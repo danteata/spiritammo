@@ -8,18 +8,12 @@ import {
   Alert,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Book, ChevronRight, Upload, Plus } from 'lucide-react-native'
-import {
-  GRADIENTS,
-  TACTICAL_THEME,
-  MILITARY_TYPOGRAPHY,
-} from '@/constants/colors'
+import { Book, ChevronRight, Upload } from 'lucide-react-native'
+import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 import { Collection, Scripture } from '@/types/scripture'
 import FileUploader from '@/components/FileUploader'
-import CollectionChapterView from '@/components/CollectionChapterView'
 import { CollectionChapterService } from '@/services/collectionChapters'
-import { fileExtractionService } from '@/services/fileExtraction'
 
 export default function ArmoryScreen() {
   const {
@@ -30,7 +24,6 @@ export default function ArmoryScreen() {
     setCurrentScripture,
     getScripturesByCollection,
     addCollection,
-    addScripturesToCollection,
     addScriptures,
   } = useAppStore()
   const [selectedCollection, setSelectedCollection] =
@@ -225,11 +218,8 @@ export default function ArmoryScreen() {
   )
 
   const backgroundColors = isDark
-    ? ((GRADIENTS.tactical?.background || GRADIENTS.primary.dark) as [
-        string,
-        string
-      ])
-    : (GRADIENTS.primary.light as [string, string])
+    ? (['#1a2f0a', '#2D5016', '#0f1a05'] as const) // Beautiful army green gradient
+    : (['#4A6B2A', '#2D5016', '#1a2f0a'] as const)
 
   return (
     <LinearGradient
