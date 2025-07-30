@@ -24,6 +24,32 @@ export interface Collection {
   name: string
   description?: string
   scriptures: string[] // Scripture IDs
+  createdAt?: string
+  tags?: string[]
+  // Chapter-based organization (optional)
+  isChapterBased?: boolean
+  chapters?: CollectionChapter[]
+  // Book information (for book-based collections)
+  sourceBook?: string
+  bookInfo?: {
+    totalChapters: number
+    completedChapters: number
+    averageAccuracy?: number
+  }
+}
+
+export interface CollectionChapter {
+  id: string
+  chapterNumber: number
+  name?: string // Optional custom name like "Creation Story", "Sermon on the Mount"
+  description?: string
+  scriptures: string[] // Scripture IDs in this chapter
+  isCompleted?: boolean
+  averageAccuracy?: number
+  lastPracticed?: string
+  // For non-sequential chapters or custom sections
+  isCustomSection?: boolean
+  sectionRange?: string // e.g., "1-3", "5,7,9"
 }
 
 export type ThemeMode = 'light' | 'dark' | 'auto'

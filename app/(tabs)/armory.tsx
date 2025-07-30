@@ -17,6 +17,9 @@ import {
 import { useAppStore } from '@/hooks/useAppStore'
 import { Collection, Scripture } from '@/types/scripture'
 import FileUploader from '@/components/FileUploader'
+import CollectionChapterView from '@/components/CollectionChapterView'
+import { CollectionChapterService } from '@/services/collectionChapters'
+import { fileExtractionService } from '@/services/fileExtraction'
 
 export default function ArmoryScreen() {
   const {
@@ -55,28 +58,81 @@ export default function ArmoryScreen() {
       return
     }
 
-    // Create a new collection for the imported verses
-    const collectionName = `Imported Collection ${new Date().toLocaleDateString()}`
-    const newCollection: Collection = {
+    // Add the scriptures to the main store first
+    await addScriptures(extractedVerses)
+
+    // Analyze for chapter organization
+    const analysis =
+      CollectionChapterService.analyzeScripturesForChapters(extractedVerses)
+
+    let newCollection: Collection = {
       id: `imported_${Date.now()}`,
-      name: collectionName,
+      name: analysis.sourceBook
+        ? `${analysis.sourceBook} Collection`
+        : `Imported Collection ${new Date().toLocaleDateString()}`,
       description: `${extractedVerses.length} verses imported from file`,
       scriptures: extractedVerses.map((v) => v.id),
       createdAt: new Date().toISOString(),
       tags: ['imported', 'file-upload'],
     }
 
-    // Add the scriptures to the main store first
-    await addScriptures(extractedVerses)
-
-    // Then add the collection
-    await addCollection(newCollection)
-
-    Alert.alert(
-      'Import Successful!',
-      `Created collection "${collectionName}" with ${extractedVerses.length} verses.`,
-      [{ text: 'OK' }]
-    )
+    // If it can be chapter-based, offer the option
+    if (analysis.canBeChapterBased) {
+      Alert.alert(
+        'Chapter Organization Available',
+        `This collection can be organized by chapters (${
+          analysis.stats.totalChapters
+        } chapters from ${analysis.stats.totalBooks} book${
+          analysis.stats.totalBooks > 1 ? 's' : ''
+        }). Would you like to enable chapter-based organization?`,
+        [
+          {
+            text: 'Simple Collection',
+            onPress: async () => {
+              await addCollection(newCollection)
+              Alert.alert(
+                'Import Successful!',
+                `Created collection "${newCollection.name}" with ${extractedVerses.length} verses.`
+              )
+            },
+          },
+          {
+            text: 'Chapter-Based',
+            onPress: async () => {
+              try {
+                const chapterBasedCollection =
+                  await CollectionChapterService.convertToChapterBased(
+                    newCollection,
+                    extractedVerses
+                  )
+                await addCollection(chapterBasedCollection)
+                Alert.alert(
+                  'Import Successful!',
+                  `Created chapter-based collection "${chapterBasedCollection.name}" with ${analysis.stats.totalChapters} chapters.`
+                )
+              } catch (error) {
+                console.error(
+                  'Failed to create chapter-based collection:',
+                  error
+                )
+                await addCollection(newCollection)
+                Alert.alert(
+                  'Import Successful!',
+                  `Created collection "${newCollection.name}" with ${extractedVerses.length} verses.`
+                )
+              }
+            },
+          },
+        ]
+      )
+    } else {
+      // Create simple collection
+      await addCollection(newCollection)
+      Alert.alert(
+        'Import Successful!',
+        `Created collection "${newCollection.name}" with ${extractedVerses.length} verses.`
+      )
+    }
   }
 
   const renderCollectionItem = ({ item }: { item: Collection }) => (
@@ -112,16 +168,28 @@ export default function ArmoryScreen() {
             {item.description}
           </Text>
         )}
-        <Text
-          style={[
-            styles.collectionCount,
-            {
-              color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
-            },
-          ]}
-        >
-          {item.scriptures.length} rounds
-        </Text>
+        <View style={styles.collectionMeta}>
+          <Text
+            style={[
+              styles.collectionCount,
+              {
+                color: isDark
+                  ? 'rgba(255, 255, 255, 0.5)'
+                  : 'rgba(0, 0, 0, 0.5)',
+              },
+            ]}
+          >
+            {item.scriptures.length} rounds
+          </Text>
+
+          {item.isChapterBased && item.chapters && (
+            <Text
+              style={[styles.chapterBadge, { color: TACTICAL_THEME.accent }]}
+            >
+              {item.chapters.length} chapters
+            </Text>
+          )}
+        </View>
       </View>
       <ChevronRight size={20} color={isDark ? 'white' : 'black'} />
     </TouchableOpacity>
@@ -157,8 +225,11 @@ export default function ArmoryScreen() {
   )
 
   const backgroundColors = isDark
-    ? GRADIENTS.primary.dark
-    : GRADIENTS.primary.light
+    ? ((GRADIENTS.tactical?.background || GRADIENTS.primary.dark) as [
+        string,
+        string
+      ])
+    : (GRADIENTS.primary.light as [string, string])
 
   return (
     <LinearGradient
@@ -297,9 +368,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 4,
   },
+  collectionMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
   collectionCount: {
     fontSize: 12,
-    marginTop: 4,
+  },
+  chapterBadge: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    backgroundColor: 'rgba(255, 107, 53, 0.2)',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    overflow: 'hidden',
   },
   bookItem: {
     flexDirection: 'row',

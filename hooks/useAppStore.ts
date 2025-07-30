@@ -201,7 +201,7 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     if (practiceCount >= 500 && accuracy >= 90) return 'captain'
     if (practiceCount >= 200 && accuracy >= 85) return 'lieutenant'
     if (practiceCount >= 100 && accuracy >= 80) return 'sergeant'
-    if (practiceCount >= 50 && accuracy >= 75) return 'soldier'
+    if (practiceCount >= 50 && accuracy >= 75) return 'corporal'
     return 'recruit'
   }
 
@@ -357,6 +357,26 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     }
   }
 
+  // Update existing collection
+  const updateCollection = async (
+    updatedCollection: Collection
+  ): Promise<boolean> => {
+    try {
+      const updatedCollections = collections.map((collection) =>
+        collection.id === updatedCollection.id ? updatedCollection : collection
+      )
+      setCollections(updatedCollections)
+      await AsyncStorage.setItem(
+        COLLECTIONS_KEY,
+        JSON.stringify(updatedCollections)
+      )
+      return true
+    } catch (error) {
+      console.error('Failed to update collection:', error)
+      return false
+    }
+  }
+
   return {
     // Theme
     themeMode,
@@ -387,5 +407,6 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     addCollection,
     addScripturesToCollection,
     addScriptures,
+    updateCollection,
   }
 })
