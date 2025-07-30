@@ -259,14 +259,20 @@ export default function MissionReportScreen() {
       {/* Tab Navigation */}
       <View style={styles.tabNavigation}>
         {[
-          { key: 'overview', label: 'OVERVIEW', icon: Shield },
-          { key: 'achievements', label: 'ACHIEVEMENTS', icon: Award },
-          { key: 'history', label: 'HISTORY', icon: Calendar },
-        ].map(({ key, label, icon: Icon }) => (
+          { key: 'overview', label: 'OVERVIEW', icon: Shield, flex: 1 },
+          {
+            key: 'achievements',
+            label: 'ACHIEVEMENTS',
+            icon: Award,
+            flex: 1.3,
+          },
+          { key: 'history', label: 'HISTORY', icon: Calendar, flex: 0.9 },
+        ].map(({ key, label, icon: Icon, flex }) => (
           <TouchableOpacity
             key={key}
             style={[
               styles.tabButton,
+              { flex },
               selectedTab === key && styles.activeTabButton,
             ]}
             onPress={() => setSelectedTab(key as any)}
@@ -329,7 +335,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   tabButton: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

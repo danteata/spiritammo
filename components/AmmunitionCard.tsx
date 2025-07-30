@@ -356,9 +356,12 @@ const styles = StyleSheet.create({
   },
   fireButton: {
     backgroundColor: TACTICAL_THEME.accent,
+    flex: 1.2, // Slightly smaller than equal
   },
   reloadButton: {
     backgroundColor: TACTICAL_THEME.secondary,
+    flex: 1.3, // Slightly larger for better spacing
+    marginRight: 8, // Add right padding
   },
   intelButton: {
     backgroundColor: TACTICAL_THEME.primary,

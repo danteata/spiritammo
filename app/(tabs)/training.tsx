@@ -276,7 +276,7 @@ export default function TrainingScreen() {
         )}
 
         {/* Accuracy Meter */}
-        {currentScripture && currentScripture.accuracy && (
+        {false && currentScripture && currentScripture.accuracy && (
           <View style={styles.metricsContainer}>
             <AccuracyMeter
               accuracy={currentScripture.accuracy}

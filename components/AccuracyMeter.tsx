@@ -60,16 +60,16 @@ export default function AccuracyMeter({
   }, [accuracy, animated])
 
   const getAccuracyColor = (acc: number) => {
-    if (acc >= 95) return ACCURACY_COLORS.excellent
-    if (acc >= 85) return ACCURACY_COLORS.good
-    if (acc >= 75) return ACCURACY_COLORS.fair
+    if (acc >= 90) return ACCURACY_COLORS.excellent
+    if (acc >= 80) return ACCURACY_COLORS.good
+    if (acc >= 70) return ACCURACY_COLORS.fair
     return ACCURACY_COLORS.poor
   }
 
   const getAccuracyRating = (acc: number) => {
-    if (acc >= 95) return 'MARKSMAN'
-    if (acc >= 85) return 'SHARPSHOOTER'
-    if (acc >= 75) return 'QUALIFIED'
+    if (acc >= 90) return 'MARKSMAN'
+    if (acc >= 80) return 'SHARPSHOOTER'
+    if (acc >= 70) return 'QUALIFIED'
     return 'TRAINEE'
   }
 
@@ -189,23 +189,45 @@ export default function AccuracyMeter({
 
       {/* Performance zones */}
       <View style={styles.zones}>
-        <View style={[styles.zone, { backgroundColor: ACCURACY_COLORS.poor }]}>
+        <View
+          style={[
+            styles.zone,
+            styles.traineeZone,
+            { backgroundColor: ACCURACY_COLORS.poor },
+          ]}
+        >
           <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>
             TRAINEE
           </Text>
         </View>
-        <View style={[styles.zone, { backgroundColor: ACCURACY_COLORS.fair }]}>
+        <View
+          style={[
+            styles.zone,
+            styles.qualifiedZone,
+            { backgroundColor: ACCURACY_COLORS.fair },
+          ]}
+        >
           <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>
             QUALIFIED
           </Text>
         </View>
-        <View style={[styles.zone, { backgroundColor: ACCURACY_COLORS.good }]}>
+        <View
+          style={[
+            styles.zone,
+            styles.sharpZone,
+            { backgroundColor: ACCURACY_COLORS.good },
+          ]}
+        >
           <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>
             SHARP
           </Text>
         </View>
         <View
-          style={[styles.zone, { backgroundColor: ACCURACY_COLORS.excellent }]}
+          style={[
+            styles.zone,
+            styles.marksZone,
+            { backgroundColor: ACCURACY_COLORS.excellent },
+          ]}
         >
           <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>
             MARKS
