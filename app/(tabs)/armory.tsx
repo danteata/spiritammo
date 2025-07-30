@@ -14,6 +14,7 @@ import { useAppStore } from '@/hooks/useAppStore'
 import { Collection, Scripture } from '@/types/scripture'
 import FileUploader from '@/components/FileUploader'
 import CollectionDetailModal from '@/components/CollectionDetailModal'
+import BookScripturesModal from '@/components/BookScripturesModal'
 import { CollectionChapterService } from '@/services/collectionChapters'
 
 export default function ArmoryScreen() {
@@ -22,7 +23,6 @@ export default function ArmoryScreen() {
     collections,
     books,
     scriptures,
-    setSelectedBook,
     getScripturesByCollection,
     addCollection,
     addScriptures,
@@ -32,9 +32,15 @@ export default function ArmoryScreen() {
   const [showFileUploader, setShowFileUploader] = useState(false)
   const [showCollectionDetail, setShowCollectionDetail] = useState(false)
   const [filterTab, setFilterTab] = useState<'books' | 'chapters'>('books')
+  const [showBookScriptures, setShowBookScriptures] = useState(false)
+  const [bookScriptures, setBookScriptures] = useState<Scripture[]>([])
+  const [selectedBookName, setSelectedBookName] = useState<string>('')
 
   const handleSelectCollection = (collection: Collection) => {
+    console.log('Selecting collection:', collection.name, collection.id)
     setSelectedCollection(collection)
+    // Reset to books tab when selecting a new collection
+    setFilterTab('books')
     // Don't open modal, just set as active collection for filtering
   }
 
@@ -43,10 +49,46 @@ export default function ArmoryScreen() {
     setShowCollectionDetail(true)
   }
 
-  const handleSelectBook = (bookId: string) => {
-    const book = books.find((b) => b.id === bookId)
-    if (book) {
-      setSelectedBook(book)
+  const handleBookDistributionTap = (bookName: string) => {
+    if (!selectedCollection) return
+
+    const scriptures = getScripturesByCollection(selectedCollection.id)
+    const bookScriptures = scriptures.filter((s) => s.book === bookName)
+
+    if (bookScriptures.length > 0) {
+      setBookScriptures(bookScriptures)
+      setSelectedBookName(bookName)
+      setShowBookScriptures(true)
+    }
+  }
+
+  const handleChapterDistributionTap = (chapterName: string) => {
+    if (!selectedCollection) return
+
+    const chapter = selectedCollection.chapters?.find(
+      (c) => c.name === chapterName
+    )
+    if (chapter) {
+      const chapterScriptures = scriptures.filter((s) =>
+        chapter.scriptures.includes(s.id)
+      )
+
+      if (chapterScriptures.length > 0) {
+        setBookScriptures(chapterScriptures)
+        setSelectedBookName(chapterName)
+        setShowBookScriptures(true)
+      }
+    }
+  }
+
+  const handleDefaultBookTap = (bookName: string) => {
+    // When no collection is selected, show all scriptures from this book
+    const bookScriptures = scriptures.filter((s) => s.book === bookName)
+
+    if (bookScriptures.length > 0) {
+      setBookScriptures(bookScriptures)
+      setSelectedBookName(bookName)
+      setShowBookScriptures(true)
     }
   }
 
@@ -138,9 +180,14 @@ export default function ArmoryScreen() {
       style={[
         styles.collectionItem,
         {
-          backgroundColor: isDark
-            ? 'rgba(255, 255, 255, 0.1)'
-            : 'rgba(0, 0, 0, 0.05)',
+          backgroundColor:
+            selectedCollection?.id === item.id
+              ? isDark
+                ? 'rgba(255, 165, 0, 0.2)'
+                : 'rgba(255, 165, 0, 0.1)'
+              : isDark
+              ? 'rgba(255, 255, 255, 0.1)'
+              : 'rgba(0, 0, 0, 0.05)',
           borderColor:
             selectedCollection?.id === item.id
               ? TACTICAL_THEME.accent
@@ -239,7 +286,7 @@ export default function ArmoryScreen() {
   }: {
     item: { book: string; count: number }
   }) => (
-    <View
+    <TouchableOpacity
       style={[
         styles.distributionItem,
         {
@@ -248,6 +295,7 @@ export default function ArmoryScreen() {
             : 'rgba(0, 0, 0, 0.05)',
         },
       ]}
+      onPress={() => handleBookDistributionTap(item.book)}
     >
       <Book size={16} color={TACTICAL_THEME.accent} />
       <Text
@@ -270,7 +318,7 @@ export default function ArmoryScreen() {
           rounds
         </Text>
       </View>
-    </View>
+    </TouchableOpacity>
   )
 
   const renderChapterDistribution = ({
@@ -278,7 +326,7 @@ export default function ArmoryScreen() {
   }: {
     item: { chapter: string; count: number }
   }) => (
-    <View
+    <TouchableOpacity
       style={[
         styles.distributionItem,
         {
@@ -287,6 +335,7 @@ export default function ArmoryScreen() {
             : 'rgba(0, 0, 0, 0.05)',
         },
       ]}
+      onPress={() => handleChapterDistributionTap(item.chapter)}
     >
       <Layers size={16} color={TACTICAL_THEME.accent} />
       <Text
@@ -309,37 +358,46 @@ export default function ArmoryScreen() {
           rounds
         </Text>
       </View>
-    </View>
-  )
-
-  const renderBookItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      style={[
-        styles.bookItem,
-        {
-          backgroundColor: isDark
-            ? 'rgba(255, 255, 255, 0.1)'
-            : 'rgba(0, 0, 0, 0.05)',
-        },
-      ]}
-      onPress={() => handleSelectBook(item.id)}
-      testID={`book-${item.id}`}
-    >
-      <Book size={20} color={isDark ? 'white' : 'black'} />
-      <Text style={[styles.bookName, { color: isDark ? 'white' : 'black' }]}>
-        {item.name}
-      </Text>
-      <Text
-        style={[
-          styles.bookChapters,
-          { color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)' },
-        ]}
-      >
-        {item.chapters} rounds
-      </Text>
-      <ChevronRight size={20} color={isDark ? 'white' : 'black'} />
     </TouchableOpacity>
   )
+
+  const renderBookItem = ({ item }: { item: any }) => {
+    // Count actual scriptures from this book across all collections
+    const bookScriptureCount = scriptures.filter(
+      (s) => s.book === item.name
+    ).length
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.bookItem,
+          {
+            backgroundColor: isDark
+              ? 'rgba(255, 255, 255, 0.1)'
+              : 'rgba(0, 0, 0, 0.05)',
+          },
+        ]}
+        onPress={() => handleDefaultBookTap(item.name)}
+        testID={`book-${item.id}`}
+      >
+        <Book size={20} color={isDark ? 'white' : 'black'} />
+        <Text style={[styles.bookName, { color: isDark ? 'white' : 'black' }]}>
+          {item.name}
+        </Text>
+        <Text
+          style={[
+            styles.bookChapters,
+            {
+              color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+            },
+          ]}
+        >
+          {bookScriptureCount} rounds
+        </Text>
+        <ChevronRight size={20} color={isDark ? 'white' : 'black'} />
+      </TouchableOpacity>
+    )
+  }
 
   const backgroundColors = isDark
     ? (['#1a2f0a', '#2D5016', '#0f1a05'] as const) // Beautiful army green gradient
@@ -361,7 +419,7 @@ export default function ArmoryScreen() {
               { color: TACTICAL_THEME.text },
             ]}
           >
-            AMMUNITION ARMORY
+            ARMORY
           </Text>
           <Text
             style={[
@@ -393,7 +451,7 @@ export default function ArmoryScreen() {
           { color: TACTICAL_THEME.text },
         ]}
       >
-        AMMUNITION COLLECTIONS
+        COLLECTIONS
       </Text>
 
       <FlatList
@@ -455,37 +513,39 @@ export default function ArmoryScreen() {
               </Text>
             </TouchableOpacity>
 
-            {selectedCollection.isChapterBased && (
-              <TouchableOpacity
-                style={[
-                  styles.filterTab,
-                  filterTab === 'chapters' && styles.activeFilterTab,
-                ]}
-                onPress={() => setFilterTab('chapters')}
-              >
-                <Layers
-                  size={16}
-                  color={
-                    filterTab === 'chapters'
-                      ? TACTICAL_THEME.text
-                      : TACTICAL_THEME.textSecondary
-                  }
-                />
-                <Text
+            {selectedCollection.isChapterBased &&
+              selectedCollection.chapters &&
+              selectedCollection.chapters.length > 0 && (
+                <TouchableOpacity
                   style={[
-                    styles.filterTabText,
-                    {
-                      color:
-                        filterTab === 'chapters'
-                          ? TACTICAL_THEME.text
-                          : TACTICAL_THEME.textSecondary,
-                    },
+                    styles.filterTab,
+                    filterTab === 'chapters' && styles.activeFilterTab,
                   ]}
+                  onPress={() => setFilterTab('chapters')}
                 >
-                  CHAPTERS
-                </Text>
-              </TouchableOpacity>
-            )}
+                  <Layers
+                    size={16}
+                    color={
+                      filterTab === 'chapters'
+                        ? TACTICAL_THEME.text
+                        : TACTICAL_THEME.textSecondary
+                    }
+                  />
+                  <Text
+                    style={[
+                      styles.filterTabText,
+                      {
+                        color:
+                          filterTab === 'chapters'
+                            ? TACTICAL_THEME.text
+                            : TACTICAL_THEME.textSecondary,
+                      },
+                    ]}
+                  >
+                    CHAPTERS
+                  </Text>
+                </TouchableOpacity>
+              )}
           </View>
 
           {/* Filter Content */}
@@ -506,7 +566,9 @@ export default function ArmoryScreen() {
                 </Text>
               }
             />
-          ) : (
+          ) : selectedCollection.isChapterBased &&
+            selectedCollection.chapters &&
+            selectedCollection.chapters.length > 0 ? (
             <FlatList
               data={getChapterDistribution()}
               renderItem={renderChapterDistribution}
@@ -523,6 +585,25 @@ export default function ArmoryScreen() {
                 </Text>
               }
             />
+          ) : (
+            <View style={styles.emptyStateContainer}>
+              <Text
+                style={[
+                  styles.emptyText,
+                  { color: 'rgba(255, 255, 255, 0.5)' },
+                ]}
+              >
+                This collection is not organized by chapters
+              </Text>
+              <Text
+                style={[
+                  styles.emptySubtext,
+                  { color: 'rgba(255, 255, 255, 0.3)' },
+                ]}
+              >
+                Use the Books tab to see scripture distribution
+              </Text>
+            </View>
           )}
         </View>
       ) : (
@@ -552,6 +633,14 @@ export default function ArmoryScreen() {
           }}
         />
       )}
+
+      {/* Book Scriptures Modal */}
+      <BookScripturesModal
+        isVisible={showBookScriptures}
+        onClose={() => setShowBookScriptures(false)}
+        scriptures={bookScriptures}
+        bookName={selectedBookName}
+      />
     </LinearGradient>
   )
 }
@@ -732,5 +821,15 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // Empty state styles
+  emptyStateContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptySubtext: {
+    textAlign: 'center',
+    marginTop: 8,
+    fontSize: 12,
   },
 })
