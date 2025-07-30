@@ -1,37 +1,47 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Eye, EyeOff, RefreshCw } from 'lucide-react-native';
-import { Scripture } from '@/types/scripture';
-import { GRADIENTS } from '@/constants/colors';
-import { useAppStore } from '@/hooks/useAppStore';
+import React, { useState } from 'react'
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  Platform,
+} from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
+import { Eye, EyeOff, RefreshCw } from 'lucide-react-native'
+import { Scripture } from '@/types/scripture'
+import { GRADIENTS } from '@/constants/colors'
+import { useAppStore } from '@/hooks/useAppStore'
 
 interface ScriptureCardProps {
-  scripture: Scripture;
-  onReveal?: () => void;
-  onNext?: () => void;
+  scripture: Scripture
+  onReveal?: () => void
+  onNext?: () => void
 }
 
-export default function ScriptureCard({ scripture, onReveal, onNext }: ScriptureCardProps) {
-  const { isDark } = useAppStore();
-  const [revealed, setRevealed] = useState(false);
-  
+export default function ScriptureCard({
+  scripture,
+  onReveal,
+  onNext,
+}: ScriptureCardProps) {
+  const { isDark } = useAppStore()
+  const [revealed, setRevealed] = useState(false)
+
   const handleReveal = () => {
-    setRevealed(true);
-    if (onReveal) onReveal();
-  };
-  
+    setRevealed(true)
+    if (onReveal) onReveal()
+  }
+
   const handleNext = () => {
-    setRevealed(false);
-    if (onNext) onNext();
-  };
-  
-  const gradientColors = isDark 
-    ? GRADIENTS.primary.dark
-    : GRADIENTS.primary.light;
-    
-  const textColor = isDark ? '#ffffff' : '#ffffff';
-  
+    setRevealed(false)
+    if (onNext) onNext()
+  }
+
+  const gradientColors = isDark
+    ? (GRADIENTS.primary.dark as [string, string])
+    : (GRADIENTS.primary.light as [string, string])
+
+  const textColor = isDark ? '#ffffff' : '#ffffff'
+
   return (
     <LinearGradient
       colors={gradientColors}
@@ -42,23 +52,29 @@ export default function ScriptureCard({ scripture, onReveal, onNext }: Scripture
       <Text style={[styles.reference, { color: textColor }]}>
         {scripture.reference}
       </Text>
-      
+
       {revealed ? (
         <Text style={[styles.text, { color: textColor }]}>
-          {scripture.verse && <Text style={styles.verseNumber}>{scripture.verse}</Text>}
+          {scripture.verse && (
+            <Text style={styles.verseNumber}>{scripture.verse}</Text>
+          )}
           {scripture.text}
         </Text>
       ) : (
         <View style={styles.hiddenTextContainer}>
           <Text style={[styles.hiddenText, { color: textColor }]}>
-            {Array(scripture.text.length / 10).fill('•••••').join('\n')}
+            {scripture.text && scripture.text.length > 0
+              ? Array(Math.max(1, Math.floor(scripture.text.length / 10)))
+                  .fill('•••••')
+                  .join('\n')
+              : '•••••'}
           </Text>
         </View>
       )}
-      
+
       <View style={styles.buttonContainer}>
-        <TouchableOpacity 
-          style={styles.iconButton} 
+        <TouchableOpacity
+          style={styles.iconButton}
           onPress={revealed ? () => setRevealed(false) : handleReveal}
           testID="toggle-reveal-button"
         >
@@ -68,9 +84,9 @@ export default function ScriptureCard({ scripture, onReveal, onNext }: Scripture
             <Eye size={24} color={textColor} />
           )}
         </TouchableOpacity>
-        
-        <TouchableOpacity 
-          style={styles.iconButton} 
+
+        <TouchableOpacity
+          style={styles.iconButton}
           onPress={handleNext}
           testID="next-scripture-button"
         >
@@ -78,7 +94,7 @@ export default function ScriptureCard({ scripture, onReveal, onNext }: Scripture
         </TouchableOpacity>
       </View>
     </LinearGradient>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -137,4 +153,4 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
   },
-});
+})

@@ -1,15 +1,15 @@
-import { Tabs } from "expo-router";
-import { Book, Target, Settings, Home } from "lucide-react-native";
-import React from "react";
-import { COLORS } from "@/constants/colors";
-import { useAppStore } from "@/hooks/useAppStore";
+import { Tabs } from 'expo-router'
+import { Book, Target, Settings, Home, FileText } from 'lucide-react-native'
+import React from 'react'
+import { COLORS } from '@/constants/colors'
+import { useAppStore } from '@/hooks/useAppStore'
 
 export default function TabLayout() {
-  const { isDark } = useAppStore();
-  
-  const activeColor = COLORS.primary.main;
-  const inactiveColor = isDark ? COLORS.disabled : COLORS.disabled;
-  
+  const { isDark } = useAppStore()
+
+  const activeColor = COLORS.primary.main
+  const inactiveColor = isDark ? COLORS.disabled : COLORS.disabled
+
   return (
     <Tabs
       screenOptions={{
@@ -17,7 +17,9 @@ export default function TabLayout() {
         tabBarInactiveTintColor: inactiveColor,
         tabBarStyle: {
           backgroundColor: isDark ? COLORS.surface.dark : COLORS.surface.light,
-          borderTopColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+          borderTopColor: isDark
+            ? 'rgba(255, 255, 255, 0.1)'
+            : 'rgba(0, 0, 0, 0.1)',
         },
         headerStyle: {
           backgroundColor: isDark ? COLORS.primary.dark : COLORS.primary.main,
@@ -31,32 +33,39 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "SpiritAmmo",
-          tabBarLabel: "Home",
+          title: 'SpiritAmmo',
+          tabBarLabel: 'Home',
           tabBarIcon: ({ color }) => <Home color={color} />,
         }}
       />
       <Tabs.Screen
         name="armory"
         options={{
-          title: "Armory",
+          title: 'Armory',
           tabBarIcon: ({ color }) => <Book color={color} />,
         }}
       />
       <Tabs.Screen
         name="training"
         options={{
-          title: "Training Range",
+          title: 'Training Range',
           tabBarIcon: ({ color }) => <Target color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="mission-report"
+        options={{
+          title: 'Mission Report',
+          tabBarIcon: ({ color }) => <FileText color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: "Command Center",
+          title: 'Command Center',
           tabBarIcon: ({ color }) => <Settings color={color} />,
         }}
       />
     </Tabs>
-  );
+  )
 }
