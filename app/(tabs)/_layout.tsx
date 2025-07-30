@@ -48,21 +48,21 @@ export default function TabLayout() {
       <Tabs.Screen
         name="training"
         options={{
-          title: 'Training Range',
+          title: 'Training',
           tabBarIcon: ({ color }) => <Target color={color} />,
         }}
       />
       <Tabs.Screen
         name="mission-report"
         options={{
-          title: 'Mission Report',
+          title: 'Report',
           tabBarIcon: ({ color }) => <FileText color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          title: 'Command Center',
+          title: 'Settings',
           tabBarIcon: ({ color }) => <Settings color={color} />,
         }}
       />

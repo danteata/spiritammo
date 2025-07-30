@@ -1,52 +1,52 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, ScrollView, Switch, Slider } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { COLORS, GRADIENTS } from '@/constants/colors';
-import { useAppStore } from '@/hooks/useAppStore';
-import { Moon, Sun, Volume2, VolumeX } from 'lucide-react-native';
+import React, { useState } from 'react'
+import { StyleSheet, Text, View, ScrollView, Switch } from 'react-native'
+import Slider from '@react-native-community/slider'
+import { LinearGradient } from 'expo-linear-gradient'
+import { COLORS, GRADIENTS } from '@/constants/colors'
+import { useAppStore } from '@/hooks/useAppStore'
+import { Moon, Sun, Volume2, VolumeX } from 'lucide-react-native'
 
 export default function SettingsScreen() {
-  const { 
-    isDark, 
-    setTheme,
-    userSettings,
-    saveUserSettings
-  } = useAppStore();
-  
-  const [localSettings, setLocalSettings] = useState(userSettings);
-  
+  const { isDark, setTheme, userSettings, saveUserSettings } = useAppStore()
+
+  const [localSettings, setLocalSettings] = useState(userSettings)
+
   const handleThemeChange = (value: boolean) => {
-    setTheme(value ? 'dark' : 'light');
-  };
-  
+    setTheme(value ? 'dark' : 'light')
+  }
+
   const handleVoiceRateChange = (value: number) => {
-    setLocalSettings(prev => ({
+    setLocalSettings((prev) => ({
       ...prev,
-      voiceRate: value
-    }));
-    
+      voiceRate: value,
+    }))
+
     saveUserSettings({
       ...localSettings,
-      voiceRate: value
-    });
-  };
-  
+      voiceRate: value,
+    })
+  }
+
   const handleVoicePitchChange = (value: number) => {
-    setLocalSettings(prev => ({
+    setLocalSettings((prev) => ({
       ...prev,
-      voicePitch: value
-    }));
-    
+      voicePitch: value,
+    }))
+
     saveUserSettings({
       ...localSettings,
-      voicePitch: value
-    });
-  };
-  
-  const backgroundColors = isDark ? GRADIENTS.primary.dark : GRADIENTS.primary.light;
-  const textColor = isDark ? COLORS.text.dark : COLORS.text.light;
-  const cardBackground = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';
-  
+      voicePitch: value,
+    })
+  }
+
+  const backgroundColors = isDark
+    ? GRADIENTS.primary.dark
+    : GRADIENTS.primary.light
+  const textColor = isDark ? COLORS.text.dark : COLORS.text.light
+  const cardBackground = isDark
+    ? 'rgba(255, 255, 255, 0.1)'
+    : 'rgba(0, 0, 0, 0.05)'
+
   return (
     <LinearGradient
       colors={backgroundColors}
@@ -58,12 +58,12 @@ export default function SettingsScreen() {
         <Text style={[styles.sectionTitle, { color: 'white' }]}>
           Command Center
         </Text>
-        
+
         <View style={[styles.card, { backgroundColor: cardBackground }]}>
           <Text style={[styles.cardTitle, { color: textColor }]}>
             Display Settings
           </Text>
-          
+
           <View style={styles.settingRow}>
             <View style={styles.settingLabelContainer}>
               <Text style={[styles.settingLabel, { color: textColor }]}>
@@ -75,7 +75,7 @@ export default function SettingsScreen() {
                 <Sun size={20} color={textColor} />
               )}
             </View>
-            
+
             <Switch
               value={isDark}
               onValueChange={handleThemeChange}
@@ -85,12 +85,12 @@ export default function SettingsScreen() {
             />
           </View>
         </View>
-        
+
         <View style={[styles.card, { backgroundColor: cardBackground }]}>
           <Text style={[styles.cardTitle, { color: textColor }]}>
             Voice Settings
           </Text>
-          
+
           <View style={styles.settingRow}>
             <View style={styles.settingLabelContainer}>
               <Text style={[styles.settingLabel, { color: textColor }]}>
@@ -98,7 +98,7 @@ export default function SettingsScreen() {
               </Text>
               <Volume2 size={20} color={textColor} />
             </View>
-            
+
             <View style={styles.sliderContainer}>
               <VolumeX size={16} color={textColor} />
               <Slider
@@ -109,7 +109,9 @@ export default function SettingsScreen() {
                 value={localSettings.voiceRate}
                 onValueChange={handleVoiceRateChange}
                 minimumTrackTintColor={COLORS.primary.main}
-                maximumTrackTintColor={isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'}
+                maximumTrackTintColor={
+                  isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
+                }
                 thumbTintColor={COLORS.primary.main}
                 testID="voice-rate-slider"
               />
@@ -119,7 +121,7 @@ export default function SettingsScreen() {
               {localSettings.voiceRate.toFixed(1)}x
             </Text>
           </View>
-          
+
           <View style={styles.settingRow}>
             <View style={styles.settingLabelContainer}>
               <Text style={[styles.settingLabel, { color: textColor }]}>
@@ -127,7 +129,7 @@ export default function SettingsScreen() {
               </Text>
               <Volume2 size={20} color={textColor} />
             </View>
-            
+
             <View style={styles.sliderContainer}>
               <Text style={{ color: textColor }}>Low</Text>
               <Slider
@@ -138,7 +140,9 @@ export default function SettingsScreen() {
                 value={localSettings.voicePitch}
                 onValueChange={handleVoicePitchChange}
                 minimumTrackTintColor={COLORS.primary.main}
-                maximumTrackTintColor={isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'}
+                maximumTrackTintColor={
+                  isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
+                }
                 thumbTintColor={COLORS.primary.main}
                 testID="voice-pitch-slider"
               />
@@ -149,27 +153,25 @@ export default function SettingsScreen() {
             </Text>
           </View>
         </View>
-        
+
         <View style={[styles.card, { backgroundColor: cardBackground }]}>
-          <Text style={[styles.cardTitle, { color: textColor }]}>
-            About
-          </Text>
-          
+          <Text style={[styles.cardTitle, { color: textColor }]}>About</Text>
+
           <Text style={[styles.aboutText, { color: textColor }]}>
             SpiritAmmo v1.0.0
           </Text>
-          
+
           <Text style={[styles.aboutText, { color: textColor }]}>
             Your spiritual armory for scripture memorization
           </Text>
-          
+
           <Text style={[styles.copyright, { color: textColor }]}>
             © 2025 SpiritAmmo
           </Text>
         </View>
       </ScrollView>
     </LinearGradient>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -233,4 +235,4 @@ const styles = StyleSheet.create({
     marginTop: 16,
     textAlign: 'center',
   },
-});
+})
