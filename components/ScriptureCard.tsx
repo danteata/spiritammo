@@ -7,6 +7,7 @@ import {
   Platform,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
+import { BlurView } from 'expo-blur'
 import { Eye, EyeOff, RefreshCw } from 'lucide-react-native'
 import { Scripture } from '@/types/scripture'
 import { GRADIENTS } from '@/constants/colors'
@@ -62,13 +63,17 @@ export default function ScriptureCard({
         </Text>
       ) : (
         <View style={styles.hiddenTextContainer}>
-          <Text style={[styles.hiddenText, { color: textColor }]}>
-            {scripture.text && scripture.text.length > 0
-              ? Array(Math.max(1, Math.floor(scripture.text.length / 10)))
-                  .fill('•••••')
-                  .join('\n')
-              : '•••••'}
+          <Text style={[styles.text, styles.hiddenText, { color: textColor }]}>
+            {scripture.verse && (
+              <Text style={styles.verseNumber}>{scripture.verse}</Text>
+            )}
+            {scripture.text}
           </Text>
+          <BlurView
+            intensity={Platform.OS === 'ios' ? 25 : 20}
+            style={styles.blurOverlay}
+            tint="light"
+          />
         </View>
       )}
 
@@ -137,11 +142,19 @@ const styles = StyleSheet.create({
   hiddenTextContainer: {
     flex: 1,
     justifyContent: 'center',
+    position: 'relative',
   },
   hiddenText: {
-    fontSize: 16,
-    textAlign: 'center',
-    opacity: 0.7,
+    fontSize: 18,
+    lineHeight: 26,
+  },
+  blurOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 8,
   },
   buttonContainer: {
     flexDirection: 'row',
