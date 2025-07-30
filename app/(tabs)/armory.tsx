@@ -1,61 +1,141 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Book, ChevronRight } from 'lucide-react-native';
-import { GRADIENTS } from '@/constants/colors';
-import { useAppStore } from '@/hooks/useAppStore';
-import { Collection } from '@/types/scripture';
+import React, { useState } from 'react'
+import {
+  StyleSheet,
+  Text,
+  View,
+  FlatList,
+  TouchableOpacity,
+  Alert,
+} from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
+import { Book, ChevronRight, Upload, Plus } from 'lucide-react-native'
+import {
+  GRADIENTS,
+  TACTICAL_THEME,
+  MILITARY_TYPOGRAPHY,
+} from '@/constants/colors'
+import { useAppStore } from '@/hooks/useAppStore'
+import { Collection, Scripture } from '@/types/scripture'
+import FileUploader from '@/components/FileUploader'
 
 export default function ArmoryScreen() {
-  const { isDark, collections, books, setSelectedBook, setCurrentScripture, getScripturesByCollection } = useAppStore();
-  const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
-  
+  const {
+    isDark,
+    collections,
+    books,
+    setSelectedBook,
+    setCurrentScripture,
+    getScripturesByCollection,
+    addCollection,
+    addScripturesToCollection,
+    addScriptures,
+  } = useAppStore()
+  const [selectedCollection, setSelectedCollection] =
+    useState<Collection | null>(null)
+  const [showFileUploader, setShowFileUploader] = useState(false)
+
   const handleSelectCollection = (collection: Collection) => {
-    setSelectedCollection(collection);
-    const scriptures = getScripturesByCollection(collection.id);
+    setSelectedCollection(collection)
+    const scriptures = getScripturesByCollection(collection.id)
     if (scriptures.length > 0) {
-      setCurrentScripture(scriptures[0]);
+      setCurrentScripture(scriptures[0])
     }
-  };
-  
+  }
+
   const handleSelectBook = (bookId: string) => {
-    const book = books.find(b => b.id === bookId);
+    const book = books.find((b) => b.id === bookId)
     if (book) {
-      setSelectedBook(book);
+      setSelectedBook(book)
     }
-  };
-  
+  }
+
+  const handleVersesExtracted = async (extractedVerses: Scripture[]) => {
+    if (extractedVerses.length === 0) {
+      Alert.alert('No Verses', 'No verses were extracted from the file.')
+      return
+    }
+
+    // Create a new collection for the imported verses
+    const collectionName = `Imported Collection ${new Date().toLocaleDateString()}`
+    const newCollection: Collection = {
+      id: `imported_${Date.now()}`,
+      name: collectionName,
+      description: `${extractedVerses.length} verses imported from file`,
+      scriptures: extractedVerses.map((v) => v.id),
+      createdAt: new Date().toISOString(),
+      tags: ['imported', 'file-upload'],
+    }
+
+    // Add the scriptures to the main store first
+    await addScriptures(extractedVerses)
+
+    // Then add the collection
+    await addCollection(newCollection)
+
+    Alert.alert(
+      'Import Successful!',
+      `Created collection "${collectionName}" with ${extractedVerses.length} verses.`,
+      [{ text: 'OK' }]
+    )
+  }
+
   const renderCollectionItem = ({ item }: { item: Collection }) => (
     <TouchableOpacity
       style={[
         styles.collectionItem,
-        { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }
+        {
+          backgroundColor: isDark
+            ? 'rgba(255, 255, 255, 0.1)'
+            : 'rgba(0, 0, 0, 0.05)',
+        },
       ]}
       onPress={() => handleSelectCollection(item)}
       testID={`collection-${item.id}`}
     >
       <View style={styles.collectionInfo}>
-        <Text style={[styles.collectionName, { color: isDark ? 'white' : 'black' }]}>
+        <Text
+          style={[styles.collectionName, { color: isDark ? 'white' : 'black' }]}
+        >
           {item.name}
         </Text>
         {item.description && (
-          <Text style={[styles.collectionDescription, { color: isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)' }]}>
+          <Text
+            style={[
+              styles.collectionDescription,
+              {
+                color: isDark
+                  ? 'rgba(255, 255, 255, 0.7)'
+                  : 'rgba(0, 0, 0, 0.7)',
+              },
+            ]}
+          >
             {item.description}
           </Text>
         )}
-        <Text style={[styles.collectionCount, { color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)' }]}>
+        <Text
+          style={[
+            styles.collectionCount,
+            {
+              color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
+            },
+          ]}
+        >
           {item.scriptures.length} rounds
         </Text>
       </View>
       <ChevronRight size={20} color={isDark ? 'white' : 'black'} />
     </TouchableOpacity>
-  );
-  
+  )
+
   const renderBookItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={[
         styles.bookItem,
-        { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)' }
+        {
+          backgroundColor: isDark
+            ? 'rgba(255, 255, 255, 0.1)'
+            : 'rgba(0, 0, 0, 0.05)',
+        },
       ]}
       onPress={() => handleSelectBook(item.id)}
       testID={`book-${item.id}`}
@@ -64,15 +144,22 @@ export default function ArmoryScreen() {
       <Text style={[styles.bookName, { color: isDark ? 'white' : 'black' }]}>
         {item.name}
       </Text>
-      <Text style={[styles.bookChapters, { color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)' }]}>
+      <Text
+        style={[
+          styles.bookChapters,
+          { color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)' },
+        ]}
+      >
         {item.chapters} chapters
       </Text>
       <ChevronRight size={20} color={isDark ? 'white' : 'black'} />
     </TouchableOpacity>
-  );
-  
-  const backgroundColors = isDark ? GRADIENTS.primary.dark : GRADIENTS.primary.light;
-  
+  )
+
+  const backgroundColors = isDark
+    ? GRADIENTS.primary.dark
+    : GRADIENTS.primary.light
+
   return (
     <LinearGradient
       colors={backgroundColors}
@@ -80,33 +167,74 @@ export default function ArmoryScreen() {
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
-      <Text style={[styles.sectionTitle, { color: 'white' }]}>
-        Scripture Ammunition
+      <View style={styles.header}>
+        <View style={styles.headerContent}>
+          <Text
+            style={[
+              styles.sectionTitle,
+              MILITARY_TYPOGRAPHY.heading,
+              { color: TACTICAL_THEME.text },
+            ]}
+          >
+            AMMUNITION ARMORY
+          </Text>
+          <Text
+            style={[
+              styles.sectionSubtitle,
+              MILITARY_TYPOGRAPHY.caption,
+              { color: TACTICAL_THEME.textSecondary },
+            ]}
+          >
+            Scripture Collections & Supply Lines
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={styles.uploadButton}
+          onPress={() => setShowFileUploader(true)}
+          testID="upload-file-button"
+        >
+          <Upload size={20} color={TACTICAL_THEME.text} />
+          <Text style={[styles.uploadText, MILITARY_TYPOGRAPHY.caption]}>
+            SUPPLY DROP
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <Text
+        style={[
+          styles.collectionsTitle,
+          MILITARY_TYPOGRAPHY.subheading,
+          { color: TACTICAL_THEME.text },
+        ]}
+      >
+        AMMUNITION COLLECTIONS
       </Text>
-      
-      <Text style={[styles.sectionSubtitle, { color: 'white' }]}>
-        Collections
-      </Text>
-      
+
       <FlatList
         data={collections}
         renderItem={renderCollectionItem}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         style={styles.list}
       />
-      
-      <Text style={[styles.sectionSubtitle, { color: 'white' }]}>
-        Books
-      </Text>
-      
+
+      <Text style={[styles.sectionSubtitle, { color: 'white' }]}>Books</Text>
+
       <FlatList
         data={books}
         renderItem={renderBookItem}
-        keyExtractor={item => item.id}
+        keyExtractor={(item) => item.id}
         style={styles.list}
       />
+
+      {/* File Uploader Modal */}
+      <FileUploader
+        isVisible={showFileUploader}
+        onClose={() => setShowFileUploader(false)}
+        onVersesExtracted={handleVersesExtracted}
+      />
     </LinearGradient>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -114,16 +242,38 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+    paddingTop: 20,
+  },
+  headerContent: {
+    flex: 1,
+  },
   sectionTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    marginBottom: 8,
   },
   sectionSubtitle: {
-    fontSize: 18,
+    marginBottom: 4,
+  },
+  uploadButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: TACTICAL_THEME.accent,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 8,
+  },
+  uploadText: {
+    color: TACTICAL_THEME.text,
     fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
+  },
+  collectionsTitle: {
+    marginBottom: 16,
+    textAlign: 'center',
   },
   list: {
     flex: 1,
@@ -168,4 +318,4 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginRight: 8,
   },
-});
+})
