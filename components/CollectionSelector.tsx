@@ -15,11 +15,13 @@ import { useAppStore } from '@/hooks/useAppStore'
 interface CollectionSelectorProps {
   onSelectCollection: (collection: Collection) => void
   selectedCollection?: Collection | null
+  selectedChapterIds?: string[]
 }
 
 export default function CollectionSelector({
   onSelectCollection,
   selectedCollection,
+  selectedChapterIds = [],
 }: CollectionSelectorProps) {
   const { collections, isDark } = useAppStore()
   const [modalVisible, setModalVisible] = useState(false)
@@ -27,6 +29,26 @@ export default function CollectionSelector({
   const handleSelect = (collection: Collection) => {
     onSelectCollection(collection)
     setModalVisible(false)
+  }
+
+  const getDisplayRoundCount = (collection: Collection) => {
+    // If no chapters are selected or collection is not chapter-based, show total
+    if (
+      !collection.isChapterBased ||
+      !collection.chapters ||
+      selectedChapterIds.length === 0
+    ) {
+      return collection.scriptures.length
+    }
+
+    // Calculate rounds from selected chapters only
+    const selectedChapters = collection.chapters.filter((ch) =>
+      selectedChapterIds.includes(ch.id)
+    )
+
+    return selectedChapters.reduce((total, chapter) => {
+      return total + chapter.scriptures.length
+    }, 0)
   }
 
   const renderItem = ({ item }: { item: Collection }) => (
@@ -65,7 +87,7 @@ export default function CollectionSelector({
 
         <View style={styles.collectionMeta}>
           <Text style={[styles.roundsCount, MILITARY_TYPOGRAPHY.caption]}>
-            {item.scriptures.length} rounds
+            {getDisplayRoundCount(item)} rounds
           </Text>
 
           {item.tags && item.tags.length > 0 && (
@@ -119,7 +141,7 @@ export default function CollectionSelector({
                   { color: TACTICAL_THEME.textSecondary },
                 ]}
               >
-                {selectedCollection.scriptures.length} rounds loaded
+                {getDisplayRoundCount(selectedCollection)} rounds loaded
               </Text>
             )}
           </View>

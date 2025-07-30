@@ -1,28 +1,32 @@
-import React, { useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Animated } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Target, TrendingUp, TrendingDown } from 'lucide-react-native';
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY, ACCURACY_COLORS } from '@/constants/colors';
+import React, { useEffect, useRef } from 'react'
+import { StyleSheet, Text, View, Animated } from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
+import { Target, TrendingUp, TrendingDown } from 'lucide-react-native'
+import {
+  TACTICAL_THEME,
+  MILITARY_TYPOGRAPHY,
+  ACCURACY_COLORS,
+} from '@/constants/colors'
 
 interface AccuracyMeterProps {
-  accuracy: number;
-  previousAccuracy?: number;
-  label?: string;
-  size?: 'small' | 'medium' | 'large';
-  animated?: boolean;
-  showTrend?: boolean;
+  accuracy: number
+  previousAccuracy?: number
+  label?: string
+  size?: 'small' | 'medium' | 'large'
+  animated?: boolean
+  showTrend?: boolean
 }
 
-export default function AccuracyMeter({ 
-  accuracy, 
-  previousAccuracy, 
-  label = 'ACCURACY', 
+export default function AccuracyMeter({
+  accuracy,
+  previousAccuracy,
+  label = 'ACCURACY',
   size = 'medium',
   animated = true,
-  showTrend = true
+  showTrend = true,
 }: AccuracyMeterProps) {
-  const animatedValue = useRef(new Animated.Value(0)).current;
-  const pulseAnimation = useRef(new Animated.Value(1)).current;
+  const animatedValue = useRef(new Animated.Value(0)).current
+  const pulseAnimation = useRef(new Animated.Value(1)).current
 
   useEffect(() => {
     if (animated) {
@@ -31,7 +35,7 @@ export default function AccuracyMeter({
         toValue: accuracy,
         duration: 1500,
         useNativeDriver: false,
-      }).start();
+      }).start()
 
       // Pulse animation for high accuracy
       if (accuracy >= 95) {
@@ -48,112 +52,117 @@ export default function AccuracyMeter({
               useNativeDriver: true,
             }),
           ])
-        ).start();
+        ).start()
       }
     } else {
-      animatedValue.setValue(accuracy);
+      animatedValue.setValue(accuracy)
     }
-  }, [accuracy, animated]);
+  }, [accuracy, animated])
 
   const getAccuracyColor = (acc: number) => {
-    if (acc >= 95) return ACCURACY_COLORS.excellent;
-    if (acc >= 85) return ACCURACY_COLORS.good;
-    if (acc >= 75) return ACCURACY_COLORS.fair;
-    return ACCURACY_COLORS.poor;
-  };
+    if (acc >= 95) return ACCURACY_COLORS.excellent
+    if (acc >= 85) return ACCURACY_COLORS.good
+    if (acc >= 75) return ACCURACY_COLORS.fair
+    return ACCURACY_COLORS.poor
+  }
 
   const getAccuracyRating = (acc: number) => {
-    if (acc >= 95) return 'MARKSMAN';
-    if (acc >= 85) return 'SHARPSHOOTER';
-    if (acc >= 75) return 'QUALIFIED';
-    return 'TRAINEE';
-  };
+    if (acc >= 95) return 'MARKSMAN'
+    if (acc >= 85) return 'SHARPSHOOTER'
+    if (acc >= 75) return 'QUALIFIED'
+    return 'TRAINEE'
+  }
 
   const getSizeStyles = () => {
     switch (size) {
       case 'small':
         return {
-          container: { height: 60 },
-          meter: { height: 8 },
+          container: { minHeight: 40 },
+          meter: { height: 4 },
           text: { fontSize: 12 },
-          rating: { fontSize: 10 },
-        };
+          rating: { fontSize: 9 },
+        }
       case 'medium':
         return {
-          container: { height: 80 },
-          meter: { height: 12 },
-          text: { fontSize: 16 },
-          rating: { fontSize: 12 },
-        };
+          container: { minHeight: 50 },
+          meter: { height: 6 }, // Even thinner for compactness
+          text: { fontSize: 14 },
+          rating: { fontSize: 10 },
+        }
       case 'large':
         return {
-          container: { height: 120 },
-          meter: { height: 16 },
-          text: { fontSize: 24 },
-          rating: { fontSize: 16 },
-        };
+          container: { minHeight: 60 },
+          meter: { height: 8 },
+          text: { fontSize: 16 },
+          rating: { fontSize: 12 },
+        }
     }
-  };
+  }
 
   const getTrendIcon = () => {
-    if (!showTrend || previousAccuracy === undefined) return null;
-    
-    const trend = accuracy - previousAccuracy;
-    if (Math.abs(trend) < 1) return null; // No significant change
-    
+    if (!showTrend || previousAccuracy === undefined) return null
+
+    const trend = accuracy - previousAccuracy
+    if (Math.abs(trend) < 1) return null // No significant change
+
     return trend > 0 ? (
       <TrendingUp size={16} color={ACCURACY_COLORS.excellent} />
     ) : (
       <TrendingDown size={16} color={ACCURACY_COLORS.poor} />
-    );
-  };
+    )
+  }
 
   const getTrendText = () => {
-    if (!showTrend || previousAccuracy === undefined) return '';
-    
-    const trend = accuracy - previousAccuracy;
-    if (Math.abs(trend) < 1) return '';
-    
-    return trend > 0 ? `+${trend.toFixed(1)}%` : `${trend.toFixed(1)}%`;
-  };
+    if (!showTrend || previousAccuracy === undefined) return ''
 
-  const sizeStyles = getSizeStyles();
-  const accuracyColor = getAccuracyColor(accuracy);
-  const rating = getAccuracyRating(accuracy);
+    const trend = accuracy - previousAccuracy
+    if (Math.abs(trend) < 1) return ''
+
+    return trend > 0 ? `+${trend.toFixed(1)}%` : `${trend.toFixed(1)}%`
+  }
+
+  const sizeStyles = getSizeStyles()
+  const accuracyColor = getAccuracyColor(accuracy)
+  const rating = getAccuracyRating(accuracy)
 
   return (
-    <Animated.View 
+    <Animated.View
       style={[
-        styles.container, 
+        styles.container,
         sizeStyles.container,
-        { transform: [{ scale: pulseAnimation }] }
+        { transform: [{ scale: pulseAnimation }] },
       ]}
     >
-      {/* Header */}
+      {/* Header with percentage */}
       <View style={styles.header}>
         <View style={styles.labelContainer}>
           <Target size={16} color={accuracyColor} />
           <Text style={[styles.label, MILITARY_TYPOGRAPHY.caption]}>
-            {label}
+            {label}: {accuracy.toFixed(1)}%
           </Text>
         </View>
-        
+
         {showTrend && (
           <View style={styles.trendContainer}>
             {getTrendIcon()}
-            <Text style={[styles.trendText, MILITARY_TYPOGRAPHY.caption, { color: accuracyColor }]}>
+            <Text
+              style={[styles.trendText, { color: accuracyColor, fontSize: 10 }]}
+            >
               {getTrendText()}
             </Text>
           </View>
         )}
       </View>
 
-      {/* Accuracy display */}
-      <View style={styles.accuracyDisplay}>
-        <Text style={[styles.accuracyText, sizeStyles.text, { color: accuracyColor }]}>
-          {accuracy.toFixed(1)}%
-        </Text>
-        <Text style={[styles.ratingText, sizeStyles.rating, { color: accuracyColor }]}>
+      {/* Rating display only */}
+      <View style={styles.ratingDisplay}>
+        <Text
+          style={[
+            styles.ratingText,
+            sizeStyles.rating,
+            { color: accuracyColor },
+          ]}
+        >
           {rating}
         </Text>
       </View>
@@ -175,67 +184,48 @@ export default function AccuracyMeter({
               },
             ]}
           />
-          
-          {/* Gradient overlay for visual enhancement */}
-          <LinearGradient
-            colors={[accuracyColor, `${accuracyColor}80`]}
-            style={[styles.meterGradient, sizeStyles.meter]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-          />
-        </View>
-
-        {/* Meter markers */}
-        <View style={styles.markers}>
-          {[25, 50, 75, 95].map((mark) => (
-            <View
-              key={mark}
-              style={[
-                styles.marker,
-                { left: `${mark}%` },
-                accuracy >= mark && { backgroundColor: accuracyColor },
-              ]}
-            />
-          ))}
-        </View>
-
-        {/* Meter labels */}
-        <View style={styles.markerLabels}>
-          <Text style={[styles.markerLabel, MILITARY_TYPOGRAPHY.caption]}>0</Text>
-          <Text style={[styles.markerLabel, MILITARY_TYPOGRAPHY.caption]}>25</Text>
-          <Text style={[styles.markerLabel, MILITARY_TYPOGRAPHY.caption]}>50</Text>
-          <Text style={[styles.markerLabel, MILITARY_TYPOGRAPHY.caption]}>75</Text>
-          <Text style={[styles.markerLabel, MILITARY_TYPOGRAPHY.caption]}>95</Text>
-          <Text style={[styles.markerLabel, MILITARY_TYPOGRAPHY.caption]}>100</Text>
         </View>
       </View>
 
       {/* Performance zones */}
       <View style={styles.zones}>
         <View style={[styles.zone, { backgroundColor: ACCURACY_COLORS.poor }]}>
-          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>TRAINEE</Text>
+          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>
+            TRAINEE
+          </Text>
         </View>
         <View style={[styles.zone, { backgroundColor: ACCURACY_COLORS.fair }]}>
-          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>QUALIFIED</Text>
+          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>
+            QUALIFIED
+          </Text>
         </View>
         <View style={[styles.zone, { backgroundColor: ACCURACY_COLORS.good }]}>
-          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>SHARP</Text>
+          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>
+            SHARP
+          </Text>
         </View>
-        <View style={[styles.zone, { backgroundColor: ACCURACY_COLORS.excellent }]}>
-          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>MARKS</Text>
+        <View
+          style={[styles.zone, { backgroundColor: ACCURACY_COLORS.excellent }]}
+        >
+          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>
+            MARKS
+          </Text>
         </View>
       </View>
     </Animated.View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
+    padding: 12,
     backgroundColor: TACTICAL_THEME.surface,
-    borderRadius: 12,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: TACTICAL_THEME.border,
+    marginBottom: 12,
+    zIndex: 1,
+    elevation: 2,
   },
   header: {
     flexDirection: 'row',
@@ -260,20 +250,20 @@ const styles = StyleSheet.create({
   trendText: {
     fontWeight: 'bold',
   },
-  accuracyDisplay: {
+  ratingDisplay: {
     alignItems: 'center',
-    marginBottom: 16,
-  },
-  accuracyText: {
-    fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 8,
+    minHeight: 18,
   },
   ratingText: {
     fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   meterContainer: {
-    marginBottom: 12,
+    marginBottom: 10,
     position: 'relative',
+    zIndex: 2,
   },
   meterBackground: {
     backgroundColor: TACTICAL_THEME.border,
@@ -295,44 +285,24 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     opacity: 0.7,
   },
-  markers: {
-    position: 'absolute',
-    top: -2,
-    left: 0,
-    right: 0,
-    height: 20,
-  },
-  marker: {
-    position: 'absolute',
-    width: 2,
-    height: 20,
-    backgroundColor: TACTICAL_THEME.textSecondary,
-    transform: [{ translateX: -1 }],
-  },
-  markerLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  markerLabel: {
-    color: TACTICAL_THEME.textSecondary,
-    fontSize: 10,
-  },
+
   zones: {
     flexDirection: 'row',
-    height: 4,
-    borderRadius: 2,
+    height: 16,
+    borderRadius: 3,
     overflow: 'hidden',
+    marginTop: 6,
   },
   zone: {
     flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 2,
   },
   zoneLabel: {
-    position: 'absolute',
-    top: -20,
-    left: '50%',
-    transform: [{ translateX: -15 }],
-    color: TACTICAL_THEME.textSecondary,
+    color: TACTICAL_THEME.text,
     fontSize: 8,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
-});
+})

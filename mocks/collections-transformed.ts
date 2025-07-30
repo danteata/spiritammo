@@ -2,11 +2,24 @@ import { Collection, Scripture, CollectionChapter } from '@/types/scripture'
 
 // Helper function to clean HTML from text
 const cleanText = (htmlText: string): string => {
-  return htmlText
+  // First, extract and preserve Words of Jesus content
+  const wordsOfJesusRegex = /<span class="wj">(.*?)<\/span>/g
+  let cleanedText = htmlText
+
+  // Replace Words of Jesus spans with a special marker
+  cleanedText = cleanedText.replace(
+    wordsOfJesusRegex,
+    '{{WJ_START}}$1{{WJ_END}}'
+  )
+
+  // Remove all other HTML tags
+  cleanedText = cleanedText
     .replace(/<[^>]*>/g, '') // Remove HTML tags
     .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
     .replace(/\s+/g, ' ') // Replace multiple spaces with single space
     .trim()
+
+  return cleanedText
 }
 
 // Helper function to extract verse number from reference
@@ -33,7 +46,7 @@ const transformToScriptures = (
     const chapterNumber = parseInt(chapterKey)
     const verses = rawData[chapterKey]
 
-    verses.forEach((verse: any, index: number) => {
+    verses.forEach((verse: any) => {
       const {
         book,
         chapter,
@@ -48,7 +61,6 @@ const transformToScriptures = (
         verse: verseNum,
         text: cleanedText,
         reference: verse.reference,
-        source: `${collectionAbbr} Collection`,
         accuracy: Math.floor(Math.random() * 30) + 70, // Random accuracy 70-100%
         practiceCount: Math.floor(Math.random() * 10),
         lastPracticed: new Date(

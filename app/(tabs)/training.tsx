@@ -14,14 +14,17 @@ import {
   MILITARY_TYPOGRAPHY,
 } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
-import { Collection } from '@/types/scripture'
+import { Collection, Scripture } from '@/types/scripture'
+import { runWordsOfJesusUpdate } from '@/scripts/updateWordsOfJesus'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import AmmunitionCard from '@/components/AmmunitionCard'
 import TargetPractice from '@/components/TargetPractice'
 import RankBadge from '@/components/RankBadge'
 import AccuracyMeter from '@/components/AccuracyMeter'
 import ActionButton from '@/components/ActionButton'
 import CollectionSelector from '@/components/CollectionSelector'
-import CollectionChapterView from '@/components/CollectionChapterView'
+
+import CollectionChapterSelector from '@/components/CollectionChapterSelector'
 import { generateAndStoreIntel } from '@/services/battleIntelligence'
 import { voiceRecognitionService } from '@/services/voiceRecognition'
 import { militaryRankingService } from '@/services/militaryRanking'
@@ -31,7 +34,7 @@ export default function TrainingScreen() {
     isDark,
     currentScripture,
     getRandomScripture,
-
+    scriptures,
     updateScriptureAccuracy,
     userStats,
     collections,
@@ -41,16 +44,31 @@ export default function TrainingScreen() {
 
   const [selectedCollection, setSelectedCollection] =
     useState<Collection | null>(null)
-  const [showChapterSelector, setShowChapterSelector] = useState(false)
+
   const [showTargetPractice, setShowTargetPractice] = useState(false)
   const [trainingMode, setTrainingMode] = useState<
     'single' | 'burst' | 'automatic'
   >('single')
   const [militaryProfile, setMilitaryProfile] = useState<any>(null)
   const [previousAccuracy, setPreviousAccuracy] = useState<number>(0)
+  const [showMultiChapterSelector, setShowMultiChapterSelector] =
+    useState(false)
+  const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
 
   useEffect(() => {
     loadMilitaryProfile()
+
+    // One-time Words of Jesus update - remove after running once
+    AsyncStorage.getItem('wordsOfJesusUpdated').then((hasRunUpdate) => {
+      if (!hasRunUpdate) {
+        runWordsOfJesusUpdate().then((success) => {
+          if (success) {
+            AsyncStorage.setItem('wordsOfJesusUpdated', 'true')
+            console.log('✅ Words of Jesus highlighting enabled')
+          }
+        })
+      }
+    })
   }, [])
 
   const loadMilitaryProfile = async () => {
@@ -122,8 +140,29 @@ export default function TrainingScreen() {
     setShowTargetPractice(false)
   }
 
-  const toggleChapterSelector = () => {
-    setShowChapterSelector(!showChapterSelector)
+  const handleMultiChapterSelection = (chapterIds: string[]) => {
+    setSelectedChapterIds(chapterIds)
+
+    // Get all scriptures from selected chapters
+    if (selectedCollection && selectedCollection.chapters) {
+      const selectedChapters = selectedCollection.chapters.filter((ch) =>
+        chapterIds.includes(ch.id)
+      )
+
+      // Combine all scripture IDs from selected chapters
+      const allScriptureIds = selectedChapters.reduce((acc, chapter) => {
+        return [...acc, ...chapter.scriptures]
+      }, [] as string[])
+
+      // Get the actual scripture objects
+      const chapterScriptures = allScriptureIds
+        .map((id) => scriptures.find((s) => s.id === id))
+        .filter(Boolean) as Scripture[]
+
+      if (chapterScriptures.length > 0) {
+        setCurrentScripture(chapterScriptures[0])
+      }
+    }
   }
 
   const backgroundColors = isDark
@@ -152,7 +191,11 @@ export default function TrainingScreen() {
             </Text>
 
             {militaryProfile && (
-              <RankBadge rank={militaryProfile.currentRank} size="small" />
+              <RankBadge
+                rank={militaryProfile.currentRank}
+                size="small"
+                showLabel={false}
+              />
             )}
           </View>
 
@@ -201,7 +244,7 @@ export default function TrainingScreen() {
             {selectedCollection && selectedCollection.isChapterBased && (
               <ActionButton
                 title="CHAPTERS"
-                onPress={toggleChapterSelector}
+                onPress={() => setShowMultiChapterSelector(true)}
                 testID="toggle-chapters-button"
               />
             )}
@@ -210,6 +253,7 @@ export default function TrainingScreen() {
               title="RANDOM"
               onPress={handleReloadAmmunition}
               testID="random-deployment-button"
+              size="small"
             />
           </View>
         </View>
@@ -218,34 +262,18 @@ export default function TrainingScreen() {
         <CollectionSelector
           onSelectCollection={handleSelectCollection}
           selectedCollection={selectedCollection}
+          selectedChapterIds={selectedChapterIds}
         />
 
-        {/* Chapter Selector */}
-        {showChapterSelector &&
-          selectedCollection &&
-          selectedCollection.isChapterBased && (
-            <CollectionChapterView
-              collection={selectedCollection}
-              onChapterSelect={(chapterId: string) => {
-                // Load scriptures from selected chapter
-                const chapter = selectedCollection.chapters?.find(
-                  (c) => c.id === chapterId
-                )
-                if (chapter && chapter.scriptures.length > 0) {
-                  const scriptures = getScripturesByCollection(
-                    selectedCollection.id
-                  )
-                  const chapterScriptures = scriptures.filter((s) =>
-                    chapter.scriptures.includes(s.id)
-                  )
-                  if (chapterScriptures.length > 0) {
-                    setCurrentScripture(chapterScriptures[0])
-                  }
-                }
-              }}
-              showProgress={false}
-            />
-          )}
+        {/* Multi-Chapter Selector */}
+        {selectedCollection && selectedCollection.isChapterBased && (
+          <CollectionChapterSelector
+            collection={selectedCollection}
+            isVisible={showMultiChapterSelector}
+            onClose={() => setShowMultiChapterSelector(false)}
+            onStartPractice={handleMultiChapterSelection}
+          />
+        )}
 
         {/* Accuracy Meter */}
         {currentScripture && currentScripture.accuracy && (
@@ -376,7 +404,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 60,
+    paddingTop: 25, // Further reduced for tighter layout
   },
   headerTop: {
     flexDirection: 'row',
@@ -386,6 +414,8 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
+    textAlignVertical: 'center', // Ensure vertical centering
+    includeFontPadding: false, // Remove extra font padding on Android
   },
   subtitle: {
     marginBottom: 16,
@@ -417,7 +447,9 @@ const styles = StyleSheet.create({
   },
   metricsContainer: {
     paddingHorizontal: 16,
-    marginBottom: 16,
+    marginBottom: 12,
+    zIndex: 10,
+    elevation: 5,
   },
   missionStatus: {
     margin: 16,

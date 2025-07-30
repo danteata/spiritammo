@@ -11,6 +11,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { X, Book } from 'lucide-react-native'
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Scripture } from '@/types/scripture'
+import ScriptureText from './ScriptureText'
 
 interface BookScripturesModalProps {
   isVisible: boolean
@@ -30,13 +31,12 @@ export default function BookScripturesModal({
       <Text style={[styles.reference, MILITARY_TYPOGRAPHY.body]}>
         {item.reference}
       </Text>
-      <Text
+      <ScriptureText
+        text={item.text}
         style={[styles.scriptureText, MILITARY_TYPOGRAPHY.caption]}
         numberOfLines={2}
         ellipsizeMode="tail"
-      >
-        {item.text}
-      </Text>
+      />
     </View>
   )
 

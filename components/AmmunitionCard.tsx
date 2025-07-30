@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   StyleSheet,
   Text,
@@ -14,6 +14,7 @@ import {
   ACCURACY_COLORS,
 } from '@/constants/colors'
 import { Scripture } from '@/types/scripture'
+import ScriptureText from './ScriptureText'
 
 interface AmmunitionCardProps {
   scripture: Scripture
@@ -31,6 +32,29 @@ export default function AmmunitionCard({
   isLoading = false,
 }: AmmunitionCardProps) {
   const [fireAnimation] = useState(new Animated.Value(1))
+  const [pulseAnimation] = useState(new Animated.Value(1))
+
+  useEffect(() => {
+    // Start pulsing animation for the FIRE button
+    const startPulse = () => {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnimation, {
+            toValue: 1.1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnimation, {
+            toValue: 1,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start()
+    }
+
+    startPulse()
+  }, [])
 
   const handleFire = () => {
     // Recoil animation
@@ -110,9 +134,10 @@ export default function AmmunitionCard({
 
         {/* Scripture text */}
         <View style={styles.textContainer}>
-          <Text style={[styles.scriptureText, MILITARY_TYPOGRAPHY.body]}>
-            {scripture.text}
-          </Text>
+          <ScriptureText
+            text={scripture.text}
+            style={[styles.scriptureText, MILITARY_TYPOGRAPHY.body]}
+          />
         </View>
 
         {/* Mnemonic section */}
@@ -163,17 +188,19 @@ export default function AmmunitionCard({
 
         {/* Action buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[styles.actionButton, styles.fireButton]}
-            onPress={handleFire}
-            disabled={isLoading}
-            testID="fire-button"
-          >
-            <Zap size={20} color={TACTICAL_THEME.text} />
-            <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
-              FIRE!
-            </Text>
-          </TouchableOpacity>
+          <Animated.View style={{ transform: [{ scale: pulseAnimation }] }}>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.fireButton]}
+              onPress={handleFire}
+              disabled={isLoading}
+              testID="fire-button"
+            >
+              <Zap size={20} color={TACTICAL_THEME.text} />
+              <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
+                FIRE!
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
 
           <TouchableOpacity
             style={[styles.actionButton, styles.reloadButton]}

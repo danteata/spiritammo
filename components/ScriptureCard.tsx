@@ -12,6 +12,7 @@ import { Eye, EyeOff, RefreshCw } from 'lucide-react-native'
 import { Scripture } from '@/types/scripture'
 import { GRADIENTS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
+import ScriptureText from './ScriptureText'
 
 interface ScriptureCardProps {
   scripture: Scripture
@@ -55,20 +56,16 @@ export default function ScriptureCard({
       </Text>
 
       {revealed ? (
-        <Text style={[styles.text, { color: textColor }]}>
-          {scripture.verse && (
-            <Text style={styles.verseNumber}>{scripture.verse}</Text>
-          )}
-          {scripture.text}
-        </Text>
+        <ScriptureText
+          text={scripture.text}
+          style={[styles.text, { color: textColor }]}
+        />
       ) : (
         <View style={styles.hiddenTextContainer}>
-          <Text style={[styles.text, styles.hiddenText, { color: textColor }]}>
-            {scripture.verse && (
-              <Text style={styles.verseNumber}>{scripture.verse}</Text>
-            )}
-            {scripture.text}
-          </Text>
+          <ScriptureText
+            text={scripture.text}
+            style={[styles.text, styles.hiddenText, { color: textColor }]}
+          />
           <BlurView
             intensity={Platform.OS === 'ios' ? 25 : 20}
             style={styles.blurOverlay}

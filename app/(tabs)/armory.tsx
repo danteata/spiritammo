@@ -427,8 +427,10 @@ export default function ArmoryScreen() {
               MILITARY_TYPOGRAPHY.caption,
               { color: TACTICAL_THEME.textSecondary },
             ]}
+            numberOfLines={1}
+            ellipsizeMode="tail"
           >
-            Scripture Collections & Supply Lines
+            Supply Lines
           </Text>
         </View>
 
@@ -659,6 +661,7 @@ const styles = StyleSheet.create({
   },
   headerContent: {
     flex: 1,
+    marginRight: 12, // Add space between text and button
   },
   sectionTitle: {
     marginBottom: 8,
@@ -670,14 +673,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: TACTICAL_THEME.accent,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 6,
+    minWidth: 100, // Ensure consistent width
   },
   uploadText: {
     color: TACTICAL_THEME.text,
     fontWeight: 'bold',
+    fontSize: 11,
   },
   collectionsTitle: {
     marginBottom: 16,
@@ -807,7 +812,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 24,
     marginBottom: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
   },
   clearSelectionButton: {
     padding: 8,

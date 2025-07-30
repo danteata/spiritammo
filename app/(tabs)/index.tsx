@@ -93,6 +93,7 @@ export default function HomeScreen() {
               subtitle="Load next round"
               onPress={handleNextScripture}
               testID="load-next-round-button"
+              animated={true}
             />
           </>
         )}
