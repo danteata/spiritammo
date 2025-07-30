@@ -22,6 +22,7 @@ export interface Book {
 export interface Collection {
   id: string
   name: string
+  abbreviation?: string // Short abbreviation like "POSE", "LAD", etc.
   description?: string
   scriptures: string[] // Scripture IDs
   createdAt?: string

@@ -14,12 +14,14 @@ import {
   MILITARY_TYPOGRAPHY,
 } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
+import { Collection } from '@/types/scripture'
 import AmmunitionCard from '@/components/AmmunitionCard'
 import TargetPractice from '@/components/TargetPractice'
 import RankBadge from '@/components/RankBadge'
 import AccuracyMeter from '@/components/AccuracyMeter'
 import ActionButton from '@/components/ActionButton'
-import ChapterSelector from '@/components/ChapterSelector'
+import CollectionSelector from '@/components/CollectionSelector'
+import CollectionChapterView from '@/components/CollectionChapterView'
 import { generateAndStoreIntel } from '@/services/battleIntelligence'
 import { voiceRecognitionService } from '@/services/voiceRecognition'
 import { militaryRankingService } from '@/services/militaryRanking'
@@ -29,13 +31,16 @@ export default function TrainingScreen() {
     isDark,
     currentScripture,
     getRandomScripture,
-    selectedBook,
-    selectedChapters,
-    setSelectedChapters,
+
     updateScriptureAccuracy,
     userStats,
+    collections,
+    getScripturesByCollection,
+    setCurrentScripture,
   } = useAppStore()
 
+  const [selectedCollection, setSelectedCollection] =
+    useState<Collection | null>(null)
   const [showChapterSelector, setShowChapterSelector] = useState(false)
   const [showTargetPractice, setShowTargetPractice] = useState(false)
   const [trainingMode, setTrainingMode] = useState<
@@ -57,8 +62,14 @@ export default function TrainingScreen() {
     }
   }
 
-  const handleSelectChapters = (chapters: number[]) => {
-    setSelectedChapters(chapters)
+  const handleSelectCollection = (collection: Collection) => {
+    setSelectedCollection(collection)
+    const scriptures = getScripturesByCollection(collection.id)
+    if (scriptures.length > 0) {
+      // Reset previous accuracy when switching ammunition
+      setPreviousAccuracy(0)
+      setCurrentScripture(scriptures[0])
+    }
   }
 
   const handleFireAmmunition = () => {
@@ -66,7 +77,17 @@ export default function TrainingScreen() {
   }
 
   const handleReloadAmmunition = () => {
-    getRandomScripture()
+    if (selectedCollection) {
+      // Get random scripture from the selected collection
+      const scriptures = getScripturesByCollection(selectedCollection.id)
+      if (scriptures.length > 0) {
+        const randomIndex = Math.floor(Math.random() * scriptures.length)
+        setCurrentScripture(scriptures[randomIndex])
+      }
+    } else {
+      // Get random scripture from all scriptures
+      getRandomScripture()
+    }
   }
 
   const handleGenerateIntel = async () => {
@@ -106,8 +127,8 @@ export default function TrainingScreen() {
   }
 
   const backgroundColors = isDark
-    ? GRADIENTS.tactical.background
-    : GRADIENTS.primary.light
+    ? (GRADIENTS.tactical.background as [string, string])
+    : (GRADIENTS.primary.light as [string, string])
 
   return (
     <LinearGradient
@@ -142,8 +163,8 @@ export default function TrainingScreen() {
               { color: TACTICAL_THEME.textSecondary },
             ]}
           >
-            {selectedBook
-              ? `${selectedBook.name} OPERATIONS`
+            {selectedCollection
+              ? `${selectedCollection.name} OPERATIONS`
               : 'ALL UNITS DEPLOYMENT'}
           </Text>
 
@@ -177,24 +198,54 @@ export default function TrainingScreen() {
           </View>
 
           <View style={styles.tabButtons}>
-            <ActionButton
-              title="SELECT CHAPTERS"
-              onPress={toggleChapterSelector}
-              testID="toggle-chapters-button"
-            />
+            {selectedCollection && selectedCollection.isChapterBased && (
+              <ActionButton
+                title="CHAPTERS"
+                onPress={toggleChapterSelector}
+                testID="toggle-chapters-button"
+              />
+            )}
 
             <ActionButton
-              title="RANDOM DEPLOYMENT"
+              title="RANDOM"
               onPress={handleReloadAmmunition}
               testID="random-deployment-button"
             />
           </View>
         </View>
 
+        {/* Collection Selector */}
+        <CollectionSelector
+          onSelectCollection={handleSelectCollection}
+          selectedCollection={selectedCollection}
+        />
+
         {/* Chapter Selector */}
-        {showChapterSelector && selectedBook && (
-          <ChapterSelector onSelectChapters={handleSelectChapters} />
-        )}
+        {showChapterSelector &&
+          selectedCollection &&
+          selectedCollection.isChapterBased && (
+            <CollectionChapterView
+              collection={selectedCollection}
+              onChapterSelect={(chapterId: string) => {
+                // Load scriptures from selected chapter
+                const chapter = selectedCollection.chapters?.find(
+                  (c) => c.id === chapterId
+                )
+                if (chapter && chapter.scriptures.length > 0) {
+                  const scriptures = getScripturesByCollection(
+                    selectedCollection.id
+                  )
+                  const chapterScriptures = scriptures.filter((s) =>
+                    chapter.scriptures.includes(s.id)
+                  )
+                  if (chapterScriptures.length > 0) {
+                    setCurrentScripture(chapterScriptures[0])
+                  }
+                }
+              }}
+              showProgress={false}
+            />
+          )}
 
         {/* Accuracy Meter */}
         {currentScripture && currentScripture.accuracy && (
@@ -202,7 +253,7 @@ export default function TrainingScreen() {
             <AccuracyMeter
               accuracy={currentScripture.accuracy}
               previousAccuracy={previousAccuracy}
-              label="CURRENT AMMUNITION ACCURACY"
+              label="AMMO ACCURACY"
               size="medium"
               showTrend={true}
             />

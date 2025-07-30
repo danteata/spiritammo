@@ -12,6 +12,7 @@ import { BOOKS } from '@/mocks/books'
 import { COLLECTIONS } from '@/mocks/collections'
 import { SCRIPTURES } from '@/mocks/scriptures'
 import { useTheme } from './useTheme'
+import { DataLoaderService } from '@/services/dataLoader'
 
 const USER_SETTINGS_KEY = '@spiritammo_user_settings'
 const USER_STATS_KEY = '@spiritammo_user_stats'
@@ -80,25 +81,38 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
           )
         }
 
-        // Load scriptures
-        const storedScriptures = await AsyncStorage.getItem(SCRIPTURES_KEY)
-        if (storedScriptures) {
-          setScriptures(JSON.parse(storedScriptures))
+        // Load transformed scriptures and collections
+        const transformedData = await DataLoaderService.loadTransformedData()
+        if (transformedData.success) {
+          setScriptures(transformedData.scriptures)
+          setCollections(transformedData.collections)
+          console.log('Loaded transformed data:', {
+            collections: transformedData.collections.length,
+            scriptures: transformedData.scriptures.length,
+          })
         } else {
-          await AsyncStorage.setItem(SCRIPTURES_KEY, JSON.stringify(SCRIPTURES))
-          setScriptures(SCRIPTURES)
-        }
+          // Fallback to mock data if transformation fails
+          const storedScriptures = await AsyncStorage.getItem(SCRIPTURES_KEY)
+          if (storedScriptures) {
+            setScriptures(JSON.parse(storedScriptures))
+          } else {
+            await AsyncStorage.setItem(
+              SCRIPTURES_KEY,
+              JSON.stringify(SCRIPTURES)
+            )
+            setScriptures(SCRIPTURES)
+          }
 
-        // Load collections
-        const storedCollections = await AsyncStorage.getItem(COLLECTIONS_KEY)
-        if (storedCollections) {
-          setCollections(JSON.parse(storedCollections))
-        } else {
-          await AsyncStorage.setItem(
-            COLLECTIONS_KEY,
-            JSON.stringify(COLLECTIONS)
-          )
-          setCollections(COLLECTIONS)
+          const storedCollections = await AsyncStorage.getItem(COLLECTIONS_KEY)
+          if (storedCollections) {
+            setCollections(JSON.parse(storedCollections))
+          } else {
+            await AsyncStorage.setItem(
+              COLLECTIONS_KEY,
+              JSON.stringify(COLLECTIONS)
+            )
+            setCollections(COLLECTIONS)
+          }
         }
 
         // Set initial scripture

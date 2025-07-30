@@ -1,27 +1,37 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Animated } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Target, Zap, Brain, RotateCcw } from 'lucide-react-native';
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY, ACCURACY_COLORS } from '@/constants/colors';
-import { Scripture } from '@/types/scripture';
+import React, { useState } from 'react'
+import {
+  StyleSheet,
+  Text,
+  View,
+  TouchableOpacity,
+  Animated,
+} from 'react-native'
+import { LinearGradient } from 'expo-linear-gradient'
+import { Target, Zap, Brain, RotateCcw } from 'lucide-react-native'
+import {
+  TACTICAL_THEME,
+  MILITARY_TYPOGRAPHY,
+  ACCURACY_COLORS,
+} from '@/constants/colors'
+import { Scripture } from '@/types/scripture'
 
 interface AmmunitionCardProps {
-  scripture: Scripture;
-  onFire: () => void;
-  onReload: () => void;
-  onIntel: () => void; // Generate mnemonic
-  isLoading?: boolean;
+  scripture: Scripture
+  onFire: () => void
+  onReload: () => void
+  onIntel: () => void // Generate mnemonic
+  isLoading?: boolean
 }
 
-export default function AmmunitionCard({ 
-  scripture, 
-  onFire, 
-  onReload, 
-  onIntel, 
-  isLoading = false 
+export default function AmmunitionCard({
+  scripture,
+  onFire,
+  onReload,
+  onIntel,
+  isLoading = false,
 }: AmmunitionCardProps) {
-  const [fireAnimation] = useState(new Animated.Value(1));
-  
+  const [fireAnimation] = useState(new Animated.Value(1))
+
   const handleFire = () => {
     // Recoil animation
     Animated.sequence([
@@ -35,32 +45,34 @@ export default function AmmunitionCard({
         duration: 100,
         useNativeDriver: true,
       }),
-    ]).start();
-    
-    onFire();
-  };
+    ]).start()
+
+    onFire()
+  }
 
   const getAccuracyColor = (accuracy?: number) => {
-    if (!accuracy) return ACCURACY_COLORS.poor;
-    if (accuracy >= 95) return ACCURACY_COLORS.excellent;
-    if (accuracy >= 85) return ACCURACY_COLORS.good;
-    if (accuracy >= 75) return ACCURACY_COLORS.fair;
-    return ACCURACY_COLORS.poor;
-  };
+    if (!accuracy) return ACCURACY_COLORS.poor
+    if (accuracy >= 95) return ACCURACY_COLORS.excellent
+    if (accuracy >= 85) return ACCURACY_COLORS.good
+    if (accuracy >= 75) return ACCURACY_COLORS.fair
+    return ACCURACY_COLORS.poor
+  }
 
   const getAccuracyLabel = (accuracy?: number) => {
-    if (!accuracy) return 'UNTESTED';
-    if (accuracy >= 95) return 'MARKSMAN';
-    if (accuracy >= 85) return 'SHARPSHOOTER';
-    if (accuracy >= 75) return 'QUALIFIED';
-    return 'TRAINEE';
-  };
+    if (!accuracy) return 'UNTESTED'
+    if (accuracy >= 95) return 'MARKSMAN'
+    if (accuracy >= 85) return 'SHARPSHOOTER'
+    if (accuracy >= 75) return 'QUALIFIED'
+    return 'TRAINEE'
+  }
 
-  const roundsCount = scripture.practiceCount || 0;
-  const accuracy = scripture.accuracy || 0;
+  const roundsCount = scripture.practiceCount || 0
+  const accuracy = scripture.accuracy || 0
 
   return (
-    <Animated.View style={[styles.container, { transform: [{ scale: fireAnimation }] }]}>
+    <Animated.View
+      style={[styles.container, { transform: [{ scale: fireAnimation }] }]}
+    >
       <LinearGradient
         colors={[TACTICAL_THEME.surface, TACTICAL_THEME.background]}
         style={styles.card}
@@ -77,9 +89,19 @@ export default function AmmunitionCard({
               ROUNDS: {roundsCount.toString().padStart(3, '0')}
             </Text>
           </View>
-          
+
           <View style={styles.statusIndicators}>
-            <View style={[styles.statusDot, { backgroundColor: roundsCount > 0 ? TACTICAL_THEME.success : TACTICAL_THEME.error }]} />
+            <View
+              style={[
+                styles.statusDot,
+                {
+                  backgroundColor:
+                    roundsCount > 0
+                      ? TACTICAL_THEME.success
+                      : TACTICAL_THEME.error,
+                },
+              ]}
+            />
             <Text style={[styles.statusText, MILITARY_TYPOGRAPHY.caption]}>
               {roundsCount > 0 ? 'LOADED' : 'EMPTY'}
             </Text>
@@ -115,20 +137,26 @@ export default function AmmunitionCard({
             <Text style={[styles.accuracyLabel, MILITARY_TYPOGRAPHY.caption]}>
               ACCURACY: {accuracy.toFixed(1)}%
             </Text>
-            <Text style={[styles.accuracyRating, MILITARY_TYPOGRAPHY.caption, { color: getAccuracyColor(accuracy) }]}>
+            <Text
+              style={[
+                styles.accuracyRating,
+                MILITARY_TYPOGRAPHY.caption,
+                { color: getAccuracyColor(accuracy) },
+              ]}
+            >
               {getAccuracyLabel(accuracy)}
             </Text>
           </View>
-          
+
           <View style={styles.accuracyBar}>
-            <View 
+            <View
               style={[
-                styles.accuracyFill, 
-                { 
-                  width: `${accuracy}%`, 
-                  backgroundColor: getAccuracyColor(accuracy) 
-                }
-              ]} 
+                styles.accuracyFill,
+                {
+                  width: `${accuracy}%`,
+                  backgroundColor: getAccuracyColor(accuracy),
+                },
+              ]}
             />
           </View>
         </View>
@@ -176,13 +204,13 @@ export default function AmmunitionCard({
         {roundsCount > 50 && (
           <View style={styles.wearIndicator}>
             <Text style={[styles.wearText, MILITARY_TYPOGRAPHY.caption]}>
-              WEAPON MAINTENANCE RECOMMENDED
+              MAINTENANCE REQUIRED
             </Text>
           </View>
         )}
       </LinearGradient>
     </Animated.View>
-  );
+  )
 }
 
 const styles = StyleSheet.create({
@@ -323,4 +351,4 @@ const styles = StyleSheet.create({
     color: TACTICAL_THEME.warning,
     textAlign: 'center',
   },
-});
+})

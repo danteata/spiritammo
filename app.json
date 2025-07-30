@@ -22,7 +22,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.spiritammo-scripture-mobile-app"
+      "package": "com.danteata.spiritammoscripturemobileapp"
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -37,6 +37,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": "https://rork.com/"
+      },
+      "eas": {
+        "projectId": "15f1c643-7dd6-4d9d-840f-9f518bfb3484"
+      }
     }
   }
 }
