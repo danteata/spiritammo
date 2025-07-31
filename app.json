@@ -33,7 +33,8 @@
         {
           "origin": "https://rork.com/"
         }
-      ]
+      ],
+      "./plugins/withGradleProperties"
     ],
     "experiments": {
       "typedRoutes": true
