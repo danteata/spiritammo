@@ -25,7 +25,10 @@ import ActionButton from '@/components/ActionButton'
 import CollectionSelector from '@/components/CollectionSelector'
 
 import CollectionChapterSelector from '@/components/CollectionChapterSelector'
-import { generateAndStoreIntel } from '@/services/battleIntelligence'
+import {
+  generateAndStoreIntel,
+  StoredIntel,
+} from '@/services/battleIntelligence'
 import { voiceRecognitionService } from '@/services/voiceRecognition'
 import { militaryRankingService } from '@/services/militaryRanking'
 
@@ -54,6 +57,7 @@ export default function TrainingScreen() {
   const [showMultiChapterSelector, setShowMultiChapterSelector] =
     useState(false)
   const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
+  const [generatedIntel, setGeneratedIntel] = useState<StoredIntel | null>(null)
 
   useEffect(() => {
     loadMilitaryProfile()
@@ -114,6 +118,11 @@ export default function TrainingScreen() {
         const intel = await generateAndStoreIntel(currentScripture)
         if (intel) {
           console.log('Generated battle intel:', intel.battlePlan)
+          setGeneratedIntel(intel)
+          setCurrentScripture({
+            ...currentScripture,
+            mnemonic: `${intel.battlePlan}: ${intel.tacticalNotes}`,
+          })
         }
       } catch (error) {
         console.error('Failed to generate intel:', error)
@@ -279,7 +288,7 @@ export default function TrainingScreen() {
         {false && currentScripture && currentScripture.accuracy && (
           <View style={styles.metricsContainer}>
             <AccuracyMeter
-              accuracy={currentScripture.accuracy}
+              accuracy={currentScripture?.accuracy}
               previousAccuracy={previousAccuracy}
               label="AMMO ACCURACY"
               size="medium"
