@@ -68,6 +68,7 @@ export default function ScriptureCard({
           />
           <BlurView
             intensity={Platform.OS === 'ios' ? 25 : 20}
+            experimentalBlurMethod="dimezisBlurView"
             style={styles.blurOverlay}
             tint="light"
           />
