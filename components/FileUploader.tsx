@@ -22,10 +22,10 @@ import {
 } from 'lucide-react-native'
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import {
-  fileExtractionService,
+  EnhancedFileExtractionService,
   ExtractedDocument,
   ExtractionProgress,
-} from '@/services/fileExtraction'
+} from '@/services/enhancedFileExtraction'
 
 interface FileUploaderProps {
   isVisible: boolean
@@ -47,6 +47,7 @@ export default function FileUploader({
   const [selectedDocument, setSelectedDocument] =
     useState<ExtractedDocument | null>(null)
   const [selectedVerses, setSelectedVerses] = useState<string[]>([])
+  const fileExtractionService = new EnhancedFileExtractionService()
 
   React.useEffect(() => {
     if (isVisible) {
@@ -64,11 +65,13 @@ export default function FileUploader({
     setExtractionProgress(null)
 
     try {
+      console.log('Starting file extraction...')
       const result = await fileExtractionService.pickAndExtractFile(
         (progress) => {
           setExtractionProgress(progress)
         }
       )
+      console.log('Extraction Result:', result)
 
       if (result) {
         loadExtractedDocuments()

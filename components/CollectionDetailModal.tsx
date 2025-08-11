@@ -20,6 +20,7 @@ import {
 } from 'lucide-react-native'
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection } from '@/types/scripture'
+import { fileExtractionService } from '@/services/fileExtraction';
 import { useAppStore } from '@/hooks/useAppStore'
 
 interface CollectionDetailModalProps {
@@ -59,6 +60,9 @@ export default function CollectionDetailModal({
               </Text>
             </View>
 
+            <TouchableOpacity style={styles.closeButton} onPress={() => fileExtractionService.openDocument(collection.id)}>
+              <BookOpen size={24} color={TACTICAL_THEME.text} />
+            </TouchableOpacity>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
               <X size={24} color={TACTICAL_THEME.text} />
             </TouchableOpacity>

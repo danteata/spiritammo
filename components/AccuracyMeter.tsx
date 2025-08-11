@@ -138,7 +138,7 @@ export default function AccuracyMeter({
         <View style={styles.labelContainer}>
           <Target size={16} color={accuracyColor} />
           <Text style={[styles.label, MILITARY_TYPOGRAPHY.caption]}>
-            {label}: {accuracy.toFixed(1)}%
+            {label}: {accuracy?.toFixed(1)}%
           </Text>
         </View>
 

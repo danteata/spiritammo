@@ -29,7 +29,7 @@ import {
   generateAndStoreIntel,
   StoredIntel,
 } from '@/services/battleIntelligence'
-import { voiceRecognitionService } from '@/services/voiceRecognition'
+// Note: Voice recognition is now handled by individual components using useSmartVoiceRecognition
 import { militaryRankingService } from '@/services/militaryRanking'
 
 export default function TrainingScreen() {
@@ -58,6 +58,8 @@ export default function TrainingScreen() {
     useState(false)
   const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
   const [generatedIntel, setGeneratedIntel] = useState<StoredIntel | null>(null)
+  const [isGeneratingIntel, setIsGeneratingIntel] = useState(false)
+  const [intelFeedback, setIntelFeedback] = useState<string | null>(null)
 
   useEffect(() => {
     loadMilitaryProfile()
@@ -115,6 +117,16 @@ export default function TrainingScreen() {
   const handleGenerateIntel = async () => {
     if (currentScripture) {
       try {
+        setIsGeneratingIntel(true)
+        setIntelFeedback("🎯 ACQUIRING BATTLE INTELLIGENCE...")
+
+        // Add dramatic delay for military effect
+        await new Promise(resolve => setTimeout(resolve, 1000))
+        setIntelFeedback("📡 CONTACTING COMMAND CENTER...")
+
+        await new Promise(resolve => setTimeout(resolve, 800))
+        setIntelFeedback("🧠 ANALYZING TACTICAL DATA...")
+
         const intel = await generateAndStoreIntel(currentScripture)
         if (intel) {
           console.log('Generated battle intel:', intel.battlePlan)
@@ -123,31 +135,45 @@ export default function TrainingScreen() {
             ...currentScripture,
             mnemonic: `${intel.battlePlan}: ${intel.tacticalNotes}`,
           })
+
+          setIntelFeedback("✅ INTELLIGENCE ACQUIRED! MISSION READY!")
+          setTimeout(() => {
+            setIntelFeedback(null)
+            setIsGeneratingIntel(false)
+          }, 2000)
+        } else {
+          setIntelFeedback("❌ INTELLIGENCE GATHERING FAILED!")
+          setTimeout(() => {
+            setIntelFeedback(null)
+            setIsGeneratingIntel(false)
+          }, 2000)
         }
       } catch (error) {
         console.error('Failed to generate intel:', error)
+        setIntelFeedback("🚨 COMMUNICATION ERROR! RETRY MISSION!")
+        setTimeout(() => {
+          setIntelFeedback(null)
+          setIsGeneratingIntel(false)
+        }, 2000)
       }
     }
   }
 
-  const handleTargetPracticeComplete = async (
-    transcript: string,
-    accuracy: number
-  ) => {
+  const handleTargetPracticeComplete = async (accuracy: number) => {
     if (currentScripture) {
-      setPreviousAccuracy(currentScripture.accuracy || 0)
-      await updateScriptureAccuracy(currentScripture.id, accuracy)
+      setPreviousAccuracy(currentScripture.accuracy || 0);
+      await updateScriptureAccuracy(currentScripture.id, accuracy);
 
       await militaryRankingService.updateProfile({
         versesMemorized: userStats.totalPracticed + 1,
         averageAccuracy: userStats.averageAccuracy,
         consecutiveDays: userStats.streak,
-      })
+      });
 
-      await loadMilitaryProfile()
+      await loadMilitaryProfile();
     }
-    setShowTargetPractice(false)
-  }
+    setShowTargetPractice(false);
+  };
 
   const handleMultiChapterSelection = (chapterIds: string[]) => {
     setSelectedChapterIds(chapterIds)
@@ -304,6 +330,8 @@ export default function TrainingScreen() {
             onFire={handleFireAmmunition}
             onReload={handleReloadAmmunition}
             onIntel={handleGenerateIntel}
+            isGeneratingIntel={isGeneratingIntel}
+            intelFeedback={intelFeedback}
           />
         )}
 

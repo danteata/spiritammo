@@ -22,6 +22,8 @@ interface AmmunitionCardProps {
   onReload: () => void
   onIntel: () => void // Generate mnemonic
   isLoading?: boolean
+  isGeneratingIntel?: boolean
+  intelFeedback?: string | null
 }
 
 export default function AmmunitionCard({
@@ -30,6 +32,8 @@ export default function AmmunitionCard({
   onReload,
   onIntel,
   isLoading = false,
+  isGeneratingIntel = false,
+  intelFeedback = null,
 }: AmmunitionCardProps) {
   const [fireAnimation] = useState(new Animated.Value(1))
   const [pulseAnimation] = useState(new Animated.Value(1))
@@ -215,17 +219,37 @@ export default function AmmunitionCard({
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionButton, styles.intelButton]}
+            style={[
+              styles.actionButton,
+              styles.intelButton,
+              isGeneratingIntel && styles.generatingButton
+            ]}
             onPress={onIntel}
-            disabled={isLoading}
+            disabled={isLoading || isGeneratingIntel}
             testID="intel-button"
           >
-            <Brain size={20} color={TACTICAL_THEME.text} />
+            {isGeneratingIntel ? (
+              <Animated.View style={{ transform: [{ rotate: pulseAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: ['0deg', '360deg'],
+              }) }] }}>
+                <Brain size={20} color={TACTICAL_THEME.text} />
+              </Animated.View>
+            ) : (
+              <Brain size={20} color={TACTICAL_THEME.text} />
+            )}
             <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
-              INTEL
+              {isGeneratingIntel ? 'ACQUIRING...' : 'INTEL'}
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* Intel Feedback Display */}
+        {intelFeedback && (
+          <View style={styles.intelFeedback}>
+            <Text style={styles.intelFeedbackText}>{intelFeedback}</Text>
+          </View>
+        )}
 
         {/* Damage/wear indicators */}
         {roundsCount > 50 && (
@@ -380,5 +404,24 @@ const styles = StyleSheet.create({
   wearText: {
     color: TACTICAL_THEME.warning,
     textAlign: 'center',
+  },
+  generatingButton: {
+    backgroundColor: '#FF8C00', // Dark orange for generating state
+    opacity: 0.8,
+  },
+  intelFeedback: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.accent,
+  },
+  intelFeedbackText: {
+    color: TACTICAL_THEME.accent,
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    letterSpacing: 1,
   },
 })

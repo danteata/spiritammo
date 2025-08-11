@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { BlurView } from 'expo-blur'
 import { Eye, EyeOff, RefreshCw } from 'lucide-react-native'
 import { Scripture } from '@/types/scripture'
-import { GRADIENTS } from '@/constants/colors'
+import { GRADIENTS, COLORS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 import ScriptureText from './ScriptureText'
 
@@ -40,9 +40,9 @@ export default function ScriptureCard({
 
   const gradientColors = isDark
     ? (GRADIENTS.primary.dark as [string, string])
-    : (GRADIENTS.primary.light as [string, string])
+    : (GRADIENTS.light.background as [string, string])
 
-  const textColor = isDark ? '#ffffff' : '#ffffff'
+  const textColor = isDark ? COLORS.text.dark : COLORS.text.light
 
   return (
     <LinearGradient

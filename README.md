@@ -40,10 +40,10 @@ A military-themed scripture memorization app that transforms Bible study into ta
 git clone [repository-url]
 
 # Install dependencies
-npm install
+bun install
 
 # Start the development server
-npm start
+bun start
 ```
 
 ### **First Time Setup**

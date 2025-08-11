@@ -9,7 +9,7 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Book, ChevronRight, Upload, Layers } from 'lucide-react-native'
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
+import { TACTICAL_THEME, MILITARY_TYPOGRAPHY, COLORS, GRADIENTS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 import { Collection, Scripture } from '@/types/scripture'
 import FileUploader from '@/components/FileUploader'
@@ -400,8 +400,8 @@ export default function ArmoryScreen() {
   }
 
   const backgroundColors = isDark
-    ? (['#1a2f0a', '#2D5016', '#0f1a05'] as const) // Beautiful army green gradient
-    : (['#4A6B2A', '#2D5016', '#1a2f0a'] as const)
+    ? (GRADIENTS.primary.dark as [string, string])
+    : (GRADIENTS.light.background as [string, string])
 
   return (
     <LinearGradient
@@ -416,7 +416,7 @@ export default function ArmoryScreen() {
             style={[
               styles.sectionTitle,
               MILITARY_TYPOGRAPHY.heading,
-              { color: TACTICAL_THEME.text },
+              { color: isDark ? TACTICAL_THEME.text : COLORS.text.light },
             ]}
           >
             ARMORY
@@ -425,7 +425,7 @@ export default function ArmoryScreen() {
             style={[
               styles.sectionSubtitle,
               MILITARY_TYPOGRAPHY.caption,
-              { color: TACTICAL_THEME.textSecondary },
+              { color: isDark ? TACTICAL_THEME.textSecondary : COLORS.text.secondary },
             ]}
             numberOfLines={1}
             ellipsizeMode="tail"
@@ -439,8 +439,8 @@ export default function ArmoryScreen() {
           onPress={() => setShowFileUploader(true)}
           testID="upload-file-button"
         >
-          <Upload size={20} color={TACTICAL_THEME.text} />
-          <Text style={[styles.uploadText, MILITARY_TYPOGRAPHY.caption]}>
+          <Upload size={20} color={isDark ? TACTICAL_THEME.text : COLORS.text.light} />
+          <Text style={[styles.uploadText, MILITARY_TYPOGRAPHY.caption, { color: isDark ? TACTICAL_THEME.text : COLORS.text.light }]}>
             SUPPLY DROP
           </Text>
         </TouchableOpacity>

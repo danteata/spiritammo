@@ -30,6 +30,21 @@ export const STEALTH_THEME = {
   shadow: 'rgba(0, 0, 0, 0.7)',
 }
 
+export const LIGHT_THEME = {
+  primary: '#2D5016', // Military Green
+  secondary: '#4A6B2A', // Lighter Military Green
+  accent: '#FF6B35', // Orange Accent
+  background: '#FFFFFF', // Pure White
+  surface: '#FFFFFF', // White Surface
+  text: '#2D5016', // Military Green Text
+  textSecondary: '#495057', // Dark Gray Text
+  success: '#28A745', // Green
+  warning: '#FFC107', // Amber
+  error: '#DC3545', // Red
+  border: '#DEE2E6', // Light Border
+  shadow: 'rgba(45, 80, 22, 0.1)', // Light military green shadow
+}
+
 // Legacy colors for backward compatibility
 export const COLORS = {
   primary: {
@@ -45,15 +60,20 @@ export const COLORS = {
   accent: TACTICAL_THEME.accent,
   background: {
     dark: TACTICAL_THEME.background,
-    light: '#f5f5f5',
+    light: '#FFFFFF', // Pure white background
+    secondary: '#F8F9FA', // Light gray secondary
   },
   surface: {
     dark: TACTICAL_THEME.surface,
-    light: '#ffffff',
+    light: '#FFFFFF', // White surface
+    card: '#FFFFFF', // White cards with shadow
   },
   text: {
     dark: TACTICAL_THEME.text,
-    light: '#212121',
+    light: '#2D5016', // Military green text for light theme
+    primary: '#2D5016', // Primary military green
+    secondary: '#495057', // Dark gray for secondary text
+    muted: '#6C757D', // Muted gray for less important text
   },
   success: TACTICAL_THEME.success,
   error: TACTICAL_THEME.error,
@@ -66,11 +86,11 @@ export const COLORS = {
 export const GRADIENTS = {
   primary: {
     dark: [TACTICAL_THEME.background, TACTICAL_THEME.primary],
-    light: ['#4A6B2A', TACTICAL_THEME.primary],
+    light: ['#FFFFFF', '#F8F9FA'], // Clean white to light gray
   },
   secondary: {
     dark: [TACTICAL_THEME.surface, TACTICAL_THEME.secondary],
-    light: ['#A0522D', TACTICAL_THEME.secondary],
+    light: ['#F8F9FA', '#E9ECEF'], // Light gray gradient
   },
   tactical: {
     background: [TACTICAL_THEME.background, '#0D0D0D'],
@@ -81,6 +101,12 @@ export const GRADIENTS = {
     background: [STEALTH_THEME.background, '#0A0A0A'],
     surface: [STEALTH_THEME.surface, STEALTH_THEME.background],
     accent: [STEALTH_THEME.accent, '#0066CC'],
+  },
+  light: {
+    background: ['#FFFFFF', '#F8F9FA'], // Clean white gradient
+    surface: ['#FFFFFF', '#FFFFFF'], // Pure white
+    accent: ['#2D5016', '#4A6B2A'], // Military green accent
+    card: ['#FFFFFF', '#F8F9FA'], // Card backgrounds
   },
 }
 

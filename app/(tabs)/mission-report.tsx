@@ -85,7 +85,7 @@ export default function MissionReportScreen() {
               />
             </View>
             <Text style={[styles.progressText, MILITARY_TYPOGRAPHY.caption]}>
-              {militaryProfile.nextRankProgress.toFixed(1)}% TO NEXT RANK
+              {militaryProfile.nextRankProgress?.toFixed(1)}% TO NEXT RANK
             </Text>
           </View>
         </View>
@@ -110,7 +110,7 @@ export default function MissionReportScreen() {
           <View style={styles.statCard}>
             <Award size={24} color={TACTICAL_THEME.success} />
             <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.body]}>
-              {userStats.averageAccuracy.toFixed(1)}%
+              {userStats.averageAccuracy?.toFixed(1)}%
             </Text>
             <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption]}>
               AVG ACCURACY
@@ -262,7 +262,7 @@ export default function MissionReportScreen() {
           { key: 'overview', label: 'OVERVIEW', icon: Shield, flex: 1 },
           {
             key: 'achievements',
-            label: 'ACHIEVEMENTS',
+            label: 'MEDALS',
             icon: Award,
             flex: 1.3,
           },

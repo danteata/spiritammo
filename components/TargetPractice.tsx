@@ -8,12 +8,20 @@ import {
   Modal,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Target, Mic, Square, Volume2, Wind } from 'lucide-react-native'
+import {
+  Target,
+  Mic,
+  Square,
+  Volume2,
+  Wind,
+  AlertTriangle,
+} from 'lucide-react-native'
 import {
   TACTICAL_THEME,
   MILITARY_TYPOGRAPHY,
   ACCURACY_COLORS,
 } from '@/constants/colors'
+import { useSmartVoiceRecognition } from '@/hooks/useSmartVoiceRecognition'
 
 interface TargetPracticeProps {
   onRecordingComplete: (transcript: string, accuracy: number) => void
@@ -26,6 +34,14 @@ interface ShotResult {
   accuracy: number
   timestamp: Date
   transcript: string
+  feedback: string
+  rank: string
+}
+
+interface MilitaryFeedback {
+  message: string
+  rank: string
+  color: string
 }
 
 export default function TargetPractice({
@@ -34,18 +50,92 @@ export default function TargetPractice({
   isVisible,
   onClose,
 }: TargetPracticeProps) {
-  const [isRecording, setIsRecording] = useState(false)
   const [shotResults, setShotResults] = useState<ShotResult[]>([])
   const [currentAccuracy, setCurrentAccuracy] = useState(0)
   const [windCondition, setWindCondition] = useState<
     'calm' | 'light' | 'strong'
   >('calm')
   const [rangeDistance, setRangeDistance] = useState(100)
+  const [isEngaging, setIsEngaging] = useState(false)
+  const [militaryFeedback, setMilitaryFeedback] =
+    useState<MilitaryFeedback | null>(null)
+  const [showFeedback, setShowFeedback] = useState(false)
+
+  // Use smart voice recognition
+  const {
+    isRecording,
+    transcript,
+    error: voiceError,
+    startRecording: startVoiceRecording,
+    stopRecording: stopVoiceRecording,
+    speak,
+    processTranscript,
+    isInitialized,
+    reset: resetVoice,
+  } = useSmartVoiceRecognition()
 
   // Animations
   const crosshairAnimation = useRef(new Animated.Value(1)).current
   const targetAnimation = useRef(new Animated.Value(1)).current
-  const pulseAnimation = useRef(new Animated.Value(1)).current
+  const feedbackAnimation = useRef(new Animated.Value(0)).current
+  const pulseAnimation = useRef(new Animated.Value(0)).current
+
+  // Start pulse animation when engaging
+  useEffect(() => {
+    if (isEngaging) {
+      Animated.loop(
+        Animated.timing(pulseAnimation, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        })
+      ).start()
+    } else {
+      pulseAnimation.stopAnimation()
+      pulseAnimation.setValue(0)
+    }
+  }, [isEngaging])
+
+  // Military feedback based on accuracy
+  const getMilitaryFeedback = (accuracy: number): MilitaryFeedback => {
+    if (accuracy >= 95) {
+      return {
+        message: 'OUTSTANDING SHOT! SNIPER PRECISION!',
+        rank: 'EXPERT MARKSMAN',
+        color: '#FFD700', // Gold
+      }
+    } else if (accuracy >= 85) {
+      return {
+        message: 'EXCELLENT SHOT! TARGET NEUTRALIZED!',
+        rank: 'SHARPSHOOTER',
+        color: '#00FF00', // Green
+      }
+    } else if (accuracy >= 75) {
+      return {
+        message: 'GOOD HIT! SOLID MARKSMANSHIP!',
+        rank: 'MARKSMAN',
+        color: '#32CD32', // Lime Green
+      }
+    } else if (accuracy >= 60) {
+      return {
+        message: 'TARGET HIT! ADJUST AND CONTINUE!',
+        rank: 'QUALIFIED',
+        color: '#FFA500', // Orange
+      }
+    } else if (accuracy >= 40) {
+      return {
+        message: 'NEAR MISS! RECALIBRATE YOUR SIGHTS!',
+        rank: 'TRAINEE',
+        color: '#FF6347', // Tomato
+      }
+    } else {
+      return {
+        message: 'MISSED TARGET! RETURN TO BASIC TRAINING!',
+        rank: 'RECRUIT',
+        color: '#FF0000', // Red
+      }
+    }
+  }
 
   useEffect(() => {
     if (isRecording) {
@@ -88,62 +178,159 @@ export default function TargetPractice({
     }
   }, [isRecording])
 
-  const startRecording = () => {
-    setIsRecording(true)
-    // Simulate wind conditions affecting difficulty
-    const windConditions = ['calm', 'light', 'strong'] as const
-    setWindCondition(
-      windConditions[Math.floor(Math.random() * windConditions.length)]
-    )
+  const startRecording = async () => {
+    try {
+      setIsEngaging(true)
+      setMilitaryFeedback({
+        message: 'ACQUIRING TARGET... STAND BY...',
+        rank: 'ENGAGING',
+        color: '#FFA500',
+      })
+      setShowFeedback(true)
+
+      // Simulate wind conditions affecting difficulty
+      const windConditions = ['calm', 'light', 'strong'] as const
+      setWindCondition(
+        windConditions[Math.floor(Math.random() * windConditions.length)]
+      )
+
+      // Reset previous results
+      resetVoice()
+
+      // Brief delay for dramatic effect
+      await new Promise((resolve) => setTimeout(resolve, 800))
+
+      // Start voice recording
+      const success = await startVoiceRecording()
+      if (success) {
+        setMilitaryFeedback({
+          message: 'TARGET ACQUIRED! WEAPONS HOT! SPEAK NOW!',
+          rank: 'RECORDING',
+          color: '#FF0000',
+        })
+        setIsEngaging(false)
+      } else {
+        setMilitaryFeedback({
+          message: 'WEAPON MALFUNCTION! CHECK YOUR EQUIPMENT!',
+          rank: 'ERROR',
+          color: '#FF0000',
+        })
+        setIsEngaging(false)
+        // Hide feedback after error
+        setTimeout(() => setShowFeedback(false), 2000)
+      }
+    } catch (error) {
+      console.error('Error starting recording:', error)
+      setMilitaryFeedback({
+        message: 'MISSION ABORT! TECHNICAL DIFFICULTIES!',
+        rank: 'ABORT',
+        color: '#FF0000',
+      })
+      setIsEngaging(false)
+      setTimeout(() => setShowFeedback(false), 2000)
+    }
   }
 
-  const stopRecording = () => {
-    setIsRecording(false)
+  const stopRecording = async () => {
+    setIsEngaging(false)
+    setMilitaryFeedback({
+      message: 'CEASE FIRE! ANALYZING SHOT...',
+      rank: 'ANALYZING',
+      color: '#FFA500',
+    })
 
-    // Simulate speech recognition result
-    const simulatedTranscript = targetVerse // In real app, this would come from voice recognition
-    const baseAccuracy = Math.floor(Math.random() * 30) + 70
-
-    // Apply wind condition modifier
-    let finalAccuracy = baseAccuracy
-    switch (windCondition) {
-      case 'light':
-        finalAccuracy = Math.max(0, baseAccuracy - 5)
-        break
-      case 'strong':
-        finalAccuracy = Math.max(0, baseAccuracy - 15)
-        break
+    const success = await stopVoiceRecording()
+    if (!success) {
+      console.error('Failed to stop voice recording in target practice')
+      setMilitaryFeedback({
+        message: 'COMMUNICATION ERROR! MISSION INCOMPLETE!',
+        rank: 'ERROR',
+        color: '#FF0000',
+      })
+      setTimeout(() => setShowFeedback(false), 2000)
     }
-
-    const shotResult: ShotResult = {
-      accuracy: finalAccuracy,
-      timestamp: new Date(),
-      transcript: simulatedTranscript,
-    }
-
-    setShotResults((prev) => [...prev, shotResult])
-    setCurrentAccuracy(finalAccuracy)
-
-    // Target hit animation
-    Animated.sequence([
-      Animated.timing(targetAnimation, {
-        toValue: 0.8,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(targetAnimation, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start()
-
-    onRecordingComplete(simulatedTranscript, finalAccuracy)
   }
 
-  const speakTarget = () => {
-    // This would use text-to-speech in a real implementation
-    console.log('Speaking target verse:', targetVerse)
+  // Handle when transcript is available
+  useEffect(() => {
+    if (!isRecording && transcript && transcript.trim()) {
+      // Calculate accuracy using the voice recognition's built-in method
+      const calculatedAccuracy = processTranscript(targetVerse)
+
+      // Apply wind condition modifier
+      let finalAccuracy = calculatedAccuracy
+      switch (windCondition) {
+        case 'light':
+          finalAccuracy = Math.max(0, calculatedAccuracy - 5)
+          break
+        case 'strong':
+          finalAccuracy = Math.max(0, calculatedAccuracy - 15)
+          break
+      }
+
+      // Get military feedback
+      const feedback = getMilitaryFeedback(finalAccuracy)
+
+      const shotResult: ShotResult = {
+        accuracy: finalAccuracy,
+        timestamp: new Date(),
+        transcript: transcript,
+        feedback: feedback.message,
+        rank: feedback.rank,
+      }
+
+      setShotResults((prev) => [...prev, shotResult])
+      setCurrentAccuracy(finalAccuracy)
+      setMilitaryFeedback(feedback)
+      setShowFeedback(true)
+
+      // Target hit animation with feedback
+      Animated.sequence([
+        Animated.timing(targetAnimation, {
+          toValue: 0.8,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        Animated.timing(targetAnimation, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]).start()
+
+      // Show feedback animation
+      Animated.sequence([
+        Animated.timing(feedbackAnimation, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.delay(2500),
+        Animated.timing(feedbackAnimation, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start(() => {
+        setShowFeedback(false)
+      })
+
+      onRecordingComplete(transcript, finalAccuracy)
+    }
+  }, [
+    isRecording,
+    transcript,
+    targetVerse,
+    windCondition,
+    processTranscript,
+    onRecordingComplete,
+  ])
+
+  const speakTarget = async () => {
+    const success = await speak(targetVerse)
+    if (!success) {
+      console.error('Failed to speak target verse')
+    }
   }
 
   const getWindIcon = () => {
@@ -217,7 +404,7 @@ export default function TargetPractice({
           </View>
         </View>
 
-        {/* Wind conditions */}
+        {/* Wind conditions and voice status */}
         <View style={styles.conditionsContainer}>
           <View style={styles.windIndicator}>
             {getWindIcon()}
@@ -225,6 +412,12 @@ export default function TargetPractice({
               {getWindDescription()}
             </Text>
           </View>
+
+          {voiceError && (
+            <View style={styles.voiceErrorContainer}>
+              <Text style={styles.voiceErrorText}>VOICE ERROR</Text>
+            </View>
+          )}
         </View>
 
         {/* Target area */}
@@ -269,6 +462,47 @@ export default function TargetPractice({
             )}
           </Animated.View>
         </View>
+
+        {/* Military Feedback Display */}
+        {showFeedback && militaryFeedback && (
+          <Animated.View
+            style={[
+              styles.militaryFeedback,
+              {
+                opacity: feedbackAnimation,
+                transform: [
+                  {
+                    translateY: feedbackAnimation.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [50, 0],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.feedbackHeader,
+                { borderColor: militaryFeedback.color },
+              ]}
+            >
+              <Text
+                style={[styles.feedbackRank, { color: militaryFeedback.color }]}
+              >
+                {militaryFeedback.rank}
+              </Text>
+            </View>
+            <Text
+              style={[
+                styles.feedbackMessage,
+                { color: militaryFeedback.color },
+              ]}
+            >
+              {militaryFeedback.message}
+            </Text>
+          </Animated.View>
+        )}
 
         {/* Shot grouping display */}
         {shotResults.length > 0 && (
@@ -315,17 +549,38 @@ export default function TargetPractice({
             style={[
               styles.controlButton,
               isRecording ? styles.stopButton : styles.recordButton,
+              isEngaging && styles.engagingButton,
             ]}
             onPress={isRecording ? stopRecording : startRecording}
+            disabled={isEngaging}
             testID={isRecording ? 'stop-recording' : 'start-recording'}
           >
             {isRecording ? (
               <Square size={24} color={TACTICAL_THEME.text} />
+            ) : isEngaging ? (
+              <Animated.View
+                style={{
+                  transform: [
+                    {
+                      rotate: pulseAnimation.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: ['0deg', '360deg'],
+                      }),
+                    },
+                  ],
+                }}
+              >
+                <Target size={24} color={TACTICAL_THEME.text} />
+              </Animated.View>
             ) : (
               <Target size={24} color={TACTICAL_THEME.text} />
             )}
             <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button]}>
-              {isRecording ? 'CEASE FIRE' : 'ENGAGE TARGET'}
+              {isRecording
+                ? 'CEASE FIRE'
+                : isEngaging
+                ? 'ACQUIRING...'
+                : 'ENGAGE TARGET'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -400,6 +655,33 @@ const styles = StyleSheet.create({
   },
   windText: {
     color: TACTICAL_THEME.textSecondary,
+  },
+  voiceStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 193, 7, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 12,
+  },
+  voiceStatusText: {
+    color: TACTICAL_THEME.warning,
+    fontSize: 10,
+    fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  voiceErrorContainer: {
+    backgroundColor: 'rgba(220, 53, 69, 0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginLeft: 12,
+  },
+  voiceErrorText: {
+    color: TACTICAL_THEME.error,
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   targetArea: {
     flex: 1,
@@ -529,5 +811,40 @@ const styles = StyleSheet.create({
   },
   resultZone: {
     fontWeight: 'bold',
+  },
+  engagingButton: {
+    backgroundColor: '#FF8C00', // Dark orange for engaging state
+    opacity: 0.8,
+  },
+  militaryFeedback: {
+    position: 'absolute',
+    top: '50%',
+    left: 20,
+    right: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    borderRadius: 12,
+    padding: 20,
+    alignItems: 'center',
+    borderWidth: 2,
+    zIndex: 1000,
+  },
+  feedbackHeader: {
+    borderBottomWidth: 2,
+    paddingBottom: 8,
+    marginBottom: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  feedbackRank: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    letterSpacing: 2,
+  },
+  feedbackMessage: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    letterSpacing: 1,
   },
 })

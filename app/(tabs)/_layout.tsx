@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router'
-import { Book, Target, Settings, Home, FileText } from 'lucide-react-native'
+import { Book, Target, Settings, Home, FileText, Users } from 'lucide-react-native'
 import React from 'react'
 import { COLORS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
@@ -50,6 +50,13 @@ export default function TabLayout() {
         options={{
           title: 'Training',
           tabBarIcon: ({ color }) => <Target color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="social"
+        options={{
+          title: 'Social',
+          tabBarIcon: ({ color }) => <Users color={color} />,
         }}
       />
       <Tabs.Screen

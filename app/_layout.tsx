@@ -6,6 +6,7 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { AppStoreProvider } from "@/hooks/useAppStore";
+import AppWrapper from "@/components/AppWrapper";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -29,7 +30,9 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <AppStoreProvider>
         <GestureHandlerRootView style={{ flex: 1 }}>
-          <BundleInspector><RorkErrorBoundary><RootLayoutNav /></RorkErrorBoundary></BundleInspector>
+          <AppWrapper>
+            <BundleInspector><RorkErrorBoundary><RootLayoutNav /></RorkErrorBoundary></BundleInspector>
+          </AppWrapper>
         </GestureHandlerRootView>
       </AppStoreProvider>
     </QueryClientProvider>

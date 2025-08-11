@@ -1,12 +1,12 @@
 import React from 'react'
 import { StyleSheet, Text, ScrollView } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { GRADIENTS } from '@/constants/colors'
+import { COLORS, GRADIENTS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 import { Collection } from '@/types/scripture'
 import ScriptureCard from '@/components/ScriptureCard'
 import CollectionSelector from '@/components/CollectionSelector'
-import VoiceRecorder from '@/components/VoiceRecorder'
+import VoiceRecordingCard from '@/components/VoiceRecordingCard'
 import ActionButton from '@/components/ActionButton'
 
 export default function HomeScreen() {
@@ -57,7 +57,9 @@ export default function HomeScreen() {
 
   const backgroundColors = isDark
     ? (GRADIENTS.primary.dark as [string, string])
-    : (GRADIENTS.primary.light as [string, string])
+    : (GRADIENTS.light.background as [string, string])
+
+  const textColor = isDark ? COLORS.text.dark : COLORS.text.light
 
   return (
     <LinearGradient
@@ -67,7 +69,7 @@ export default function HomeScreen() {
       end={{ x: 0, y: 1 }}
     >
       <ScrollView style={styles.scrollView}>
-        <Text style={[styles.sectionTitle, { color: 'white' }]}>
+        <Text style={[styles.sectionTitle, { color: textColor }]}>
           Ammunition
         </Text>
 
@@ -83,8 +85,8 @@ export default function HomeScreen() {
               onNext={handleNextScripture}
             />
 
-            <VoiceRecorder
-              scriptureText={currentScripture.text}
+            <VoiceRecordingCard
+              scripture={currentScripture}
               onRecordingComplete={handleRecordingComplete}
             />
 
