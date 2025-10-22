@@ -53,7 +53,9 @@
             "com.google.android.googlequicksearchbox"
           ]
         }
-      ]
+      ],
+      "expo-font",
+      "expo-web-browser"
     ],
     "experiments": {
       "typedRoutes": true

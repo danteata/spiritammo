@@ -3,6 +3,7 @@ import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PDFDocument } from 'pdf-lib';
 import JSZip from 'jszip';
+import { Platform } from 'react-native';
 import { BOOKS as ALL_BOOKS } from '@/mocks/books';
 import { Scripture } from '@/types/scripture';
 import { debugPdfText, analyzePdfContent } from '@/utils/testPdfExtraction';
@@ -196,9 +197,7 @@ export class EnhancedFileExtractionService {
     });
 
     try {
-      const content = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.UTF8,
-      });
+      const content = await readFileAsString(uri, 'utf8');
 
       return {
         text: content,
@@ -352,9 +351,7 @@ export class EnhancedFileExtractionService {
     });
 
     try {
-      const base64Content = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      const base64Content = await readFileAsString(uri, 'base64');
 
       // Try pdf-lib for basic PDF parsing
       const pdfBytes = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0));
@@ -440,9 +437,7 @@ export class EnhancedFileExtractionService {
     uri: string
   ): Promise<{ text: string; method: string; confidence: number }> {
     try {
-      const base64Content = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      const base64Content = await readFileAsString(uri, 'base64');
       
       return this.basicBinaryExtraction(base64Content, 0);
     } catch (error) {
@@ -464,9 +459,7 @@ export class EnhancedFileExtractionService {
 
     try {
       // Read EPUB file as base64
-      const base64Content = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
+      const base64Content = await readFileAsString(uri, 'base64');
 
       // Load EPUB as ZIP
       const zip = await JSZip.loadAsync(base64Content, { base64: true });
