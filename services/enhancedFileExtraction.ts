@@ -1,13 +1,32 @@
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// Platform-specific FileSystem import
+import { Platform } from 'react-native';
+
+// Import FileSystem based on platform
+let FileSystem: any = null
+
+// Import FileSystem based on platform
+if (Platform.OS === 'web') {
+  // Use web stub on web platform
+  const webFileSystem = require('./webFileSystemStub').default
+  FileSystem = webFileSystem
+} else {
+  // Use native expo-file-system on mobile platforms
+  try {
+    FileSystem = require('expo-file-system')
+  } catch (error) {
+    console.error('Failed to import expo-file-system:', error)
+    throw new Error('expo-file-system is required for mobile platforms')
+  }
+}
+
 import { PDFDocument } from 'pdf-lib';
 import JSZip from 'jszip';
-import { Platform } from 'react-native';
 import { BOOKS as ALL_BOOKS } from '@/mocks/books';
 import { Scripture } from '@/types/scripture';
 import { debugPdfText, analyzePdfContent } from '@/utils/testPdfExtraction';
-import { frontendPDFExtraction } from './frontendPdfExtraction';
+import { FrontendPDFExtractionService } from './frontendPdfExtraction';
 
 // Enhanced extraction types
 export interface ExtractedDocument {
@@ -45,8 +64,10 @@ export interface ExtractionProgress {
 export class EnhancedFileExtractionService {
   private documents: ExtractedDocument[] = [];
   private readonly STORAGE_KEY = 'extracted_documents_enhanced';
+  private frontendPDFService: FrontendPDFExtractionService;
 
   constructor() {
+    this.frontendPDFService = new FrontendPDFExtractionService();
     this.loadExtractedDocuments();
   }
 
@@ -197,7 +218,7 @@ export class EnhancedFileExtractionService {
     });
 
     try {
-      const content = await readFileAsString(uri, 'utf8');
+      const content = await FileSystem.readAsStringAsync(uri);
 
       return {
         text: content,
@@ -230,15 +251,15 @@ export class EnhancedFileExtractionService {
         progress: 55,
         message: 'Attempting PDF.js extraction...',
       });
-      
-      const pdfJsResult = await frontendPDFExtraction.extractFromPDF(uri, (progress) => {
+
+      const pdfJsResult = await this.frontendPDFService.extractFromPDF(uri, (progress) => {
         onProgress?.({
           stage: 'parsing',
           progress: progress.progress,
           message: progress.message,
         });
       });
-      
+
       if (pdfJsResult.success && pdfJsResult.confidence > 60) {
         console.log(`✅ PDF.js extraction successful: ${pdfJsResult.confidence}% confidence`);
         return {
@@ -272,14 +293,14 @@ export class EnhancedFileExtractionService {
         progress: 70,
         message: 'Trying enhanced PDF extraction...',
       });
-      
+
       const enhancedResult = await this.enhancedPDFExtraction(uri, onProgress);
       extractionAttempts.push({
         method: 'Enhanced PDF',
         text: enhancedResult.text,
         confidence: enhancedResult.confidence,
       });
-      
+
       if (enhancedResult.confidence > 40) {
         console.log(`✅ Enhanced PDF extraction successful: ${enhancedResult.confidence}% confidence`);
         return enhancedResult;
@@ -301,7 +322,7 @@ export class EnhancedFileExtractionService {
         progress: 85,
         message: 'Applying binary extraction as fallback...',
       });
-      
+
       const binaryResult = await this.binaryPDFExtraction(uri);
       extractionAttempts.push({
         method: 'Binary Extraction',
@@ -321,7 +342,7 @@ export class EnhancedFileExtractionService {
     // Return the best result from all attempts
     const bestResult = extractionAttempts
       .filter(attempt => attempt.text.length > 50)
-      .reduce((best, current) => 
+      .reduce((best, current) =>
         current.confidence > best.confidence ? current : best,
         { method: 'No extraction', text: '', confidence: 0 }
       );
@@ -334,7 +355,7 @@ export class EnhancedFileExtractionService {
       const errorSummary = extractionAttempts
         .map(attempt => `${attempt.method}: ${attempt.error || 'Low confidence'}`)
         .join('; ');
-      
+
       throw new Error(`All PDF extraction methods failed. Attempts: ${errorSummary}. This PDF may be image-based, encrypted, or corrupted.`);
     }
   }
@@ -351,7 +372,9 @@ export class EnhancedFileExtractionService {
     });
 
     try {
-      const base64Content = await readFileAsString(uri, 'base64');
+      const base64Content = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64'
+      } as any);
 
       // Try pdf-lib for basic PDF parsing
       const pdfBytes = Uint8Array.from(atob(base64Content), c => c.charCodeAt(0));
@@ -404,16 +427,16 @@ export class EnhancedFileExtractionService {
       // Pick the best result
       const bestResult = extractionResults
         .filter(result => result.text.length > 20)
-        .reduce((best, current) => 
+        .reduce((best, current) =>
           current.confidence > best.confidence ? current : best,
           { text: '', method: 'No extraction', confidence: 0 }
         );
 
-      console.log('📊 Enhanced extraction results:', 
-        extractionResults.map(r => ({ 
-          method: r.method, 
-          confidence: r.confidence, 
-          length: r.text.length 
+      console.log('📊 Enhanced extraction results:',
+        extractionResults.map(r => ({
+          method: r.method,
+          confidence: r.confidence,
+          length: r.text.length
         }))
       );
 
@@ -437,8 +460,10 @@ export class EnhancedFileExtractionService {
     uri: string
   ): Promise<{ text: string; method: string; confidence: number }> {
     try {
-      const base64Content = await readFileAsString(uri, 'base64');
-      
+      const base64Content = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64'
+      } as any);
+
       return this.basicBinaryExtraction(base64Content, 0);
     } catch (error) {
       console.error('❌ Binary PDF extraction failed:', error);
@@ -459,7 +484,9 @@ export class EnhancedFileExtractionService {
 
     try {
       // Read EPUB file as base64
-      const base64Content = await readFileAsString(uri, 'base64');
+      const base64Content = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64'
+      } as any);
 
       // Load EPUB as ZIP
       const zip = await JSZip.loadAsync(base64Content, { base64: true });
@@ -492,7 +519,7 @@ export class EnhancedFileExtractionService {
         throw new Error('All EPUB extraction methods failed');
       }
 
-      const bestResult = results.reduce((best, current) => 
+      const bestResult = results.reduce((best, current) =>
         current!.confidence > best!.confidence ? current : best
       )!;
 
@@ -514,7 +541,7 @@ export class EnhancedFileExtractionService {
   // File type detection
   private getFileType(fileName: string, mimeType?: string): 'pdf' | 'epub' | 'txt' {
     const extension = fileName.toLowerCase().split('.').pop();
-    
+
     if (extension === 'pdf' || mimeType === 'application/pdf') {
       return 'pdf';
     }
@@ -551,8 +578,8 @@ export class EnhancedFileExtractionService {
     });
 
     const patternVerses = await this.extractWithEnhancedPatterns(
-      cleanedText, 
-      allBookMatchers, 
+      cleanedText,
+      allBookMatchers,
       bookAbbreviations,
       onProgress
     );
@@ -630,42 +657,42 @@ export class EnhancedFileExtractionService {
       /[\x20-\x7E]{10,}/g, // ASCII printable characters
       /[a-zA-Z\s]{15,}/g,  // English text
     ];
-    
+
     let extractedText = '';
     for (const pattern of patterns) {
       const matches = binaryString.match(pattern) || [];
       extractedText += matches.join(' ');
     }
-    
+
     return this.cleanPdfText(extractedText);
   }
 
   private calculateTextConfidence(text: string): number {
     if (text.length < 20) return 0;
-    
+
     let confidence = 20;
-    
+
     // Length bonus
     if (text.length > 500) confidence += 30;
     else if (text.length > 200) confidence += 20;
     else if (text.length > 100) confidence += 10;
-    
+
     // Word ratio
     const words = text.split(/\s+/).filter(word => word.length > 2);
     const wordRatio = words.length / (text.length / 5);
     confidence += Math.min(20, wordRatio * 10);
-    
+
     // Sentence structure
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
     if (sentences.length > 0) confidence += 15;
-    
+
     // Biblical keywords
     const biblicalWords = ['Lord', 'God', 'Jesus', 'Christ', 'faith', 'love', 'peace', 'salvation'];
-    const biblicalCount = biblicalWords.filter(word => 
+    const biblicalCount = biblicalWords.filter(word =>
       text.toLowerCase().includes(word.toLowerCase())
     ).length;
     confidence += biblicalCount * 3;
-    
+
     return Math.min(95, confidence);
   }
 
@@ -677,9 +704,9 @@ export class EnhancedFileExtractionService {
       .split(' ')
       .filter(word => word.length > 2 && /[a-zA-Z]/.test(word))
       .join(' ');
-    
+
     const confidence = this.calculateTextConfidence(cleanedText);
-    
+
     return {
       text: cleanedText,
       method: `Basic Binary Extraction${pageCount > 0 ? ` (${pageCount} pages)` : ''}`,
@@ -713,7 +740,7 @@ export class EnhancedFileExtractionService {
   async deleteDocument(id: string): Promise<boolean> {
     const index = this.documents.findIndex(doc => doc.id === id);
     if (index === -1) return false;
-    
+
     this.documents.splice(index, 1);
     await this.saveExtractedDocuments();
     return true;
@@ -790,7 +817,7 @@ export class EnhancedFileExtractionService {
 
       const htmlContent = await htmlFile.async('text');
       const textContent = this.enhancedHtmlClean(htmlContent);
-      
+
       if (textContent.length > 50) {
         fullText += textContent + '\n\n';
       }
@@ -830,7 +857,7 @@ export class EnhancedFileExtractionService {
 
         const htmlContent = await htmlFile.async('text');
         const textContent = this.enhancedHtmlClean(htmlContent);
-        
+
         if (textContent.length > 20) {
           const contentScore = this.scoreEPUBContent(textContent, filePath);
           contentScores.push({
@@ -852,8 +879,8 @@ export class EnhancedFileExtractionService {
       .slice(0, 20); // Limit to top 20 files to avoid noise
 
     fullText = goodContent.map(item => item.text).join('\n\n');
-    
-    const confidence = Math.min(85, 
+
+    const confidence = Math.min(85,
       (goodContent.length / Math.max(1, contentFiles.length)) * 100
     );
 
@@ -864,37 +891,37 @@ export class EnhancedFileExtractionService {
   // Enhanced HTML content cleaning
   private enhancedHtmlClean(html: string): string {
     let cleaned = html;
-    
+
     // Remove script and style content
     cleaned = cleaned.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
     cleaned = cleaned.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
-    
+
     // Remove HTML comments
     cleaned = cleaned.replace(/<!--[\s\S]*?-->/g, '');
-    
+
     // Remove navigation and metadata elements
     cleaned = cleaned.replace(/<nav[^>]*>[\s\S]*?<\/nav>/gi, '');
     cleaned = cleaned.replace(/<header[^>]*>[\s\S]*?<\/header>/gi, '');
     cleaned = cleaned.replace(/<footer[^>]*>[\s\S]*?<\/footer>/gi, '');
     cleaned = cleaned.replace(/<aside[^>]*>[\s\S]*?<\/aside>/gi, '');
-    
+
     // Preserve paragraph and heading structure
     cleaned = cleaned.replace(/<\/p>/gi, '\n\n');
     cleaned = cleaned.replace(/<\/div>/gi, '\n');
     cleaned = cleaned.replace(/<br\s*\/?>/gi, '\n');
     cleaned = cleaned.replace(/<\/h[1-6]>/gi, '\n\n');
     cleaned = cleaned.replace(/<\/li>/gi, '\n');
-    
+
     // Remove all remaining HTML tags
     cleaned = cleaned.replace(/<[^>]+>/g, ' ');
-    
+
     // Decode HTML entities
     const entityMap: { [key: string]: string } = {
       '&nbsp;': ' ',
-      '&amp;': '&',
-      '&lt;': '<',
-      '&gt;': '>',
-      '&quot;': '"',
+      '&': '&',
+      '<': '<',
+      '>': '>',
+      '"': '"',
       '&#39;': "'",
       '&#8217;': "'",
       '&#8220;': '"',
@@ -908,81 +935,81 @@ export class EnhancedFileExtractionService {
       '&rdquo;': '"',
       '&ldquo;': '"',
     };
-    
+
     Object.keys(entityMap).forEach(entity => {
       const regex = new RegExp(entity, 'g');
       cleaned = cleaned.replace(regex, entityMap[entity]);
     });
-    
+
     // Clean up whitespace
     cleaned = cleaned.replace(/\n\s*\n\s*\n/g, '\n\n'); // Multiple newlines to double
     cleaned = cleaned.replace(/[ \t]+/g, ' '); // Multiple spaces to single
     cleaned = cleaned.replace(/^\s+|\s+$/gm, ''); // Trim lines
-    
+
     return cleaned.trim();
   }
 
   // Score EPUB content quality
   private scoreEPUBContent(text: string, filePath: string): number {
     let score = 0;
-    
+
     // Length scoring
     if (text.length > 500) score += 20;
     else if (text.length > 200) score += 15;
     else if (text.length > 100) score += 10;
     else if (text.length > 50) score += 5;
-    
+
     // Sentence structure
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 10);
     score += Math.min(15, sentences.length);
-    
+
     // Biblical content indicators
     const biblicalWords = ['Lord', 'God', 'Jesus', 'Christ', 'faith', 'love', 'peace', 'salvation', 'heaven', 'prayer'];
-    const biblicalCount = biblicalWords.filter(word => 
+    const biblicalCount = biblicalWords.filter(word =>
       text.toLowerCase().includes(word.toLowerCase())
     ).length;
     score += biblicalCount * 3;
-    
+
     // Verse references
     const verseReferences = text.match(/\d+:\d+/g)?.length || 0;
     score += verseReferences * 5;
-    
+
     // File path indicators
     if (filePath.includes('chapter') || filePath.includes('content')) score += 10;
     if (filePath.includes('toc') || filePath.includes('nav') || filePath.includes('cover')) score -= 10;
-    
+
     // Penalize very short or very long content
     if (text.length < 50 || text.length > 10000) score -= 5;
-    
+
     return Math.max(0, score);
   }
 
   // Calculate EPUB extraction confidence
   private calculateEPUBConfidence(text: string, processedPages: number, totalPages: number): number {
     let confidence = 40; // Base confidence
-    
+
     // Success rate bonus
     if (totalPages > 0) {
       const successRate = processedPages / totalPages;
       confidence += successRate * 30;
     }
-    
+
     // Content length bonus
     if (text.length > 2000) confidence += 15;
     else if (text.length > 1000) confidence += 10;
     else if (text.length > 500) confidence += 5;
-    
+
     // Word quality bonus
     const words = text.split(/\s+/).filter(word => word.length > 2);
     if (words.length > 100) confidence += 10;
-    
+
     // Biblical content bonus
     const biblicalWords = ['Lord', 'God', 'Jesus', 'Christ', 'faith', 'love', 'peace'];
-    const biblicalCount = biblicalWords.filter(word => 
+    const biblicalCount = biblicalWords.filter(word =>
       text.toLowerCase().includes(word.toLowerCase())
     ).length;
     confidence += biblicalCount * 2;
-    
+
     return Math.min(95, confidence);
   }
 
@@ -999,28 +1026,28 @@ export class EnhancedFileExtractionService {
     const versePatterns = [
       // Standard format: "John 3:16 For God so loved..."
       new RegExp(`(${allBookMatchers})\\s+(\\d+):(\\d+)\\s+([^\\n\\r.!?]{10,500})`, 'gi'),
-      
+
       // Alternative format: "John 3:16. For God so loved..."
       new RegExp(`(${allBookMatchers})\\s+(\\d+):(\\d+)\\.\\s+([^\\n\\r]{10,500})`, 'gi'),
-      
+
       // Format with dash: "John 3:16 - For God so loved..."
       new RegExp(`(${allBookMatchers})\\s+(\\d+):(\\d+)\\s*[-–—]\\s*([^\\n\\r]{10,500})`, 'gi'),
-      
+
       // Verse number at start: "16 For God so loved... (John 3)"
       new RegExp(`^(\\d+)\\s+([^\\n\\r]{20,400}?)\\s+\\((${allBookMatchers})\\s+(\\d+)\\)`, 'gmi'),
-      
+
       // Simple verse reference followed by text on next line
       new RegExp(`(${allBookMatchers})\\s+(\\d+):(\\d+)\\s*[\\n\\r]\\s*([^\\n\\r]{10,500})`, 'gi'),
-      
+
       // Verse with book abbreviation
       new RegExp(`\\b(${bookAbbreviations})\\s+(\\d+):(\\d+)\\s+([^\\n\\r]{10,500})`, 'gi'),
-      
+
       // Format with colon and space: "John 3: 16 For God so loved..."
       new RegExp(`(${allBookMatchers})\\s+(\\d+):\\s+(\\d+)\\s+([^\\n\\r]{10,500})`, 'gi'),
-      
+
       // Format with verse range: "John 3:16-17 For God so loved..."
       new RegExp(`(${allBookMatchers})\\s+(\\d+):(\\d+)[-–](\\d+)\\s+([^\\n\\r]{10,500})`, 'gi'),
-      
+
       // Parenthetical reference at end: "For God so loved... (John 3:16)"
       new RegExp(`([^\\n\\r]{20,400})\\s+\\((${allBookMatchers})\\s+(\\d+):(\\d+)\\)`, 'gi'),
     ];
@@ -1033,29 +1060,29 @@ export class EnhancedFileExtractionService {
 
       for (const match of matches) {
         let book: string, chapter: string, verse: string, verseText: string;
-        
+
         // Handle different pattern formats
         if (patternIndex === 3) { // Reverse format: "16 For God... (John 3)"
-          [, verse, verseText, book, chapter] = match.map((m, i) => 
+          [, verse, verseText, book, chapter] = match.map((m, i) =>
             i === 0 ? m : (m || '').trim()
           );
         } else if (patternIndex === 7) { // Verse range format
-          [, book, chapter, verse, , verseText] = match.map((m, i) => 
+          [, book, chapter, verse, , verseText] = match.map((m, i) =>
             i === 0 ? m : (m || '').trim()
           );
         } else if (patternIndex === 8) { // Parenthetical at end
-          [, verseText, book, chapter, verse] = match.map((m, i) => 
+          [, verseText, book, chapter, verse] = match.map((m, i) =>
             i === 0 ? m : (m || '').trim()
           );
         } else {
           // Standard format: [full, book, chapter, verse, text]
-          [, book, chapter, verse, verseText] = match.map((m, i) => 
+          [, book, chapter, verse, verseText] = match.map((m, i) =>
             i === 0 ? m : (m || '').trim()
           );
         }
 
         const cleanText = this.cleanVerseText(verseText);
-        
+
         if (this.isValidVerse(cleanText, book, parseInt(chapter), parseInt(verse))) {
           const extractedVerse: ExtractedVerse = {
             id: `pattern_verse_${Date.now()}_${verses.length}`,
@@ -1091,16 +1118,16 @@ export class EnhancedFileExtractionService {
   ): Promise<ExtractedVerse[]> {
     const verses: ExtractedVerse[] = [];
     const lines = text.split(/\n/);
-    
+
     console.log('🧐 Applying contextual analysis...');
-    
+
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if (line.length < 20) continue;
-      
+
       // Score the line for biblical content
       const biblicalScore = this.scoreBiblicalContent(line);
-      
+
       if (biblicalScore > 40) {
         // Look for verse references in surrounding context
         const contextLines = [
@@ -1110,13 +1137,13 @@ export class EnhancedFileExtractionService {
           lines[i + 1]?.trim() || '',
           lines[i + 2]?.trim() || '',
         ].join(' ');
-        
+
         const verseRefMatch = contextLines.match(new RegExp(`(${allBookMatchers})\\s+(\\d+):(\\d+)`, 'i'));
-        
+
         if (verseRefMatch) {
           const [, book, chapter, verse] = verseRefMatch;
           const cleanText = this.cleanVerseText(line);
-          
+
           if (this.isValidVerse(cleanText, book, parseInt(chapter), parseInt(verse))) {
             verses.push({
               id: `contextual_verse_${Date.now()}_${verses.length}`,
@@ -1132,7 +1159,7 @@ export class EnhancedFileExtractionService {
         }
       }
     }
-    
+
     console.log(`🎯 Contextual analysis found ${verses.length} verses`);
     return verses;
   }
@@ -1143,18 +1170,18 @@ export class EnhancedFileExtractionService {
     onProgress?: (progress: ExtractionProgress) => void
   ): Promise<ExtractedVerse[]> {
     const verses: ExtractedVerse[] = [];
-    
+
     console.log('🤖 Applying intelligent content scoring...');
-    
+
     // Split text into potential verse segments
     const segments = this.segmentTextIntelligently(text);
-    
+
     segments.forEach((segment, index) => {
       const score = this.scoreVerseContent(segment);
-      
+
       if (score > 60) {
         const cleanText = this.cleanVerseText(segment);
-        
+
         if (cleanText.length > 15 && cleanText.length < 400) {
           verses.push({
             id: `intelligent_verse_${Date.now()}_${index}`,
@@ -1169,7 +1196,7 @@ export class EnhancedFileExtractionService {
         }
       }
     });
-    
+
     console.log(`🎯 Intelligent scoring found ${verses.length} verses`);
     return verses;
   }
@@ -1177,15 +1204,15 @@ export class EnhancedFileExtractionService {
   // Intelligent text segmentation
   private segmentTextIntelligently(text: string): string[] {
     const segments: string[] = [];
-    
+
     // Method 1: Split by sentences and group
     const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 20);
-    
+
     for (let i = 0; i < sentences.length; i++) {
       const sentence = sentences[i].trim();
       if (sentence.length > 30) {
         segments.push(sentence);
-        
+
         // Also try combining with next sentence
         if (i < sentences.length - 1) {
           const combined = sentence + '. ' + sentences[i + 1].trim();
@@ -1195,65 +1222,65 @@ export class EnhancedFileExtractionService {
         }
       }
     }
-    
+
     // Method 2: Split by paragraphs
     const paragraphs = text.split(/\n\s*\n/).filter(p => p.trim().length > 50);
     segments.push(...paragraphs);
-    
+
     // Method 3: Split by double newlines
     const doubleNewlines = text.split(/\n\n/).filter(p => p.trim().length > 30);
     segments.push(...doubleNewlines);
-    
+
     return [...new Set(segments)]; // Remove duplicates
   }
 
   // Score biblical content
   private scoreBiblicalContent(text: string): number {
     let score = 0;
-    
+
     // Biblical keywords
     const biblicalWords = [
       'Lord', 'God', 'Jesus', 'Christ', 'faith', 'love', 'peace', 'salvation',
       'heaven', 'prayer', 'spirit', 'soul', 'righteousness', 'glory', 'mercy',
       'grace', 'blessed', 'holy', 'eternal', 'kingdom', 'disciples', 'apostle'
     ];
-    
-    const biblicalCount = biblicalWords.filter(word => 
+
+    const biblicalCount = biblicalWords.filter(word =>
       text.toLowerCase().includes(word.toLowerCase())
     ).length;
     score += biblicalCount * 5;
-    
+
     // Verse-like language patterns
     if (text.includes(' said ') || text.includes(' spoke ') || text.includes(' answered ')) score += 10;
     if (text.includes(' shall ') || text.includes(' thou ') || text.includes(' thy ')) score += 15;
     if (text.match(/\b(and|but|for|therefore|thus|so)\b/gi)) score += 5;
-    
+
     // Quote patterns
     if (text.includes('"') || text.includes('“') || text.includes('”')) score += 10;
-    
+
     // Sentence structure (biblical style)
     const words = text.split(/\s+/);
     if (words.length > 8 && words.length < 50) score += 10;
-    
+
     return score;
   }
 
   // Score individual verse content
   private scoreVerseContent(text: string): number {
     let score = this.scoreBiblicalContent(text);
-    
+
     // Length scoring
     if (text.length > 50 && text.length < 300) score += 15;
     else if (text.length > 20 && text.length < 500) score += 10;
-    
+
     // Completeness (sentence structure)
     if (text.match(/^[A-Z]/) && text.match(/[.!?]$/)) score += 10;
-    
+
     // Word quality
     const words = text.split(/\s+/).filter(word => word.length > 2);
     const avgWordLength = words.reduce((sum, word) => sum + word.length, 0) / words.length;
     if (avgWordLength > 4) score += 5;
-    
+
     return score;
   }
 
@@ -1271,25 +1298,25 @@ export class EnhancedFileExtractionService {
   private isValidVerse(text: string, book: string, chapter: number, verse: number): boolean {
     if (!text || text.length < 10 || text.length > 1000) return false;
     if (!book || chapter < 1 || verse < 1) return false;
-    
+
     // Check for reasonable content
     const words = text.split(/\s+/).filter(word => word.length > 1);
     if (words.length < 3) return false;
-    
+
     // Check for biblical book validity
     const normalizedBook = this.normalizeBookName(book);
-    const validBook = ALL_BOOKS.some(b => 
+    const validBook = ALL_BOOKS.some(b =>
       b.name.toLowerCase() === normalizedBook.toLowerCase() ||
       b.abbreviations.some(abbr => abbr.toLowerCase() === normalizedBook.toLowerCase())
     );
-    
+
     return validBook;
   }
 
   // Normalize book names
   private normalizeBookName(book: string): string {
     const bookLower = book.toLowerCase().trim();
-    const foundBook = ALL_BOOKS.find(b => 
+    const foundBook = ALL_BOOKS.find(b =>
       b.name.toLowerCase() === bookLower ||
       b.abbreviations.some(abbr => abbr.toLowerCase() === bookLower)
     );
@@ -1299,17 +1326,17 @@ export class EnhancedFileExtractionService {
   // Calculate verse confidence
   private calculateVerseConfidence(text: string, book: string): number {
     let confidence = 50;
-    
+
     // Length bonus
     if (text.length > 100) confidence += 20;
     else if (text.length > 50) confidence += 10;
-    
+
     // Biblical content bonus
     confidence += this.scoreBiblicalContent(text) * 0.3;
-    
+
     // Book validity bonus
     if (this.normalizeBookName(book) !== book) confidence += 15;
-    
+
     return Math.min(95, Math.max(30, confidence));
   }
 
@@ -1324,21 +1351,21 @@ export class EnhancedFileExtractionService {
   private deduplicateAndValidateVerses(verses: ExtractedVerse[]): ExtractedVerse[] {
     // Remove duplicates based on text similarity
     const uniqueVerses: ExtractedVerse[] = [];
-    
+
     for (const verse of verses) {
       const isDuplicate = uniqueVerses.some(existing => {
         const similarity = this.calculateTextSimilarity(verse.text, existing.text);
-        return similarity > 0.8 || 
-               (verse.book === existing.book && 
-                verse.chapter === existing.chapter && 
+        return similarity > 0.8 ||
+               (verse.book === existing.book &&
+                verse.chapter === existing.chapter &&
                 verse.verse === existing.verse);
       });
-      
+
       if (!isDuplicate) {
         uniqueVerses.push(verse);
       }
     }
-    
+
     // Sort by confidence and return top results
     return uniqueVerses
       .sort((a, b) => b.confidence - a.confidence)
@@ -1349,16 +1376,16 @@ export class EnhancedFileExtractionService {
   private calculateTextSimilarity(text1: string, text2: string): number {
     const words1 = text1.toLowerCase().split(/\s+/);
     const words2 = text2.toLowerCase().split(/\s+/);
-    
+
     const allWords = [...new Set([...words1, ...words2])];
     const vector1 = allWords.map(word => words1.filter(w => w === word).length);
     const vector2 = allWords.map(word => words2.filter(w => w === word).length);
-    
+
     // Calculate cosine similarity
     const dotProduct = vector1.reduce((sum, v1, i) => sum + v1 * vector2[i], 0);
     const magnitude1 = Math.sqrt(vector1.reduce((sum, v) => sum + v * v, 0));
     const magnitude2 = Math.sqrt(vector2.reduce((sum, v) => sum + v * v, 0));
-    
+
     if (magnitude1 === 0 || magnitude2 === 0) return 0;
     return dotProduct / (magnitude1 * magnitude2);
   }

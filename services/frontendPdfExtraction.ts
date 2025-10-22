@@ -1,5 +1,22 @@
-import * as FileSystem from 'expo-file-system'
+// Platform-specific FileSystem import
 import { Platform } from 'react-native'
+
+let FileSystem: any = null
+
+// Import FileSystem based on platform
+if (Platform.OS === 'web') {
+  // Use web stub on web platform
+  const webFileSystem = require('./webFileSystemStub').default
+  FileSystem = webFileSystem
+} else {
+  // Use native expo-file-system on mobile platforms
+  try {
+    FileSystem = require('expo-file-system')
+  } catch (error) {
+    console.error('Failed to import expo-file-system:', error)
+    throw new Error('expo-file-system is required for mobile platforms')
+  }
+}
 
 // Import PDF.js for different platforms with improved error handling
 let pdfjs: any = null
