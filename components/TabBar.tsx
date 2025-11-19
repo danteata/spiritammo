@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { Book, Target, Settings, Home } from 'lucide-react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import { COLORS } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
 
@@ -17,17 +17,16 @@ export default function TabBar({ activeTab, onChangeTab }: TabBarProps) {
   const activeColor = COLORS.primary.main;
   
   const tabs = [
-    { id: 'home', label: 'Home', icon: Home },
-    { id: 'armory', label: 'Armory', icon: Book },
-    { id: 'training', label: 'Training', icon: Target },
-    { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'home', label: 'Home', icon: 'home' },
+    { id: 'armory', label: 'Armory', icon: 'book' },
+    { id: 'training', label: 'Training', icon: 'bullseye' },
+    { id: 'settings', label: 'Settings', icon: 'cog' },
   ];
   
   return (
     <View style={[styles.container, { backgroundColor }]}>
       {tabs.map(tab => {
         const isActive = activeTab === tab.id;
-        const Icon = tab.icon;
         
         return (
           <TouchableOpacity
@@ -36,7 +35,8 @@ export default function TabBar({ activeTab, onChangeTab }: TabBarProps) {
             onPress={() => onChangeTab(tab.id)}
             testID={`tab-${tab.id}`}
           >
-            <Icon
+            <FontAwesome
+              name={tab.icon as any}
               size={24}
               color={isActive ? activeColor : textColor}
             />

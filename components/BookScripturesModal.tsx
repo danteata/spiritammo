@@ -8,7 +8,7 @@ import {
   FlatList,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { X, Book } from 'lucide-react-native'
+import { FontAwesome } from '@expo/vector-icons';
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Scripture } from '@/types/scripture'
 import ScriptureText from './ScriptureText'
@@ -33,6 +33,7 @@ export default function BookScripturesModal({
       </Text>
       <ScriptureText
         text={item.text}
+        isJesusWords={item.isJesusWords}
         style={[styles.scriptureText, MILITARY_TYPOGRAPHY.caption]}
         numberOfLines={2}
         ellipsizeMode="tail"
@@ -55,14 +56,14 @@ export default function BookScripturesModal({
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.titleSection}>
-              <Book size={24} color={TACTICAL_THEME.accent} />
+              <FontAwesome name="book" size={24} color={TACTICAL_THEME.accent} />
               <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
                 {bookName} References
               </Text>
             </View>
 
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <X size={24} color={TACTICAL_THEME.text} />
+              <FontAwesome name="close" size={24} color={TACTICAL_THEME.text} />
             </TouchableOpacity>
           </View>
 

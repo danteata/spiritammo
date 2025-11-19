@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
-import { Moon, Sun, User } from 'lucide-react-native';
+import { FontAwesome } from '@expo/vector-icons';
 import { GRADIENTS } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,9 +12,9 @@ interface HeaderProps {
 export default function Header({ title }: HeaderProps) {
   const { isDark, toggleTheme } = useAppStore();
   
-  const gradientColors = isDark 
-    ? GRADIENTS.primary.dark
-    : GRADIENTS.primary.light;
+  const gradientColors = isDark
+    ? GRADIENTS.primary.dark as [string, string, string]
+    : GRADIENTS.primary.light as [string, string, string];
     
   return (
     <LinearGradient
@@ -32,9 +32,9 @@ export default function Header({ title }: HeaderProps) {
           testID="theme-toggle-button"
         >
           {isDark ? (
-            <Sun size={20} color="white" />
+            <FontAwesome name="sun-o" size={20} color="white" />
           ) : (
-            <Moon size={20} color="white" />
+            <FontAwesome name="moon-o" size={20} color="white" />
           )}
         </TouchableOpacity>
         
@@ -42,7 +42,7 @@ export default function Header({ title }: HeaderProps) {
           style={styles.iconButton}
           testID="user-profile-button"
         >
-          <User size={20} color="white" />
+          <FontAwesome name="user-o" size={20} color="white" />
         </TouchableOpacity>
       </View>
     </LinearGradient>

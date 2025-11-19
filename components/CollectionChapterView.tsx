@@ -9,19 +9,7 @@ import {
   Alert,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import {
-  BookOpen,
-  CheckCircle,
-  Circle,
-  Target,
-  TrendingUp,
-  Calendar,
-  Settings,
-  Plus,
-  X,
-  Edit3,
-  Trash2,
-} from 'lucide-react-native'
+import { FontAwesome } from '@expo/vector-icons';
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection, CollectionChapter } from '@/types/scripture'
 import { CollectionChapterService } from '@/services/collectionChapters'
@@ -59,12 +47,12 @@ export default function CollectionChapterView({
 
   const getChapterStatusIcon = (chapter: CollectionChapter) => {
     if (chapter.isCompleted) {
-      return <CheckCircle size={16} color={TACTICAL_THEME.success} />
+      return <FontAwesome name="check-circle" size={16} color={TACTICAL_THEME.success} />
     }
     if (chapter.averageAccuracy && chapter.averageAccuracy >= 80) {
-      return <Target size={16} color={TACTICAL_THEME.warning} />
+      return <FontAwesome name="bullseye" size={16} color={TACTICAL_THEME.warning} />
     }
-    return <Circle size={16} color={TACTICAL_THEME.textSecondary} />
+    return <FontAwesome name="circle-o" size={16} color={TACTICAL_THEME.textSecondary} />
   }
 
   const handleDeleteChapter = (chapterId: string) => {
@@ -145,7 +133,7 @@ export default function CollectionChapterView({
       <View style={styles.chapterFooter}>
         {chapter.lastPracticed && (
           <View style={styles.lastPracticed}>
-            <Calendar size={12} color={TACTICAL_THEME.textSecondary} />
+            <FontAwesome name="calendar" size={12} color={TACTICAL_THEME.textSecondary} />
             <Text
               style={[styles.lastPracticedText, MILITARY_TYPOGRAPHY.caption]}
             >
@@ -184,7 +172,7 @@ export default function CollectionChapterView({
             style={styles.manageButton}
             onPress={() => setShowChapterManager(true)}
           >
-            <Settings size={16} color={TACTICAL_THEME.text} />
+            <FontAwesome name="cog" size={16} color={TACTICAL_THEME.text} />
           </TouchableOpacity>
         </View>
       )}
@@ -234,7 +222,7 @@ export default function CollectionChapterView({
               style={styles.closeButton}
               onPress={() => setShowChapterManager(false)}
             >
-              <X size={24} color={TACTICAL_THEME.text} />
+              <FontAwesome name="close" size={24} color={TACTICAL_THEME.text} />
             </TouchableOpacity>
           </View>
 
@@ -296,7 +284,7 @@ export default function CollectionChapterView({
                   CHAPTERS
                 </Text>
                 <TouchableOpacity style={styles.addButton}>
-                  <Plus size={16} color={TACTICAL_THEME.text} />
+                  <FontAwesome name="plus" size={16} color={TACTICAL_THEME.text} />
                   <Text
                     style={[styles.addButtonText, MILITARY_TYPOGRAPHY.caption]}
                   >
@@ -355,16 +343,13 @@ export default function CollectionChapterView({
 
                       <View style={styles.chapterActionButtons}>
                         <TouchableOpacity style={styles.actionButton}>
-                          <Edit3
-                            size={14}
-                            color={TACTICAL_THEME.textSecondary}
-                          />
+                          <FontAwesome name="edit" size={14} color={TACTICAL_THEME.textSecondary} />
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.actionButton}
                           onPress={() => handleDeleteChapter(chapter.id)}
                         >
-                          <Trash2 size={14} color={TACTICAL_THEME.error} />
+                          <FontAwesome name="trash" size={14} color={TACTICAL_THEME.error} />
                         </TouchableOpacity>
                       </View>
                     </View>

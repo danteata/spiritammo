@@ -7,7 +7,7 @@ import {
   Animated,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Target, Zap, Brain, RotateCcw } from 'lucide-react-native'
+import { FontAwesome, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import {
   TACTICAL_THEME,
   MILITARY_TYPOGRAPHY,
@@ -136,6 +136,7 @@ export default function AmmunitionCard({
         <View style={styles.textContainer}>
           <ScriptureText
             text={scripture.text}
+            isJesusWords={scripture.isJesusWords}
             style={[styles.scriptureText, MILITARY_TYPOGRAPHY.body]}
           />
         </View>
@@ -144,7 +145,7 @@ export default function AmmunitionCard({
         {scripture.mnemonic && (
           <View style={styles.mnemonicContainer}>
             <View style={styles.mnemonicHeader}>
-              <Brain size={16} color={TACTICAL_THEME.accent} />
+              <FontAwesome5 name="brain" size={16} color={TACTICAL_THEME.accent} />
               <Text style={[styles.mnemonicLabel, MILITARY_TYPOGRAPHY.caption]}>
                 BATTLE INTEL
               </Text>
@@ -158,7 +159,7 @@ export default function AmmunitionCard({
         {/* Accuracy meter */}
         <View style={styles.accuracyContainer}>
           <View style={styles.accuracyHeader}>
-            <Target size={16} color={getAccuracyColor(accuracy)} />
+            <FontAwesome name="bullseye" size={16} color={getAccuracyColor(accuracy)} />
             <Text style={[styles.accuracyLabel, MILITARY_TYPOGRAPHY.caption]}>
               ACCURACY: {accuracy.toFixed(1)}%
             </Text>
@@ -195,7 +196,7 @@ export default function AmmunitionCard({
               disabled={isLoading}
               testID="fire-button"
             >
-              <Zap size={20} color={TACTICAL_THEME.text} />
+              <Ionicons name="flash" size={20} color={TACTICAL_THEME.text} />
               <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
                 FIRE!
               </Text>
@@ -208,7 +209,7 @@ export default function AmmunitionCard({
             disabled={isLoading}
             testID="reload-button"
           >
-            <RotateCcw size={20} color={TACTICAL_THEME.text} />
+            <FontAwesome name="undo" size={20} color={TACTICAL_THEME.text} />
             <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
               RELOAD
             </Text>
@@ -220,7 +221,7 @@ export default function AmmunitionCard({
             disabled={isLoading}
             testID="intel-button"
           >
-            <Brain size={20} color={TACTICAL_THEME.text} />
+            <FontAwesome5 name="brain" size={20} color={TACTICAL_THEME.text} />
             <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
               INTEL
             </Text>

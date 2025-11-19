@@ -9,20 +9,27 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.rork.spiritammo-scripture-mobile-app"
+      "bundleIdentifier": "app.rork.spiritammo-scripture-mobile-app",
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Recording is required for target practice transcription."
+      }
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/adaptive-icon/foreground.png",
+        "backgroundColor": "#ffffff",
+        "backgroundImage": "./assets/images/adaptive-icon/background.png"
       },
-      "package": "com.danteata.spiritammoscripturemobileapp"
+      "package": "com.danteata.spiritammoscripturemobileapp",
+      "permissions": [
+        "RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"
@@ -31,10 +38,17 @@
       [
         "expo-router",
         {
-          "origin": "https://rork.com/"
+          "origin": "https://n"
         }
       ],
-      "./plugins/withGradleProperties"
+      [
+        "expo-speech-recognition",
+        {
+          "microphonePermission": "Allow SpiritAmmo to use the microphone for voice practice.",
+          "speechRecognitionPermission": "Allow SpiritAmmo to use speech recognition for target practice."
+        }
+      ],
+      "expo-font"
     ],
     "experiments": {
       "typedRoutes": true

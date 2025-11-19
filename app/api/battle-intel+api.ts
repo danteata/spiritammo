@@ -16,7 +16,12 @@ const openai = new OpenAI({
 })
 
 export function GET(request: Request) {
-  return Response.json({ hello: 'world' })
+  console.log('[DEBUG] GET request received for /api/battle-intel');
+  return Response.json({ 
+    status: 'Battle Intelligence API is operational',
+    version: '1.0',
+    timestamp: new Date().toISOString()
+  });
 }
 
 export async function POST(request: Request) {

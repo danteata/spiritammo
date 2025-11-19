@@ -1,6 +1,5 @@
 import { Tabs } from 'expo-router'
-import { Book, Target, Settings, Home, FileText } from 'lucide-react-native'
-import React from 'react'
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 
@@ -8,7 +7,7 @@ export default function TabLayout() {
   const { isDark } = useAppStore()
 
   const activeColor = COLORS.primary.main
-  const inactiveColor = isDark ? COLORS.disabled : COLORS.disabled
+  const inactiveColor = COLORS.disabled
 
   return (
     <Tabs
@@ -35,35 +34,35 @@ export default function TabLayout() {
         options={{
           title: 'SpiritAmmo',
           tabBarLabel: 'Home',
-          tabBarIcon: ({ color }) => <Home color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome name="home" color={color} />,
         }}
       />
       <Tabs.Screen
         name="armory"
         options={{
           title: 'Armory',
-          tabBarIcon: ({ color }) => <Book color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome name="book" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="training"
         options={{
           title: 'Training',
-          tabBarIcon: ({ color }) => <Target color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="fitness" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="mission-report"
         options={{
           title: 'Report',
-          tabBarIcon: ({ color }) => <FileText color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="document-text" size={24} color={color} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Settings',
-          tabBarIcon: ({ color }) => <Settings color={color} />,
+          tabBarIcon: ({ color }) => <Ionicons name="settings" size={24} color={color} />,
         }}
       />
     </Tabs>

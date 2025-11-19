@@ -7,16 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import {
-  Target,
-  Award,
-  TrendingUp,
-  Calendar,
-  Star,
-  Shield,
-  Zap,
-  Trophy,
-} from 'lucide-react-native'
+import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import {
   GRADIENTS,
   TACTICAL_THEME,
@@ -48,8 +39,8 @@ export default function MissionReportScreen() {
   }
 
   const backgroundColors = isDark
-    ? GRADIENTS.tactical.background
-    : GRADIENTS.primary.light
+    ? ['#1a2f0a', '#2D5016', '#0f1a05'] as [string, string, string]
+    : ['#4A90E2', '#357ABD', '#2E5B8A'] as [string, string, string]
 
   const renderOverview = () => (
     <View style={styles.tabContent}>
@@ -98,7 +89,7 @@ export default function MissionReportScreen() {
         </Text>
         <View style={styles.statsGrid}>
           <View style={styles.statCard}>
-            <Target size={24} color={TACTICAL_THEME.accent} />
+            <FontAwesome name="bullseye" size={24} color={TACTICAL_THEME.accent} />
             <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.body]}>
               {userStats.totalPracticed}
             </Text>
@@ -108,7 +99,7 @@ export default function MissionReportScreen() {
           </View>
 
           <View style={styles.statCard}>
-            <Award size={24} color={TACTICAL_THEME.success} />
+            <Ionicons name="trophy" size={24} color={TACTICAL_THEME.success} />
             <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.body]}>
               {userStats.averageAccuracy.toFixed(1)}%
             </Text>
@@ -118,7 +109,7 @@ export default function MissionReportScreen() {
           </View>
 
           <View style={styles.statCard}>
-            <TrendingUp size={24} color={TACTICAL_THEME.warning} />
+            <Ionicons name="trending-up" size={24} color={TACTICAL_THEME.warning} />
             <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.body]}>
               {userStats.streak}
             </Text>
@@ -128,7 +119,7 @@ export default function MissionReportScreen() {
           </View>
 
           <View style={styles.statCard}>
-            <Calendar size={24} color={TACTICAL_THEME.textSecondary} />
+            <Ionicons name="calendar" size={24} color={TACTICAL_THEME.textSecondary} />
             <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.body]}>
               {userStats.lastPracticeDate
                 ? new Date(userStats.lastPracticeDate).toLocaleDateString()
@@ -182,7 +173,7 @@ export default function MissionReportScreen() {
               </Text>
               {spec.unlocked && (
                 <View style={styles.unlockedIndicator}>
-                  <Star size={16} color={TACTICAL_THEME.warning} />
+                  <Ionicons name="star" size={16} color={TACTICAL_THEME.warning} />
                 </View>
               )}
             </View>
@@ -217,7 +208,7 @@ export default function MissionReportScreen() {
               </Text>
               {comm.unlocked && (
                 <View style={styles.unlockedIndicator}>
-                  <Trophy size={16} color={TACTICAL_THEME.success} />
+                  <Ionicons name="trophy" size={16} color={TACTICAL_THEME.success} />
                 </View>
               )}
             </View>
@@ -259,15 +250,15 @@ export default function MissionReportScreen() {
       {/* Tab Navigation */}
       <View style={styles.tabNavigation}>
         {[
-          { key: 'overview', label: 'OVERVIEW', icon: Shield, flex: 1 },
+          { key: 'overview', label: 'OVERVIEW', iconName: 'shield', flex: 1 },
           {
             key: 'achievements',
             label: 'ACHIEVEMENTS',
-            icon: Award,
+            iconName: 'trophy',
             flex: 1.3,
           },
-          { key: 'history', label: 'HISTORY', icon: Calendar, flex: 0.9 },
-        ].map(({ key, label, icon: Icon, flex }) => (
+          { key: 'history', label: 'HISTORY', iconName: 'calendar', flex: 0.9 },
+        ].map(({ key, label, iconName, flex }) => (
           <TouchableOpacity
             key={key}
             style={[
@@ -277,7 +268,8 @@ export default function MissionReportScreen() {
             ]}
             onPress={() => setSelectedTab(key as any)}
           >
-            <Icon
+            <Ionicons
+              name={iconName as any}
               size={20}
               color={
                 selectedTab === key

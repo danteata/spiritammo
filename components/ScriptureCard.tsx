@@ -8,7 +8,7 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { BlurView } from 'expo-blur'
-import { Eye, EyeOff, RefreshCw } from 'lucide-react-native'
+import { FontAwesome } from '@expo/vector-icons';
 import { Scripture } from '@/types/scripture'
 import { GRADIENTS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
@@ -58,12 +58,14 @@ export default function ScriptureCard({
       {revealed ? (
         <ScriptureText
           text={scripture.text}
+          isJesusWords={scripture.isJesusWords}
           style={[styles.text, { color: textColor }]}
         />
       ) : (
         <View style={styles.hiddenTextContainer}>
           <ScriptureText
             text={scripture.text}
+            isJesusWords={scripture.isJesusWords}
             style={[styles.text, styles.hiddenText, { color: textColor }]}
           />
           <BlurView
@@ -82,9 +84,9 @@ export default function ScriptureCard({
           testID="toggle-reveal-button"
         >
           {revealed ? (
-            <EyeOff size={24} color={textColor} />
+            <FontAwesome name="eye-slash" size={24} color={textColor} />
           ) : (
-            <Eye size={24} color={textColor} />
+            <FontAwesome name="eye" size={24} color={textColor} />
           )}
         </TouchableOpacity>
 
@@ -93,7 +95,7 @@ export default function ScriptureCard({
           onPress={handleNext}
           testID="next-scripture-button"
         >
-          <RefreshCw size={24} color={textColor} />
+          <FontAwesome name="refresh" size={24} color={textColor} />
         </TouchableOpacity>
       </View>
     </LinearGradient>

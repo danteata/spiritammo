@@ -8,16 +8,7 @@ import {
   ScrollView,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import {
-  X,
-  Target,
-  BookOpen,
-  Play,
-  BarChart3,
-  Calendar,
-  Tag,
-  Layers,
-} from 'lucide-react-native'
+import { FontAwesome, Feather } from '@expo/vector-icons';
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection } from '@/types/scripture'
 import { useAppStore } from '@/hooks/useAppStore'
@@ -51,7 +42,7 @@ export default function CollectionDetailModal({
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.titleSection}>
-              <BookOpen size={24} color={TACTICAL_THEME.accent} />
+              <FontAwesome name="book" size={24} color={TACTICAL_THEME.accent} />
               <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
                 {collection.abbreviation
                   ? `${collection.abbreviation} - ${collection.name}`
@@ -60,7 +51,7 @@ export default function CollectionDetailModal({
             </View>
 
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <X size={24} color={TACTICAL_THEME.text} />
+              <FontAwesome name="close" size={24} color={TACTICAL_THEME.text} />
             </TouchableOpacity>
           </View>
 
@@ -80,7 +71,7 @@ export default function CollectionDetailModal({
 
             <View style={styles.statsGrid}>
               <View style={styles.statCard}>
-                <Target size={20} color={TACTICAL_THEME.accent} />
+                <FontAwesome name="bullseye" size={20} color={TACTICAL_THEME.accent} />
                 <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading]}>
                   {scriptures.length}
                 </Text>
@@ -91,7 +82,7 @@ export default function CollectionDetailModal({
 
               {collection.isChapterBased && collection.chapters && (
                 <View style={styles.statCard}>
-                  <Layers size={20} color={TACTICAL_THEME.accent} />
+                  <Feather name="layers" size={20} color={TACTICAL_THEME.accent} />
                   <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading]}>
                     {collection.chapters.length}
                   </Text>
@@ -103,7 +94,7 @@ export default function CollectionDetailModal({
 
               {collection.bookInfo && (
                 <View style={styles.statCard}>
-                  <BarChart3 size={20} color={TACTICAL_THEME.accent} />
+                  <FontAwesome name="bar-chart" size={20} color={TACTICAL_THEME.accent} />
                   <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading]}>
                     {collection.bookInfo.averageAccuracy?.toFixed(0) || '0'}%
                   </Text>
@@ -114,7 +105,7 @@ export default function CollectionDetailModal({
               )}
 
               <View style={styles.statCard}>
-                <Calendar size={20} color={TACTICAL_THEME.accent} />
+                <FontAwesome name="calendar" size={20} color={TACTICAL_THEME.accent} />
                 <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading]}>
                   {new Date(
                     collection.createdAt || Date.now()
@@ -141,7 +132,7 @@ export default function CollectionDetailModal({
               <View style={styles.tagsContainer}>
                 {collection.tags.map((tag, index) => (
                   <View key={index} style={styles.tag}>
-                    <Tag size={12} color={TACTICAL_THEME.text} />
+                    <FontAwesome name="tag" size={12} color={TACTICAL_THEME.text} />
                     <Text style={[styles.tagText, MILITARY_TYPOGRAPHY.caption]}>
                       {tag.toUpperCase()}
                     </Text>
@@ -207,7 +198,7 @@ export default function CollectionDetailModal({
 
         {/* Training Range Note */}
         <View style={styles.trainingNote}>
-          <Target size={20} color={TACTICAL_THEME.accent} />
+          <FontAwesome name="bullseye" size={20} color={TACTICAL_THEME.accent} />
           <Text style={[styles.trainingNoteText, MILITARY_TYPOGRAPHY.body]}>
             Visit the{' '}
             <Text style={styles.trainingRangeText}>Training Range</Text> to

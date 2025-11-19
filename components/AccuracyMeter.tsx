@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react'
 import { StyleSheet, Text, View, Animated } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Target, TrendingUp, TrendingDown } from 'lucide-react-native'
+import { FontAwesome } from '@expo/vector-icons';
 import {
   TACTICAL_THEME,
   MILITARY_TYPOGRAPHY,
@@ -106,9 +106,9 @@ export default function AccuracyMeter({
     if (Math.abs(trend) < 1) return null // No significant change
 
     return trend > 0 ? (
-      <TrendingUp size={16} color={ACCURACY_COLORS.excellent} />
+      <FontAwesome name="long-arrow-up" size={16} color={ACCURACY_COLORS.excellent} />
     ) : (
-      <TrendingDown size={16} color={ACCURACY_COLORS.poor} />
+      <FontAwesome name="long-arrow-down" size={16} color={ACCURACY_COLORS.poor} />
     )
   }
 
@@ -136,7 +136,7 @@ export default function AccuracyMeter({
       {/* Header with percentage */}
       <View style={styles.header}>
         <View style={styles.labelContainer}>
-          <Target size={16} color={accuracyColor} />
+          <FontAwesome name="bullseye" size={16} color={accuracyColor} />
           <Text style={[styles.label, MILITARY_TYPOGRAPHY.caption]}>
             {label}: {accuracy.toFixed(1)}%
           </Text>
@@ -326,5 +326,17 @@ const styles = StyleSheet.create({
     fontSize: 8,
     fontWeight: 'bold',
     textAlign: 'center',
+  },
+  traineeZone: {
+    // Styles for trainee zone - using backgroundColor from inline styles
+  },
+  qualifiedZone: {
+    // Styles for qualified zone - using backgroundColor from inline styles
+  },
+  sharpZone: {
+    // Styles for sharp zone - using backgroundColor from inline styles
+  },
+  marksZone: {
+    // Styles for marks zone - using backgroundColor from inline styles
   },
 })

@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import {
   StyleSheet,
   Text,
@@ -8,13 +8,15 @@ import {
   Alert,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Book, ChevronRight, Upload, Layers } from 'lucide-react-native'
+import { FontAwesome, Feather } from '@expo/vector-icons';
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 import { Collection, Scripture } from '@/types/scripture'
 import FileUploader from '@/components/FileUploader'
 import CollectionDetailModal from '@/components/CollectionDetailModal'
 import BookScripturesModal from '@/components/BookScripturesModal'
+import AddVersesModal from '@/components/AddVersesModal'
+
 import { CollectionChapterService } from '@/services/collectionChapters'
 
 export default function ArmoryScreen() {
@@ -35,6 +37,7 @@ export default function ArmoryScreen() {
   const [showBookScriptures, setShowBookScriptures] = useState(false)
   const [bookScriptures, setBookScriptures] = useState<Scripture[]>([])
   const [selectedBookName, setSelectedBookName] = useState<string>('')
+  const [showAddVerses, setShowAddVerses] = useState(false)
 
   const handleSelectCollection = (collection: Collection) => {
     console.log('Selecting collection:', collection.name, collection.id)
@@ -240,8 +243,8 @@ export default function ArmoryScreen() {
       <TouchableOpacity
         style={styles.collectionArrow}
         onPress={() => handleShowCollectionDetail(item)}
-      >
-        <ChevronRight size={20} color={isDark ? 'white' : 'black'} />
+        >
+        <FontAwesome name="chevron-right" size={20} color={isDark ? 'white' : 'black'} />
       </TouchableOpacity>
     </View>
   )
@@ -297,7 +300,7 @@ export default function ArmoryScreen() {
       ]}
       onPress={() => handleBookDistributionTap(item.book)}
     >
-      <Book size={16} color={TACTICAL_THEME.accent} />
+      <FontAwesome name="book" size={16} color={TACTICAL_THEME.accent} />
       <Text
         style={[styles.distributionBook, { color: isDark ? 'white' : 'black' }]}
       >
@@ -337,7 +340,7 @@ export default function ArmoryScreen() {
       ]}
       onPress={() => handleChapterDistributionTap(item.chapter)}
     >
-      <Layers size={16} color={TACTICAL_THEME.accent} />
+      <Feather name="layers" size={16} color={TACTICAL_THEME.accent} />
       <Text
         style={[styles.distributionBook, { color: isDark ? 'white' : 'black' }]}
       >
@@ -380,7 +383,7 @@ export default function ArmoryScreen() {
         onPress={() => handleDefaultBookTap(item.name)}
         testID={`book-${item.id}`}
       >
-        <Book size={20} color={isDark ? 'white' : 'black'} />
+        <FontAwesome name="book" size={20} color={isDark ? 'white' : 'black'} />
         <Text style={[styles.bookName, { color: isDark ? 'white' : 'black' }]}>
           {item.name}
         </Text>
@@ -394,7 +397,7 @@ export default function ArmoryScreen() {
         >
           {bookScriptureCount} rounds
         </Text>
-        <ChevronRight size={20} color={isDark ? 'white' : 'black'} />
+        <FontAwesome name="chevron-right" size={20} color={isDark ? 'white' : 'black'} />
       </TouchableOpacity>
     )
   }
@@ -434,16 +437,29 @@ export default function ArmoryScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity
-          style={styles.uploadButton}
-          onPress={() => setShowFileUploader(true)}
-          testID="upload-file-button"
-        >
-          <Upload size={20} color={TACTICAL_THEME.text} />
-          <Text style={[styles.uploadText, MILITARY_TYPOGRAPHY.caption]}>
-            SUPPLY DROP
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={styles.addVersesButton}
+            onPress={() => setShowAddVerses(true)}
+            testID="add-verses-button"
+          >
+            <FontAwesome name="plus" size={16} color={TACTICAL_THEME.text} />
+            <Text style={[styles.addVersesText, MILITARY_TYPOGRAPHY.caption]}>
+              ADD VERSES
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.uploadButton}
+            onPress={() => setShowFileUploader(true)}
+            testID="upload-file-button"
+          >
+            <FontAwesome name="upload" size={20} color={TACTICAL_THEME.text} />
+            <Text style={[styles.uploadText, MILITARY_TYPOGRAPHY.caption]}>
+              SUPPLY DROP
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <Text
@@ -492,7 +508,8 @@ export default function ArmoryScreen() {
               ]}
               onPress={() => setFilterTab('books')}
             >
-              <Book
+              <FontAwesome
+                name="book"
                 size={16}
                 color={
                   filterTab === 'books'
@@ -525,7 +542,8 @@ export default function ArmoryScreen() {
                   ]}
                   onPress={() => setFilterTab('chapters')}
                 >
-                  <Layers
+                  <Feather
+                    name="layers"
                     size={16}
                     color={
                       filterTab === 'chapters'
@@ -643,6 +661,15 @@ export default function ArmoryScreen() {
         scriptures={bookScriptures}
         bookName={selectedBookName}
       />
+
+      {/* Add Verses Modal */}
+      <AddVersesModal
+        isVisible={showAddVerses}
+        onClose={() => setShowAddVerses(false)}
+        onVersesAdded={(collectionId, verses) => {
+          console.log(`Added ${verses.length} verses to collection ${collectionId}`);
+        }}
+      />
     </LinearGradient>
   )
 }
@@ -663,11 +690,29 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12, // Add space between text and button
   },
+  headerButtons: {
+    gap: 8,
+  },
   sectionTitle: {
     marginBottom: 8,
   },
   sectionSubtitle: {
     marginBottom: 4,
+  },
+  addVersesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 4,
+    minWidth: 80,
+  },
+  addVersesText: {
+    color: TACTICAL_THEME.text,
+    fontWeight: 'bold',
+    fontSize: 10,
   },
   uploadButton: {
     flexDirection: 'row',

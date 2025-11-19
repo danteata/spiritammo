@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
 import { StyleSheet, Text, View, ScrollView, Switch } from 'react-native'
-import Slider from '@react-native-community/slider'
+// import Slider from '@react-native-community/slider' // Temporarily disabled due to Android 15 crash
 import { LinearGradient } from 'expo-linear-gradient'
 import { COLORS, GRADIENTS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
-import { Moon, Sun, Volume2, VolumeX } from 'lucide-react-native'
+import { Ionicons } from '@expo/vector-icons';
 
 export default function SettingsScreen() {
   const { isDark, setTheme, userSettings, saveUserSettings } = useAppStore()
@@ -40,8 +40,8 @@ export default function SettingsScreen() {
   }
 
   const backgroundColors = isDark
-    ? GRADIENTS.primary.dark
-    : GRADIENTS.primary.light
+    ? GRADIENTS.primary.dark as [string, string, string]
+    : GRADIENTS.primary.light as [string, string, string]
   const textColor = isDark ? COLORS.text.dark : COLORS.text.light
   const cardBackground = isDark
     ? 'rgba(255, 255, 255, 0.1)'
@@ -70,9 +70,9 @@ export default function SettingsScreen() {
                 Dark Mode
               </Text>
               {isDark ? (
-                <Moon size={20} color={textColor} />
+                <Ionicons name="moon" size={20} color={textColor} />
               ) : (
-                <Sun size={20} color={textColor} />
+                <Ionicons name="sunny" size={20} color={textColor} />
               )}
             </View>
 
@@ -90,17 +90,23 @@ export default function SettingsScreen() {
           <Text style={[styles.cardTitle, { color: textColor }]}>
             Voice Settings
           </Text>
+          
+          {/* Sliders temporarily disabled due to Android 15 crash bug */}
+          <Text style={[styles.aboutText, { color: textColor }]}>
+            Voice settings temporarily unavailable
+          </Text>
 
+          {/*
           <View style={styles.settingRow}>
             <View style={styles.settingLabelContainer}>
               <Text style={[styles.settingLabel, { color: textColor }]}>
                 Speech Rate
               </Text>
-              <Volume2 size={20} color={textColor} />
+              <Ionicons name="volume-high" size={20} color={textColor} />
             </View>
 
             <View style={styles.sliderContainer}>
-              <VolumeX size={16} color={textColor} />
+              <Ionicons name="volume-mute" size={16} color={textColor} />
               <Slider
                 style={styles.slider}
                 minimumValue={0.5}
@@ -115,7 +121,7 @@ export default function SettingsScreen() {
                 thumbTintColor={COLORS.primary.main}
                 testID="voice-rate-slider"
               />
-              <Volume2 size={16} color={textColor} />
+              <Ionicons name="volume-high" size={16} color={textColor} />
             </View>
             <Text style={[styles.sliderValue, { color: textColor }]}>
               {localSettings.voiceRate.toFixed(1)}x
@@ -127,7 +133,7 @@ export default function SettingsScreen() {
               <Text style={[styles.settingLabel, { color: textColor }]}>
                 Speech Pitch
               </Text>
-              <Volume2 size={20} color={textColor} />
+              <Ionicons name="volume-high" size={20} color={textColor} />
             </View>
 
             <View style={styles.sliderContainer}>
@@ -152,6 +158,7 @@ export default function SettingsScreen() {
               {localSettings.voicePitch.toFixed(1)}x
             </Text>
           </View>
+          */}
         </View>
 
         <View style={[styles.card, { backgroundColor: cardBackground }]}>

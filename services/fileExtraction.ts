@@ -1,7 +1,11 @@
 import * as DocumentPicker from 'expo-document-picker'
-import * as FileSystem from 'expo-file-system'
+// Use legacy import as suggested by error message for readAsStringAsync
+import * as FileSystem from 'expo-file-system/legacy'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Scripture } from '@/types/scripture'
+import JSZip from 'jszip'
+
+// File extraction types
 
 // File extraction types
 export interface ExtractedDocument {
@@ -68,70 +72,60 @@ class FileExtractionService {
     }
   }
 
-  // Pick and extract file
-  async pickAndExtractFile(
-    onProgress?: (progress: ExtractionProgress) => void
-  ): Promise<ExtractedDocument | null> {
+  // Pick file (step 1)
+  async pickFile(): Promise<{ uri: string; name: string; size?: number; mimeType?: string } | null> {
     try {
-      // Pick document
-      onProgress?.({
-        stage: 'reading',
-        progress: 10,
-        message: 'Opening file picker...',
-      })
-
       const result = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf', 'application/epub+zip', 'text/plain'],
         copyToCacheDirectory: true,
       })
 
-      if (result.canceled) {
-        return null
+      if (result.canceled) return null
+      const asset = result.assets?.[0]
+      if (!asset) return null
+
+      return {
+        uri: asset.uri,
+        name: asset.name,
+        size: asset.size,
+        mimeType: asset.mimeType,
       }
+    } catch (error) {
+      console.error('Failed to pick file:', error)
+      return null
+    }
+  }
 
-      const file = result.assets[0]
+  // Extract text from non-PDF files (step 2a)
+  async extractTextFromFile(
+    uri: string,
+    fileType: 'epub' | 'txt',
+    onProgress?: (progress: ExtractionProgress) => void
+  ): Promise<string> {
+    if (fileType === 'txt') {
+      return await FileSystem.readAsStringAsync(uri)
+    } else if (fileType === 'epub') {
+      return await this.extractFromEPUB(uri, onProgress)
+    }
+    return ''
+  }
 
-      onProgress?.({
-        stage: 'reading',
-        progress: 30,
-        message: `Reading ${file.name}...`,
-      })
-
-      // Read file content
-      const fileContent = await FileSystem.readAsStringAsync(file.uri)
-
-      onProgress?.({
-        stage: 'parsing',
-        progress: 50,
-        message: 'Parsing document content...',
-      })
-
-      // Determine file type and extract accordingly
-      const fileType = this.getFileType(file.name, file.mimeType)
-      let extractedText = ''
-
-      switch (fileType) {
-        case 'txt':
-          extractedText = fileContent
-          break
-        case 'pdf':
-          extractedText = await this.extractFromPDF(fileContent, onProgress)
-          break
-        case 'epub':
-          extractedText = await this.extractFromEPUB(fileContent, onProgress)
-          break
-        default:
-          throw new Error('Unsupported file type')
-      }
-
+  // Process extracted text into verses and save (step 3)
+  async processExtractedText(
+    text: string,
+    fileName: string,
+    fileType: 'pdf' | 'epub' | 'txt',
+    fileSize: number,
+    onProgress?: (progress: ExtractionProgress) => void
+  ): Promise<ExtractedDocument> {
+    try {
       onProgress?.({
         stage: 'extracting',
         progress: 70,
         message: 'Extracting verses...',
       })
 
-      // Extract verses from text
-      const verses = await this.extractVerses(extractedText, onProgress)
+      const verses = await this.extractVerses(text, onProgress)
 
       onProgress?.({
         stage: 'analyzing',
@@ -139,19 +133,17 @@ class FileExtractionService {
         message: 'Analyzing extracted content...',
       })
 
-      // Create extracted document
       const extractedDoc: ExtractedDocument = {
         id: `doc_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
-        name: file.name,
+        name: fileName,
         type: fileType,
-        size: file.size || 0,
+        size: fileSize,
         extractedAt: new Date(),
         totalVerses: verses.length,
-        extractedText,
+        extractedText: text,
         verses,
       }
 
-      // Save document
       this.documents.push(extractedDoc)
       await this.saveExtractedDocuments()
 
@@ -164,20 +156,20 @@ class FileExtractionService {
 
       return extractedDoc
     } catch (error) {
-      console.error('Failed to extract file:', error)
-      onProgress?.({
-        stage: 'complete',
-        progress: 0,
-        message: `Extraction failed: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`,
-      })
-      return null
+      console.error('Processing error:', error)
+      throw error
     }
   }
 
+  // Deprecated: Keep for backward compatibility if needed, but it won't handle PDF anymore
+  async pickAndExtractFile(
+    onProgress?: (progress: ExtractionProgress) => void
+  ): Promise<ExtractedDocument | null> {
+    throw new Error('Use pickFile and processExtractedText instead')
+  }
+
   // Determine file type
-  private getFileType(
+  getFileType(
     fileName: string,
     mimeType?: string
   ): 'pdf' | 'epub' | 'txt' {
@@ -192,60 +184,110 @@ class FileExtractionService {
     return 'txt'
   }
 
-  // Extract text from PDF (basic implementation)
-  private async extractFromPDF(
-    content: string,
-    onProgress?: (progress: ExtractionProgress) => void
-  ): Promise<string> {
-    // For now, we'll implement a basic text extraction
-    // In a production app, you'd use a proper PDF parsing library
-    onProgress?.({
-      stage: 'parsing',
-      progress: 60,
-      message: 'Parsing PDF content...',
-    })
 
-    // Basic PDF text extraction (this is simplified)
-    // Real implementation would use pdf-parse or similar
-    try {
-      // Remove PDF metadata and extract readable text
-      const textContent = content
-        .replace(/[\x00-\x1F\x7F-\x9F]/g, ' ') // Remove control characters
-        .replace(/\s+/g, ' ') // Normalize whitespace
-        .trim()
 
-      return textContent
-    } catch (error) {
-      console.error('PDF extraction error:', error)
-      return content // Fallback to raw content
-    }
-  }
-
-  // Extract text from EPUB (basic implementation)
+  // Extract text from EPUB
   private async extractFromEPUB(
-    content: string,
+    uri: string,
     onProgress?: (progress: ExtractionProgress) => void
   ): Promise<string> {
     onProgress?.({
-      stage: 'parsing',
-      progress: 60,
-      message: 'Parsing EPUB content...',
+      stage: 'reading',
+      progress: 40,
+      message: 'Reading EPUB file...',
     })
 
-    // Basic EPUB text extraction
-    // Real implementation would properly parse the EPUB structure
     try {
-      // Remove HTML tags and extract text
-      const textContent = content
-        .replace(/<[^>]*>/g, ' ') // Remove HTML tags
-        .replace(/&[^;]+;/g, ' ') // Remove HTML entities
-        .replace(/\s+/g, ' ') // Normalize whitespace
-        .trim()
+      const fileContent = await FileSystem.readAsStringAsync(uri, {
+        encoding: 'base64',
+      })
 
-      return textContent
+      onProgress?.({
+        stage: 'parsing',
+        progress: 50,
+        message: 'Unzipping EPUB container...',
+      })
+
+      const zip = await JSZip.loadAsync(fileContent, { base64: true })
+
+      // Find OPF file from container.xml
+      const containerXml = await zip.file('META-INF/container.xml')?.async('string')
+      if (!containerXml) throw new Error('Invalid EPUB: Missing container.xml')
+
+      const opfPathMatch = containerXml.match(/full-path="([^"]+)"/)
+      const opfPath = opfPathMatch ? opfPathMatch[1] : null
+      if (!opfPath) throw new Error('Invalid EPUB: Could not find OPF path')
+
+      // Read OPF file
+      const opfContent = await zip.file(opfPath)?.async('string')
+      if (!opfContent) throw new Error('Invalid EPUB: Missing OPF file')
+
+      // Parse spine to get reading order
+      // Simple regex parsing to avoid XML parser dependency if possible, 
+      // but we can use fast-xml-parser if needed. For now, regex.
+      const manifestItems: Record<string, string> = {}
+      const manifestRegex = /<item[^>]*id="([^"]+)"[^>]*href="([^"]+)"/g
+      let match
+      while ((match = manifestRegex.exec(opfContent)) !== null) {
+        manifestItems[match[1]] = match[2]
+      }
+
+      const spineRegex = /<itemref[^>]*idref="([^"]+)"/g
+      const spineIds: string[] = []
+      while ((match = spineRegex.exec(opfContent)) !== null) {
+        spineIds.push(match[1])
+      }
+
+      // Resolve relative paths
+      const opfDir = opfPath.includes('/') ? opfPath.substring(0, opfPath.lastIndexOf('/') + 1) : ''
+
+      let fullText = ''
+      let processedItems = 0
+
+      onProgress?.({
+        stage: 'extracting',
+        progress: 60,
+        message: 'Extracting text from chapters...',
+      })
+
+      for (const id of spineIds) {
+        const href = manifestItems[id]
+        if (href) {
+          const filePath = opfDir + href
+          const content = await zip.file(filePath)?.async('string')
+
+          if (content) {
+            // Strip HTML tags
+            const text = content
+              .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '') // Remove styles
+              .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '') // Remove scripts
+              .replace(/<[^>]+>/g, ' ') // Remove tags
+              .replace(/&nbsp;/g, ' ')
+              .replace(/&amp;/g, '&')
+              .replace(/&lt;/g, '<')
+              .replace(/&gt;/g, '>')
+              .replace(/&quot;/g, '"')
+              .replace(/\s+/g, ' ')
+              .trim()
+
+            fullText += text + '\n\n'
+          }
+        }
+
+        processedItems++
+        if (processedItems % 5 === 0) {
+          onProgress?.({
+            stage: 'extracting',
+            progress: 60 + Math.floor((processedItems / spineIds.length) * 20),
+            message: `Processed ${processedItems}/${spineIds.length} chapters...`,
+          })
+        }
+      }
+
+      return fullText
     } catch (error) {
       console.error('EPUB extraction error:', error)
-      return content // Fallback to raw content
+      throw new Error(`Failed to parse EPUB: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
@@ -271,10 +313,8 @@ class FileExtractionService {
 
     // First pass: count total potential matches
     for (const pattern of versePatterns) {
-      const matches = text.matchAll(pattern)
-      for (const _ of matches) {
-        totalMatches++
-      }
+      const matches = Array.from(text.matchAll(pattern))
+      totalMatches += matches.length
     }
 
     onProgress?.({
@@ -286,29 +326,35 @@ class FileExtractionService {
 
     // Second pass: extract verses
     for (const pattern of versePatterns) {
-      const matches = text.matchAll(pattern)
+      const matches = Array.from(text.matchAll(pattern))
 
       for (const match of matches) {
         processedMatches++
 
-        let book: string, chapter: number, verse: number, verseText: string
+        let book = ''
+        let chapter = 0
+        let verseNum = 0
+        let verseText = ''
 
-        if (match[4]) {
-          // Standard format
-          ;[, book, chapter, verse, verseText] = match.map((m, i) =>
-            i === 2 || i === 3 ? parseInt(m) : m?.trim()
-          ) as [string, string, number, number, string]
+        // Determine mapping based on pattern shape
+        if (pattern === versePatterns[2]) {
+          // Quote format: "text" - Book Chapter:Verse
+          verseText = match[1] || ''
+          book = (match[2] || '').toString()
+          chapter = parseInt(match[3]) || 0
+          verseNum = parseInt(match[4]) || 0
         } else {
-          // Quote format
-          ;[, verseText, book, chapter, verse] = match.map((m, i) =>
-            i === 3 || i === 4 ? parseInt(m) : m?.trim()
-          ) as [string, string, string, number, number]
+          // Standard formats: Book Chapter:Verse <text>  OR Book Chapter.Verse <text>
+          book = (match[1] || '').toString()
+          chapter = parseInt(match[2]) || 0
+          verseNum = parseInt(match[3]) || 0
+          verseText = match[4] || ''
         }
 
         // Clean up the verse text
-        const cleanText = verseText
-          .replace(/^\s*[-–—"']\s*/, '') // Remove leading punctuation
-          .replace(/\s*[-–—"']\s*$/, '') // Remove trailing punctuation
+        const cleanText = (verseText || '')
+          .replace(/^\s*[-–—"']\s*/, '')
+          .replace(/\s*[-–—"']\s*$/, '')
           .trim()
 
         if (cleanText.length > 10 && cleanText.length < 500) {
@@ -316,10 +362,10 @@ class FileExtractionService {
           const extractedVerse: ExtractedVerse = {
             id: `verse_${Date.now()}_${verses.length}`,
             text: cleanText,
-            reference: `${book} ${chapter}:${verse}`,
+            reference: `${book} ${chapter}:${verseNum}`,
             book: book.replace(/^\d+\s*/, ''), // Remove leading numbers
             chapter,
-            verse,
+            verse: verseNum,
             confidence: this.calculateConfidence(cleanText, book),
             context: this.extractContext(text, match.index || 0, 100),
           }
@@ -327,11 +373,12 @@ class FileExtractionService {
           verses.push(extractedVerse)
         }
 
-        // Update progress
-        if (processedMatches % 10 === 0) {
+        // Update progress (guard divide-by-zero)
+        if (totalMatches > 0 && processedMatches % 10 === 0) {
+          const pct = 75 + (processedMatches / totalMatches) * 15
           onProgress?.({
             stage: 'extracting',
-            progress: 75 + (processedMatches / totalMatches) * 15,
+            progress: Math.min(90, Math.round(pct)),
             message: `Processed ${processedMatches}/${totalMatches} verses...`,
             currentVerse: processedMatches,
             totalVerses: totalMatches,

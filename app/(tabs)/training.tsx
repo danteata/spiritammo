@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Target, Award, TrendingUp, Settings } from 'lucide-react-native'
+import { FontAwesome } from '@expo/vector-icons';
 import {
   GRADIENTS,
   TACTICAL_THEME,
@@ -29,7 +29,6 @@ import {
   generateAndStoreIntel,
   StoredIntel,
 } from '@/services/battleIntelligence'
-import { voiceRecognitionService } from '@/services/voiceRecognition'
 import { militaryRankingService } from '@/services/militaryRanking'
 
 export default function TrainingScreen() {
@@ -59,6 +58,10 @@ export default function TrainingScreen() {
   const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
   const [generatedIntel, setGeneratedIntel] = useState<StoredIntel | null>(null)
 
+  // Safe formatter for numeric percentages that might be null/undefined
+  const fmt = (v?: number | null, digits = 1) =>
+    typeof v === 'number' && !Number.isNaN(v) ? v.toFixed(digits) : '0'
+
   useEffect(() => {
     loadMilitaryProfile()
 
@@ -85,12 +88,16 @@ export default function TrainingScreen() {
   }
 
   const handleSelectCollection = (collection: Collection) => {
-    setSelectedCollection(collection)
-    const scriptures = getScripturesByCollection(collection.id)
+    console.log('🎯 Selecting collection:', collection.name, 'ID:', collection.id);
+    setSelectedCollection(collection);
+    const scriptures = getScripturesByCollection(collection.id);
+    console.log('💯 Found', scriptures.length, 'scriptures in collection');
     if (scriptures.length > 0) {
       // Reset previous accuracy when switching ammunition
-      setPreviousAccuracy(0)
-      setCurrentScripture(scriptures[0])
+      setPreviousAccuracy(0);
+      setCurrentScripture(scriptures[0]);
+    } else {
+      console.warn('⚠️ No scriptures found in collection', collection.id);
     }
   }
 
@@ -100,15 +107,26 @@ export default function TrainingScreen() {
 
   const handleReloadAmmunition = () => {
     if (selectedCollection) {
-      // Get random scripture from the selected collection
-      const scriptures = getScripturesByCollection(selectedCollection.id)
-      if (scriptures.length > 0) {
-        const randomIndex = Math.floor(Math.random() * scriptures.length)
-        setCurrentScripture(scriptures[randomIndex])
+      // Get the latest collection data to ensure we have updated scripture IDs
+      const freshCollection = collections.find(c => c.id === selectedCollection.id);
+      if (freshCollection) {
+        console.log('🔄 Reloading ammunition for collection:', freshCollection.name);
+        console.log('📄 Collection has', freshCollection.scriptures.length, 'scripture IDs');
+        const scriptures = getScripturesByCollection(freshCollection.id);
+        console.log('💯 Reload found', scriptures.length, 'scripture objects');
+        if (scriptures.length > 0) {
+          const randomIndex = Math.floor(Math.random() * scriptures.length);
+          const newScripture = scriptures[randomIndex];
+          console.log('✅ Selected random scripture:', newScripture.reference);
+          setCurrentScripture(newScripture);
+        } else {
+          console.warn('⚠️ No scriptures available in collection');
+        }
       }
     } else {
       // Get random scripture from all scriptures
-      getRandomScripture()
+      console.log('🔄 Reloading from all scriptures');
+      getRandomScripture();
     }
   }
 
@@ -146,7 +164,8 @@ export default function TrainingScreen() {
 
       await loadMilitaryProfile()
     }
-    setShowTargetPractice(false)
+    // Keep the practice modal open so the user can view the transcript and
+    // shot result. The modal is closed by the user via the CEASE FIRE button.
   }
 
   const handleMultiChapterSelection = (chapterIds: string[]) => {
@@ -285,10 +304,10 @@ export default function TrainingScreen() {
         )}
 
         {/* Accuracy Meter */}
-        {false && currentScripture && currentScripture.accuracy && (
+        {false && currentScripture?.accuracy != null && (
           <View style={styles.metricsContainer}>
             <AccuracyMeter
-              accuracy={currentScripture?.accuracy}
+              accuracy={currentScripture?.accuracy ?? 0}
               previousAccuracy={previousAccuracy}
               label="AMMO ACCURACY"
               size="medium"
@@ -322,7 +341,7 @@ export default function TrainingScreen() {
 
             <View style={styles.statusGrid}>
               <View style={styles.statusItem}>
-                <Target size={20} color={TACTICAL_THEME.accent} />
+                <FontAwesome name="bullseye" size={20} color={TACTICAL_THEME.accent} />
                 <Text
                   style={[
                     styles.statusLabel,
@@ -344,7 +363,7 @@ export default function TrainingScreen() {
               </View>
 
               <View style={styles.statusItem}>
-                <Award size={20} color={TACTICAL_THEME.success} />
+                <FontAwesome name="trophy" size={20} color={TACTICAL_THEME.success} />
                 <Text
                   style={[
                     styles.statusLabel,
@@ -361,12 +380,12 @@ export default function TrainingScreen() {
                     { color: TACTICAL_THEME.text },
                   ]}
                 >
-                  {militaryProfile.averageAccuracy.toFixed(1)}%
+                  {fmt(militaryProfile.averageAccuracy)}%
                 </Text>
               </View>
 
               <View style={styles.statusItem}>
-                <TrendingUp size={20} color={TACTICAL_THEME.warning} />
+                <FontAwesome name="long-arrow-up" size={20} color={TACTICAL_THEME.warning} />
                 <Text
                   style={[
                     styles.statusLabel,

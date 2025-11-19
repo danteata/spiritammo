@@ -7,7 +7,7 @@ import {
   FlatList,
   Modal,
 } from 'react-native'
-import { ChevronDown, Target, BookOpen } from 'lucide-react-native'
+import { FontAwesome } from '@expo/vector-icons';
 import { Collection } from '@/types/scripture'
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
@@ -59,7 +59,7 @@ export default function CollectionSelector({
     >
       <View style={styles.collectionInfo}>
         <View style={styles.collectionHeader}>
-          <BookOpen size={16} color={TACTICAL_THEME.accent} />
+          <FontAwesome name="book" size={16} color={TACTICAL_THEME.accent} />
           <Text style={[styles.collectionName, MILITARY_TYPOGRAPHY.body]}>
             {item.abbreviation
               ? `${item.abbreviation} - ${item.name}`
@@ -118,7 +118,7 @@ export default function CollectionSelector({
         testID="collection-selector-button"
       >
         <View style={styles.selectorContent}>
-          <Target size={20} color={TACTICAL_THEME.accent} />
+          <FontAwesome name="bullseye" size={20} color={TACTICAL_THEME.accent} />
           <View style={styles.selectorTextContainer}>
             <Text
               style={[
@@ -146,7 +146,7 @@ export default function CollectionSelector({
             )}
           </View>
         </View>
-        <ChevronDown size={20} color={textColor} />
+        <FontAwesome name="chevron-down" size={20} color={textColor} />
       </TouchableOpacity>
 
       <Modal
@@ -180,7 +180,7 @@ export default function CollectionSelector({
 
             {collections.length === 0 ? (
               <View style={styles.emptyState}>
-                <BookOpen size={48} color={TACTICAL_THEME.textSecondary} />
+                <FontAwesome name="book" size={48} color={TACTICAL_THEME.textSecondary} />
                 <Text
                   style={[
                     styles.emptyStateText,

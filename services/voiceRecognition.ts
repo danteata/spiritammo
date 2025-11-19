@@ -1,7 +1,7 @@
 import Voice from '@react-native-voice/voice';
 import * as Speech from 'expo-speech';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { Platform, PermissionsAndroid, NativeModules } from 'react-native';
 
 // Voice Recognition Types
 export interface VoiceSettings {
@@ -71,6 +71,11 @@ class VoiceRecognitionService {
   private isRecording = false;
   private settings: VoiceSettings = DEFAULT_VOICE_SETTINGS;
   private shotHistory: ShotResult[] = [];
+  // Listeners for partial and final transcription results
+  private partialListeners: Array<(partial: string) => void> = [];
+  private resultListeners: Array<(finalTranscript: string) => void> = [];
+  // Whether the underlying native module appears available
+  private available = false;
 
   constructor() {
     this.initializeVoice();
@@ -80,16 +85,25 @@ class VoiceRecognitionService {
 
   private async initializeVoice() {
     try {
-      if (Platform.OS !== 'web') {
-        Voice.onSpeechStart = this.onSpeechStart;
-        Voice.onSpeechRecognized = this.onSpeechRecognized;
-        Voice.onSpeechEnd = this.onSpeechEnd;
-        Voice.onSpeechError = this.onSpeechError;
-        Voice.onSpeechResults = this.onSpeechResults;
-        Voice.onSpeechPartialResults = this.onSpeechPartialResults;
-        Voice.onSpeechVolumeChanged = this.onSpeechVolumeChanged;
+      // Quick probe: check NativeModules for the RNVoice native module which
+      // react-native-voice typically registers as RNVoice.
+      const nativeVoice = (NativeModules as any).RNVoice || (NativeModules as any).Voice || null
+      if (Platform.OS !== 'web' && Voice && typeof Voice === 'object' && nativeVoice) {
+        // Only attach handlers if the native module is available
+        if (typeof Voice.onSpeechStart !== 'undefined') Voice.onSpeechStart = this.onSpeechStart;
+        if (typeof Voice.onSpeechRecognized !== 'undefined') Voice.onSpeechRecognized = this.onSpeechRecognized;
+        if (typeof Voice.onSpeechEnd !== 'undefined') Voice.onSpeechEnd = this.onSpeechEnd;
+        if (typeof Voice.onSpeechError !== 'undefined') Voice.onSpeechError = this.onSpeechError;
+        if (typeof Voice.onSpeechResults !== 'undefined') Voice.onSpeechResults = this.onSpeechResults;
+        if (typeof Voice.onSpeechPartialResults !== 'undefined') Voice.onSpeechPartialResults = this.onSpeechPartialResults;
+        if (typeof Voice.onSpeechVolumeChanged !== 'undefined') Voice.onSpeechVolumeChanged = this.onSpeechVolumeChanged;
+        this.isInitialized = true;
+        this.available = true;
+      } else {
+        console.warn('Voice native module not available. Voice recognition will be disabled on this platform or build.');
+        this.isInitialized = false;
+        this.available = false;
       }
-      this.isInitialized = true;
     } catch (error) {
       console.error('Failed to initialize voice recognition:', error);
     }
@@ -138,10 +152,25 @@ class VoiceRecognitionService {
 
   private onSpeechResults = (e: any) => {
     console.log('Speech results:', e.value);
+    try {
+      const results: string[] = Array.isArray(e.value) ? e.value : []
+      const first = results.length > 0 ? results[0] : ''
+      // Notify listeners with the first (best) result
+      this.resultListeners.forEach((cb) => cb(first))
+    } catch (err) {
+      console.error('Error handling speech results:', err)
+    }
   };
 
   private onSpeechPartialResults = (e: any) => {
     console.log('Partial results:', e.value);
+    try {
+      const results: string[] = Array.isArray(e.value) ? e.value : []
+      const partial = results.length > 0 ? results.join(' ') : ''
+      this.partialListeners.forEach((cb) => cb(partial))
+    } catch (err) {
+      console.error('Error handling partial results:', err)
+    }
   };
 
   private onSpeechVolumeChanged = (e: any) => {
@@ -156,16 +185,42 @@ class VoiceRecognitionService {
       }
 
       if (Platform.OS === 'web') {
-        console.log('Voice recognition not fully supported on web');
+        console.log('Voice recognition not supported on web');
         return false;
       }
 
-      await Voice.start(this.settings.language);
-      this.isRecording = true;
-      return true;
+      if (!this.available || !Voice || typeof Voice.start !== 'function') {
+        console.warn('Native voice module not available. Aborting startRecording.');
+        return false;
+      }
+
+      // Android: request RECORD_AUDIO permission at runtime
+      if (Platform.OS === 'android') {
+        try {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+            {
+              title: 'Microphone Permission',
+              message: 'SpiritAmmo needs access to your microphone for voice practice.',
+              buttonPositive: 'OK',
+            }
+          )
+          if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.warn('Microphone permission denied')
+            return false
+          }
+        } catch (permErr) {
+          console.error('Failed to request microphone permission:', permErr)
+          return false
+        }
+      }
+
+      await Voice.start(this.settings.language)
+      this.isRecording = true
+      return true
     } catch (error) {
-      console.error('Failed to start voice recognition:', error);
-      return false;
+      console.error('Failed to start voice recognition:', error)
+      return false
     }
   }
 
@@ -176,16 +231,37 @@ class VoiceRecognitionService {
         return [];
       }
 
+      if (!Voice || typeof Voice.stop !== 'function') {
+        console.warn('Voice.stop is not available');
+        this.isRecording = false;
+        return [];
+      }
+
       await Voice.stop();
       this.isRecording = false;
-      
-      // In a real implementation, this would return the actual results
-      // For now, we'll return an empty array and handle results in the callback
+      // Final results will be pushed to listeners via the native callbacks
       return [];
     } catch (error) {
       console.error('Failed to stop voice recognition:', error);
       return [];
     }
+  }
+
+  // Listener registration helpers
+  addPartialListener(cb: (partial: string) => void) {
+    this.partialListeners.push(cb)
+  }
+
+  removePartialListener(cb: (partial: string) => void) {
+    this.partialListeners = this.partialListeners.filter((fn) => fn !== cb)
+  }
+
+  addResultListener(cb: (finalTranscript: string) => void) {
+    this.resultListeners.push(cb)
+  }
+
+  removeResultListener(cb: (finalTranscript: string) => void) {
+    this.resultListeners = this.resultListeners.filter((fn) => fn !== cb)
   }
 
   // Calculate advanced accuracy metrics

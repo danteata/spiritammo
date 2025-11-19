@@ -9,23 +9,14 @@ import {
   Alert,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import {
-  Upload,
-  FileText,
-  BookOpen,
-  CheckCircle,
-  XCircle,
-  Download,
-  Eye,
-  Trash2,
-  AlertCircle,
-} from 'lucide-react-native'
+import { FontAwesome } from '@expo/vector-icons';
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import {
   fileExtractionService,
   ExtractedDocument,
   ExtractionProgress,
 } from '@/services/fileExtraction'
+import { PDFExtractor } from './PDFExtractor'
 
 interface FileUploaderProps {
   isVisible: boolean
@@ -47,6 +38,7 @@ export default function FileUploader({
   const [selectedDocument, setSelectedDocument] =
     useState<ExtractedDocument | null>(null)
   const [selectedVerses, setSelectedVerses] = useState<string[]>([])
+  const [pdfFile, setPdfFile] = useState<{ uri: string; name: string; size: number } | null>(null)
 
   React.useEffect(() => {
     if (isVisible) {
@@ -64,26 +56,73 @@ export default function FileUploader({
     setExtractionProgress(null)
 
     try {
-      const result = await fileExtractionService.pickAndExtractFile(
-        (progress) => {
-          setExtractionProgress(progress)
-        }
-      )
+      const file = await fileExtractionService.pickFile()
+      if (!file) {
+        setIsExtracting(false)
+        return
+      }
 
-      if (result) {
-        loadExtractedDocuments()
-        Alert.alert(
-          'Extraction Complete!',
-          `Successfully extracted ${result.totalVerses} verses from ${result.name}`,
-          [{ text: 'OK' }]
+      const fileType = fileExtractionService.getFileType(file.name, file.mimeType)
+
+      if (fileType === 'pdf') {
+        // Set PDF file to trigger WebView extraction
+        setPdfFile({ uri: file.uri, name: file.name, size: file.size || 0 })
+        // Extraction will continue in handleExtractionComplete
+      } else {
+        // Handle EPUB/TXT directly
+        const text = await fileExtractionService.extractTextFromFile(
+          file.uri,
+          fileType,
+          (progress) => setExtractionProgress(progress)
         )
+        await processExtractedText(text, file.name, fileType, file.size || 0)
       }
     } catch (error) {
-      Alert.alert('Extraction Failed', error.message)
+      Alert.alert('Extraction Failed', (error as any)?.message || String(error))
+      setIsExtracting(false)
+    }
+  }
+
+  const processExtractedText = async (
+    text: string,
+    name: string,
+    type: 'pdf' | 'epub' | 'txt',
+    size: number
+  ) => {
+    try {
+      const result = await fileExtractionService.processExtractedText(
+        text,
+        name,
+        type,
+        size,
+        (progress) => setExtractionProgress(progress)
+      )
+
+      loadExtractedDocuments()
+      Alert.alert(
+        'Extraction Complete!',
+        `Successfully extracted ${result.totalVerses} verses from ${result.name}`,
+        [{ text: 'OK' }]
+      )
+    } catch (error) {
+      Alert.alert('Processing Failed', (error as any)?.message || String(error))
     } finally {
       setIsExtracting(false)
       setExtractionProgress(null)
+      setPdfFile(null)
     }
+  }
+
+  const handlePdfExtractionComplete = (text: string) => {
+    if (pdfFile) {
+      processExtractedText(text, pdfFile.name, 'pdf', pdfFile.size)
+    }
+  }
+
+  const handlePdfExtractionError = (error: string) => {
+    Alert.alert('PDF Extraction Failed', error)
+    setIsExtracting(false)
+    setPdfFile(null)
   }
 
   const handleDocumentSelect = (document: ExtractedDocument) => {
@@ -201,7 +240,7 @@ export default function FileUploader({
 
       {extractedDocuments.length === 0 ? (
         <View style={styles.emptyState}>
-          <FileText size={48} color={TACTICAL_THEME.textSecondary} />
+          <FontAwesome name="file-text-o" size={48} color={TACTICAL_THEME.textSecondary} />
           <Text style={[styles.emptyText, MILITARY_TYPOGRAPHY.body]}>
             No documents extracted yet
           </Text>
@@ -222,7 +261,7 @@ export default function FileUploader({
             >
               <View style={styles.documentHeader}>
                 <View style={styles.documentInfo}>
-                  <BookOpen size={20} color={TACTICAL_THEME.accent} />
+                  <FontAwesome name="book" size={20} color={TACTICAL_THEME.accent} />
                   <View style={styles.documentDetails}>
                     <Text
                       style={[styles.documentName, MILITARY_TYPOGRAPHY.body]}
@@ -242,7 +281,7 @@ export default function FileUploader({
                   style={styles.deleteButton}
                   onPress={() => handleDeleteDocument(doc.id)}
                 >
-                  <Trash2 size={16} color={TACTICAL_THEME.error} />
+                  <FontAwesome name="trash" size={16} color={TACTICAL_THEME.error} />
                 </TouchableOpacity>
               </View>
 
@@ -283,7 +322,7 @@ export default function FileUploader({
               onPress={handleImportSelected}
               disabled={selectedVerses.length === 0}
             >
-              <Download size={16} color={TACTICAL_THEME.text} />
+              <FontAwesome name="download" size={16} color={TACTICAL_THEME.text} />
               <Text style={[styles.actionText, MILITARY_TYPOGRAPHY.caption]}>
                 IMPORT ({selectedVerses.length})
               </Text>
@@ -337,7 +376,7 @@ export default function FileUploader({
 
                 <View style={styles.selectionIndicator}>
                   {selectedVerses.includes(verse.id) ? (
-                    <CheckCircle size={20} color={TACTICAL_THEME.success} />
+                    <FontAwesome name="check-circle" size={20} color={TACTICAL_THEME.success} />
                   ) : (
                     <View style={styles.unselectedCircle} />
                   )}
@@ -367,7 +406,7 @@ export default function FileUploader({
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <XCircle size={24} color={TACTICAL_THEME.error} />
+            <FontAwesome name="times-circle" size={24} color={TACTICAL_THEME.error} />
           </TouchableOpacity>
 
           <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
@@ -379,7 +418,7 @@ export default function FileUploader({
             onPress={handleFileUpload}
             disabled={isExtracting}
           >
-            <Upload size={20} color={TACTICAL_THEME.text} />
+            <FontAwesome name="upload" size={20} color={TACTICAL_THEME.text} />
             <Text style={[styles.uploadText, MILITARY_TYPOGRAPHY.caption]}>
               {isExtracting ? 'EXTRACTING...' : 'UPLOAD FILE'}
             </Text>
@@ -392,6 +431,15 @@ export default function FileUploader({
 
           {!selectedDocument ? renderDocumentList() : renderVerseSelection()}
         </View>
+
+        {/* Hidden PDF Extractor */}
+        {pdfFile && (
+          <PDFExtractor
+            fileUri={pdfFile.uri}
+            onExtractionComplete={handlePdfExtractionComplete}
+            onError={handlePdfExtractionError}
+          />
+        )}
 
         {/* Back button when viewing verses */}
         {selectedDocument && (

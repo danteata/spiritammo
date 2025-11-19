@@ -17,7 +17,7 @@ import {
   EventSubscription,
   requireOptionalNativeModule,
 } from "expo-modules-core";
-import { X } from "lucide-react-native";
+// import { X } from "lucide-react-native";
 import type { PropsWithChildren } from "react";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import type { ViewStyle } from "react-native";
@@ -40,12 +40,12 @@ import type {
   TouchedViewDataAtPoint,
   // @ts-ignore
 } from "react-native/Libraries/Renderer/shims/ReactNativeTypes";
-import ErrorUtils from "react-native/Libraries/vendor/core/ErrorUtils";
+import { ErrorUtils } from "react-native";
 
-const getInspectorDataForViewAtPoint =
-  require("react-native/src/private/inspector/getInspectorDataForViewAtPoint").default;
-const InspectorOverlay =
-  require("react-native/src/private/inspector/InspectorOverlay").default;
+// const getInspectorDataForViewAtPoint =
+//   require("react-native/src/private/inspector/getInspectorDataForViewAtPoint").default;
+// const InspectorOverlay =
+//   require("react-native/src/private/inspector/InspectorOverlay").default;
 // Removed InspectorPanel import - implementing inline
 
 type PanelPosition = "top" | "bottom";
@@ -67,12 +67,14 @@ const BridgeModule = requireOptionalNativeModule("Bridge");
 LogBox.uninstall();
 
 // @ts-ignore
-ErrorUtils.setGlobalHandler((error) => {
-  sendBridgeMessage("runtime-error", {
-    stack: error.stack,
-    message: error.message,
+if (ErrorUtils && ErrorUtils.setGlobalHandler) {
+  ErrorUtils.setGlobalHandler((error) => {
+    sendBridgeMessage("runtime-error", {
+      stack: error.stack,
+      message: error.message,
+    });
   });
-});
+}
 
 export function sendBridgeMessage(
   type:
@@ -169,27 +171,27 @@ export function BundleInspector(props: BundleInspectorProps) {
   );
 
   const onTouchPoint = (locationX: number, locationY: number) => {
-    getInspectorDataForViewAtPoint(
-      innerViewRef.current,
-      locationX,
-      locationY,
-      (viewData: TouchedViewDataAtPoint) => {
-        setPanelPosition(
-          viewData.pointerY > Dimensions.get("window").height * 0.8
-            ? "top"
-            : "bottom",
-        );
+    // getInspectorDataForViewAtPoint(
+    //   innerViewRef.current,
+    //   locationX,
+    //   locationY,
+    //   (viewData: TouchedViewDataAtPoint) => {
+    //     setPanelPosition(
+    //       viewData.pointerY > Dimensions.get("window").height * 0.8
+    //         ? "top"
+    //         : "bottom",
+    //     );
 
-        setInspectedElement({
-          frame: viewData.frame,
-          style: viewData.props.style,
-        });
+    //     setInspectedElement({
+    //       frame: viewData.frame,
+    //       style: viewData.props.style,
+    //     });
 
-        handleInspectedElementChange(viewData);
+    //     handleInspectedElementChange(viewData);
 
-        return false;
-      },
-    );
+    //     return false;
+    //   },
+    // );
   };
 
   const { top, bottom } = useSafeAreaInsets();
@@ -211,10 +213,10 @@ export function BundleInspector(props: BundleInspectorProps) {
 
       {inspectorEnabled && (
         <View style={styles.inspectorContainer} pointerEvents="box-none">
-          <InspectorOverlay
+          {/* <InspectorOverlay
             inspected={inspectedElement}
             onTouchPoint={onTouchPoint}
-          />
+          /> */}
 
           <OptionalBlurView
             style={[
@@ -252,7 +254,7 @@ export function BundleInspector(props: BundleInspectorProps) {
                     style={styles.cancelButton}
                     onPress={disableInspector}
                   >
-                    <X size={18} color="#808080" strokeWidth={2.5} />
+                    <Text style={{ color: "#808080", fontSize: 18, fontWeight: "bold" }}>×</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -602,4 +604,3 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
-

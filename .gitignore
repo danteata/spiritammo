@@ -34,4 +34,11 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# vercel deployment
 .vercel
+
+# generated native folders
+/ios
+/android
+.idea

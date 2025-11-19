@@ -9,14 +9,7 @@ import {
   Alert,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import {
-  X,
-  Layers,
-  CheckSquare,
-  Square,
-  Target,
-  Play,
-} from 'lucide-react-native'
+import { FontAwesome, Feather } from '@expo/vector-icons';
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection, CollectionChapter } from '@/types/scripture'
 
@@ -76,7 +69,7 @@ export default function CollectionChapterSelector({
         <View style={styles.chapterContent}>
           <View style={styles.chapterHeader}>
             <View style={styles.chapterInfo}>
-              <Layers size={16} color={TACTICAL_THEME.accent} />
+              <Feather name="layers" size={16} color={TACTICAL_THEME.accent} />
               <Text style={[styles.chapterName, MILITARY_TYPOGRAPHY.body]}>
                 {item.name}
               </Text>
@@ -84,9 +77,9 @@ export default function CollectionChapterSelector({
 
             <View style={styles.selectionIndicator}>
               {isSelected ? (
-                <CheckSquare size={20} color={TACTICAL_THEME.accent} />
+                <FontAwesome name="check-square-o" size={20} color={TACTICAL_THEME.accent} />
               ) : (
-                <Square size={20} color={TACTICAL_THEME.textSecondary} />
+                <FontAwesome name="square-o" size={20} color={TACTICAL_THEME.textSecondary} />
               )}
             </View>
           </View>
@@ -148,14 +141,14 @@ export default function CollectionChapterSelector({
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.titleSection}>
-              <Target size={24} color={TACTICAL_THEME.accent} />
+              <FontAwesome name="bullseye" size={24} color={TACTICAL_THEME.accent} />
               <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
                 SELECT CHAPTERS
               </Text>
             </View>
 
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <X size={24} color={TACTICAL_THEME.text} />
+              <FontAwesome name="close" size={24} color={TACTICAL_THEME.text} />
             </TouchableOpacity>
           </View>
 
@@ -214,7 +207,7 @@ export default function CollectionChapterSelector({
             onPress={handleStartPractice}
             disabled={selectedCount === 0}
           >
-            <Play size={20} color={TACTICAL_THEME.text} />
+            <FontAwesome name="play" size={20} color={TACTICAL_THEME.text} />
             <Text style={[styles.startButtonText, MILITARY_TYPOGRAPHY.button]}>
               START PRACTICE
             </Text>

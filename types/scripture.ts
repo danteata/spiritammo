@@ -10,6 +10,7 @@ export interface Scripture {
   lastPracticed?: string
   accuracy?: number
   practiceCount?: number
+  isJesusWords?: boolean // Flag to indicate if this verse contains words of Jesus
 }
 
 export interface Book {

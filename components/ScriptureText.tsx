@@ -4,6 +4,7 @@ import { TACTICAL_THEME } from '@/constants/colors';
 
 interface ScriptureTextProps {
   text: string;
+  isJesusWords?: boolean; // Flag to indicate if this is Jesus speaking
   style?: TextStyle | TextStyle[];
   numberOfLines?: number;
   ellipsizeMode?: 'head' | 'middle' | 'tail' | 'clip';
@@ -11,11 +12,31 @@ interface ScriptureTextProps {
 
 export default function ScriptureText({ 
   text, 
+  isJesusWords,
   style, 
   numberOfLines, 
   ellipsizeMode 
 }: ScriptureTextProps) {
-  // Check if text contains Words of Jesus markers
+  // If this verse contains Jesus's words, render in red
+  if (isJesusWords) {
+    return (
+      <Text 
+        style={[
+          style,
+          { 
+            color: '#DC143C', // Crimson red for Words of Jesus
+            fontWeight: '500' // Slightly bolder
+          }
+        ]} 
+        numberOfLines={numberOfLines}
+        ellipsizeMode={ellipsizeMode}
+      >
+        {text}
+      </Text>
+    );
+  }
+  
+  // Check if text contains Words of Jesus markers (legacy support)
   const hasWordsOfJesus = text.includes('{{WJ_START}}') && text.includes('{{WJ_END}}');
   
   if (!hasWordsOfJesus) {
@@ -31,7 +52,7 @@ export default function ScriptureText({
     );
   }
   
-  // Split text by Words of Jesus markers
+  // Split text by Words of Jesus markers (legacy support)
   const parts = text.split(/({{WJ_START}}.*?{{WJ_END}})/g);
   
   return (

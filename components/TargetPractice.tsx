@@ -6,14 +6,16 @@ import {
   TouchableOpacity,
   Animated,
   Modal,
+  Alert,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Target, Mic, Square, Volume2, Wind } from 'lucide-react-native'
+import { FontAwesome, Feather } from '@expo/vector-icons';
 import {
   TACTICAL_THEME,
   MILITARY_TYPOGRAPHY,
   ACCURACY_COLORS,
 } from '@/constants/colors'
+import VoiceRecorder from '@/components/VoiceRecorder'
 
 interface TargetPracticeProps {
   onRecordingComplete: (transcript: string, accuracy: number) => void
@@ -34,94 +36,29 @@ export default function TargetPractice({
   isVisible,
   onClose,
 }: TargetPracticeProps) {
-  const [isRecording, setIsRecording] = useState(false)
   const [shotResults, setShotResults] = useState<ShotResult[]>([])
   const [currentAccuracy, setCurrentAccuracy] = useState(0)
   const [windCondition, setWindCondition] = useState<
     'calm' | 'light' | 'strong'
   >('calm')
   const [rangeDistance, setRangeDistance] = useState(100)
+  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false)
 
   // Animations
-  const crosshairAnimation = useRef(new Animated.Value(1)).current
   const targetAnimation = useRef(new Animated.Value(1)).current
-  const pulseAnimation = useRef(new Animated.Value(1)).current
 
-  useEffect(() => {
-    if (isRecording) {
-      // Start crosshair animation
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(crosshairAnimation, {
-            toValue: 1.2,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-          Animated.timing(crosshairAnimation, {
-            toValue: 1,
-            duration: 1000,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start()
-
-      // Start pulse animation
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnimation, {
-            toValue: 1.1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnimation, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ])
-      ).start()
-    } else {
-      crosshairAnimation.stopAnimation()
-      pulseAnimation.stopAnimation()
-      crosshairAnimation.setValue(1)
-      pulseAnimation.setValue(1)
-    }
-  }, [isRecording])
-
-  const startRecording = () => {
-    setIsRecording(true)
-    // Simulate wind conditions affecting difficulty
-    const windConditions = ['calm', 'light', 'strong'] as const
-    setWindCondition(
-      windConditions[Math.floor(Math.random() * windConditions.length)]
-    )
-  }
-
-  const stopRecording = () => {
-    setIsRecording(false)
-
-    // Simulate speech recognition result
-    const simulatedTranscript = targetVerse // In real app, this would come from voice recognition
-    const baseAccuracy = Math.floor(Math.random() * 30) + 70
-
-    // Apply wind condition modifier
-    let finalAccuracy = baseAccuracy
+  const handleVoiceRecorderComplete = (accuracy: number) => {
+    // Apply wind condition modifier to accuracy
+    let finalAccuracy = accuracy
     switch (windCondition) {
       case 'light':
-        finalAccuracy = Math.max(0, baseAccuracy - 5)
+        finalAccuracy = Math.max(0, accuracy - 5)
         break
       case 'strong':
-        finalAccuracy = Math.max(0, baseAccuracy - 15)
+        finalAccuracy = Math.max(0, accuracy - 15)
         break
     }
 
-    const shotResult: ShotResult = {
-      accuracy: finalAccuracy,
-      timestamp: new Date(),
-      transcript: simulatedTranscript,
-    }
-
-    setShotResults((prev) => [...prev, shotResult])
     setCurrentAccuracy(finalAccuracy)
 
     // Target hit animation
@@ -138,7 +75,18 @@ export default function TargetPractice({
       }),
     ]).start()
 
-    onRecordingComplete(simulatedTranscript, finalAccuracy)
+    // Simulate wind conditions affecting difficulty
+    const windConditions = ['calm', 'light', 'strong'] as const
+    setWindCondition(
+      windConditions[Math.floor(Math.random() * windConditions.length)]
+    )
+
+    setShowVoiceRecorder(false)
+  }
+
+  // Handle recording completion from VoiceRecorder
+  const handleRecordingComplete = (transcript: string, accuracy: number) => {
+    handleVoiceRecorderComplete(accuracy)
   }
 
   const speakTarget = () => {
@@ -151,9 +99,9 @@ export default function TargetPractice({
       case 'calm':
         return null
       case 'light':
-        return <Wind size={16} color={TACTICAL_THEME.warning} />
+        return <Feather name="wind" size={16} color={TACTICAL_THEME.warning} />
       case 'strong':
-        return <Wind size={16} color={TACTICAL_THEME.error} />
+        return <Feather name="wind" size={16} color={TACTICAL_THEME.error} />
     }
   }
 
@@ -227,46 +175,30 @@ export default function TargetPractice({
           </View>
         </View>
 
+        {/* Voice Recorder Modal */}
+        {showVoiceRecorder && (
+          <VoiceRecorder
+            scriptureText={targetVerse}
+            onRecordingComplete={handleVoiceRecorderComplete}
+          />
+        )}
+
         {/* Target area */}
         <View style={styles.targetArea}>
           <Animated.View
             style={[styles.target, { transform: [{ scale: targetAnimation }] }]}
           >
-            {/* Crosshair */}
-            <Animated.View
-              style={[
-                styles.crosshair,
-                {
-                  transform: [{ scale: crosshairAnimation }],
-                  opacity: isRecording ? 1 : 0.5,
-                },
-              ]}
-            >
+            {/* Crosshair - always visible */}
+            <View style={styles.crosshair}>
               <View style={styles.crosshairHorizontal} />
               <View style={styles.crosshairVertical} />
-            </Animated.View>
+            </View>
 
             {/* Target rings */}
             <View style={[styles.targetRing, styles.outerRing]} />
             <View style={[styles.targetRing, styles.middleRing]} />
             <View style={[styles.targetRing, styles.innerRing]} />
             <View style={[styles.targetRing, styles.bullseye]} />
-
-            {/* Recording indicator */}
-            {isRecording && (
-              <Animated.View
-                style={[
-                  styles.recordingIndicator,
-                  { transform: [{ scale: pulseAnimation }] },
-                ]}
-              >
-                <Text
-                  style={[styles.recordingText, MILITARY_TYPOGRAPHY.caption]}
-                >
-                  RECORDING
-                </Text>
-              </Animated.View>
-            )}
           </Animated.View>
         </View>
 
@@ -305,27 +237,20 @@ export default function TargetPractice({
             onPress={speakTarget}
             testID="speak-target-button"
           >
-            <Volume2 size={24} color={TACTICAL_THEME.text} />
+            <FontAwesome name="volume-up" size={24} color={TACTICAL_THEME.text} />
             <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button]}>
               HEAR TARGET
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.controlButton,
-              isRecording ? styles.stopButton : styles.recordButton,
-            ]}
-            onPress={isRecording ? stopRecording : startRecording}
-            testID={isRecording ? 'stop-recording' : 'start-recording'}
+            style={[styles.controlButton, styles.recordButton]}
+            onPress={() => setShowVoiceRecorder(true)}
+            testID="start-recording"
           >
-            {isRecording ? (
-              <Square size={24} color={TACTICAL_THEME.text} />
-            ) : (
-              <Target size={24} color={TACTICAL_THEME.text} />
-            )}
+            <FontAwesome name="bullseye" size={24} color={TACTICAL_THEME.text} />
             <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button]}>
-              {isRecording ? 'CEASE FIRE' : 'ENGAGE TARGET'}
+              ENGAGE TARGET
             </Text>
           </TouchableOpacity>
         </View>
@@ -529,5 +454,13 @@ const styles = StyleSheet.create({
   },
   resultZone: {
     fontWeight: 'bold',
+  },
+  simBanner: {
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 10,
+    backgroundColor: '#B00020',
+    borderRadius: 8,
+    alignItems: 'center',
   },
 })

@@ -251,29 +251,51 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
 
   addScripturesToCollection: async (collectionId, scriptureIds) => {
     try {
-      const updatedCollections = get().collections.map((collection) =>
-        collection.id === collectionId
-          ? { ...collection, scriptures: [...collection.scriptures, ...scriptureIds] }
-          : collection
-      )
-      set({ collections: updatedCollections })
-      await AsyncStorage.setItem(COLLECTIONS_KEY, JSON.stringify(updatedCollections))
-      return true
+      const updatedCollections = get().collections.map((collection) => {
+        if (collection.id === collectionId) {
+          // Filter out duplicates
+          const existingIds = new Set(collection.scriptures);
+          const newIds = scriptureIds.filter(id => !existingIds.has(id));
+          
+          console.log(`📝 Adding ${newIds.length} scripture IDs to collection (${scriptureIds.length - newIds.length} duplicates skipped)`);
+          
+          return { ...collection, scriptures: [...collection.scriptures, ...newIds] };
+        }
+        return collection;
+      });
+      
+      set({ collections: updatedCollections });
+      await AsyncStorage.setItem(COLLECTIONS_KEY, JSON.stringify(updatedCollections));
+      return true;
     } catch (error) {
-      console.error('Failed to add scriptures to collection:', error)
-      return false
+      console.error('Failed to add scriptures to collection:', error);
+      return false;
     }
   },
 
   addScriptures: async (newScriptures) => {
     try {
-      const updatedScriptures = [...get().scriptures, ...newScriptures]
-      set({ scriptures: updatedScriptures })
-      await AsyncStorage.setItem(SCRIPTURES_KEY, JSON.stringify(updatedScriptures))
-      return true
+      const existingScriptures = get().scriptures;
+      const existingIds = new Set(existingScriptures.map(s => s.id));
+      
+      // Filter out duplicates
+      const uniqueNewScriptures = newScriptures.filter(s => !existingIds.has(s.id));
+      
+      console.log(`💾 Adding ${uniqueNewScriptures.length} new scriptures (${newScriptures.length - uniqueNewScriptures.length} duplicates skipped)`);
+      
+      if (uniqueNewScriptures.length === 0) {
+        console.log('✅ All scriptures already exist in store');
+        return true; // Not an error, just no new scriptures to add
+      }
+      
+      const updatedScriptures = [...existingScriptures, ...uniqueNewScriptures];
+      set({ scriptures: updatedScriptures });
+      await AsyncStorage.setItem(SCRIPTURES_KEY, JSON.stringify(updatedScriptures));
+      console.log(`✅ Successfully added ${uniqueNewScriptures.length} scriptures to store`);
+      return true;
     } catch (error) {
-      console.error('Failed to add scriptures:', error)
-      return false
+      console.error('Failed to add scriptures:', error);
+      return false;
     }
   },
 
