@@ -48,7 +48,8 @@
           "speechRecognitionPermission": "Allow SpiritAmmo to use speech recognition for target practice."
         }
       ],
-      "expo-font"
+      "expo-font",
+      "./plugins/withAndroidAsset"
     ],
     "experiments": {
       "typedRoutes": true
