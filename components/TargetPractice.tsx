@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Feather } from '@expo/vector-icons';
+import * as Speech from 'expo-speech';
 import {
   TACTICAL_THEME,
   MILITARY_TYPOGRAPHY,
@@ -30,6 +31,13 @@ interface ShotResult {
   transcript: string
 }
 
+interface BulletHole {
+  id: string
+  x: number
+  y: number
+  isHit: boolean
+}
+
 export default function TargetPractice({
   onRecordingComplete,
   targetVerse,
@@ -43,9 +51,12 @@ export default function TargetPractice({
   >('calm')
   const [rangeDistance, setRangeDistance] = useState(100)
   const [showVoiceRecorder, setShowVoiceRecorder] = useState(false)
+  const [shots, setShots] = useState<BulletHole[]>([])
+  const [isPlaying, setIsPlaying] = useState(false)
 
   // Animations
   const targetAnimation = useRef(new Animated.Value(1)).current
+  const shakeAnimation = useRef(new Animated.Value(0)).current
 
   const handleVoiceRecorderComplete = (accuracy: number) => {
     // Apply wind condition modifier to accuracy
@@ -61,19 +72,54 @@ export default function TargetPractice({
 
     setCurrentAccuracy(finalAccuracy)
 
-    // Target hit animation
-    Animated.sequence([
-      Animated.timing(targetAnimation, {
-        toValue: 0.8,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.timing(targetAnimation, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start()
+    // Calculate shot position
+    // Target size is 200x200, center is 100,100
+    // Accuracy 100 = center (0 deviation)
+    // Accuracy 0 = edge/miss (100 deviation)
+    const maxDeviation = 100
+    const deviation = maxDeviation * (1 - finalAccuracy / 100)
+    const angle = Math.random() * Math.PI * 2
+    // Add some randomness to the distance based on deviation
+    const distance = deviation * (0.8 + Math.random() * 0.4)
+
+    const x = 100 + Math.cos(angle) * distance
+    const y = 100 + Math.sin(angle) * distance
+
+    const isHit = finalAccuracy > 60 // Arbitrary threshold for "hit" vs "miss" visual
+
+    const newShot: BulletHole = {
+      id: Date.now().toString(),
+      x,
+      y,
+      isHit
+    }
+
+    setShots(prev => [...prev, newShot])
+
+    // Animations
+    if (isHit) {
+      // Pulse animation for hit
+      Animated.sequence([
+        Animated.timing(targetAnimation, {
+          toValue: 0.9,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.timing(targetAnimation, {
+          toValue: 1,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+      ]).start()
+    } else {
+      // Shake animation for miss
+      Animated.sequence([
+        Animated.timing(shakeAnimation, { toValue: 10, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnimation, { toValue: -10, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnimation, { toValue: 10, duration: 50, useNativeDriver: true }),
+        Animated.timing(shakeAnimation, { toValue: 0, duration: 50, useNativeDriver: true }),
+      ]).start()
+    }
 
     // Simulate wind conditions affecting difficulty
     const windConditions = ['calm', 'light', 'strong'] as const
@@ -90,8 +136,18 @@ export default function TargetPractice({
   }
 
   const speakTarget = () => {
-    // This would use text-to-speech in a real implementation
-    console.log('Speaking target verse:', targetVerse)
+    if (isPlaying) {
+      Speech.stop()
+      setIsPlaying(false)
+      return
+    }
+
+    Speech.speak(targetVerse, {
+      onStart: () => setIsPlaying(true),
+      onDone: () => setIsPlaying(false),
+      onStopped: () => setIsPlaying(false),
+      rate: 0.9,
+    })
   }
 
   const getWindIcon = () => {
@@ -133,7 +189,7 @@ export default function TargetPractice({
   const averageAccuracy =
     shotResults.length > 0
       ? shotResults.reduce((sum, shot) => sum + shot.accuracy, 0) /
-        shotResults.length
+      shotResults.length
       : 0
 
   return (
@@ -147,33 +203,32 @@ export default function TargetPractice({
         style={styles.container}
       >
         {/* Header */}
+        {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <Text style={[styles.closeText, MILITARY_TYPOGRAPHY.button]}>
-              CEASE FIRE
-            </Text>
-          </TouchableOpacity>
-
-          <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
-            TARGET PRACTICE
-          </Text>
-
-          <View style={styles.rangeInfo}>
-            <Text style={[styles.rangeText, MILITARY_TYPOGRAPHY.caption]}>
-              {rangeDistance}M RANGE
-            </Text>
+          <View style={styles.headerLeft}>
+            <TouchableOpacity onPress={onClose} style={styles.closeButtonContainer}>
+              <Text style={[styles.statusText, MILITARY_TYPOGRAPHY.button]}>
+                CEASE FIRE
+              </Text>
+            </TouchableOpacity>
           </View>
-        </View>
 
-        {/* Wind conditions */}
-        <View style={styles.conditionsContainer}>
-          <View style={styles.windIndicator}>
-            {getWindIcon()}
-            <Text style={[styles.windText, MILITARY_TYPOGRAPHY.caption]}>
+          <View style={styles.headerCenter}>
+            <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
+              TARGET PRACTICE
+            </Text>
+            <Text style={[styles.subTitle, MILITARY_TYPOGRAPHY.caption]}>
               {getWindDescription()}
             </Text>
           </View>
+
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <FontAwesome name="times" size={24} color={TACTICAL_THEME.error} />
+          </TouchableOpacity>
         </View>
+
+        {/* Wind conditions */}
+
 
         {/* Voice Recorder Modal */}
         {showVoiceRecorder && (
@@ -183,24 +238,51 @@ export default function TargetPractice({
           />
         )}
 
-        {/* Target area */}
-        <View style={styles.targetArea}>
-          <Animated.View
-            style={[styles.target, { transform: [{ scale: targetAnimation }] }]}
-          >
-            {/* Crosshair - always visible */}
-            <View style={styles.crosshair}>
-              <View style={styles.crosshairHorizontal} />
-              <View style={styles.crosshairVertical} />
-            </View>
+        {/* Target area - Hide when recording to prevent clutter */}
+        {!showVoiceRecorder && (
+          <View style={styles.targetArea}>
+            <Animated.View
+              style={[styles.target, { transform: [{ scale: targetAnimation }] }]}
+            >
+              {/* Crosshair - always visible */}
+              <View style={styles.crosshair}>
+                <View style={styles.crosshairHorizontal} />
+                <View style={styles.crosshairVertical} />
+              </View>
 
-            {/* Target rings */}
-            <View style={[styles.targetRing, styles.outerRing]} />
-            <View style={[styles.targetRing, styles.middleRing]} />
-            <View style={[styles.targetRing, styles.innerRing]} />
-            <View style={[styles.targetRing, styles.bullseye]} />
-          </Animated.View>
-        </View>
+              {/* Target rings */}
+              <View style={[styles.targetRing, styles.outerRing]} />
+              <View style={[styles.targetRing, styles.middleRing]} />
+              <View style={[styles.targetRing, styles.innerRing]} />
+              <View style={[styles.targetRing, styles.bullseye]} />
+
+              {/* Bullet Holes */}
+              {shots.map(shot => (
+                <View
+                  key={shot.id}
+                  style={[
+                    styles.bulletHole,
+                    {
+                      left: shot.x - 4, // Center the 8px hole
+                      top: shot.y - 4,
+                      backgroundColor: shot.isHit ? '#1a1a1a' : TACTICAL_THEME.error,
+                      borderColor: shot.isHit ? 'rgba(255,255,255,0.2)' : 'rgba(255,0,0,0.3)',
+                    }
+                  ]}
+                />
+              ))}
+            </Animated.View>
+          </View>
+        )}
+
+        {/* Verse Display - Hide when recording */}
+        {!showVoiceRecorder && (
+          <View style={styles.verseContainer}>
+            <Text style={[styles.verseText, MILITARY_TYPOGRAPHY.body]}>
+              "{targetVerse}"
+            </Text>
+          </View>
+        )}
 
         {/* Shot grouping display */}
         {shotResults.length > 0 && (
@@ -237,9 +319,13 @@ export default function TargetPractice({
             onPress={speakTarget}
             testID="speak-target-button"
           >
-            <FontAwesome name="volume-up" size={24} color={TACTICAL_THEME.text} />
-            <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button]}>
-              HEAR TARGET
+            <FontAwesome
+              name={isPlaying ? "volume-up" : "volume-off"}
+              size={20}
+              color={isPlaying ? TACTICAL_THEME.accent : TACTICAL_THEME.text}
+            />
+            <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button, isPlaying && { color: TACTICAL_THEME.accent }]}>
+              {isPlaying ? "PLAYING..." : "HEAR TARGET"}
             </Text>
           </TouchableOpacity>
 
@@ -248,13 +334,16 @@ export default function TargetPractice({
             onPress={() => setShowVoiceRecorder(true)}
             testID="start-recording"
           >
-            <FontAwesome name="bullseye" size={24} color={TACTICAL_THEME.text} />
+            <View style={styles.recordIconOuter}>
+              <View style={styles.recordIconInner} />
+            </View>
             <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button]}>
               ENGAGE TARGET
             </Text>
           </TouchableOpacity>
         </View>
 
+        {/* Last shot result */}
         {/* Last shot result */}
         {currentAccuracy > 0 && (
           <View style={styles.lastShotResult}>
@@ -265,7 +354,7 @@ export default function TargetPractice({
               style={[
                 styles.resultAccuracy,
                 MILITARY_TYPOGRAPHY.title,
-                { color: getAccuracyColor(currentAccuracy) },
+                { color: getAccuracyColor(currentAccuracy), fontSize: 48 },
               ]}
             >
               {currentAccuracy.toFixed(1)}%
@@ -274,7 +363,7 @@ export default function TargetPractice({
               style={[
                 styles.resultZone,
                 MILITARY_TYPOGRAPHY.body,
-                { color: getAccuracyColor(currentAccuracy) },
+                { color: getAccuracyColor(currentAccuracy), letterSpacing: 2 },
               ]}
             >
               {getHitZone(currentAccuracy)}
@@ -294,18 +383,45 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingTop: 20,
+    paddingBottom: 10,
   },
-  closeButton: {
+  headerLeft: {
+    flex: 1,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+  },
+  closeButtonContainer: {
     padding: 8,
+    marginLeft: -8, // Align with padding
   },
-  closeText: {
+  headerCenter: {
+    flex: 2,
+    alignItems: 'center',
+  },
+  statusText: {
     color: TACTICAL_THEME.error,
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   title: {
     color: TACTICAL_THEME.text,
+    fontSize: 20,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  subTitle: {
+    color: TACTICAL_THEME.textSecondary,
+    fontSize: 10,
+    marginTop: 4,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  closeButton: {
+    flex: 1,
+    alignItems: 'flex-end',
   },
   rangeInfo: {
     alignItems: 'flex-end',
@@ -416,51 +532,90 @@ const styles = StyleSheet.create({
   controls: {
     flexDirection: 'row',
     paddingHorizontal: 20,
-    gap: 16,
-    marginBottom: 20,
+    gap: 12,
+    marginBottom: 30,
   },
   controlButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRadius: 12,
     gap: 8,
   },
   speakButton: {
-    backgroundColor: TACTICAL_THEME.secondary,
+    backgroundColor: '#5D4037', // Brownish
   },
   recordButton: {
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: '#FF6B35', // Orange
   },
-  stopButton: {
-    backgroundColor: TACTICAL_THEME.error,
+  recordIconOuter: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  recordIconInner: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: 'white',
   },
   controlText: {
-    color: TACTICAL_THEME.text,
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
+    letterSpacing: 0.5,
   },
   lastShotResult: {
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingBottom: 40,
+    paddingBottom: 50,
   },
   resultTitle: {
     color: TACTICAL_THEME.textSecondary,
-    marginBottom: 8,
+    marginBottom: 10,
+    fontSize: 14,
+    letterSpacing: 1,
   },
   resultAccuracy: {
-    marginBottom: 4,
+    marginBottom: 8,
+    fontWeight: 'bold',
   },
   resultZone: {
     fontWeight: 'bold',
+    fontSize: 14,
+    textTransform: 'uppercase',
   },
-  simBanner: {
+  bulletHole: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1,
+    zIndex: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.5,
+    shadowRadius: 1,
+  },
+  verseContainer: {
     marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 10,
-    backgroundColor: '#B00020',
-    borderRadius: 8,
-    alignItems: 'center',
+    marginBottom: 20,
+    padding: 16,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  verseText: {
+    color: TACTICAL_THEME.text,
+    textAlign: 'center',
+    fontStyle: 'italic',
+    fontSize: 16,
+    lineHeight: 24,
   },
 })

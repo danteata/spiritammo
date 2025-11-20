@@ -18,6 +18,7 @@ interface ActionButtonProps {
   testID?: string
   size?: 'small' | 'medium' | 'large'
   animated?: boolean
+  style?: any
 }
 
 export default function ActionButton({
@@ -27,6 +28,7 @@ export default function ActionButton({
   testID,
   size = 'medium',
   animated = false,
+  style,
 }: ActionButtonProps) {
   const { isDark } = useAppStore()
   const [pulseAnimation] = useState(new Animated.Value(1))
@@ -40,7 +42,7 @@ export default function ActionButton({
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnimation, {
-            toValue: 1.1,
+            toValue: 1.05,
             duration: 1000,
             useNativeDriver: true,
           }),
@@ -59,12 +61,15 @@ export default function ActionButton({
       case 'small':
         return {
           button: {
-            paddingVertical: 6,
-            paddingHorizontal: 12,
+            paddingVertical: 8,
+            paddingHorizontal: 16,
             marginVertical: 4,
+            marginHorizontal: 4,
+            minHeight: 40,
           },
-          title: { fontSize: 14 },
-          subtitle: { fontSize: 12 },
+          title: { fontSize: 12, letterSpacing: 0.5 },
+          subtitle: { fontSize: 10 },
+          iconSize: 14,
         }
       case 'large':
         return {
@@ -75,6 +80,7 @@ export default function ActionButton({
           },
           title: { fontSize: 20 },
           subtitle: { fontSize: 16 },
+          iconSize: 24,
         }
       default: // medium
         return {
@@ -85,6 +91,7 @@ export default function ActionButton({
           },
           title: { fontSize: 18 },
           subtitle: { fontSize: 14 },
+          iconSize: 20,
         }
     }
   }
@@ -93,12 +100,19 @@ export default function ActionButton({
 
   const buttonContent = (
     <TouchableOpacity
-      style={[styles.button, sizeStyles.button, { backgroundColor }]}
+      style={[styles.button, sizeStyles.button, { backgroundColor }, style]}
       onPress={onPress}
       testID={testID}
     >
       <View style={styles.textContainer}>
-        <FontAwesome name="crosshairs" size={24} color={textColor} style={{ marginBottom: 4 }} />
+        {size !== 'small' && (
+          <FontAwesome
+            name="crosshairs"
+            size={sizeStyles.iconSize}
+            color={textColor}
+            style={{ marginBottom: 4 }}
+          />
+        )}
         <Text style={[styles.title, sizeStyles.title, { color: textColor }]}>
           {title}
         </Text>

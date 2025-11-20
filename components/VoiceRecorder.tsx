@@ -313,9 +313,13 @@ export default function VoiceRecorder({ scriptureText, onRecordingComplete }: Vo
         ) : interimTranscript ? (
           <Text style={[styles.displayText, { color: textColor, opacity: 0.7 }]}>{interimTranscript}...</Text>
         ) : (
-          <Text style={[styles.displayText, { color: textColor, opacity: 0.5 }]}>
-            AWAITING VOICE INPUT...
-          </Text>
+          <View style={styles.waveformContainer}>
+            <View style={[styles.waveformBar, { height: 10, opacity: 0.3 }]} />
+            <View style={[styles.waveformBar, { height: 16, opacity: 0.5 }]} />
+            <View style={[styles.waveformBar, { height: 24, opacity: 0.7 }]} />
+            <View style={[styles.waveformBar, { height: 16, opacity: 0.5 }]} />
+            <View style={[styles.waveformBar, { height: 10, opacity: 0.3 }]} />
+          </View>
         )}
 
         {/* Accuracy Badge */}
@@ -394,28 +398,40 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   commsDisplay: {
-    minHeight: 80,
+    minHeight: 60,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
-    padding: 12,
+    marginBottom: 12,
+    padding: 8,
     backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
   },
   displayText: {
-    fontSize: 16,
+    fontSize: 14,
     textAlign: 'center',
     fontStyle: 'italic',
   },
+  waveformContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    height: 24,
+  },
+  waveformBar: {
+    width: 3,
+    backgroundColor: 'white',
+    borderRadius: 2,
+  },
   accuracyBadge: {
-    marginTop: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    marginTop: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
     borderRadius: 4,
   },
   accuracyText: {
     color: 'white',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: 'bold',
   },
   controlsContainer: {

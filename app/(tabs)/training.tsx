@@ -239,33 +239,40 @@ export default function TrainingScreen() {
               : 'ALL UNITS DEPLOYMENT'}
           </Text>
 
-          {/* Training Mode Selector */}
-          <View style={styles.modeSelector}>
-            {(['single', 'burst', 'automatic'] as const).map((mode) => (
-              <TouchableOpacity
-                key={mode}
-                style={[
-                  styles.modeButton,
-                  trainingMode === mode && styles.activeModeButton,
-                ]}
-                onPress={() => setTrainingMode(mode)}
-              >
-                <Text
+          <View style={styles.modeSelectorContainer}>
+            <View style={styles.modeSelector}>
+              {(['single', 'burst', 'automatic'] as const).map((mode) => (
+                <TouchableOpacity
+                  key={mode}
                   style={[
-                    styles.modeText,
-                    MILITARY_TYPOGRAPHY.caption,
-                    {
-                      color:
-                        trainingMode === mode
-                          ? TACTICAL_THEME.text
-                          : TACTICAL_THEME.textSecondary,
-                    },
+                    styles.modeButton,
+                    trainingMode === mode && styles.activeModeButton,
                   ]}
+                  onPress={() => setTrainingMode(mode)}
                 >
-                  {mode.toUpperCase()}
-                </Text>
-              </TouchableOpacity>
-            ))}
+                  <Text
+                    style={[
+                      styles.modeText,
+                      MILITARY_TYPOGRAPHY.caption,
+                      {
+                        color:
+                          trainingMode === mode
+                            ? TACTICAL_THEME.text
+                            : TACTICAL_THEME.textSecondary,
+                      },
+                    ]}
+                  >
+                    {mode === 'automatic' ? 'AUTO' : mode.toUpperCase()}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={styles.randomButtonCompact}
+              onPress={handleReloadAmmunition}
+            >
+              <FontAwesome name="random" size={16} color={TACTICAL_THEME.text} />
+            </TouchableOpacity>
           </View>
 
           <View style={styles.tabButtons}>
@@ -274,15 +281,9 @@ export default function TrainingScreen() {
                 title="CHAPTERS"
                 onPress={() => setShowMultiChapterSelector(true)}
                 testID="toggle-chapters-button"
+                style={{ flex: 1 }}
               />
             )}
-
-            <ActionButton
-              title="RANDOM"
-              onPress={handleReloadAmmunition}
-              testID="random-deployment-button"
-              size="small"
-            />
           </View>
         </View>
 
@@ -432,7 +433,10 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 25, // Further reduced for tighter layout
+    paddingTop: 20, // Reduced from 60
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
+    marginBottom: 10, // Reduced from 20
   },
   headerTop: {
     flexDirection: 'row',
@@ -442,31 +446,60 @@ const styles = StyleSheet.create({
   },
   title: {
     flex: 1,
-    textAlignVertical: 'center', // Ensure vertical centering
-    includeFontPadding: false, // Remove extra font padding on Android
+    textAlignVertical: 'center',
+    includeFontPadding: false,
+    fontSize: 24,
+    letterSpacing: 1,
   },
   subtitle: {
-    marginBottom: 16,
+    marginBottom: 4,
+    opacity: 0.7,
+    letterSpacing: 2,
+  },
+  modeSelectorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 24,
+    gap: 12,
   },
   modeSelector: {
+    flex: 1,
     flexDirection: 'row',
-    backgroundColor: TACTICAL_THEME.surface,
-    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Slightly darker for better contrast
+    borderRadius: 16, // Increased radius
     padding: 4,
-    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  randomButtonCompact: {
+    width: 48,
+    height: 48,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   modeButton: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 12,
     paddingHorizontal: 12,
-    borderRadius: 6,
+    borderRadius: 8,
     alignItems: 'center',
   },
   activeModeButton: {
     backgroundColor: TACTICAL_THEME.accent,
+    shadowColor: TACTICAL_THEME.accent,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
   },
   modeText: {
-    fontWeight: 'bold',
+    fontWeight: '900',
+    letterSpacing: 1,
+    fontSize: 10,
   },
   tabButtons: {
     flexDirection: 'row',
@@ -481,31 +514,48 @@ const styles = StyleSheet.create({
   },
   missionStatus: {
     margin: 16,
-    padding: 16,
-    backgroundColor: TACTICAL_THEME.surface,
-    borderRadius: 12,
+    padding: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.border,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   statusTitle: {
-    marginBottom: 16,
+    marginBottom: 20,
     textAlign: 'center',
+    letterSpacing: 2,
+    opacity: 0.9,
   },
   statusGrid: {
     flexDirection: 'row',
     justifyContent: 'space-around',
+    gap: 8,
   },
   statusItem: {
     alignItems: 'center',
     flex: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   statusLabel: {
     marginTop: 8,
     marginBottom: 4,
     textAlign: 'center',
+    fontSize: 10,
+    opacity: 0.7,
+    letterSpacing: 0.5,
   },
   statusValue: {
     fontWeight: 'bold',
     textAlign: 'center',
+    fontSize: 16,
   },
 })

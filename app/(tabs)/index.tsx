@@ -103,6 +103,7 @@ export default function HomeScreen() {
             onPress={handleNextScripture}
             testID="load-next-round-button"
             animated={true}
+            style={{ paddingVertical: 12, marginVertical: 0 }}
           />
         </View>
       )}
