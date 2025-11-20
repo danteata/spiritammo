@@ -133,7 +133,7 @@ export default function MissionReportScreen() {
       </View>
 
       {/* Accuracy Analysis */}
-      <View style={styles.section}>
+      <View style={[styles.section, { marginVertical: 20 }]}>
         <AccuracyMeter
           accuracy={userStats.averageAccuracy}
           label="OVERALL MARKSMANSHIP"
@@ -309,9 +309,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 40, // Reduced from 60
+    paddingTop: 20,
     paddingHorizontal: 20,
-    paddingBottom: 20,
+    paddingBottom: 10,
     alignItems: 'center',
   },
   title: {
@@ -327,15 +327,15 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   tabButton: {
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
     borderRadius: 8,
-    marginHorizontal: 4,
+    marginHorizontal: 2,
     backgroundColor: TACTICAL_THEME.surface,
-    gap: 8,
+    gap: 4,
   },
   activeTabButton: {
     backgroundColor: TACTICAL_THEME.accent,
@@ -388,12 +388,17 @@ const styles = StyleSheet.create({
   },
   statCard: {
     width: '48%',
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.border,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   statValue: {
     color: TACTICAL_THEME.text,
