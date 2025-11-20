@@ -239,7 +239,7 @@ export default function VoiceRecorder({ scriptureText, onRecordingComplete }: Vo
     }
   };
 
-  // Calculate accuracy between original text and transcript
+  // Calculate accuracy using Levenshtein distance
   const calculateAccuracy = (original: string, spoken: string): number => {
     if (!original || !spoken) return 0;
 
@@ -252,22 +252,41 @@ export default function VoiceRecorder({ scriptureText, onRecordingComplete }: Vo
         .trim();
     };
 
-    const normalizedOriginal = normalizeText(original);
-    const normalizedSpoken = normalizeText(spoken);
+    const s1 = normalizeText(original);
+    const s2 = normalizeText(spoken);
 
-    // Simple word matching accuracy
-    const originalWords = normalizedOriginal.split(' ');
-    const spokenWords = normalizedSpoken.split(' ');
+    if (s1 === s2) return 100;
+    if (s1.length === 0) return 0;
+    if (s2.length === 0) return 0;
 
-    let correctWords = 0;
-    for (let i = 0; i < Math.min(originalWords.length, spokenWords.length); i++) {
-      if (originalWords[i] === spokenWords[i]) {
-        correctWords++;
+    // Levenshtein distance algorithm
+    const track = Array(s2.length + 1).fill(null).map(() =>
+      Array(s1.length + 1).fill(null));
+
+    for (let i = 0; i <= s1.length; i += 1) {
+      track[0][i] = i;
+    }
+    for (let j = 0; j <= s2.length; j += 1) {
+      track[j][0] = j;
+    }
+
+    for (let j = 1; j <= s2.length; j += 1) {
+      for (let i = 1; i <= s1.length; i += 1) {
+        const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
+        track[j][i] = Math.min(
+          track[j][i - 1] + 1, // deletion
+          track[j - 1][i] + 1, // insertion
+          track[j - 1][i - 1] + indicator, // substitution
+        );
       }
     }
 
-    const totalWords = Math.max(originalWords.length, spokenWords.length);
-    return totalWords > 0 ? Math.round((correctWords / totalWords) * 100) : 0;
+    const distance = track[s2.length][s1.length];
+    const maxLength = Math.max(s1.length, s2.length);
+
+    // Calculate similarity percentage
+    const similarity = 1 - (distance / maxLength);
+    return Math.round(similarity * 100);
   };
 
   const textColor = isDark ? COLORS.text.dark : COLORS.text.light;
