@@ -5,10 +5,9 @@ import { OpenAI } from 'openai'
 const openai = new OpenAI({
   apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'fake-key-for-dev', // Use fake key for development
   dangerouslyAllowBrowser: true, // Allow browser usage for development
-  baseURL: `${
-    process.env.EXPO_PUBLIC_GEMINI_API_BASE_URL ||
+  baseURL: `${process.env.EXPO_PUBLIC_GEMINI_API_BASE_URL ||
     'https://generativelanguage.googleapis.com'
-  }/${process.env.EXPO_PUBLIC_GEMINI_API_VERSION || 'v1beta'}/openai/`,
+    }/${process.env.EXPO_PUBLIC_GEMINI_API_VERSION || 'v1beta'}/openai/`,
   defaultHeaders: {
     'x-goog-api-key':
       process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'fake-key-for-dev',
@@ -17,7 +16,7 @@ const openai = new OpenAI({
 
 export function GET(request: Request) {
   console.log('[DEBUG] GET request received for /api/battle-intel');
-  return Response.json({ 
+  return Response.json({
     status: 'Battle Intelligence API is operational',
     version: '1.0',
     timestamp: new Date().toISOString()
@@ -71,7 +70,7 @@ export async function POST(request: Request) {
     const completion = await openai.chat.completions.create({
       model:
         process.env.EXPO_PUBLIC_GEMINI_API_MODEL ||
-        'gemini-2.5-flash-preview-05-20',
+        'gemini-2.5-flash',
       messages: [{ role: 'user', content: prompt }],
       temperature: parseFloat(
         process.env.EXPO_PUBLIC_GEMINI_API_TEMPERATURE || '0.7'
@@ -81,7 +80,6 @@ export async function POST(request: Request) {
       // ),
       // top_p: parseFloat(process.env.EXPO_PUBLIC_GEMINI_API_TOP_P || '0.95'),
     })
-
     const responseContent = completion.choices[0]?.message?.content || '{}'
     console.log('[DEBUG] Gemini response content:', responseContent)
     let intelResponse: IntelResponse

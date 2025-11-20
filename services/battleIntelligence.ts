@@ -33,28 +33,23 @@ const CUSTOM_INTEL_KEY = '@spiritammo_custom_intel'
 // Pre-programmed tactical patterns for common verse types
 const tacticalPatterns = {
   prayer: (reference: string, chapter: number, verse: number) =>
-    `${
-      reference.split(' ')[0]
+    `${reference.split(' ')[0]
     } Command, Chapter ${chapter}: Prayer is weapon #${verse} in your arsenal!`,
 
   leadership: (reference: string, chapter: number, verse: number) =>
-    `Leadership Manual ${
-      reference.split(' ')[0]
+    `Leadership Manual ${reference.split(' ')[0]
     } ${chapter}:${verse} - Command authority protocols.`,
 
   ministry: (reference: string, chapter: number, verse: number) =>
-    `Mission Orders ${
-      reference.split(' ')[0]
+    `Mission Orders ${reference.split(' ')[0]
     } ${chapter}:${verse} - Ministry deployment strategy.`,
 
   warfare: (reference: string, chapter: number, verse: number) =>
-    `Combat Manual ${
-      reference.split(' ')[0]
+    `Combat Manual ${reference.split(' ')[0]
     } ${chapter}:${verse} - Spiritual warfare tactics.`,
 
   general: (reference: string, chapter: number, verse: number) =>
-    `Field Manual ${
-      reference.split(' ')[0]
+    `Field Manual ${reference.split(' ')[0]
     } ${chapter}:${verse} - General operations directive.`,
 }
 
@@ -111,14 +106,8 @@ export const generateBattleIntel = async (
       }
     }
 
-    // For web platform, call Gemini API directly since Expo Router API routes don't work
-    if (typeof window !== 'undefined') {
-      console.log('🌐 Web platform detected - calling Gemini API directly');
-      return await generateIntelDirectly(request);
-    }
-
-    // For native platforms, use the API route
-    console.log('📱 Native platform - using API route');
+    // Call the API route for all platforms
+    console.log('📡 Requesting battle intelligence from API...');
     const response = await fetch('/api/battle-intel', {
       method: 'POST',
       headers: {
@@ -126,7 +115,7 @@ export const generateBattleIntel = async (
       },
       body: JSON.stringify(request),
     })
-    
+
     console.log('🎯 Battle Intel API Response:', {
       status: response.status,
       ok: response.ok,
@@ -139,17 +128,17 @@ export const generateBattleIntel = async (
       console.error('API request failed with status:', response.status, errorBody)
       throw new Error(`API returned status ${response.status}: ${errorBody}`);
     }
-    
+
     // Check content type to ensure we're getting JSON
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      const textResponse = await response.text();
-      console.error('❌ API returned non-JSON response:', {
-        contentType,
-        preview: textResponse.substring(0, 200)
-      });
-      throw new Error('API returned HTML instead of JSON. The API endpoint may not be working correctly.');
-    }
+    // const contentType = response.headers.get('content-type');
+    // if (!contentType || !contentType.includes('application/json')) {
+    //   const textResponse = await response.text();
+    //   console.error('❌ API returned non-JSON response:', {
+    //     contentType,
+    //     preview: textResponse.substring(0, 200)
+    //   });
+    //   throw new Error('API returned HTML instead of JSON. The API endpoint may not be working correctly.');
+    // }
 
     const intelResponse: IntelResponse = await response.json();
 
@@ -186,115 +175,6 @@ export const generateBattleIntel = async (
         'Fallback tactical pattern - API request failed, using basic military structure.',
       reliability: 60,
     }
-  }
-}
-
-/**
- * Call Gemini API directly (for web platform)
- */
-const generateIntelDirectly = async (request: IntelRequest): Promise<IntelResponse> => {
-  try {
-    const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY;
-    if (!apiKey || apiKey === 'fake-key-for-dev') {
-      throw new Error('Gemini API key not configured');
-    }
-
-    const prompt = `You are a military strategist creating battle intelligence from biblical scriptures. 
-    Convert the following scripture into a military-themed mnemonic for memorization:
-    
-    Scripture Reference: ${request.reference}
-    Scripture Text: ${request.text}
-    ${request.missionContext ? `Mission Context: ${request.missionContext}` : ''}
-    
-    Create a creative, memorable military-themed mnemonic that connects the scripture reference numbers 
-    and key words to military concepts. Include:
-    1. A battle plan/mnemonic (concise, memorable)
-    2. Tactical notes explaining the military metaphor
-    3. A reliability score (0-100) indicating confidence in the mnemonic quality
-    
-    Format your response as JSON with these exact keys:
-    - battlePlan: string
-    - tacticalNotes: string
-    - reliability: number
-    
-    Example format:
-    {
-      "battlePlan": "ACTS of war require 6 soldiers with 4 weapons: Prayer and the Word for victory!",
-      "tacticalNotes": "Military metaphor connecting Acts 6:4 to spiritual warfare with 6 soldiers representing the 6 words and 4 weapons representing the 4 words in the verse.",
-      "reliability": 95
-    }`;
-
-    const baseURL = process.env.EXPO_PUBLIC_GEMINI_API_BASE_URL || 'https://generativelanguage.googleapis.com';
-    const version = process.env.EXPO_PUBLIC_GEMINI_API_VERSION || 'v1beta';
-    const model = process.env.EXPO_PUBLIC_GEMINI_API_MODEL || 'gemini-1.5-flash';
-    
-    // Use Gemini's native REST API endpoint
-    const url = `${baseURL}/${version}/models/${model}:generateContent?key=${apiKey}`;
-    
-    console.log('🚀 Calling Gemini API directly:', { url: url.replace(apiKey, 'HIDDEN'), model });
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: prompt
-          }]
-        }],
-        generationConfig: {
-          temperature: parseFloat(process.env.EXPO_PUBLIC_GEMINI_API_TEMPERATURE || '0.7'),
-          maxOutputTokens: 500,
-        }
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('❌ Gemini API error:', response.status, errorText);
-      throw new Error(`Gemini API returned ${response.status}`);
-    }
-
-    const data = await response.json();
-    const responseContent = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    
-    console.log('✅ Gemini response:', responseContent.substring(0, 100) + '...');
-
-    let intelResponse: IntelResponse;
-    try {
-      // Clean the response content by removing markdown backticks
-      const cleanedContent = responseContent.replace(/```json\n|```/g, '');
-      intelResponse = JSON.parse(cleanedContent);
-    } catch (parseError) {
-      console.error('❌ Failed to parse Gemini response:', parseError);
-      // Fallback response
-      intelResponse = {
-        battlePlan: `Military Strategy ${request.reference} - Apply spiritual principles from this verse to your mission.`,
-        tacticalNotes: 'Fallback response due to parsing error.',
-        reliability: 60,
-      };
-    }
-
-    // Store the generated intelligence
-    const storedIntel: StoredIntel = {
-      id: `intel_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      reference: request.reference,
-      battlePlan: intelResponse.battlePlan,
-      tacticalNotes: intelResponse.tacticalNotes,
-      reliability: intelResponse.reliability,
-      dateCreated: new Date(),
-      isCustomIntel: false,
-      missionType: determineMissionType(request.text),
-    };
-
-    await storeBattleIntel(storedIntel);
-
-    return intelResponse;
-  } catch (error) {
-    console.error('❌ Direct Gemini API call failed:', error);
-    throw error; // Re-throw to trigger fallback in parent function
   }
 }
 
