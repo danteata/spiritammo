@@ -5,9 +5,9 @@ import {
   scriptures as transformedScriptures,
 } from '@/mocks/collections-transformed'
 
-const COLLECTIONS_KEY = 'collections'
-const SCRIPTURES_KEY = 'scriptures'
-const DATA_LOADED_KEY = 'data_loaded_v1'
+const COLLECTIONS_KEY = '@spiritammo_collections'
+const SCRIPTURES_KEY = '@spiritammo_scriptures'
+const DATA_LOADED_KEY = '@spiritammo_data_loaded_v1'
 
 export class DataLoaderService {
   // Check if transformed data has already been loaded
