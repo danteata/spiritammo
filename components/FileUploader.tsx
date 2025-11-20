@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   StyleSheet,
   Text,
@@ -7,6 +7,8 @@ import {
   Modal,
   ScrollView,
   Alert,
+  Switch,
+  ActivityIndicator,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome } from '@expo/vector-icons';
@@ -32,9 +34,11 @@ export default function FileUploader({
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractionProgress, setExtractionProgress] =
     useState<ExtractionProgress | null>(null)
+  const [militaryStatus, setMilitaryStatus] = useState('INITIALIZING...')
   const [extractedDocuments, setExtractedDocuments] = useState<
     ExtractedDocument[]
   >([])
+  const [useInternalBible, setUseInternalBible] = useState(true)
   const [selectedDocument, setSelectedDocument] =
     useState<ExtractedDocument | null>(null)
   const [selectedVerses, setSelectedVerses] = useState<string[]>([])
@@ -50,6 +54,26 @@ export default function FileUploader({
     const docs = fileExtractionService.getExtractedDocuments()
     setExtractedDocuments(docs)
   }
+
+  // Cycle military status messages during extraction
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (isExtracting && !extractionProgress) {
+      const messages = [
+        'ESTABLISHING SECURE UPLINK...',
+        'SCANNING SECTOR ALPHA...',
+        'DECRYPTING ENEMY INTEL...',
+        'TRIANGULATING TARGETS...',
+        'MOBILIZING RECON UNITS...',
+      ]
+      let i = 0
+      interval = setInterval(() => {
+        setMilitaryStatus(messages[i % messages.length])
+        i++
+      }, 1500)
+    }
+    return () => clearInterval(interval)
+  }, [isExtracting, extractionProgress])
 
   const handleFileUpload = async () => {
     setIsExtracting(true)
@@ -95,7 +119,8 @@ export default function FileUploader({
         name,
         type,
         size,
-        (progress) => setExtractionProgress(progress)
+        (progress) => setExtractionProgress(progress),
+        { useInternalBible }
       )
 
       loadExtractedDocuments()
@@ -201,33 +226,42 @@ export default function FileUploader({
   }
 
   const renderExtractionProgress = () => {
-    if (!extractionProgress) return null
+    if (!isExtracting) return null
+
+    if (extractionProgress) {
+      return (
+        <View style={styles.progressContainer}>
+          <ActivityIndicator size="large" color={TACTICAL_THEME.accent} />
+          <Text style={[styles.progressText, MILITARY_TYPOGRAPHY.body]}>
+            {extractionProgress.message.toUpperCase()}
+          </Text>
+          <View style={styles.progressBar}>
+            <View
+              style={[
+                styles.progressFill,
+                { width: `${extractionProgress.progress}%` },
+              ]}
+            />
+          </View>
+          <Text style={[styles.progressPercent, MILITARY_TYPOGRAPHY.caption]}>
+            {Math.round(extractionProgress.progress)}% COMPLETE
+          </Text>
+          {extractionProgress.currentVerse && extractionProgress.totalVerses && (
+            <Text style={[styles.progressDetail, MILITARY_TYPOGRAPHY.caption]}>
+              Processing verse {extractionProgress.currentVerse} of{' '}
+              {extractionProgress.totalVerses}
+            </Text>
+          )}
+        </View>
+      )
+    }
 
     return (
       <View style={styles.progressContainer}>
-        <Text style={[styles.progressTitle, MILITARY_TYPOGRAPHY.subheading]}>
-          EXTRACTION IN PROGRESS
+        <ActivityIndicator size="large" color={TACTICAL_THEME.accent} />
+        <Text style={[styles.progressText, MILITARY_TYPOGRAPHY.body]}>
+          {militaryStatus}
         </Text>
-
-        <View style={styles.progressBar}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${extractionProgress.progress}%` },
-            ]}
-          />
-        </View>
-
-        <Text style={[styles.progressText, MILITARY_TYPOGRAPHY.caption]}>
-          {extractionProgress.message}
-        </Text>
-
-        {extractionProgress.currentVerse && extractionProgress.totalVerses && (
-          <Text style={[styles.progressDetail, MILITARY_TYPOGRAPHY.caption]}>
-            Processing verse {extractionProgress.currentVerse} of{' '}
-            {extractionProgress.totalVerses}
-          </Text>
-        )}
       </View>
     )
   }
@@ -405,24 +439,42 @@ export default function FileUploader({
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <FontAwesome name="times-circle" size={24} color={TACTICAL_THEME.error} />
-          </TouchableOpacity>
+          <View style={styles.headerTopRow}>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <FontAwesome name="times-circle" size={24} color={TACTICAL_THEME.error} />
+            </TouchableOpacity>
 
-          <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
-            AMMUNITION SUPPLY
-          </Text>
-
-          <TouchableOpacity
-            style={styles.uploadButton}
-            onPress={handleFileUpload}
-            disabled={isExtracting}
-          >
-            <FontAwesome name="upload" size={20} color={TACTICAL_THEME.text} />
-            <Text style={[styles.uploadText, MILITARY_TYPOGRAPHY.caption]}>
-              {isExtracting ? 'EXTRACTING...' : 'UPLOAD FILE'}
+            <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
+              AMMUNITION SUPPLY
             </Text>
-          </TouchableOpacity>
+
+            {/* Placeholder to balance the close button */}
+            <View style={{ width: 40 }} />
+          </View>
+
+          <View style={styles.headerControls}>
+            <View style={styles.toggleContainer}>
+              <Text style={[styles.toggleLabel, MILITARY_TYPOGRAPHY.caption]}>SMART MATCH</Text>
+              <Switch
+                value={useInternalBible}
+                onValueChange={setUseInternalBible}
+                trackColor={{ false: TACTICAL_THEME.surface, true: TACTICAL_THEME.accent }}
+                thumbColor={useInternalBible ? '#fff' : '#f4f3f4'}
+                style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.uploadButton}
+              onPress={handleFileUpload}
+              disabled={isExtracting}
+            >
+              <FontAwesome name="upload" size={20} color={TACTICAL_THEME.text} />
+              <Text style={[styles.uploadText, MILITARY_TYPOGRAPHY.caption]}>
+                {isExtracting ? '...' : 'UPLOAD'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Content */}
@@ -462,12 +514,21 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingTop: 50,
     paddingHorizontal: 20,
     paddingBottom: 20,
+    gap: 16,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerControls: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 16,
   },
   closeButton: {
     padding: 8,
@@ -476,6 +537,22 @@ const styles = StyleSheet.create({
     color: TACTICAL_THEME.text,
     flex: 1,
     textAlign: 'center',
+  },
+  headerActions: {
+    // Deprecated
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 16,
+  },
+  toggleLabel: {
+    color: TACTICAL_THEME.textSecondary,
+    fontSize: 10,
   },
   uploadButton: {
     flexDirection: 'row',
@@ -519,13 +596,19 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   progressText: {
-    color: TACTICAL_THEME.textSecondary,
     textAlign: 'center',
     marginBottom: 8,
+  },
+  progressPercent: {
+    color: TACTICAL_THEME.text,
+    textAlign: 'center',
+    marginTop: 4,
   },
   progressDetail: {
     color: TACTICAL_THEME.textSecondary,
     textAlign: 'center',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
   sectionTitle: {
     color: TACTICAL_THEME.text,

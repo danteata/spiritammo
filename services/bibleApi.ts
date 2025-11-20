@@ -64,61 +64,69 @@ export class BibleApiService {
 
     try {
       console.log('📖 Loading Bible XML data...');
-      
+
       let xmlContent: string = '';
-      
+
       if (Platform.OS === 'web') {
         // On web, fetch the XML file directly
         console.log('📖 Loading XML for web platform...');
         const response = await fetch(require('../assets/bible/eng-kjv.osis.xml'));
         xmlContent = await response.text();
       } else {
-        // On native platforms (iOS/Android), read from bundled assets
+        // On native platforms (iOS/Android), use Expo Asset
         console.log('📖 Loading XML for native platform...');
-        
-        // For Android, use a native module to read the asset
+
+        // ANDROID SPECIFIC: Try loading from native assets first (since we have the plugin)
         if (Platform.OS === 'android') {
           try {
-            // Use FileSystem to read from Android assets
-            const { RNFSManager } = NativeModules;
-            
-            // Try reading using react-native's asset system
-            const assetPath = 'asset:/bible/eng-kjv.osis.xml';
-            console.log('📖 Reading from Android asset:', assetPath);
-            
-            // Read using FileSystem with asset:// protocol
-            xmlContent = await FileSystem.readAsStringAsync(assetPath, {
-              encoding: FileSystem.EncodingType.UTF8
-            });
-            console.log('✅ Successfully loaded Bible XML from Android assets');
+            console.log('📖 Attempting to read from Android native assets using FileSystem...');
+            // Note: FileSystem.readAsStringAsync supports file:///android_asset/ on some versions,
+            // but sometimes we need to use the specific bundled asset approach.
+            // Let's try the direct URI first.
+            const uri = 'file:///android_asset/bible/eng-kjv.osis.xml';
+            xmlContent = await FileSystem.readAsStringAsync(uri);
+            console.log('✅ Successfully loaded Bible XML from Android native assets');
           } catch (androidError) {
-            console.error('❌ Failed to load from Android assets:', androidError);
-            throw new Error('Could not load Bible XML from Android assets');
+            console.warn('⚠️ Failed to load from native assets (FileSystem):', androidError);
+
+            // Second attempt: Try constructing a raw asset URI if the above failed
+            try {
+              // This is a backup strategy for some Android versions
+              const uri = 'asset:///bible/eng-kjv.osis.xml';
+              xmlContent = await FileSystem.readAsStringAsync(uri);
+              console.log('✅ Successfully loaded Bible XML from Android native assets (asset:// scheme)');
+            } catch (retryError) {
+              console.warn('⚠️ Failed to load from native assets (asset:// scheme):', retryError);
+            }
           }
-        } else {
-          // For iOS, use the standard asset loading
+        }
+
+        // If not loaded yet (iOS or Android fallback failed), use Expo Asset
+        if (!xmlContent) {
           try {
+            console.log('📖 Falling back to Expo Asset system...');
             const asset = Asset.fromModule(require('../assets/bible/eng-kjv.osis.xml'));
             await asset.downloadAsync();
-            
+
             const uri = asset.localUri || asset.uri;
             if (!uri) {
               throw new Error('No valid URI for Bible XML asset');
             }
-            
+
+            console.log('📖 Reading from asset URI:', uri);
             xmlContent = await FileSystem.readAsStringAsync(uri);
-            console.log('✅ Successfully loaded Bible XML from iOS assets');
-          } catch (iosError) {
-            console.error('❌ Failed to load from iOS assets:', iosError);
-            throw new Error('Could not load Bible XML from iOS assets');
+            console.log('✅ Successfully loaded Bible XML via Expo Asset');
+          } catch (error) {
+            console.error('❌ Failed to load from assets:', error);
+            throw new Error('Could not load Bible XML from assets. Please ensure metro bundler is running with --clear cache.');
           }
         }
       }
-      
+
       console.log('📖 Parsing Bible verses from XML...');
       // Parse verses using regex since the OSIS format has complex verse tagging
       this.parseVersesFromXML(xmlContent);
-      
+
       console.log(`✅ Loaded ${this.parsedVerses.size} verses from ${this.parsedChapters.size} chapters`);
       this.isInitialized = true;
     } catch (error) {
@@ -127,56 +135,92 @@ export class BibleApiService {
   }
 
   private parseVersesFromXML(xmlContent: string) {
-    // Regex to match verse start and end tags with content between them
-    const verseRegex = /<verse[^>]*osisID="([^"]+)"[^>]*sID="([^"]+)"[^>]*n="(\d+)"[^>]*\/>([^<]*(?:<(?!verse)[^<]*)*)<verse[^>]*eID="\2"[^>]*\/>/g;
+    // Optimized "Tag Scanner" approach
+    // Instead of matching the whole verse (start+content+end) with a heavy regex,
+    // we scan for tags and extract content by substring. This is much faster.
 
-    let match;
-    while ((match = verseRegex.exec(xmlContent)) !== null) {
-      const osisId = match[1]; // e.g., "Gen.1.1"
-      const verseNum = parseInt(match[3]);
-      let verseContent = match[4];
+    console.log(`📖 Parsing XML content (length: ${xmlContent.length})`);
 
-      // Check if this verse contains Jesus's words
-      const hasJesusWords = /<q[^>]*who="Jesus"/.test(verseContent);
+    // Relaxed regex to match both <verse ... /> and <verse ... >
+    const tagRegex = /<verse\s+([^>]+)>/g;
 
-      // Clean up the text - remove XML tags and normalize whitespace
-      let verseText = this.cleanXMLText(verseContent);
+    // Store the currently open verse
+    let currentVerse: { osisId: string, sID: string, n: number, contentStartIndex: number } | null = null;
+    let regexMatch: RegExpExecArray | null;
+    let matchCount = 0;
 
-      // Skip empty verses
-      if (!verseText) continue;
+    while ((regexMatch = tagRegex.exec(xmlContent)) !== null) {
+      matchCount++;
+      const tagAttributes = regexMatch[1];
+      const tagIndex = regexMatch.index;
+      const tagLength = regexMatch[0].length;
 
-      // Parse book and chapter from osisId
-      const [bookAbbrev, chapterStr, verseStr] = osisId.split('.');
-      const chapter = parseInt(chapterStr);
-      const verse = parseInt(verseStr);
-
-      const normalizedBookName = this.normalizeBookName(bookAbbrev);
-
-      const verseObj: BibleVerse = {
-        book: normalizedBookName,
-        chapter,
-        verse,
-        text: verseText,
-        reference: `${normalizedBookName} ${chapter}:${verse}`,
-        isJesusWords: hasJesusWords
-      };
-
-      // Store verse
-      const verseKey = `${bookAbbrev}.${chapter}.${verse}`;
-      this.parsedVerses.set(verseKey, verseObj);
-
-      // Add to chapter if not already there
-      const chapterKey = `${bookAbbrev}.${chapter}`;
-      if (!this.parsedChapters.has(chapterKey)) {
-        this.parsedChapters.set(chapterKey, {
-          book: normalizedBookName,
-          chapter,
-          verses: []
-        });
+      if (matchCount <= 3) {
+        console.log(`🔍 Match #${matchCount}: ${regexMatch[0].substring(0, 50)}...`);
       }
-      const chapterData = this.parsedChapters.get(chapterKey)!;
-      if (!chapterData.verses.find(v => v.verse === verse)) {
-        chapterData.verses.push(verseObj);
+
+      // Check if it's a start tag (has sID) or end tag (has eID)
+      if (tagAttributes.includes('sID="')) {
+        // It's a start tag. Extract attributes.
+        // Use strict regex to avoid matching substrings in other attributes (like osisID matching sID if it were possible)
+        const osisIdMatch = tagAttributes.match(/(?:^|\s)osisID="([^"]+)"/);
+        const sIdMatch = tagAttributes.match(/(?:^|\s)sID="([^"]+)"/);
+        const nMatch = tagAttributes.match(/(?:^|\s)n="(\d+)"/);
+
+        if (matchCount <= 3) {
+          console.log(`🔍 Tag Attributes: [${tagAttributes}]`);
+          if (sIdMatch) console.log(`   sID match: ${sIdMatch[1]}`);
+          else console.log(`   sID match: null`);
+        }
+
+        if (osisIdMatch && sIdMatch && nMatch) {
+          if (matchCount <= 3) console.log(`➡️ Start tag found: ${osisIdMatch[1]} (sID: ${sIdMatch[1]})`);
+          currentVerse = {
+            osisId: osisIdMatch[1],
+            sID: sIdMatch[1],
+            n: parseInt(nMatch[1]),
+            contentStartIndex: tagIndex + tagLength
+          };
+        } else {
+          if (matchCount <= 3) console.log(`⚠️ Start tag missing attributes: ${tagAttributes}`);
+        }
+      } else if (tagAttributes.includes('eID="')) {
+        // It's an end tag.
+        const eIdMatch = tagAttributes.match(/eID="([^"]+)"/);
+
+        if (eIdMatch) {
+          if (matchCount <= 3) console.log(`⬅️ End tag found: ${eIdMatch[1]}`);
+
+          if (currentVerse) {
+            if (eIdMatch[1] === currentVerse.sID) {
+              // Found the closing tag for the current verse
+              // Extract content using substring (extremely fast)
+              const rawContent = xmlContent.substring(currentVerse.contentStartIndex, tagIndex);
+
+              if (matchCount <= 3) console.log(`📝 Raw content length: ${rawContent.length}`);
+
+              // Clean up content
+              const cleanContent = rawContent
+                .replace(/<[^>]+>/g, '') // Remove all XML tags inside
+                .replace(/\s+/g, ' ')    // Condense whitespace
+                .trim();
+
+              if (cleanContent) {
+                if (matchCount <= 3) console.log(`✅ Content extracted: "${cleanContent.substring(0, 20)}..."`);
+                this.addVerse(currentVerse.osisId, currentVerse.n, cleanContent);
+              } else {
+                if (matchCount <= 3) console.log(`⚠️ Content empty after cleanup`);
+              }
+
+              // Reset
+              currentVerse = null;
+            } else {
+              if (matchCount <= 3) console.log(`⚠️ Mismatch: End tag ${eIdMatch[1]} != Current ${currentVerse.sID}`);
+            }
+          } else {
+            if (matchCount <= 3) console.log(`⚠️ End tag found but no current verse open`);
+          }
+        }
       }
     }
 
@@ -184,6 +228,41 @@ export class BibleApiService {
     for (const chapterData of this.parsedChapters.values()) {
       chapterData.verses.sort((a, b) => a.verse - b.verse);
     }
+  }
+
+  private addVerse(osisId: string, verseNum: number, text: string) {
+    // Parse book and chapter from osisId
+    const [bookAbbrev, chapterStr] = osisId.split('.');
+    const chapter = parseInt(chapterStr);
+
+    const normalizedBookName = this.normalizeBookName(bookAbbrev);
+
+    // Debug first few adds
+    if (this.parsedVerses.size < 3) {
+      console.log(`➕ Adding verse: ${normalizedBookName} ${chapter}:${verseNum}`);
+    }
+
+    const verseObj: BibleVerse = {
+      book: normalizedBookName,
+      chapter,
+      verse: verseNum,
+      text,
+      reference: `${normalizedBookName} ${chapter}:${verseNum}`,
+      isJesusWords: false // Simplified for now
+    };
+
+    const verseKey = `${bookAbbrev}.${chapter}.${verseNum}`;
+    this.parsedVerses.set(verseKey, verseObj);
+
+    const chapterKey = `${bookAbbrev}.${chapter}`;
+    if (!this.parsedChapters.has(chapterKey)) {
+      this.parsedChapters.set(chapterKey, {
+        book: normalizedBookName,
+        chapter: chapter,
+        verses: []
+      });
+    }
+    this.parsedChapters.get(chapterKey)?.verses.push(verseObj);
   }
 
   /**
@@ -205,7 +284,7 @@ export class BibleApiService {
       // Normalize whitespace
       .replace(/\s+/g, ' ')
       .trim();
-    
+
     return cleaned;
   }
 
@@ -214,15 +293,15 @@ export class BibleApiService {
    */
   async waitForInitialization(): Promise<boolean> {
     if (this.isInitialized) return true;
-    
+
     // Wait up to 10 seconds for initialization
     const maxWaitTime = 10000;
     const startTime = Date.now();
-    
+
     while (!this.isInitialized && (Date.now() - startTime) < maxWaitTime) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
-    
+
     return this.isInitialized;
   }
 
@@ -315,9 +394,11 @@ export class BibleApiService {
       'esther': 'Est',
       'job': 'Job',
       'psalms': 'Ps',
+      'psalm': 'Ps',
       'proverbs': 'Prov',
       'ecclesiastes': 'Eccl',
       'song of solomon': 'Song',
+      'song of songs': 'Song',
       'isaiah': 'Isa',
       'jeremiah': 'Jer',
       'lamentations': 'Lam',
@@ -331,7 +412,7 @@ export class BibleApiService {
       'micah': 'Mic',
       'nahum': 'Nah',
       'habakkuk': 'Hab',
-      'zephaniah': 'Zep',
+      'zephaniah': 'Zeph',
       'haggai': 'Hag',
       'zechariah': 'Zech',
       'malachi': 'Mal',
@@ -352,26 +433,34 @@ export class BibleApiService {
       '1 timothy': '1Tim',
       '2 timothy': '2Tim',
       'titus': 'Titus',
-      'philemon': 'Philem',
+      'philemon': 'Phlm',
       'hebrews': 'Heb',
-      'james': 'James',
+      'james': 'Jas',
       '1 peter': '1Pet',
       '2 peter': '2Pet',
       '1 john': '1John',
       '2 john': '2John',
       '3 john': '3John',
       'jude': 'Jude',
-      'revelation': 'Rev'
+      'revelation': 'Rev',
     };
 
-    const normalized = book.toLowerCase().replace(/\s+/g, ' ');
-    return reverseBookMap[normalized] || book;
+    const normalized = book.toLowerCase().trim();
+    const abbrev = reverseBookMap[normalized];
+
+    if (!abbrev) {
+      console.warn(`⚠️ Could not find abbreviation for book: "${book}" (normalized: "${normalized}")`);
+      // Try to return capitalized version as fallback
+      return book.charAt(0).toUpperCase() + book.slice(1);
+    }
+
+    return abbrev;
   }
 
   /**
    * Normalize book names to match the app's format
    */
-  private normalizeBookName(book: string): string {
+  public normalizeBookName(book: string): string {
     // Handle common abbreviations and variations
     const bookMap: { [key: string]: string } = {
       'gen': 'Genesis',

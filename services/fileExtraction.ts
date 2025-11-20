@@ -4,6 +4,7 @@ import * as FileSystem from 'expo-file-system/legacy'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Scripture } from '@/types/scripture'
 import JSZip from 'jszip'
+import { bibleApiService } from './bibleApi'
 
 // File extraction types
 
@@ -27,6 +28,7 @@ export interface ExtractedVerse {
   chapter?: number
   verse?: number
   confidence: number // 0-100, how confident we are this is a verse
+  source?: 'extracted' | 'internal_db'
   context?: string // surrounding text for context
 }
 
@@ -116,21 +118,22 @@ class FileExtractionService {
     fileName: string,
     fileType: 'pdf' | 'epub' | 'txt',
     fileSize: number,
-    onProgress?: (progress: ExtractionProgress) => void
+    onProgress?: (progress: ExtractionProgress) => void,
+    options: { useInternalBible: boolean } = { useInternalBible: true }
   ): Promise<ExtractedDocument> {
     try {
       onProgress?.({
         stage: 'extracting',
         progress: 70,
-        message: 'Extracting verses...',
+        message: 'DEPLOYING RECONNAISSANCE UNITS...',
       })
 
-      const verses = await this.extractVerses(text, onProgress)
+      const verses = await this.extractVerses(text, onProgress, options.useInternalBible)
 
       onProgress?.({
         stage: 'analyzing',
         progress: 90,
-        message: 'Analyzing extracted content...',
+        message: 'ANALYZING INTEL...',
       })
 
       const extractedDoc: ExtractedDocument = {
@@ -150,7 +153,7 @@ class FileExtractionService {
       onProgress?.({
         stage: 'complete',
         progress: 100,
-        message: `Successfully extracted ${verses.length} verses!`,
+        message: `MISSION ACCOMPLISHED: ${verses.length} TARGETS SECURED`,
         totalVerses: verses.length,
       })
 
@@ -194,7 +197,7 @@ class FileExtractionService {
     onProgress?.({
       stage: 'reading',
       progress: 40,
-      message: 'Reading EPUB file...',
+      message: 'BREACHING EPUB PERIMETER...',
     })
 
     try {
@@ -205,7 +208,7 @@ class FileExtractionService {
       onProgress?.({
         stage: 'parsing',
         progress: 50,
-        message: 'Unzipping EPUB container...',
+        message: 'DECODING ENCRYPTED DATA...',
       })
 
       const zip = await JSZip.loadAsync(fileContent, { base64: true })
@@ -247,7 +250,7 @@ class FileExtractionService {
       onProgress?.({
         stage: 'extracting',
         progress: 60,
-        message: 'Extracting text from chapters...',
+        message: 'EXTRACTING INTEL FROM SECTORS...',
       })
 
       for (const id of spineIds) {
@@ -279,7 +282,7 @@ class FileExtractionService {
           onProgress?.({
             stage: 'extracting',
             progress: 60 + Math.floor((processedItems / spineIds.length) * 20),
-            message: `Processed ${processedItems}/${spineIds.length} chapters...`,
+            message: `SECTOR SCAN: ${processedItems}/${spineIds.length} CLEARED`,
           })
         }
       }
@@ -294,12 +297,13 @@ class FileExtractionService {
   // Extract verses from text using pattern matching
   private async extractVerses(
     text: string,
-    onProgress?: (progress: ExtractionProgress) => void
+    onProgress?: (progress: ExtractionProgress) => void,
+    useInternalBible: boolean = true
   ): Promise<ExtractedVerse[]> {
     const verses: ExtractedVerse[] = []
 
     // Common verse patterns
-    const versePatterns = [
+    let versePatterns = [
       // Standard format: "Book Chapter:Verse"
       /([1-3]?\s*[A-Za-z]+)\s+(\d+):(\d+)[\s\-–—]*([^.!?]*[.!?])/g,
       // Alternative format: "Book Chapter.Verse"
@@ -308,8 +312,23 @@ class FileExtractionService {
       /"([^"]+)"\s*[-–—]\s*([1-3]?\s*[A-Za-z]+)\s+(\d+):(\d+)/g,
     ]
 
+    // If using internal Bible, we can be more aggressive/flexible with patterns
+    // and don't need to capture the text following the reference
+    if (useInternalBible) {
+      versePatterns = [
+        // Just capture the reference: Book Chapter:Verse
+        /([1-3]?\s*[A-Za-z]+)\s+(\d+):(\d+)/g,
+        // Book Chapter.Verse
+        /([1-3]?\s*[A-Za-z]+)\s+(\d+)\.(\d+)/g,
+      ]
+    }
+
     let totalMatches = 0
     let processedMatches = 0
+    const seenVerses = new Set<string>()
+
+    // Helper to create a unique key for a verse
+    const getVerseKey = (b: string, c: number, v: number) => `${b.toLowerCase().trim()}_${c}_${v}`
 
     // First pass: count total potential matches
     for (const pattern of versePatterns) {
@@ -320,7 +339,7 @@ class FileExtractionService {
     onProgress?.({
       stage: 'extracting',
       progress: 75,
-      message: `Found ${totalMatches} potential verses...`,
+      message: `TARGETS IDENTIFIED: ${totalMatches} POTENTIAL VERSES`,
       totalVerses: totalMatches,
     })
 
@@ -337,17 +356,18 @@ class FileExtractionService {
         let verseText = ''
 
         // Determine mapping based on pattern shape
-        if (pattern === versePatterns[2]) {
+        if (!useInternalBible && pattern.toString().includes('"([^"]+)"')) {
           // Quote format: "text" - Book Chapter:Verse
           verseText = match[1] || ''
           book = (match[2] || '').toString()
           chapter = parseInt(match[3]) || 0
           verseNum = parseInt(match[4]) || 0
         } else {
-          // Standard formats: Book Chapter:Verse <text>  OR Book Chapter.Verse <text>
+          // Standard formats: Book Chapter:Verse <text>
           book = (match[1] || '').toString()
           chapter = parseInt(match[2]) || 0
           verseNum = parseInt(match[3]) || 0
+          // Only capture text if we're not using internal bible (or if the pattern captured it)
           verseText = match[4] || ''
         }
 
@@ -357,20 +377,62 @@ class FileExtractionService {
           .replace(/\s*[-–—"']\s*$/, '')
           .trim()
 
-        if (cleanText.length > 10 && cleanText.length < 500) {
+        // If using internal bible, we don't care about the extracted text length check
+        if (useInternalBible || (cleanText.length > 10 && cleanText.length < 500)) {
           // Reasonable verse length
-          const extractedVerse: ExtractedVerse = {
-            id: `verse_${Date.now()}_${verses.length}`,
-            text: cleanText,
+          let finalText = cleanText
+          let confidence = this.calculateConfidence(cleanText, book)
+          let source: 'extracted' | 'internal_db' = 'extracted'
+
+          // Smart Match: Look up in internal Bible
+          if (useInternalBible && book && chapter && verseNum) {
+            console.log(`[SmartMatch] Attempting lookup for: ${book} ${chapter}:${verseNum}`)
+
+            // Ensure service is ready
+            await bibleApiService.waitForInitialization()
+
+            // Try exact match first
+            let internalVerse = await bibleApiService.getVerse(book, chapter, verseNum)
+            console.log(`[SmartMatch] Exact match result: ${internalVerse ? 'FOUND' : 'NOT FOUND'}`)
+
+            // If not found, try normalizing the book name
+            if (!internalVerse) {
+              // Try to find a matching book name in the bible service
+              const normalizedBook = await bibleApiService.normalizeBookName(book)
+              console.log(`[SmartMatch] Normalized '${book}' to '${normalizedBook}'`)
+
+              internalVerse = await bibleApiService.getVerse(normalizedBook, chapter, verseNum)
+              console.log(`[SmartMatch] Normalized match result: ${internalVerse ? 'FOUND' : 'NOT FOUND'}`)
+            }
+
+            if (internalVerse) {
+              finalText = internalVerse.text
+              confidence = 100
+              source = 'internal_db'
+              console.log(`[SmartMatch] SUCCESS: Replaced text for ${book} ${chapter}:${verseNum}`)
+            } else {
+              console.log(`[SmartMatch] FAILED: Could not find verse in internal DB`)
+            }
+          }
+
+          // De-duplication check
+          const verseKey = getVerseKey(book, chapter, verseNum)
+          if (seenVerses.has(verseKey)) {
+            continue
+          }
+          seenVerses.add(verseKey)
+
+          verses.push({
+            id: Math.random().toString(36).substr(2, 9),
             reference: `${book} ${chapter}:${verseNum}`,
+            text: finalText,
             book: book.replace(/^\d+\s*/, ''), // Remove leading numbers
             chapter,
             verse: verseNum,
-            confidence: this.calculateConfidence(cleanText, book),
+            confidence,
+            source,
             context: this.extractContext(text, match.index || 0, 100),
-          }
-
-          verses.push(extractedVerse)
+          })
         }
 
         // Update progress (guard divide-by-zero)
@@ -379,7 +441,7 @@ class FileExtractionService {
           onProgress?.({
             stage: 'extracting',
             progress: Math.min(90, Math.round(pct)),
-            message: `Processed ${processedMatches}/${totalMatches} verses...`,
+            message: `PROCESSING INTEL: ${processedMatches}/${totalMatches} TARGETS`,
             currentVerse: processedMatches,
             totalVerses: totalMatches,
           })
