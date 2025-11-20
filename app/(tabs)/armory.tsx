@@ -28,6 +28,7 @@ export default function ArmoryScreen() {
     getScripturesByCollection,
     addCollection,
     addScriptures,
+    addScripturesToCollection,
   } = useAppStore()
   const [selectedCollection, setSelectedCollection] =
     useState<Collection | null>(null)
@@ -95,7 +96,7 @@ export default function ArmoryScreen() {
     }
   }
 
-  const handleVersesExtracted = async (extractedVerses: Scripture[]) => {
+  const handleVersesExtracted = async (extractedVerses: Scripture[], targetCollectionId?: string) => {
     if (extractedVerses.length === 0) {
       Alert.alert('No Verses', 'No verses were extracted from the file.')
       return
@@ -103,6 +104,13 @@ export default function ArmoryScreen() {
 
     // Add the scriptures to the main store first
     await addScriptures(extractedVerses)
+
+    // If user selected a target collection, add to it directly
+    if (targetCollectionId) {
+      await addScripturesToCollection(targetCollectionId, extractedVerses.map(v => v.id))
+      // Alert is already shown in FileUploader
+      return
+    }
 
     // Analyze for chapter organization
     const analysis =
@@ -123,10 +131,8 @@ export default function ArmoryScreen() {
     if (analysis.canBeChapterBased) {
       Alert.alert(
         'Chapter Organization Available',
-        `This collection can be organized by chapters (${
-          analysis.stats.totalChapters
-        } chapters from ${analysis.stats.totalBooks} book${
-          analysis.stats.totalBooks > 1 ? 's' : ''
+        `This collection can be organized by chapters (${analysis.stats.totalChapters
+        } chapters from ${analysis.stats.totalBooks} book${analysis.stats.totalBooks > 1 ? 's' : ''
         }). Would you like to enable chapter-based organization?`,
         [
           {
@@ -189,8 +195,8 @@ export default function ArmoryScreen() {
                 ? 'rgba(255, 165, 0, 0.2)'
                 : 'rgba(255, 165, 0, 0.1)'
               : isDark
-              ? 'rgba(255, 255, 255, 0.1)'
-              : 'rgba(0, 0, 0, 0.05)',
+                ? 'rgba(255, 255, 255, 0.1)'
+                : 'rgba(0, 0, 0, 0.05)',
           borderColor:
             selectedCollection?.id === item.id
               ? TACTICAL_THEME.accent
@@ -243,7 +249,7 @@ export default function ArmoryScreen() {
       <TouchableOpacity
         style={styles.collectionArrow}
         onPress={() => handleShowCollectionDetail(item)}
-        >
+      >
         <FontAwesome name="chevron-right" size={20} color={isDark ? 'white' : 'black'} />
       </TouchableOpacity>
     </View>
@@ -482,9 +488,8 @@ export default function ArmoryScreen() {
       <View style={styles.sectionHeader}>
         <Text style={[styles.sectionSubtitle, { color: 'white' }]}>
           {selectedCollection
-            ? `${
-                selectedCollection.abbreviation || selectedCollection.name
-              } - Scripture Distribution`
+            ? `${selectedCollection.abbreviation || selectedCollection.name
+            } - Scripture Distribution`
             : `Books (${scriptures.length} total rounds)`}
         </Text>
         {selectedCollection && (

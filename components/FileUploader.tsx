@@ -18,12 +18,14 @@ import {
   ExtractedDocument,
   ExtractionProgress,
 } from '@/services/fileExtraction'
-import { PDFExtractor } from './PDFExtractor'
+import CollectionSelector from './CollectionSelector'
+import { Collection } from '@/types/scripture'
+import { PDFExtractor } from './PDFExtractor';
 
 interface FileUploaderProps {
   isVisible: boolean
   onClose: () => void
-  onVersesExtracted: (verses: any[]) => void
+  onVersesExtracted: (verses: any[], targetCollectionId?: string) => void
 }
 
 export default function FileUploader({
@@ -43,6 +45,7 @@ export default function FileUploader({
     useState<ExtractedDocument | null>(null)
   const [selectedVerses, setSelectedVerses] = useState<string[]>([])
   const [pdfFile, setPdfFile] = useState<{ uri: string; name: string; size: number } | null>(null)
+  const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
 
   React.useEffect(() => {
     if (isVisible) {
@@ -57,7 +60,7 @@ export default function FileUploader({
 
   // Cycle military status messages during extraction
   useEffect(() => {
-    let interval: NodeJS.Timeout
+    let interval: any
     if (isExtracting && !extractionProgress) {
       const messages = [
         'ESTABLISHING SECURE UPLINK...',
@@ -183,11 +186,11 @@ export default function FileUploader({
       selectedDocument,
       selectedVerses
     )
-    onVersesExtracted(scriptures)
+    onVersesExtracted(scriptures, selectedCollection?.id)
 
     Alert.alert(
       'Import Successful!',
-      `Imported ${scriptures.length} verses to your collection.`,
+      `Imported ${scriptures.length} verses to ${selectedCollection ? selectedCollection.name : 'new arsenal'}.`,
       [{ text: 'OK', onPress: onClose }]
     )
   }
@@ -338,6 +341,13 @@ export default function FileUploader({
           <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
             SELECT VERSES TO IMPORT
           </Text>
+
+          <View style={{ marginBottom: 16 }}>
+            <CollectionSelector
+              selectedCollection={selectedCollection}
+              onSelectCollection={setSelectedCollection}
+            />
+          </View>
 
           <View style={styles.selectionActions}>
             <TouchableOpacity

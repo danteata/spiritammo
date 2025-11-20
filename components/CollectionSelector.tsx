@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Modal,
+  TextInput,
 } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons';
 import { Collection } from '@/types/scripture'
@@ -23,11 +24,33 @@ export default function CollectionSelector({
   selectedCollection,
   selectedChapterIds = [],
 }: CollectionSelectorProps) {
-  const { collections, isDark } = useAppStore()
+  const { collections, isDark, addCollection } = useAppStore()
   const [modalVisible, setModalVisible] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
+  const [newArsenalName, setNewArsenalName] = useState('')
 
   const handleSelect = (collection: Collection) => {
     onSelectCollection(collection)
+    setModalVisible(false)
+  }
+
+  const handleCreateArsenal = async () => {
+    if (!newArsenalName.trim()) return
+
+    const newCollection: Collection = {
+      id: `arsenal_${Date.now()}`,
+      name: newArsenalName.trim(),
+      description: 'Custom Arsenal',
+      scriptures: [],
+      createdAt: new Date().toISOString(),
+      tags: ['custom'],
+      isChapterBased: false
+    }
+
+    await addCollection(newCollection)
+    onSelectCollection(newCollection)
+    setNewArsenalName('')
+    setIsCreating(false)
     setModalVisible(false)
   }
 
@@ -131,7 +154,7 @@ export default function CollectionSelector({
                 ? selectedCollection.abbreviation
                   ? `${selectedCollection.abbreviation} - ${selectedCollection.name}`
                   : selectedCollection.name
-                : 'SELECT AMMUNITION'}
+                : 'SELECT ARSENAL'}
             </Text>
             {selectedCollection && (
               <Text
@@ -165,7 +188,7 @@ export default function CollectionSelector({
                   { color: textColor },
                 ]}
               >
-                AMMUNITION SELECTION
+                ARSENAL SELECTION
               </Text>
               <Text
                 style={[
@@ -174,46 +197,76 @@ export default function CollectionSelector({
                   { color: TACTICAL_THEME.textSecondary },
                 ]}
               >
-                Choose your scripture collection
+                Choose your ammunition supply
               </Text>
             </View>
 
-            {collections.length === 0 ? (
-              <View style={styles.emptyState}>
-                <FontAwesome name="book" size={48} color={TACTICAL_THEME.textSecondary} />
-                <Text
-                  style={[
-                    styles.emptyStateText,
-                    MILITARY_TYPOGRAPHY.body,
-                    { color: TACTICAL_THEME.textSecondary },
-                  ]}
-                >
-                  No ammunition collections available
-                </Text>
-                <Text
-                  style={[
-                    styles.emptyStateSubtext,
-                    MILITARY_TYPOGRAPHY.caption,
-                    { color: TACTICAL_THEME.textSecondary },
-                  ]}
-                >
-                  Create collections in the Armory
-                </Text>
+            {isCreating ? (
+              <View style={styles.createContainer}>
+                <TextInput
+                  style={[styles.input, { color: textColor, borderColor: TACTICAL_THEME.border }]}
+                  placeholder="ENTER ARSENAL NAME"
+                  placeholderTextColor={TACTICAL_THEME.textSecondary}
+                  value={newArsenalName}
+                  onChangeText={setNewArsenalName}
+                  autoFocus
+                />
+                <View style={styles.createActions}>
+                  <TouchableOpacity
+                    style={[styles.actionButton, { borderColor: TACTICAL_THEME.border }]}
+                    onPress={() => setIsCreating(false)}
+                  >
+                    <Text style={[styles.actionButtonText, { color: TACTICAL_THEME.textSecondary }]}>CANCEL</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.actionButton, { backgroundColor: TACTICAL_THEME.accent, borderColor: TACTICAL_THEME.accent }]}
+                    onPress={handleCreateArsenal}
+                  >
+                    <Text style={[styles.actionButtonText, { color: TACTICAL_THEME.text }]}>CREATE</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
-              <FlatList
-                data={collections}
-                renderItem={renderItem}
-                keyExtractor={(item) => item.id}
-                style={styles.collectionList}
-                showsVerticalScrollIndicator={false}
-              />
+              <>
+                <TouchableOpacity
+                  style={styles.createButton}
+                  onPress={() => setIsCreating(true)}
+                >
+                  <FontAwesome name="plus" size={16} color={TACTICAL_THEME.text} />
+                  <Text style={[styles.createButtonText, MILITARY_TYPOGRAPHY.button]}>
+                    ESTABLISH NEW ARSENAL
+                  </Text>
+                </TouchableOpacity>
+
+                {collections.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <FontAwesome name="book" size={48} color={TACTICAL_THEME.textSecondary} />
+                    <Text
+                      style={[
+                        styles.emptyStateText,
+                        MILITARY_TYPOGRAPHY.body,
+                        { color: TACTICAL_THEME.textSecondary },
+                      ]}
+                    >
+                      No arsenals available
+                    </Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={collections}
+                    renderItem={renderItem}
+                    keyExtractor={(item) => item.id}
+                    style={styles.collectionList}
+                    showsVerticalScrollIndicator={false}
+                  />
+                )}
+              </>
             )}
 
             <TouchableOpacity
               style={[
                 styles.closeButton,
-                { backgroundColor: TACTICAL_THEME.accent },
+                { backgroundColor: TACTICAL_THEME.secondary },
               ]}
               onPress={() => setModalVisible(false)}
             >
@@ -357,7 +410,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   closeButton: {
-    marginTop: 20,
+    marginTop: 12,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -365,6 +418,48 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     color: TACTICAL_THEME.text,
+    fontWeight: 'bold',
+  },
+  createButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 12,
+    marginBottom: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: TACTICAL_THEME.border,
+    gap: 8,
+  },
+  createButtonText: {
+    color: TACTICAL_THEME.text,
+    fontWeight: 'bold',
+  },
+  createContainer: {
+    padding: 16,
+  },
+  input: {
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    marginBottom: 16,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  createActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  actionButtonText: {
     fontWeight: 'bold',
   },
 })
