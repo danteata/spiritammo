@@ -85,7 +85,7 @@ export default function VoiceRecorder({ scriptureText, onRecordingComplete }: Vo
     try {
       // Stop any existing speech
       await Speech.stop();
-      
+
       // Start new speech with proper settings
       await Speech.speak(scriptureText, {
         rate: userSettings.voiceRate || 0.9,
@@ -269,7 +269,7 @@ export default function VoiceRecorder({ scriptureText, onRecordingComplete }: Vo
     const totalWords = Math.max(originalWords.length, spokenWords.length);
     return totalWords > 0 ? Math.round((correctWords / totalWords) * 100) : 0;
   };
-  
+
   const textColor = isDark ? COLORS.text.dark : COLORS.text.light;
   const isRecording = isRecognizing || audioIsRecording;
   const displayError = speechError || audioError;
@@ -277,179 +277,168 @@ export default function VoiceRecorder({ scriptureText, onRecordingComplete }: Vo
 
   return (
     <View style={styles.container}>
-      {/* Status message */}
-      <Text style={[styles.statusText, { color: textColor }]}>
-        {statusMessage}
-      </Text>
+      {/* Comms Panel Header */}
+      <View style={styles.panelHeader}>
+        <View style={[styles.statusIndicator, isRecording ? styles.statusActive : styles.statusStandby]} />
+        <Text style={[styles.statusText, { color: textColor }]}>
+          {statusMessage.toUpperCase()}
+        </Text>
+      </View>
 
+      {/* Main Comms Display */}
+      <View style={styles.commsDisplay}>
+        {displayError ? (
+          <Text style={[styles.displayText, { color: COLORS.error }]}>{displayError}</Text>
+        ) : displayTranscript ? (
+          <Text style={[styles.displayText, { color: textColor }]}>"{displayTranscript}"</Text>
+        ) : interimTranscript ? (
+          <Text style={[styles.displayText, { color: textColor, opacity: 0.7 }]}>{interimTranscript}...</Text>
+        ) : (
+          <Text style={[styles.displayText, { color: textColor, opacity: 0.5 }]}>
+            AWAITING VOICE INPUT...
+          </Text>
+        )}
+
+        {/* Accuracy Badge */}
+        {showAccuracy && (
+          <View style={[
+            styles.accuracyBadge,
+            { backgroundColor: accuracy >= 80 ? COLORS.success : accuracy >= 60 ? COLORS.warning : COLORS.error }
+          ]}>
+            <Text style={styles.accuracyText}>{accuracy}% ACCURACY</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Controls */}
       <View style={styles.controlsContainer}>
+        <TouchableOpacity
+          style={[styles.secondaryButton, { borderColor: textColor }]}
+          onPress={speakScripture}
+          testID="speak-scripture-button"
+        >
+          <FontAwesome name="volume-up" size={16} color={textColor} />
+          <Text style={[styles.secondaryButtonText, { color: textColor }]}>PLAY INTEL</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           style={[
             styles.recordButton,
-            audioIsRecording && styles.stopButton
+            audioIsRecording && styles.stopButton,
+            isRecognizing && styles.listeningButton
           ]}
-          onPress={audioIsRecording ? stopRecording : startRecording}
+          onPress={audioIsRecording || isRecognizing ? stopRecording : startRecording}
           testID={audioIsRecording ? "stop-recording-button" : "start-recording-button"}
         >
           <FontAwesome
-            name={audioIsRecording ? "square" : "microphone"}
+            name={audioIsRecording || isRecognizing ? "stop" : "microphone"}
             size={24}
             color="white"
           />
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.speakButton, { backgroundColor: COLORS.secondary.main }]}
-          onPress={speakScripture}
-          testID="speak-scripture-button"
-        >
-          <FontAwesome name="volume-up" size={20} color="white" />
-          <Text style={styles.speakButtonText}>Quote!</Text>
-        </TouchableOpacity>
       </View>
-
-      {/* Error message */}
-      {displayError && (
-        <Text style={[styles.errorText, { color: COLORS.error }]}>
-          {displayError}
-        </Text>
-      )}
-
-      {/* Recording status */}
-      {audioIsRecording && (
-        <Text style={[styles.recordingText, { color: textColor }]}>
-          🎤 Recording... Speak now ({Math.floor(recordingDuration / 1000)}s)
-        </Text>
-      )}
-
-      {/* Audio error message */}
-      {audioError && (
-        <Text style={[styles.errorText, { color: COLORS.error }]}>
-          Audio Error: {audioError}
-        </Text>
-      )}
-
-      {/* Interim transcript (real-time feedback) */}
-      {interimTranscript && (
-        <Text style={[styles.interimText, { color: textColor }]}>
-          "{interimTranscript}"
-        </Text>
-      )}
-
-      {/* Final transcript */}
-      {displayTranscript && !isRecording && (
-        <Text style={[styles.transcriptText, { color: textColor }]}>
-          You said: "{displayTranscript}"
-        </Text>
-      )}
-
-      {/* Audio recording info */}
-      {audioRecording && (
-        <Text style={[styles.transcriptText, { color: textColor }]}>
-          Audio recorded: {Math.floor(audioRecording.duration / 1000)}s, {(audioRecording.size / 1024).toFixed(1)}KB
-        </Text>
-      )}
-
-      {/* Accuracy result */}
-      {showAccuracy && (
-        <Text style={[
-          styles.accuracyText,
-          { color: accuracy >= 80 ? COLORS.success : accuracy >= 60 ? COLORS.warning : COLORS.error }
-        ]}>
-          Accuracy: {accuracy}% {accuracy >= 90 ? '🎯' : accuracy >= 75 ? '✅' : '📝'}
-        </Text>
-      )}
-
-      {/* Instructions */}
-      {!isRecording && !displayTranscript && !displayError && (
-        <Text style={[styles.instructionText, { color: textColor }]}>
-          {isAvailable
-            ? "Tap the microphone and speak the scripture text"
-            : "Speech recognition not available - using audio transcription"
-          }
-        </Text>
-      )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    alignItems: 'center',
-    marginVertical: 16,
+    marginVertical: 20,
+    marginHorizontal: 16,
+    padding: 16,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  controlsContainer: {
-    flexDirection: 'column',
+  panelHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  recordButton: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+  statusIndicator: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  statusActive: {
     backgroundColor: COLORS.error,
+  },
+  statusStandby: {
+    backgroundColor: COLORS.success,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    opacity: 0.8,
+  },
+  commsDisplay: {
+    minHeight: 80,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+    padding: 12,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 8,
   },
-  disabledButton: {
-    opacity: 0.5,
+  displayText: {
+    fontSize: 16,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  accuracyBadge: {
+    marginTop: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  accuracyText: {
+    color: 'white',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  controlsContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  recordButton: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: COLORS.error,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   stopButton: {
-    backgroundColor: COLORS.error,
+    backgroundColor: '#333',
+    borderWidth: 2,
+    borderColor: COLORS.error,
   },
-  speakButton: {
+  listeningButton: {
+    backgroundColor: COLORS.warning,
+  },
+  secondaryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
-    marginBottom: 8,
-  },
-  speakButtonText: {
-    color: 'white',
-    marginLeft: 8,
-    fontWeight: '500',
-  },
-  statusText: {
-    fontSize: 12,
-    textAlign: 'center',
-    marginBottom: 8,
-    opacity: 0.7,
-  },
-  errorText: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 8,
-    fontWeight: '500',
-  },
-  recordingText: {
-    fontSize: 16,
-    marginTop: 8,
-    fontWeight: '500',
-  },
-  interimText: {
-    fontSize: 16,
-    marginTop: 8,
-    fontStyle: 'italic',
-    textAlign: 'center',
+    borderWidth: 1,
     opacity: 0.8,
   },
-  transcriptText: {
-    fontSize: 16,
-    marginTop: 8,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  instructionText: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 8,
-    opacity: 0.7,
-  },
-  accuracyText: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginTop: 8,
+  secondaryButtonText: {
+    marginLeft: 8,
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
 });

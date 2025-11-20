@@ -5,7 +5,9 @@ import {
   TouchableOpacity,
   View,
   Animated,
+  Platform,
 } from 'react-native'
+import { FontAwesome } from '@expo/vector-icons'
 import { COLORS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 
@@ -96,6 +98,7 @@ export default function ActionButton({
       testID={testID}
     >
       <View style={styles.textContainer}>
+        <FontAwesome name="crosshairs" size={24} color={textColor} style={{ marginBottom: 4 }} />
         <Text style={[styles.title, sizeStyles.title, { color: textColor }]}>
           {title}
         </Text>
@@ -121,24 +124,42 @@ export default function ActionButton({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 8,
-    marginHorizontal: 16,
+    marginVertical: 16,
+    marginHorizontal: 24,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 5,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.3)',
+      },
+    }),
   },
   textContainer: {
     alignItems: 'center',
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
   subtitle: {
     fontSize: 14,
     marginTop: 4,
-    opacity: 0.8,
+    opacity: 0.9,
+    fontWeight: '500',
+    letterSpacing: 0.5,
   },
 })

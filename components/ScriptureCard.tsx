@@ -89,14 +89,6 @@ export default function ScriptureCard({
             <FontAwesome name="eye" size={24} color={textColor} />
           )}
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={handleNext}
-          testID="next-scripture-button"
-        >
-          <FontAwesome name="refresh" size={24} color={textColor} />
-        </TouchableOpacity>
       </View>
     </LinearGradient>
   )
@@ -158,7 +150,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginTop: 16,
   },
   iconButton: {

@@ -1,5 +1,5 @@
 import React from 'react'
-import { StyleSheet, Text, ScrollView } from 'react-native'
+import { StyleSheet, Text, ScrollView, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { GRADIENTS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
@@ -66,9 +66,9 @@ export default function HomeScreen() {
       start={{ x: 0, y: 0 }}
       end={{ x: 0, y: 1 }}
     >
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <Text style={[styles.sectionTitle, { color: 'white' }]}>
-          Ammunition
+          ARSENAL
         </Text>
 
         <CollectionSelector
@@ -76,7 +76,7 @@ export default function HomeScreen() {
           selectedCollection={selectedCollection}
         />
 
-        {currentScripture && (
+        {currentScripture ? (
           <>
             <ScriptureCard
               scripture={currentScripture}
@@ -88,14 +88,22 @@ export default function HomeScreen() {
               onRecordingComplete={handleRecordingComplete}
             />
 
-            <ActionButton
-              title="Ready! Aim! Fire!"
-              subtitle="Load next round"
-              onPress={handleNextScripture}
-              testID="load-next-round-button"
-              animated={true}
-            />
+            <View style={styles.footer}>
+              <ActionButton
+                title="Ready! Aim! Fire!"
+                subtitle="LOAD NEXT ROUND"
+                onPress={handleNextScripture}
+                testID="load-next-round-button"
+                animated={true}
+              />
+            </View>
           </>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={{ color: 'white', textAlign: 'center', opacity: 0.7 }}>
+              No ammunition loaded. Select an arsenal or import verses.
+            </Text>
+          </View>
         )}
       </ScrollView>
     </LinearGradient>
@@ -109,11 +117,25 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 40,
+  },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: 24,
+    fontWeight: '900',
+    marginTop: 24,
+    marginBottom: 16,
     textAlign: 'center',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+  },
+  footer: {
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  emptyState: {
+    padding: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 })
