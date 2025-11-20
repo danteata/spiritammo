@@ -185,53 +185,38 @@ export default function AccuracyMeter({
             ]}
           />
         </View>
+
+        {/* Target Indicator */}
+        <Animated.View
+          style={[
+            styles.targetIndicator,
+            {
+              left: animatedValue.interpolate({
+                inputRange: [0, 100],
+                outputRange: ['0%', '100%'],
+                extrapolate: 'clamp',
+              }),
+              transform: [{ translateX: -6 }], // Center the indicator (half of width)
+            },
+          ]}
+        >
+          <View style={[styles.indicatorTriangle, { borderTopColor: accuracyColor }]} />
+        </Animated.View>
       </View>
 
       {/* Performance zones */}
       <View style={styles.zones}>
-        <View
-          style={[
-            styles.zone,
-            styles.traineeZone,
-            { backgroundColor: ACCURACY_COLORS.poor },
-          ]}
-        >
-          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>
-            TRAINEE
-          </Text>
+        <View style={[styles.zone, styles.traineeZone]}>
+          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>TRAINEE</Text>
         </View>
-        <View
-          style={[
-            styles.zone,
-            styles.qualifiedZone,
-            { backgroundColor: ACCURACY_COLORS.fair },
-          ]}
-        >
-          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>
-            QUALIFIED
-          </Text>
+        <View style={[styles.zone, styles.qualifiedZone]}>
+          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>QUALIFIED</Text>
         </View>
-        <View
-          style={[
-            styles.zone,
-            styles.sharpZone,
-            { backgroundColor: ACCURACY_COLORS.good },
-          ]}
-        >
-          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>
-            SHARP
-          </Text>
+        <View style={[styles.zone, styles.sharpZone]}>
+          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>SHARP</Text>
         </View>
-        <View
-          style={[
-            styles.zone,
-            styles.marksZone,
-            { backgroundColor: ACCURACY_COLORS.excellent },
-          ]}
-        >
-          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>
-            MARKS
-          </Text>
+        <View style={[styles.zone, styles.marksZone]}>
+          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>MARKS</Text>
         </View>
       </View>
     </Animated.View>
@@ -240,20 +225,23 @@ export default function AccuracyMeter({
 
 const styles = StyleSheet.create({
   container: {
-    padding: 12,
+    padding: 16,
     backgroundColor: TACTICAL_THEME.surface,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: TACTICAL_THEME.border,
     marginBottom: 12,
-    zIndex: 1,
-    elevation: 2,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 16,
   },
   labelContainer: {
     flexDirection: 'row',
@@ -263,80 +251,103 @@ const styles = StyleSheet.create({
   label: {
     color: TACTICAL_THEME.text,
     fontWeight: 'bold',
+    letterSpacing: 1,
   },
   trendContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   trendText: {
     fontWeight: 'bold',
   },
   ratingDisplay: {
     alignItems: 'center',
-    marginBottom: 8,
-    minHeight: 18,
+    marginBottom: 12,
+    minHeight: 24,
   },
   ratingText: {
-    fontWeight: 'bold',
+    fontWeight: '900',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 2,
+    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   meterContainer: {
-    marginBottom: 10,
+    marginBottom: 8,
     position: 'relative',
     zIndex: 2,
+    height: 24, // Ensure space for indicator
+    justifyContent: 'center',
   },
   meterBackground: {
-    backgroundColor: TACTICAL_THEME.border,
-    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 4,
     overflow: 'hidden',
-    position: 'relative',
+    width: '100%',
   },
   meterFill: {
-    borderRadius: 8,
-    position: 'absolute',
-    left: 0,
-    top: 0,
+    borderRadius: 4,
+    height: '100%',
   },
-  meterGradient: {
+  targetIndicator: {
     position: 'absolute',
-    left: 0,
-    top: 0,
-    right: 0,
-    borderRadius: 8,
-    opacity: 0.7,
+    top: -8, // Position above the bar
+    width: 12,
+    height: 12,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
   },
-
+  indicatorTriangle: {
+    width: 0,
+    height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 8,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+  },
   zones: {
     flexDirection: 'row',
-    height: 16,
-    borderRadius: 3,
-    overflow: 'hidden',
-    marginTop: 6,
+    marginTop: 4,
+    gap: 2,
   },
   zone: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 2,
+    paddingVertical: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderRadius: 2,
   },
   zoneLabel: {
-    color: TACTICAL_THEME.text,
+    color: TACTICAL_THEME.textSecondary,
     fontSize: 8,
     fontWeight: 'bold',
     textAlign: 'center',
+    opacity: 0.7,
   },
   traineeZone: {
-    // Styles for trainee zone - using backgroundColor from inline styles
+    borderBottomWidth: 2,
+    borderBottomColor: ACCURACY_COLORS.poor,
   },
   qualifiedZone: {
-    // Styles for qualified zone - using backgroundColor from inline styles
+    borderBottomWidth: 2,
+    borderBottomColor: ACCURACY_COLORS.fair,
   },
   sharpZone: {
-    // Styles for sharp zone - using backgroundColor from inline styles
+    borderBottomWidth: 2,
+    borderBottomColor: ACCURACY_COLORS.good,
   },
   marksZone: {
-    // Styles for marks zone - using backgroundColor from inline styles
+    borderBottomWidth: 2,
+    borderBottomColor: ACCURACY_COLORS.excellent,
   },
 })
