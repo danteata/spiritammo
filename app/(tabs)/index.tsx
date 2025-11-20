@@ -67,9 +67,7 @@ export default function HomeScreen() {
       end={{ x: 0, y: 1 }}
     >
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
-        <Text style={[styles.sectionTitle, { color: 'white' }]}>
-          ARSENAL
-        </Text>
+
 
         <CollectionSelector
           onSelectCollection={handleSelectCollection}
@@ -87,16 +85,6 @@ export default function HomeScreen() {
               scriptureText={currentScripture.text}
               onRecordingComplete={handleRecordingComplete}
             />
-
-            <View style={styles.footer}>
-              <ActionButton
-                title="Ready! Aim! Fire!"
-                subtitle="LOAD NEXT ROUND"
-                onPress={handleNextScripture}
-                testID="load-next-round-button"
-                animated={true}
-              />
-            </View>
           </>
         ) : (
           <View style={styles.emptyState}>
@@ -106,6 +94,18 @@ export default function HomeScreen() {
           </View>
         )}
       </ScrollView>
+
+      {currentScripture && (
+        <View style={styles.footer}>
+          <ActionButton
+            title="Ready! Aim! Fire!"
+            subtitle="LOAD NEXT ROUND"
+            onPress={handleNextScripture}
+            testID="load-next-round-button"
+            animated={true}
+          />
+        </View>
+      )}
     </LinearGradient>
   )
 }
