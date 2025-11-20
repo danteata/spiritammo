@@ -131,8 +131,10 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   footer: {
-    marginTop: 20,
-    marginBottom: 20,
+    padding: 20,
+    paddingBottom: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyState: {
     padding: 40,
