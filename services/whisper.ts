@@ -1,145 +1,169 @@
-/**
- * Minimal TypeScript wrapper for integrating whisper.cpp.
- *
- * This file intentionally does not include heavy native or WASM bindings.
- * Instead it provides a typed adapter and safe fallbacks so the app can
- * be wired to a future local whisper implementation (WASM/native) or a
- * remote whisper.cpp server.
- *
- * Implementation approaches are documented in WHISPER_INTEGRATION.md.
- */
+import * as FS from 'react-native-fs';
 
-export type WhisperBackend = 'wasm' | 'native' | 'remote' | 'none';
+// Define types locally to avoid importing from the library at top level
+// These match the types from whisper.rn
+interface WhisperContext {
+  transcribe: (
+    audioFilePath: string,
+    options?: {
+      language?: string;
+      maxLen?: number;
+      tokenTimestamps?: boolean;
+    }
+  ) => Promise<{ promise: Promise<{ result: string; text?: string }> }>;
+}
+
+// Check if decodeAudio is available in the module
+interface WhisperModule {
+  initWhisper: (options: { filePath: string }) => Promise<WhisperContext>;
+  decodeAudio?: (filePath: string) => Promise<{ result: number[] }>; // PCM data
+}
 
 export interface TranscriptionResult {
   text: string;
-  confidence?: number; // optional, whisper.cpp may not provide this for all builds
+  confidence?: number;
   language?: string;
 }
 
-export interface WhisperOptions {
-  backend?: WhisperBackend;
-  modelPath?: string; // local path or URL depending on backend
-}
+// Model configuration
+const MODEL_NAME = 'ggml-base.en.bin';
+const MODEL_URL = `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${MODEL_NAME}`;
+const MODEL_PATH = `${FS.DocumentDirectoryPath}/${MODEL_NAME}`;
 
 class WhisperService {
-  private backend: WhisperBackend = 'none';
-  private modelPath?: string;
-  private initialized = false;
-  // Optional remote endpoint used when backend === 'remote'
-  private remoteEndpoint?: string;
+  private context: WhisperContext | null = null;
+  private isInitializing = false;
+  private initPromise: Promise<void> | null = null;
+  private whisperModule: any = null;
 
-  constructor() {}
+  constructor() { }
 
-  /** Initialize whisper with options. This is intentionally lightweight and
-   * does not load models. Use `downloadModel` or a native/WASM loader in a
-   * concrete implementation. */
-  async init(opts: WhisperOptions = {}): Promise<void> {
-    this.backend = opts.backend || 'none';
-    this.modelPath = opts.modelPath;
-    if (opts && (opts as any).remoteEndpoint) {
-      this.remoteEndpoint = (opts as any).remoteEndpoint;
-    }
-    // real implementations would load or prepare model files here
-    this.initialized = true;
+  /**
+   * Initialize the Whisper service.
+   * This will download the model if it doesn't exist.
+   */
+  async init(): Promise<void> {
+    if (this.context) return;
+    if (this.initPromise) return this.initPromise;
+
+    this.initPromise = (async () => {
+      try {
+        this.isInitializing = true;
+        console.log('Initializing Whisper Service...');
+
+        // Dynamically require whisper.rn
+        let whisperModule;
+        try {
+          whisperModule = require('whisper.rn');
+          this.whisperModule = whisperModule;
+          console.log('Whisper module loaded. Available keys:', Object.keys(whisperModule));
+        } catch (e) {
+          console.error('Failed to load whisper.rn module:', e);
+          throw new Error('Whisper native module not found. Please rebuild the app.');
+        }
+
+        const { initWhisper } = whisperModule;
+
+        // Check if model exists
+        const modelExists = await FS.exists(MODEL_PATH);
+        if (!modelExists) {
+          console.log('Model not found. Downloading...', MODEL_URL);
+          const download = FS.downloadFile({
+            fromUrl: MODEL_URL,
+            toFile: MODEL_PATH,
+            progress: (res) => {
+              const progress = (res.bytesWritten / res.contentLength) * 100;
+              console.log(`Downloading model: ${progress.toFixed(0)}%`);
+            },
+          });
+
+          const result = await download.promise;
+          if (result.statusCode !== 200) {
+            throw new Error(`Failed to download model: Status ${result.statusCode}`);
+          }
+          console.log('Model downloaded successfully to:', MODEL_PATH);
+        } else {
+          console.log('Model found at:', MODEL_PATH);
+        }
+
+        // Initialize Whisper Context
+        this.context = await initWhisper({
+          filePath: MODEL_PATH,
+        });
+
+        console.log('Whisper Context Initialized!');
+      } catch (error) {
+        console.error('Failed to initialize Whisper:', error);
+        this.initPromise = null;
+        throw error;
+      } finally {
+        this.isInitializing = false;
+      }
+    })();
+
+    return this.initPromise;
   }
 
   isAvailable(): boolean {
-    return this.backend !== 'none' && this.initialized;
+    return !!this.context;
   }
 
   /**
-   * Transcribe an audio file at a local filesystem path (native) or a URL (web/remote).
-   * Concrete backends should override this behavior. The default implementation
-   * throws a helpful error describing integration options.
+   * Transcribe an audio file using the local Whisper model.
    */
   async transcribeFromFile(path: string): Promise<TranscriptionResult> {
-    if (this.backend === 'remote') {
-      if (!this.remoteEndpoint) throw new Error('remoteEndpoint not configured for remote backend');
-
-      // In React Native we can use `fetch` with FormData and `react-native-fs` to read files.
-      // For simplicity this implementation expects `path` to be a blob URL or file URI that `fetch` can handle.
-      try {
-        const fd = new FormData();
-        // @ts-ignore - FormData accepts Blobs in RN environments
-        fd.append('file', {
-          uri: path,
-          name: 'audio.wav',
-          type: 'audio/wav',
-        } as any);
-
-        const resp = await fetch(this.remoteEndpoint, {
-          method: 'POST',
-          body: fd,
-          headers: {
-            // Let fetch set multipart boundary
-          } as any,
-        });
-
-        if (!resp.ok) {
-          throw new Error(`Remote transcription failed: ${resp.status} ${resp.statusText}`);
-        }
-
-        const json = await resp.json();
-        return {
-          text: json.text || '',
-          confidence: json.confidence,
-          language: json.language,
-        };
-      } catch (err: any) {
-        throw new Error(`Remote transcription error: ${err?.message || String(err)}`);
+    if (!this.context) {
+      // Try to init if not ready
+      await this.init();
+      if (!this.context) {
+        throw new Error('Whisper service not initialized');
       }
     }
 
-    throw new Error(
-      `Whisper backend not implemented. Callers should configure a backend (wasm|native|remote) and implement transcription. See WHISPER_INTEGRATION.md for integration steps.`
-    );
-  }
-
-  /**
-   * Transcribe from a raw audio buffer. Buffer format expectations (PCM16, sample rate) must
-   * be documented and normalized by the caller or the backend implementation.
-   */
-  async transcribeFromBuffer(_buffer: ArrayBuffer | Uint8Array): Promise<TranscriptionResult> {
-    throw new Error('transcribeFromBuffer not implemented for the chosen backend');
-  }
-
-  /**
-   * Helper for remote-backend: send audio to a remote whisper.cpp service and receive result.
-   * This default implementation is a no-op; adapt to your server API.
-   */
-  async transcribeRemote(_uploadUrl: string, _audioData: ArrayBuffer): Promise<TranscriptionResult> {
-    // Basic implementation: POST audioData as octet-stream to the provided uploadUrl
     try {
-      const resp = await fetch(_uploadUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/octet-stream',
-        },
-        body: _audioData as any,
+      // Clean path for Android (remove file:// or file:/ prefix)
+      let cleanPath = path;
+      if (cleanPath.startsWith('file://')) {
+        cleanPath = cleanPath.slice(7);
+      } else if (cleanPath.startsWith('file:')) {
+        cleanPath = cleanPath.slice(5);
+      }
+      console.log('Transcribing file:', cleanPath);
+      const start = Date.now();
+
+      let response;
+
+
+      // Try standard transcription
+      const { promise } = await this.context.transcribe(cleanPath, {
+        language: 'en',
+        maxLen: 0,
+        tokenTimestamps: false,
       });
+      response = await promise;
 
-      if (!resp.ok) throw new Error(`Remote transcription failed: ${resp.status}`);
-      const json = await resp.json();
+      const duration = Date.now() - start;
+      console.log(`Transcription complete in ${duration}ms. Full response:`, JSON.stringify(response));
+
+      // Handle potential different response structures or failures
+      if (!response || typeof response !== 'object') {
+        throw new Error(`Invalid response from Whisper: ${JSON.stringify(response)}`);
+      }
+
+      // @ts-ignore
+      const finalText = response.result || response.text || '';
+
       return {
-        text: json.text || '',
-        confidence: json.confidence,
-        language: json.language,
+        text: finalText.trim(),
+        confidence: 90,
+        language: 'en',
       };
-    } catch (err: any) {
-      throw new Error(`transcribeRemote error: ${err?.message || String(err)}`);
+    } catch (error) {
+      console.error('Transcription failed:', error);
+      throw error;
     }
-  }
-
-  /**
-   * Optional helper for downloading model files to device storage. Native/WASM
-   * integrations may need different placement for models.
-   */
-  async downloadModel(_url: string, _destinationPath: string): Promise<string> {
-    throw new Error('downloadModel not implemented - see WHISPER_INTEGRATION.md for guidance');
   }
 }
 
 export const whisperService = new WhisperService();
-
 export default whisperService;

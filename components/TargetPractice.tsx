@@ -21,6 +21,7 @@ import VoiceRecorder from '@/components/VoiceRecorder'
 interface TargetPracticeProps {
   onRecordingComplete: (transcript: string, accuracy: number) => void
   targetVerse: string
+  intelText?: string
   isVisible: boolean
   onClose: () => void
 }
@@ -41,6 +42,7 @@ interface BulletHole {
 export default function TargetPractice({
   onRecordingComplete,
   targetVerse,
+  intelText,
   isVisible,
   onClose,
 }: TargetPracticeProps) {
@@ -234,6 +236,7 @@ export default function TargetPractice({
         {showVoiceRecorder && (
           <VoiceRecorder
             scriptureText={targetVerse}
+            intelText={intelText}
             onRecordingComplete={handleVoiceRecorderComplete}
           />
         )}

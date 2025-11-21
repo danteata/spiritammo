@@ -1,12 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import {
-  useAudioRecorder,
-  useAudioRecorderState,
-  AudioModule,
-  setAudioModeAsync,
-  RecordingPresets,
-} from 'expo-audio';
-import * as FileSystem from 'expo-file-system';
+import { useState, useCallback, useEffect } from 'react';
+import { useAudioRecorder, RecordingConfig } from '@siteed/expo-audio-stream';
+import * as FileSystem from 'expo-file-system/legacy';
 
 export interface AudioRecordingResult {
   uri: string;
@@ -29,59 +23,45 @@ export interface AudioRecordingState {
   error?: string;
 }
 
-// Note: expo-audio's useAudioRecorder hook uses RecordingPresets
-// Quality presets: LOW_QUALITY, MEDIUM_QUALITY, HIGH_QUALITY
-
 // React hook for audio recording
 export function useAudioRecording() {
   const [error, setError] = useState<string | undefined>();
   const [recordingResult, setRecordingResult] = useState<AudioRecordingResult | null>(null);
+  const [recordingUri, setRecordingUri] = useState<string | undefined>();
 
-  // Initialize audio recorder with high quality preset
-  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  
-  // Get recorder state (provides isRecording, isPaused, durationMillis, etc.)
-  const recorderState = useAudioRecorderState(audioRecorder);
-
-  // Initialize audio system
-  const initializeAudio = useCallback(async () => {
-    try {
-      // Request recording permissions
-      const status = await AudioModule.requestRecordingPermissionsAsync();
-      if (!status.granted) {
-        throw new Error('Recording permission denied');
-      }
-
-      // Set audio mode
-      await setAudioModeAsync({
-        playsInSilentMode: true,
-        allowsRecording: true,
-      });
-      return true;
-    } catch (error) {
-      console.error('Failed to initialize audio:', error);
-      setError(error instanceof Error ? error.message : 'Failed to initialize audio system');
-      return false;
-    }
-  }, []);
+  // Initialize audio recorder from @siteed/expo-audio-stream
+  const {
+    startRecording: startStreamRecording,
+    stopRecording: stopStreamRecording,
+    isRecording,
+    durationMs
+  } = useAudioRecorder({});
 
   // Start recording
   const startRecording = useCallback(async (options: AudioRecordingOptions = {}) => {
     try {
-      if (recorderState.isRecording) {
+      if (isRecording) {
         console.warn('Already recording');
         return false;
       }
 
-      const isInitialized = await initializeAudio();
-      if (!isInitialized) return false;
-
-      // Prepare and start recording
-      await audioRecorder.prepareToRecordAsync();
-      await audioRecorder.record();
-      
       setError(undefined);
       setRecordingResult(null);
+      setRecordingUri(undefined);
+
+      // Configure for Whisper: 16kHz, 1 channel, PCM 16-bit
+      const config: RecordingConfig = {
+        sampleRate: 16000,
+        channels: 1,
+        encoding: 'pcm_16bit',
+        interval: 500, // Update analysis every 500ms
+        onAudioStream: async (data) => {
+          // Optional: Process live audio stream if needed
+        },
+      };
+
+      const result = await startStreamRecording(config);
+      console.log('Recording started with config:', result);
 
       return true;
     } catch (error) {
@@ -89,50 +69,56 @@ export function useAudioRecording() {
       setError(error instanceof Error ? error.message : 'Failed to start recording');
       return false;
     }
-  }, [recorderState.isRecording, initializeAudio, audioRecorder]);
+  }, [isRecording, startStreamRecording]);
 
   // Stop recording
   const stopRecording = useCallback(async (): Promise<AudioRecordingResult | null> => {
     try {
-      if (!recorderState.isRecording) {
+      if (!isRecording) {
         console.warn('No active recording');
         return null;
       }
 
-      await audioRecorder.stop();
-      const uri = audioRecorder.uri;
-      
-      if (!uri) {
-        throw new Error('No recording URI available');
+      const result = await stopStreamRecording();
+
+      if (!result || !result.fileUri) {
+        throw new Error('No recording URI returned');
       }
 
-      // Get file info using expo-file-system
-      let fileSize = 0;
-      try {
-        const fileInfo = await FileSystem.getInfoAsync(uri);
-        if (fileInfo.exists && 'size' in fileInfo) {
-          fileSize = fileInfo.size;
+      // The library returns file:/ path, ensure it's file:/// for consistency if needed,
+      // but usually expo-file-system handles both.
+      const uri = result.fileUri;
+      setRecordingUri(uri);
+
+      // Get file info
+      let fileSize = result.size || 0;
+      if (fileSize === 0) {
+        try {
+          const fileInfo = await FileSystem.getInfoAsync(uri);
+          if (fileInfo.exists && 'size' in fileInfo) {
+            fileSize = fileInfo.size;
+          }
+        } catch (err) {
+          console.warn('Could not get file size:', err);
         }
-      } catch (err) {
-        console.warn('Could not get file size:', err);
       }
 
-      const result: AudioRecordingResult = {
+      const finalResult: AudioRecordingResult = {
         uri,
-        duration: recorderState.durationMillis || 0,
+        duration: result.durationMs || durationMs || 0,
         size: fileSize
       };
 
-      setRecordingResult(result);
+      setRecordingResult(finalResult);
       setError(undefined);
 
-      return result;
+      return finalResult;
     } catch (error) {
       console.error('Failed to stop recording:', error);
       setError(error instanceof Error ? error.message : 'Failed to stop recording');
       return null;
     }
-  }, [recorderState.isRecording, recorderState.durationMillis, audioRecorder]);
+  }, [isRecording, stopStreamRecording, durationMs]);
 
   // Delete recording
   const deleteRecording = useCallback(async (uri: string): Promise<boolean> => {
@@ -149,10 +135,10 @@ export function useAudioRecording() {
     startRecording,
     stopRecording,
     deleteRecording,
-    isRecording: recorderState.isRecording,
+    isRecording,
     error,
-    duration: recorderState.durationMillis || 0,
-    uri: audioRecorder.uri,
+    duration: durationMs || 0,
+    uri: recordingUri,
     recordingResult,
   };
 }

@@ -416,6 +416,11 @@ export default function TrainingScreen() {
         <TargetPractice
           isVisible={showTargetPractice}
           targetVerse={currentScripture.text}
+          intelText={
+            generatedIntel
+              ? `Battle Plan: ${generatedIntel.battlePlan}. Tactical Notes: ${generatedIntel.tacticalNotes}`
+              : undefined
+          }
           onRecordingComplete={handleTargetPracticeComplete}
           onClose={() => setShowTargetPractice(false)}
         />

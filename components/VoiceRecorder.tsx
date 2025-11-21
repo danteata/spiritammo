@@ -11,10 +11,11 @@ import { useAudioRecording, AudioRecordingResult } from '@/services/audioRecordi
 
 interface VoiceRecorderProps {
   scriptureText: string;
+  intelText?: string;
   onRecordingComplete: (accuracy: number) => void;
 }
 
-export default function VoiceRecorder({ scriptureText, onRecordingComplete }: VoiceRecorderProps) {
+export default function VoiceRecorder({ scriptureText, intelText, onRecordingComplete }: VoiceRecorderProps) {
   const { isDark, userSettings } = useAppStore();
 
   // Audio recording hook for mobile fallback
@@ -59,14 +60,29 @@ export default function VoiceRecorder({ scriptureText, onRecordingComplete }: Vo
   const [statusMessage, setStatusMessage] = useState('');
   const [audioRecording, setAudioRecording] = useState<AudioRecordingResult | null>(null);
   const [localTranscript, setLocalTranscript] = useState('');
+  const [whisperReady, setWhisperReady] = useState(false);
 
-  // Update status message based on availability
+  // Initialize Whisper and check availability
   useEffect(() => {
-    if (isAvailable) {
-      setStatusMessage(hasPermission ? 'Ready to record' : 'Microphone permission needed');
-    } else {
-      setStatusMessage('Speech recognition not available - using audio recording');
-    }
+    const init = async () => {
+      try {
+        setStatusMessage('Initializing Whisper model...');
+        await whisperService.init();
+        console.log('Whisper initialized');
+        setWhisperReady(true);
+
+        setStatusMessage('Ready to record (Whisper active)');
+      } catch (error) {
+        console.error('Failed to init whisper:', error);
+        setStatusMessage('Failed to load Whisper model');
+        // Fallback to native status if whisper fails
+        if (isAvailable) {
+          setStatusMessage(hasPermission ? 'Ready to record (Native)' : 'Microphone permission needed');
+        }
+      }
+    };
+
+    init();
   }, [isAvailable, hasPermission]);
 
   // Update status message during recording
@@ -80,19 +96,21 @@ export default function VoiceRecorder({ scriptureText, onRecordingComplete }: Vo
     }
   }, [isRecognizing, audioIsRecording, recordingDuration, showAccuracy, accuracy]);
 
-  // Speak the scripture text
-  const speakScripture = async () => {
+  // Speak the intel text
+  const speakIntel = async () => {
     try {
       // Stop any existing speech
       await Speech.stop();
 
+      const textToSpeak = intelText || "No tactical intel available for this target.";
+
       // Start new speech with proper settings
-      await Speech.speak(scriptureText, {
+      await Speech.speak(textToSpeak, {
         rate: userSettings.voiceRate || 0.9,
         pitch: userSettings.voicePitch || 1.0,
         language: userSettings.language || 'en-US',
         onStart: () => {
-          setStatusMessage('Speaking verse...');
+          setStatusMessage('Reading intel...');
         },
         onDone: () => {
           setStatusMessage('Ready to record');
@@ -102,7 +120,7 @@ export default function VoiceRecorder({ scriptureText, onRecordingComplete }: Vo
         }
       });
     } catch (error) {
-      console.error('Failed to speak scripture:', error);
+      console.error('Failed to speak intel:', error);
     }
   };  // Start recording
   const startRecording = async () => {
@@ -112,7 +130,19 @@ export default function VoiceRecorder({ scriptureText, onRecordingComplete }: Vo
       setShowAccuracy(false);
       setAudioRecording(null);
 
-      // Try speech recognition first if available
+      // 1. Prefer Whisper (Audio Recording) if available
+      if (whisperReady) {
+        if (Platform.OS !== 'web') {
+          const audioSuccess = await startAudioRecording();
+          if (audioSuccess) {
+            console.log('Audio recording started (Whisper mode)');
+            setStatusMessage('Recording... (Whisper)');
+            return;
+          }
+        }
+      }
+
+      // 2. Fallback to Native Speech Recognition
       if (isAvailable) {
         const success = await startSpeechRecognition();
         if (success) {
@@ -165,39 +195,30 @@ export default function VoiceRecorder({ scriptureText, onRecordingComplete }: Vo
   // Process audio recording with whisper service
   const processAudioRecording = async (audioResult: AudioRecordingResult) => {
     try {
-      const whisperEndpoint = (Constants.manifest2?.extra as any)?.WHISPER_REMOTE_ENDPOINT || (Constants.expoConfig?.extra as any)?.WHISPER_REMOTE_ENDPOINT;
+      setStatusMessage('Transcribing...');
+      console.log('Processing audio with Whisper:', audioResult.uri);
 
-      if (whisperEndpoint) {
-        try {
-          await whisperService.init({ backend: 'remote', remoteEndpoint: whisperEndpoint } as any);
+      try {
+        const result = await whisperService.transcribeFromFile(audioResult.uri);
+        console.log('Whisper result:', result);
 
-          // For now, simulate transcription since we need to implement proper file upload
-          // In a real implementation, you would upload the audio file to the whisper endpoint
-          console.log('Audio file recorded:', audioResult.uri);
-          console.log('Would send to whisper endpoint:', whisperEndpoint);
-
-          // Simulate getting a transcript from the audio
-          // Replace this with actual file upload and transcription
-          const simulatedTranscript = scriptureText; // In real implementation, this would come from whisper
-
-          if (simulatedTranscript) {
-            setLocalTranscript(simulatedTranscript);
-            const calculatedAccuracy = calculateAccuracy(scriptureText, simulatedTranscript);
-            setAccuracy(calculatedAccuracy);
-            setShowAccuracy(true);
-
-            onRecordingComplete(calculatedAccuracy);
-          } else {
-            console.warn('No transcription received from whisper service');
-          }
-        } catch (err) {
-          console.warn('Whisper transcription failed:', err);
+        if (result && result.text) {
+          setLocalTranscript(result.text);
+          const calculatedAccuracy = calculateAccuracy(scriptureText, result.text);
+          setAccuracy(calculatedAccuracy);
+          setShowAccuracy(true);
+          onRecordingComplete(calculatedAccuracy);
+        } else {
+          console.warn('No transcription received from whisper service');
+          setStatusMessage('Transcription failed');
         }
-      } else {
-        console.warn('No whisper endpoint configured for audio transcription');
+      } catch (err) {
+        console.error('Whisper transcription failed:', err);
+        setStatusMessage('Transcription error');
       }
     } catch (error) {
       console.error('Error processing audio recording:', error);
+      setStatusMessage('Error processing audio');
     }
   };
 
@@ -206,25 +227,14 @@ export default function VoiceRecorder({ scriptureText, onRecordingComplete }: Vo
     try {
       // For native platforms or when web speech isn't available, try whisper
       if (Platform.OS !== 'web' || !isAvailable) {
-        const whisperEndpoint = (Constants.manifest2?.extra as any)?.WHISPER_REMOTE_ENDPOINT || (Constants.expoConfig?.extra as any)?.WHISPER_REMOTE_ENDPOINT;
-
-        if (whisperEndpoint) {
-          try {
-            await whisperService.init({ backend: 'remote', remoteEndpoint: whisperEndpoint } as any);
-            // Note: In a real implementation, you would need to record audio and send the file
-            // For now, we'll use the transcript from web speech or simulate with the original text
-            const enhancedTranscript = finalTranscript || scriptureText;
-
-            // Calculate accuracy based on the transcript we got
-            const calculatedAccuracy = calculateAccuracy(scriptureText, enhancedTranscript);
-            setAccuracy(calculatedAccuracy);
-            setShowAccuracy(true);
-
-            onRecordingComplete(calculatedAccuracy);
-            return;
-          } catch (err) {
-            console.warn('Whisper transcription failed:', err);
-          }
+        // If we have a final transcript from native dictation, use it.
+        // Otherwise, if we were doing audio recording, we handled it in processAudioRecording.
+        if (finalTranscript) {
+          const calculatedAccuracy = calculateAccuracy(scriptureText, finalTranscript);
+          setAccuracy(calculatedAccuracy);
+          setShowAccuracy(true);
+          onRecordingComplete(calculatedAccuracy);
+          return;
         }
       }
 
@@ -337,8 +347,8 @@ export default function VoiceRecorder({ scriptureText, onRecordingComplete }: Vo
       <View style={styles.controlsContainer}>
         <TouchableOpacity
           style={[styles.secondaryButton, { borderColor: textColor }]}
-          onPress={speakScripture}
-          testID="speak-scripture-button"
+          onPress={speakIntel}
+          testID="speak-intel-button"
         >
           <FontAwesome name="volume-up" size={16} color={textColor} />
           <Text style={[styles.secondaryButtonText, { color: textColor }]}>PLAY INTEL</Text>
