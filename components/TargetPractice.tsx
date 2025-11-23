@@ -61,6 +61,7 @@ export default function TargetPractice({
   const shakeAnimation = useRef(new Animated.Value(0)).current
 
   const handleVoiceRecorderComplete = (accuracy: number) => {
+    console.log('🎤 TargetPractice: handleVoiceRecorderComplete called with accuracy:', accuracy)
     // Apply wind condition modifier to accuracy
     let finalAccuracy = accuracy
     switch (windCondition) {
@@ -72,7 +73,16 @@ export default function TargetPractice({
         break
     }
 
+    console.log('🎤 TargetPractice: Final accuracy after wind conditions:', finalAccuracy)
     setCurrentAccuracy(finalAccuracy)
+
+    // Record shot result
+    const newResult: ShotResult = {
+      accuracy: finalAccuracy,
+      timestamp: new Date(),
+      transcript: '' // Transcript not available here but could be passed
+    }
+    setShotResults(prev => [...prev, newResult])
 
     // Calculate shot position
     // Target size is 200x200, center is 100,100
@@ -130,11 +140,10 @@ export default function TargetPractice({
     )
 
     setShowVoiceRecorder(false)
-  }
 
-  // Handle recording completion from VoiceRecorder
-  const handleRecordingComplete = (transcript: string, accuracy: number) => {
-    handleVoiceRecorderComplete(accuracy)
+    // **FIX: Call the parent's onRecordingComplete to update stats**
+    console.log('🎤 TargetPractice: Calling parent onRecordingComplete with accuracy:', finalAccuracy)
+    onRecordingComplete('', finalAccuracy)
   }
 
   const speakTarget = () => {

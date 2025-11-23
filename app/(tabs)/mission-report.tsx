@@ -5,11 +5,11 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
+  Dimensions,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
-  GRADIENTS,
   TACTICAL_THEME,
   MILITARY_TYPOGRAPHY,
 } from '@/constants/colors'
@@ -17,16 +17,23 @@ import { useAppStore } from '@/hooks/useAppStore'
 import RankBadge from '@/components/RankBadge'
 import AccuracyMeter from '@/components/AccuracyMeter'
 import { militaryRankingService } from '@/services/militaryRanking'
+import { getDb } from '@/db/client'
+import { practiceLogs as practiceLogsTable } from '@/db/schema'
+import { desc } from 'drizzle-orm'
+
+const { width } = Dimensions.get('window')
 
 export default function MissionReportScreen() {
-  const { isDark, userStats } = useAppStore()
+  const { isDark, userStats, scriptures } = useAppStore()
   const [militaryProfile, setMilitaryProfile] = useState<any>(null)
   const [selectedTab, setSelectedTab] = useState<
     'overview' | 'achievements' | 'history'
   >('overview')
+  const [practiceLogs, setPracticeLogs] = useState<any[]>([])
 
   useEffect(() => {
     loadMilitaryProfile()
+    loadPracticeLogs()
   }, [])
 
   const loadMilitaryProfile = async () => {
@@ -38,18 +45,43 @@ export default function MissionReportScreen() {
     }
   }
 
+  const loadPracticeLogs = async () => {
+    try {
+      const db = await getDb()
+      if (!db) return
+
+      const logs = await db
+        .select()
+        .from(practiceLogsTable)
+        .orderBy(desc(practiceLogsTable.date))
+        .limit(50)
+
+      setPracticeLogs(logs)
+    } catch (error) {
+      console.error('Failed to load practice logs:', error)
+    }
+  }
+
   const backgroundColors = isDark
-    ? ['#1a2f0a', '#2D5016', '#0f1a05'] as [string, string, string]
-    : ['#4A90E2', '#357ABD', '#2E5B8A'] as [string, string, string]
+    ? (['#0a1505', '#1a2f0a', '#0f1a05'] as const)
+    : (['#4A6B2A', '#2D5016', '#1a2f0a'] as const)
+
+  const cardBackground = isDark
+    ? 'rgba(255, 255, 255, 0.05)'
+    : 'rgba(0, 0, 0, 0.03)'
+
+  const borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
 
   const renderOverview = () => (
     <View style={styles.tabContent}>
-      {/* Rank Section */}
+      {/* Rank Section - Centered Layout */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
           CURRENT RANK
         </Text>
+
         <View style={styles.rankContainer}>
+          <View style={styles.rankGlow} />
           {militaryProfile && (
             <RankBadge
               rank={militaryProfile.currentRank}
@@ -58,74 +90,77 @@ export default function MissionReportScreen() {
             />
           )}
         </View>
-      </View>
 
-      {/* Progress to Next Rank */}
-      {militaryProfile && (
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
-            PROMOTION PROGRESS
-          </Text>
+        {/* Promotion Progress */}
+        {militaryProfile && (
           <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
+            <View style={styles.progressHeader}>
+              <Text style={[styles.progressLabel, { color: isDark ? '#aaa' : '#666' }]}>
+                PROMOTION PROGRESS
+              </Text>
+              <Text style={[styles.progressValue, { color: TACTICAL_THEME.accent }]}>
+                {militaryProfile.nextRankProgress.toFixed(0)}%
+              </Text>
+            </View>
+            <View style={styles.progressBarBg}>
               <View
                 style={[
-                  styles.progressFill,
+                  styles.progressBarFill,
                   { width: `${militaryProfile.nextRankProgress}%` },
                 ]}
               />
             </View>
-            <Text style={[styles.progressText, MILITARY_TYPOGRAPHY.caption]}>
-              {militaryProfile.nextRankProgress.toFixed(1)}% TO NEXT RANK
+            <Text style={[styles.nextRankText, { color: isDark ? '#888' : '#666' }]}>
+              {militaryProfile.nextRank ? `Next Rank: ${militaryProfile.nextRank}` : 'Max Rank Achieved'}
             </Text>
           </View>
-        </View>
-      )}
+        )}
+      </View>
 
-      {/* Combat Statistics */}
+      {/* Combat Statistics - Darker & Centered */}
       <View style={styles.section}>
         <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
           COMBAT STATISTICS
         </Text>
         <View style={styles.statsGrid}>
-          <View style={styles.statCard}>
-            <FontAwesome name="bullseye" size={24} color={TACTICAL_THEME.accent} />
-            <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.body]}>
+          <View style={[styles.statCard, { backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+            <MaterialCommunityIcons name="target" size={28} color={TACTICAL_THEME.accent} style={{ marginBottom: 8 }} />
+            <Text style={[styles.statValue, { color: 'white' }]}>
               {userStats.totalPracticed}
             </Text>
-            <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption]}>
+            <Text style={[styles.statLabel, { color: '#ccc' }]}>
               ROUNDS FIRED
             </Text>
           </View>
 
-          <View style={styles.statCard}>
-            <Ionicons name="trophy" size={24} color={TACTICAL_THEME.success} />
-            <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.body]}>
+          <View style={[styles.statCard, { backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+            <MaterialCommunityIcons name="crosshairs-gps" size={28} color={TACTICAL_THEME.success} style={{ marginBottom: 8 }} />
+            <Text style={[styles.statValue, { color: 'white' }]}>
               {userStats.averageAccuracy.toFixed(1)}%
             </Text>
-            <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption]}>
+            <Text style={[styles.statLabel, { color: '#ccc' }]}>
               AVG ACCURACY
             </Text>
           </View>
 
-          <View style={styles.statCard}>
-            <Ionicons name="trending-up" size={24} color={TACTICAL_THEME.warning} />
-            <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.body]}>
+          <View style={[styles.statCard, { backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+            <MaterialCommunityIcons name="fire" size={28} color={TACTICAL_THEME.warning} style={{ marginBottom: 8 }} />
+            <Text style={[styles.statValue, { color: 'white' }]}>
               {userStats.streak}
             </Text>
-            <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption]}>
+            <Text style={[styles.statLabel, { color: '#ccc' }]}>
               DAY STREAK
             </Text>
           </View>
 
-          <View style={styles.statCard}>
-            <Ionicons name="calendar" size={24} color={TACTICAL_THEME.textSecondary} />
-            <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.body]}>
+          <View style={[styles.statCard, { backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(255,255,255,0.1)' }]}>
+            <MaterialCommunityIcons name="calendar-clock" size={28} color="#aaa" style={{ marginBottom: 8 }} />
+            <Text style={[styles.statValue, { color: 'white', fontSize: 16 }]}>
               {userStats.lastPracticeDate
-                ? new Date(userStats.lastPracticeDate).toLocaleDateString()
-                : 'Never'}
+                ? new Date(userStats.lastPracticeDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                : 'N/A'}
             </Text>
-            <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption]}>
+            <Text style={[styles.statLabel, { color: '#ccc' }]}>
               LAST MISSION
             </Text>
           </View>
@@ -133,13 +168,19 @@ export default function MissionReportScreen() {
       </View>
 
       {/* Accuracy Analysis */}
-      <View style={[styles.section, { marginVertical: 20 }]}>
-        <AccuracyMeter
-          accuracy={userStats.averageAccuracy}
-          label="OVERALL MARKSMANSHIP"
-          size="large"
-          animated={true}
-        />
+      <View style={[styles.section, { marginTop: 8 }]}>
+        <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
+          MARKSMANSHIP ANALYSIS
+        </Text>
+        <View style={{ width: '100%', paddingVertical: 10 }}>
+          <AccuracyMeter
+            accuracy={userStats.averageAccuracy}
+            label=""
+            size="large"
+            animated={true}
+            transparent={true}
+          />
+        </View>
       </View>
     </View>
   )
@@ -152,32 +193,124 @@ export default function MissionReportScreen() {
           SPECIALIZATIONS
         </Text>
         <View style={styles.achievementGrid}>
-          {militaryProfile?.specializations?.map((spec: any) => (
-            <View
-              key={spec.id}
-              style={[
-                styles.achievementCard,
-                spec.unlocked && styles.unlockedAchievement,
-              ]}
-            >
-              <Text style={styles.achievementBadge}>{spec.badge}</Text>
-              <Text
-                style={[styles.achievementName, MILITARY_TYPOGRAPHY.caption]}
+          {militaryProfile?.specializations?.map((spec: any) => {
+            // Icon and Color Mapping for Specializations
+            let iconName: any = 'target'
+            let iconColor = '#32CD32' // Default Green
+            let gradientColors = ['rgba(50, 205, 50, 0.15)', 'rgba(50, 205, 50, 0.05)']
+            let borderColor = 'rgba(50, 205, 50, 0.3)'
+
+            switch (spec.id) {
+              case 'sharpshooter':
+                iconName = 'crosshairs-gps'
+                iconColor = '#FF4500' // Red Orange
+                gradientColors = ['rgba(255, 69, 0, 0.2)', 'rgba(255, 69, 0, 0.05)']
+                borderColor = 'rgba(255, 69, 0, 0.4)'
+                break
+              case 'rapid_fire':
+                iconName = 'flash'
+                iconColor = '#FFD700' // Gold
+                gradientColors = ['rgba(255, 215, 0, 0.2)', 'rgba(255, 215, 0, 0.05)']
+                borderColor = 'rgba(255, 215, 0, 0.4)'
+                break
+              case 'sniper':
+                iconName = 'telescope'
+                iconColor = '#0A84FF' // Blue
+                gradientColors = ['rgba(10, 132, 255, 0.2)', 'rgba(10, 132, 255, 0.05)']
+                borderColor = 'rgba(10, 132, 255, 0.4)'
+                break
+              case 'drill_sergeant':
+                iconName = 'account-voice'
+                iconColor = '#8B4513' // Brown
+                gradientColors = ['rgba(139, 69, 19, 0.2)', 'rgba(139, 69, 19, 0.05)']
+                borderColor = 'rgba(139, 69, 19, 0.4)'
+                break
+              case 'chaplain':
+                iconName = 'book-cross'
+                iconColor = '#9932CC' // Purple
+                gradientColors = ['rgba(153, 50, 204, 0.2)', 'rgba(153, 50, 204, 0.05)']
+                borderColor = 'rgba(153, 50, 204, 0.4)'
+                break
+              case 'intelligence_officer':
+                iconName = 'brain'
+                iconColor = '#00CED1' // Dark Turquoise
+                gradientColors = ['rgba(0, 206, 209, 0.2)', 'rgba(0, 206, 209, 0.05)']
+                borderColor = 'rgba(0, 206, 209, 0.4)'
+                break
+            }
+
+            // Locked State Overrides
+            if (!spec.unlocked) {
+              iconColor = isDark ? '#444' : '#AAA'
+              gradientColors = isDark
+                ? ['rgba(255, 255, 255, 0.05)', 'rgba(255, 255, 255, 0.02)']
+                : ['rgba(0, 0, 0, 0.05)', 'rgba(0, 0, 0, 0.02)']
+              borderColor = 'rgba(128, 128, 128, 0.1)'
+            }
+
+            return (
+              <LinearGradient
+                key={spec.id}
+                colors={gradientColors as any}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[
+                  styles.achievementCard,
+                  {
+                    borderColor: borderColor,
+                    borderWidth: 1,
+                    opacity: spec.unlocked ? 1 : 0.8 // Increased opacity for locked state visibility
+                  }
+                ]}
               >
-                {spec.name}
-              </Text>
-              <Text
-                style={[styles.achievementDesc, MILITARY_TYPOGRAPHY.caption]}
-              >
-                {spec.description}
-              </Text>
-              {spec.unlocked && (
-                <View style={styles.unlockedIndicator}>
-                  <Ionicons name="star" size={16} color={TACTICAL_THEME.warning} />
+                <View style={[
+                  styles.iconContainer,
+                  !spec.unlocked && {
+                    backgroundColor: 'rgba(0,0,0,0.1)',
+                    borderColor: 'rgba(128,128,128,0.1)'
+                  }
+                ]}>
+                  <MaterialCommunityIcons
+                    name={iconName}
+                    size={32}
+                    color={iconColor}
+                    style={spec.unlocked && {
+                      textShadowColor: iconColor,
+                      textShadowOffset: { width: 0, height: 0 },
+                      textShadowRadius: 10
+                    }}
+                  />
                 </View>
-              )}
-            </View>
-          ))}
+
+                <Text style={[
+                  styles.achievementName,
+                  {
+                    color: spec.unlocked ? (isDark ? 'white' : 'black') : (isDark ? '#777' : '#999'),
+                    marginTop: 8
+                  }
+                ]}>
+                  {spec.name.toUpperCase()}
+                </Text>
+
+                <Text style={[
+                  styles.achievementDesc,
+                  { color: isDark ? '#888' : '#666' }
+                ]}>
+                  {spec.description}
+                </Text>
+
+                {spec.unlocked ? (
+                  <View style={styles.unlockedIndicator}>
+                    <Ionicons name="checkmark-circle" size={16} color={TACTICAL_THEME.success} />
+                  </View>
+                ) : (
+                  <View style={[styles.unlockedIndicator, { backgroundColor: 'transparent' }]}>
+                    <MaterialCommunityIcons name="lock" size={14} color={isDark ? '#444' : '#CCC'} />
+                  </View>
+                )}
+              </LinearGradient>
+            )
+          })}
         </View>
       </View>
 
@@ -187,115 +320,266 @@ export default function MissionReportScreen() {
           COMMENDATIONS
         </Text>
         <View style={styles.achievementGrid}>
-          {militaryProfile?.commendations?.map((comm: any) => (
-            <View
-              key={comm.id}
-              style={[
-                styles.achievementCard,
-                comm.unlocked && styles.unlockedAchievement,
-              ]}
-            >
-              <Text style={styles.achievementBadge}>{comm.medal}</Text>
-              <Text
-                style={[styles.achievementName, MILITARY_TYPOGRAPHY.caption]}
+          {militaryProfile?.commendations?.map((comm: any) => {
+            // Icon and Color Mapping
+            let iconName: any = 'medal'
+            let iconColor = '#FFD700' // Default Gold
+            let gradientColors = ['rgba(255, 215, 0, 0.15)', 'rgba(255, 215, 0, 0.05)'] // Gold Gradient
+            let borderColor = 'rgba(255, 215, 0, 0.3)'
+
+            switch (comm.id) {
+              case 'distinguished_service':
+                iconName = 'medal'
+                iconColor = '#FFD700' // Gold
+                gradientColors = ['rgba(255, 215, 0, 0.2)', 'rgba(255, 215, 0, 0.05)']
+                borderColor = 'rgba(255, 215, 0, 0.4)'
+                break
+              case 'combat_excellence':
+                iconName = 'ribbon' // Or rosette
+                iconColor = '#FF4500' // Red/Orange
+                gradientColors = ['rgba(255, 69, 0, 0.2)', 'rgba(255, 69, 0, 0.05)']
+                borderColor = 'rgba(255, 69, 0, 0.4)'
+                break
+              case 'strategist':
+                iconName = 'chess-knight'
+                iconColor = '#0A84FF' // Blue
+                gradientColors = ['rgba(10, 132, 255, 0.2)', 'rgba(10, 132, 255, 0.05)']
+                borderColor = 'rgba(10, 132, 255, 0.4)'
+                break
+              case 'innovation':
+                iconName = 'lightbulb-on'
+                iconColor = '#FFFF00' // Bright Yellow
+                gradientColors = ['rgba(255, 255, 0, 0.15)', 'rgba(255, 255, 0, 0.05)']
+                borderColor = 'rgba(255, 255, 0, 0.4)'
+                break
+              case 'valor':
+                iconName = 'trophy-award'
+                iconColor = '#E5E4E2' // Platinum/Silver
+                gradientColors = ['rgba(229, 228, 226, 0.25)', 'rgba(229, 228, 226, 0.1)']
+                borderColor = 'rgba(229, 228, 226, 0.5)'
+                break
+            }
+
+            // Locked State Overrides
+            if (!comm.unlocked) {
+              iconColor = isDark ? '#555' : '#999'
+              gradientColors = isDark
+                ? ['rgba(255, 255, 255, 0.03)', 'rgba(255, 255, 255, 0.01)']
+                : ['rgba(0, 0, 0, 0.03)', 'rgba(0, 0, 0, 0.01)']
+              borderColor = 'transparent'
+            }
+
+            return (
+              <LinearGradient
+                key={comm.id}
+                colors={gradientColors as any}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[
+                  styles.achievementCard,
+                  {
+                    borderColor: borderColor,
+                    borderWidth: 1,
+                    opacity: comm.unlocked ? 1 : 0.7
+                  }
+                ]}
               >
-                {comm.name}
-              </Text>
-              <Text
-                style={[styles.achievementDesc, MILITARY_TYPOGRAPHY.caption]}
-              >
-                {comm.description}
-              </Text>
-              {comm.unlocked && (
-                <View style={styles.unlockedIndicator}>
-                  <Ionicons name="trophy" size={16} color={TACTICAL_THEME.success} />
+                <View style={[styles.iconContainer, !comm.unlocked && { opacity: 0.5 }]}>
+                  <MaterialCommunityIcons
+                    name={iconName}
+                    size={32}
+                    color={iconColor}
+                    style={comm.unlocked && {
+                      textShadowColor: iconColor,
+                      textShadowOffset: { width: 0, height: 0 },
+                      textShadowRadius: 10
+                    }}
+                  />
                 </View>
-              )}
-            </View>
-          ))}
+
+                <Text style={[
+                  styles.achievementName,
+                  {
+                    color: comm.unlocked ? (isDark ? 'white' : 'black') : (isDark ? '#666' : '#999'),
+                    marginTop: 8
+                  }
+                ]}>
+                  {comm.name.toUpperCase()}
+                </Text>
+
+                <Text style={[
+                  styles.achievementDesc,
+                  { color: isDark ? '#888' : '#666' }
+                ]}>
+                  {comm.description}
+                </Text>
+
+                {comm.unlocked && (
+                  <View style={styles.unlockedIndicator}>
+                    <Ionicons name="checkmark-circle" size={16} color={TACTICAL_THEME.success} />
+                  </View>
+                )}
+              </LinearGradient>
+            )
+          })}
         </View>
       </View>
     </View>
   )
 
-  const renderHistory = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.section}>
-        <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
-          MISSION HISTORY
-        </Text>
-        <Text style={[styles.comingSoon, MILITARY_TYPOGRAPHY.body]}>
-          Detailed mission history coming soon...
-        </Text>
+  const renderHistory = () => {
+    const getScriptureById = (id: string) => {
+      return scriptures.find(s => s.id === id)
+    }
+
+    const getAccuracyColor = (accuracy: number) => {
+      if (accuracy >= 90) return TACTICAL_THEME.success
+      if (accuracy >= 75) return TACTICAL_THEME.warning
+      return TACTICAL_THEME.error
+    }
+
+    return (
+      <View style={styles.tabContent}>
+        <View style={[styles.card, { backgroundColor: cardBackground, borderColor, borderWidth: 1 }]}>
+          <View style={styles.cardHeader}>
+            <MaterialCommunityIcons name="history" size={18} color={TACTICAL_THEME.accent} />
+            <Text style={[styles.cardTitle, { color: isDark ? 'white' : 'black' }]}>
+              MISSION LOGS
+            </Text>
+          </View>
+
+          {practiceLogs.length === 0 ? (
+            <View style={styles.emptyState}>
+              <MaterialCommunityIcons name="file-document-outline" size={48} color={isDark ? '#444' : '#ccc'} />
+              <Text style={[styles.comingSoon, { color: isDark ? '#888' : '#666' }]}>
+                No mission history recorded yet.
+              </Text>
+              <Text style={[styles.comingSoon, { color: isDark ? '#666' : '#999', fontSize: 12, marginTop: 4 }]}>
+                Practice some verses to see your history here.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.logsList}>
+              {practiceLogs.map((log, index) => {
+                const scripture = getScriptureById(log.scriptureId)
+                const date = new Date(log.date)
+                const isToday = date.toDateString() === new Date().toDateString()
+
+                return (
+                  <View
+                    key={log.id}
+                    style={[
+                      styles.logItem,
+                      { 
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                        borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
+                      }
+                    ]}
+                  >
+                    <View style={styles.logHeader}>
+                      <View style={styles.logDateContainer}>
+                        <MaterialCommunityIcons 
+                          name={isToday ? "clock-outline" : "calendar"} 
+                          size={14} 
+                          color={isDark ? '#888' : '#666'} 
+                        />
+                        <Text style={[styles.logDate, { color: isDark ? '#888' : '#666' }]}>
+                          {isToday 
+                            ? `Today ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
+                            : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+                          }
+                        </Text>
+                      </View>
+                      <View style={[
+                        styles.accuracyBadge,
+                        { backgroundColor: getAccuracyColor(log.accuracy) }
+                      ]}>
+                        <Text style={styles.accuracyBadgeText}>
+                          {log.accuracy.toFixed(0)}%
+                        </Text>
+                      </View>
+                    </View>
+
+                    {scripture && (
+                      <View style={styles.logContent}>
+                        <Text style={[styles.logReference, { color: TACTICAL_THEME.accent }]}>
+                          {scripture.reference}
+                        </Text>
+                        <Text 
+                          style={[styles.logText, { color: isDark ? '#ccc' : '#444' }]}
+                          numberOfLines={2}
+                        >
+                          {scripture.text}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )
+              })}
+            </View>
+          )}
+        </View>
       </View>
-    </View>
-  )
+    )
+  }
 
   return (
     <LinearGradient
       colors={backgroundColors}
       style={styles.container}
       start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
+      end={{ x: 1, y: 1 }}
     >
-      <View style={styles.header}>
-        <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
-          MISSION REPORT
-        </Text>
-        <Text style={[styles.subtitle, MILITARY_TYPOGRAPHY.caption]}>
-          OPERATIONAL STATUS & ACHIEVEMENTS
-        </Text>
-      </View>
-
-      {/* Tab Navigation */}
-      <View style={styles.tabNavigation}>
-        {[
-          { key: 'overview', label: 'OVERVIEW', iconName: 'shield', flex: 1 },
-          {
-            key: 'achievements',
-            label: 'ACHIEVEMENTS',
-            iconName: 'trophy',
-            flex: 1.3,
-          },
-          { key: 'history', label: 'HISTORY', iconName: 'calendar', flex: 0.9 },
-        ].map(({ key, label, iconName, flex }) => (
-          <TouchableOpacity
-            key={key}
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 40 }}>
+        <View style={styles.header}>
+          <Text
             style={[
-              styles.tabButton,
-              { flex },
-              selectedTab === key && styles.activeTabButton,
+              MILITARY_TYPOGRAPHY.heading,
+              { color: 'white', fontSize: 28, letterSpacing: 1 },
             ]}
-            onPress={() => setSelectedTab(key as any)}
           >
-            <Ionicons
-              name={iconName as any}
-              size={20}
-              color={
-                selectedTab === key
-                  ? TACTICAL_THEME.text
-                  : TACTICAL_THEME.textSecondary
-              }
-            />
+            MISSION REPORT
+          </Text>
+          <View style={styles.subtitleContainer}>
+            <View style={styles.subtitleLine} />
             <Text
               style={[
-                styles.tabLabel,
                 MILITARY_TYPOGRAPHY.caption,
-                {
-                  color:
-                    selectedTab === key
-                      ? TACTICAL_THEME.text
-                      : TACTICAL_THEME.textSecondary,
-                },
+                { color: TACTICAL_THEME.accent, letterSpacing: 2 },
               ]}
             >
-              {label}
+              OPERATIONAL STATUS
             </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+          </View>
+        </View>
 
-      <ScrollView style={styles.scrollView}>
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          {[
+            { key: 'overview', label: 'OVERVIEW' },
+            { key: 'achievements', label: 'MEDALS' },
+            { key: 'history', label: 'LOGS' },
+          ].map(({ key, label }) => (
+            <TouchableOpacity
+              key={key}
+              style={[
+                styles.tabButton,
+                selectedTab === key && styles.activeTabButton,
+              ]}
+              onPress={() => setSelectedTab(key as any)}
+            >
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: selectedTab === key ? (isDark ? 'white' : 'black') : (isDark ? '#888' : '#666') }
+                ]}
+              >
+                {label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {selectedTab === 'overview' && renderOverview()}
         {selectedTab === 'achievements' && renderAchievements()}
         {selectedTab === 'history' && renderHistory()}
@@ -308,152 +592,263 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    paddingTop: 20,
-    paddingHorizontal: 20,
-    paddingBottom: 10,
-    alignItems: 'center',
+  scrollView: {
+    flex: 1,
+    padding: 20,
+    paddingTop: 60,
   },
-  title: {
-    color: TACTICAL_THEME.text,
+  header: {
+    marginBottom: 24,
+  },
+  subtitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  subtitleLine: {
+    width: 20,
+    height: 2,
+    backgroundColor: TACTICAL_THEME.accent,
+    marginRight: 8,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 12,
     marginBottom: 8,
   },
-  subtitle: {
-    color: TACTICAL_THEME.textSecondary,
-  },
-  tabNavigation: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 20,
-  },
   tabButton: {
-    flexDirection: 'column',
+    flex: 1,
+    paddingVertical: 12,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 4,
     borderRadius: 8,
-    marginHorizontal: 2,
-    backgroundColor: TACTICAL_THEME.surface,
-    gap: 4,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   activeTabButton: {
     backgroundColor: TACTICAL_THEME.accent,
+    borderColor: TACTICAL_THEME.accent,
   },
   tabLabel: {
+    fontSize: 12,
     fontWeight: 'bold',
-  },
-  scrollView: {
-    flex: 1,
+    letterSpacing: 0.5,
   },
   tabContent: {
-    paddingHorizontal: 20,
+    flex: 1,
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
-    color: TACTICAL_THEME.text,
+    color: 'white',
     marginBottom: 16,
     textAlign: 'center',
+    fontSize: 14,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  card: {
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 10,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    letterSpacing: 1,
   },
   rankContainer: {
     alignItems: 'center',
-    paddingVertical: 20,
+    paddingVertical: 10,
+    position: 'relative',
+  },
+  rankGlow: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: 100,
+    height: 100,
+    marginLeft: -50,
+    marginTop: -50,
+    backgroundColor: TACTICAL_THEME.accent,
+    opacity: 0.15,
+    borderRadius: 50,
+    zIndex: -1,
   },
   progressContainer: {
-    alignItems: 'center',
+    marginTop: 16,
+    paddingHorizontal: 10,
   },
-  progressBar: {
-    width: '100%',
-    height: 8,
-    backgroundColor: TACTICAL_THEME.border,
-    borderRadius: 4,
-    overflow: 'hidden',
+  progressHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 8,
   },
-  progressFill: {
+  progressLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  progressValue: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  progressBarBg: {
+    height: 6,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  progressBarFill: {
     height: '100%',
     backgroundColor: TACTICAL_THEME.accent,
-    borderRadius: 4,
+    borderRadius: 3,
   },
-  progressText: {
-    color: TACTICAL_THEME.textSecondary,
+  nextRankText: {
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
     gap: 12,
+    marginBottom: 16,
   },
   statCard: {
-    width: '48%',
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    width: (width - 40 - 12) / 2, // (Screen width - padding - gap) / 2
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
     elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
   },
   statValue: {
-    color: TACTICAL_THEME.text,
-    marginVertical: 8,
+    fontSize: 24,
     fontWeight: 'bold',
+    marginBottom: 4,
   },
   statLabel: {
-    color: TACTICAL_THEME.textSecondary,
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
     textAlign: 'center',
   },
   achievementGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
     gap: 12,
   },
   achievementCard: {
-    width: '48%',
-    backgroundColor: TACTICAL_THEME.surface,
-    borderRadius: 12,
+    width: (width - 40 - 40 - 12) / 2, // (Screen width - outer padding - card padding - gap) / 2 ... approx
+    flexGrow: 1,
+    borderRadius: 16,
     padding: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 160,
+  },
+  iconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.border,
-    opacity: 0.5,
-    position: 'relative',
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   unlockedAchievement: {
     opacity: 1,
-    borderColor: TACTICAL_THEME.accent,
   },
   achievementBadge: {
     fontSize: 32,
-    marginBottom: 8,
+    marginBottom: 12,
   },
   achievementName: {
-    color: TACTICAL_THEME.text,
-    fontWeight: 'bold',
+    fontSize: 10,
+    fontWeight: '800',
     textAlign: 'center',
     marginBottom: 4,
+    letterSpacing: 0.5,
   },
   achievementDesc: {
-    color: TACTICAL_THEME.textSecondary,
+    fontSize: 9,
     textAlign: 'center',
-    fontSize: 10,
+    lineHeight: 12,
+    opacity: 0.8,
   },
   unlockedIndicator: {
     position: 'absolute',
     top: 8,
     right: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 10,
+    padding: 2,
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 20,
   },
   comingSoon: {
-    color: TACTICAL_THEME.textSecondary,
-    textAlign: 'center',
+    marginTop: 12,
+    fontSize: 14,
     fontStyle: 'italic',
-    marginTop: 40,
+  },
+  logsList: {
+    gap: 12,
+  },
+  logItem: {
+    padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  logHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  logDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  logDate: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  accuracyBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  accuracyBadgeText: {
+    color: 'white',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  logContent: {
+    gap: 6,
+  },
+  logReference: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  logText: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontStyle: 'italic',
   },
 })

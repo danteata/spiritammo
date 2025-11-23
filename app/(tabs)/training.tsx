@@ -8,6 +8,7 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome } from '@expo/vector-icons';
+import { useLocalSearchParams } from 'expo-router'
 import {
   GRADIENTS,
   TACTICAL_THEME,
@@ -32,6 +33,7 @@ import {
 import { militaryRankingService } from '@/services/militaryRanking'
 
 export default function TrainingScreen() {
+  const params = useLocalSearchParams()
   const {
     isDark,
     currentScripture,
@@ -77,6 +79,21 @@ export default function TrainingScreen() {
       }
     })
   }, [])
+
+  // Handle deep linking / navigation params
+  useEffect(() => {
+    if (params.collectionId && collections.length > 0) {
+      const collectionId = Array.isArray(params.collectionId)
+        ? params.collectionId[0]
+        : params.collectionId
+
+      const targetCollection = collections.find(c => c.id === collectionId)
+      if (targetCollection) {
+        console.log('🔗 Deep link to collection:', targetCollection.name)
+        handleSelectCollection(targetCollection)
+      }
+    }
+  }, [params.collectionId, collections])
 
   const loadMilitaryProfile = async () => {
     try {
@@ -137,6 +154,7 @@ export default function TrainingScreen() {
         if (intel) {
           console.log('Generated battle intel:', intel.battlePlan)
           setGeneratedIntel(intel)
+          await militaryRankingService.recordIntelGenerated()
           setCurrentScripture({
             ...currentScripture,
             mnemonic: `${intel.battlePlan}: ${intel.tacticalNotes}`,
@@ -152,7 +170,9 @@ export default function TrainingScreen() {
     transcript: string,
     accuracy: number
   ) => {
+    console.log('🎯 Training: handleTargetPracticeComplete called with accuracy:', accuracy)
     if (currentScripture) {
+      console.log('🎯 Training: Updating scripture accuracy for:', currentScripture.id)
       setPreviousAccuracy(currentScripture.accuracy || 0)
       await updateScriptureAccuracy(currentScripture.id, accuracy)
 
@@ -160,9 +180,14 @@ export default function TrainingScreen() {
         versesMemorized: userStats.totalPracticed + 1,
         averageAccuracy: userStats.averageAccuracy,
         consecutiveDays: userStats.streak,
+        lastSessionAccuracy: accuracy,
+        lastSessionWordCount: currentScripture.text.split(' ').length,
       })
 
       await loadMilitaryProfile()
+      console.log('🎯 Training: handleTargetPracticeComplete completed')
+    } else {
+      console.warn('🎯 Training: No current scripture to update')
     }
     // Keep the practice modal open so the user can view the transcript and
     // shot result. The modal is closed by the user via the CEASE FIRE button.

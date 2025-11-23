@@ -15,6 +15,7 @@ interface AccuracyMeterProps {
   size?: 'small' | 'medium' | 'large'
   animated?: boolean
   showTrend?: boolean
+  transparent?: boolean
 }
 
 export default function AccuracyMeter({
@@ -24,6 +25,7 @@ export default function AccuracyMeter({
   size = 'medium',
   animated = true,
   showTrend = true,
+  transparent = false,
 }: AccuracyMeterProps) {
   const animatedValue = useRef(new Animated.Value(0)).current
   const pulseAnimation = useRef(new Animated.Value(1)).current
@@ -60,16 +62,16 @@ export default function AccuracyMeter({
   }, [accuracy, animated])
 
   const getAccuracyColor = (acc: number) => {
-    if (acc >= 90) return ACCURACY_COLORS.excellent
-    if (acc >= 80) return ACCURACY_COLORS.good
-    if (acc >= 70) return ACCURACY_COLORS.fair
+    if (acc >= 75) return ACCURACY_COLORS.excellent
+    if (acc >= 50) return ACCURACY_COLORS.good
+    if (acc >= 25) return ACCURACY_COLORS.fair
     return ACCURACY_COLORS.poor
   }
 
   const getAccuracyRating = (acc: number) => {
-    if (acc >= 90) return 'MARKSMAN'
-    if (acc >= 80) return 'SHARPSHOOTER'
-    if (acc >= 70) return 'QUALIFIED'
+    if (acc >= 75) return 'MARKSMAN'
+    if (acc >= 50) return 'SHARPSHOOTER'
+    if (acc >= 25) return 'QUALIFIED'
     return 'TRAINEE'
   }
 
@@ -129,6 +131,7 @@ export default function AccuracyMeter({
     <Animated.View
       style={[
         styles.container,
+        transparent && styles.transparentContainer,
         sizeStyles.container,
         { transform: [{ scale: pulseAnimation }] },
       ]}
@@ -237,6 +240,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
   },
+  transparentContainer: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    elevation: 0,
+    shadowOpacity: 0,
+    padding: 0,
+    marginBottom: 0,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -326,6 +337,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
     borderRadius: 2,
+    marginHorizontal: 1,
   },
   zoneLabel: {
     color: TACTICAL_THEME.textSecondary,
