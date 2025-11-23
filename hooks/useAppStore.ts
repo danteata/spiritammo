@@ -39,6 +39,9 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const addScripturesToCollection = useZustandStore((s) => s.addScripturesToCollection)
   const addScriptures = useZustandStore((s) => s.addScriptures)
   const updateCollection = useZustandStore((s) => s.updateCollection)
+  const deleteCollection = useZustandStore((s) => s.deleteCollection)
+  const removeScriptureFromCollection = useZustandStore((s) => s.removeScriptureFromCollection)
+  const bulkRemoveScripturesFromCollection = useZustandStore((s) => s.bulkRemoveScripturesFromCollection)
 
   return {
     // Theme
@@ -71,5 +74,8 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     addScripturesToCollection,
     addScriptures,
     updateCollection,
+    deleteCollection,
+    removeScriptureFromCollection,
+    bulkRemoveScripturesFromCollection,
   }
 })

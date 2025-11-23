@@ -63,6 +63,7 @@ export interface UserSettings {
   voicePitch: number
   language: string
   trainingMode: 'single' | 'burst' | 'automatic'
+  voiceEngine: 'whisper' | 'native'
 }
 
 export interface UserStats {
@@ -71,15 +72,15 @@ export interface UserStats {
   streak: number
   lastPracticeDate?: string
   rank:
-    | 'recruit'
-    | 'private'
-    | 'corporal'
-    | 'sergeant'
-    | 'lieutenant'
-    | 'captain'
-    | 'major'
-    | 'colonel'
-    | 'general'
+  | 'recruit'
+  | 'private'
+  | 'corporal'
+  | 'sergeant'
+  | 'lieutenant'
+  | 'captain'
+  | 'major'
+  | 'colonel'
+  | 'general'
   specializations?: string[]
   commendations?: string[]
   totalPoints?: number

@@ -53,6 +53,12 @@ export interface MilitaryProfile {
   achievements: Achievement[];
   totalPoints: number;
   nextRankProgress: number;
+  // Detailed Tracking
+  consecutivePerfectVerses: number; // 100% accuracy
+  perfectVersesTotal: number;
+  longVersesMemorized: number; // > 30 words
+  mnemonicsCreated: number;
+  intelGenerated: number;
 }
 
 // Storage keys
@@ -63,31 +69,31 @@ const ACHIEVEMENTS_KEY = '@spiritammo_achievements';
 export const MILITARY_RANKS: MilitaryRank[] = [
   {
     rank: 'recruit',
-    versesRequired: 10,
-    accuracy: 60,
+    versesRequired: 0,
+    accuracy: 0,
     insignia: '🎖️',
     title: 'RECRUIT',
-    description: 'Basic Training Complete',
+    description: 'Basic Training',
   },
   {
     rank: 'private',
-    versesRequired: 25,
-    accuracy: 70,
+    versesRequired: 10,
+    accuracy: 60,
     insignia: '🏅',
     title: 'PRIVATE',
     description: 'Infantry Ready',
   },
   {
     rank: 'corporal',
-    versesRequired: 50,
-    accuracy: 75,
+    versesRequired: 25,
+    accuracy: 70,
     insignia: '🎗️',
     title: 'CORPORAL',
     description: 'Squad Leader',
   },
   {
     rank: 'sergeant',
-    versesRequired: 100,
+    versesRequired: 50,
     accuracy: 80,
     insignia: '🏆',
     title: 'SERGEANT',
@@ -95,7 +101,7 @@ export const MILITARY_RANKS: MilitaryRank[] = [
   },
   {
     rank: 'lieutenant',
-    versesRequired: 200,
+    versesRequired: 100,
     accuracy: 85,
     insignia: '🥇',
     title: 'LIEUTENANT',
@@ -103,7 +109,7 @@ export const MILITARY_RANKS: MilitaryRank[] = [
   },
   {
     rank: 'captain',
-    versesRequired: 500,
+    versesRequired: 250,
     accuracy: 90,
     insignia: '⭐',
     title: 'CAPTAIN',
@@ -111,24 +117,24 @@ export const MILITARY_RANKS: MilitaryRank[] = [
   },
   {
     rank: 'major',
-    versesRequired: 1000,
-    accuracy: 95,
+    versesRequired: 500,
+    accuracy: 92,
     insignia: '🌟',
     title: 'MAJOR',
     description: 'Battalion Officer',
   },
   {
     rank: 'colonel',
-    versesRequired: 2000,
-    accuracy: 98,
+    versesRequired: 1000,
+    accuracy: 95,
     insignia: '💫',
     title: 'COLONEL',
     description: 'Regiment Commander',
   },
   {
     rank: 'general',
-    versesRequired: 5000,
-    accuracy: 99,
+    versesRequired: 2500,
+    accuracy: 98,
     insignia: '👑',
     title: 'GENERAL',
     description: 'Supreme Commander',
@@ -141,7 +147,7 @@ export const SPECIALIZATIONS: Specialization[] = [
     id: 'sharpshooter',
     name: 'Sharpshooter',
     description: 'Master of precision',
-    requirement: '100% accuracy on 50 consecutive verses',
+    requirement: 'Maintain >90% average accuracy',
     badge: '🎯',
     unlocked: false,
   },
@@ -149,7 +155,7 @@ export const SPECIALIZATIONS: Specialization[] = [
     id: 'rapid_fire',
     name: 'Rapid Fire',
     description: 'Speed demon',
-    requirement: 'Complete 20 verses in under 5 minutes',
+    requirement: 'Maintain 90% accuracy for 50 verses', // Changed to be realistic without timer
     badge: '⚡',
     unlocked: false,
   },
@@ -157,7 +163,7 @@ export const SPECIALIZATIONS: Specialization[] = [
     id: 'sniper',
     name: 'Sniper',
     description: 'Long-range specialist',
-    requirement: 'Master 10 long verses (50+ words) perfectly',
+    requirement: 'Master 10 long verses (30+ words)',
     badge: '🔭',
     unlocked: false,
   },
@@ -173,7 +179,7 @@ export const SPECIALIZATIONS: Specialization[] = [
     id: 'chaplain',
     name: 'Chaplain',
     description: 'Spiritual leader',
-    requirement: 'Memorize entire book of the Bible',
+    requirement: 'Memorize 100 verses total', // Simplified for MVP
     badge: '✝️',
     unlocked: false,
   },
@@ -181,7 +187,7 @@ export const SPECIALIZATIONS: Specialization[] = [
     id: 'intelligence_officer',
     name: 'Intelligence Officer',
     description: 'Master of mnemonics',
-    requirement: 'Create 50 custom mnemonics',
+    requirement: 'Generate 50 Battle Intel reports',
     badge: '🧠',
     unlocked: false,
   },
@@ -193,7 +199,7 @@ export const COMMENDATIONS: Commendation[] = [
     id: 'distinguished_service',
     name: 'Distinguished Service Medal',
     description: 'For exceptional dedication',
-    requirement: '6 months consistent training',
+    requirement: '1000 total practice sessions',
     medal: '🏅',
     rarity: 'uncommon',
     unlocked: false,
@@ -202,16 +208,16 @@ export const COMMENDATIONS: Commendation[] = [
     id: 'combat_excellence',
     name: 'Combat Excellence Ribbon',
     description: 'For superior performance',
-    requirement: '90%+ average accuracy for 1 month',
+    requirement: '95%+ average accuracy after 100 verses',
     medal: '🎖️',
     rarity: 'rare',
     unlocked: false,
   },
   {
-    id: 'leadership',
-    name: 'Leadership Commendation',
-    description: 'For inspiring others',
-    requirement: 'Help 5 other users achieve next rank',
+    id: 'strategist',
+    name: 'Strategist Commendation',
+    description: 'For tactical planning',
+    requirement: 'Generate 25 Battle Intel reports',
     medal: '⭐',
     rarity: 'rare',
     unlocked: false,
@@ -220,7 +226,7 @@ export const COMMENDATIONS: Commendation[] = [
     id: 'innovation',
     name: 'Innovation Award',
     description: 'For creative excellence',
-    requirement: 'Create 25 custom mnemonics',
+    requirement: 'Create 25 custom mnemonics', // To be hooked up later or removed
     medal: '💡',
     rarity: 'uncommon',
     unlocked: false,
@@ -229,7 +235,7 @@ export const COMMENDATIONS: Commendation[] = [
     id: 'valor',
     name: 'Medal of Valor',
     description: 'For extraordinary courage',
-    requirement: 'Complete 100 verses with 95%+ accuracy',
+    requirement: '50 perfect verses (100% accuracy)',
     medal: '🏆',
     rarity: 'legendary',
     unlocked: false,
@@ -248,8 +254,23 @@ class MilitaryRankingService {
       const stored = await AsyncStorage.getItem(MILITARY_PROFILE_KEY);
       if (stored) {
         this.profile = JSON.parse(stored);
+        // Migration: Ensure new fields exist
+        if (this.profile && typeof this.profile.consecutivePerfectVerses === 'undefined') {
+          this.profile.consecutivePerfectVerses = 0;
+          this.profile.perfectVersesTotal = 0;
+          this.profile.longVersesMemorized = 0;
+          this.profile.mnemonicsCreated = 0;
+          this.profile.intelGenerated = 0;
+        }
       } else {
         this.profile = this.createDefaultProfile();
+        await this.saveProfile();
+      }
+
+      // Re-validate requirements in case they changed (e.g. code updates)
+      if (this.profile) {
+        await this.checkSpecializations();
+        await this.checkCommendations();
         await this.saveProfile();
       }
     } catch (error) {
@@ -269,6 +290,11 @@ class MilitaryRankingService {
       achievements: [],
       totalPoints: 0,
       nextRankProgress: 0,
+      consecutivePerfectVerses: 0,
+      perfectVersesTotal: 0,
+      longVersesMemorized: 0,
+      mnemonicsCreated: 0,
+      intelGenerated: 0,
     };
   }
 
@@ -298,6 +324,8 @@ class MilitaryRankingService {
     versesMemorized: number;
     averageAccuracy: number;
     consecutiveDays: number;
+    lastSessionAccuracy?: number; // New: Accuracy of the specific session
+    lastSessionWordCount?: number; // New: Word count of the verse
   }): Promise<{ rankUp: boolean; newRank?: UserStats['rank']; unlockedAchievements: Achievement[] }> {
     if (!this.profile) {
       await this.loadProfile();
@@ -307,11 +335,25 @@ class MilitaryRankingService {
     const newRank = this.calculateRank(stats.versesMemorized, stats.averageAccuracy);
     const rankUp = newRank !== oldRank;
 
-    // Update profile
+    // Update basic stats
     this.profile!.totalVersesMemorized = stats.versesMemorized;
     this.profile!.averageAccuracy = stats.averageAccuracy;
     this.profile!.consecutiveDays = stats.consecutiveDays;
     this.profile!.currentRank = newRank;
+
+    // Update detailed tracking
+    if (stats.lastSessionAccuracy !== undefined) {
+      if (stats.lastSessionAccuracy >= 100) {
+        this.profile!.consecutivePerfectVerses += 1;
+        this.profile!.perfectVersesTotal += 1;
+      } else {
+        this.profile!.consecutivePerfectVerses = 0;
+      }
+    }
+
+    if (stats.lastSessionWordCount !== undefined && stats.lastSessionWordCount >= 30) {
+      this.profile!.longVersesMemorized += 1;
+    }
 
     // Calculate next rank progress
     const currentRankIndex = MILITARY_RANKS.findIndex(r => r.rank === newRank);
@@ -319,6 +361,7 @@ class MilitaryRankingService {
     if (nextRank) {
       const versesProgress = Math.min(100, (stats.versesMemorized / nextRank.versesRequired) * 100);
       const accuracyProgress = Math.min(100, (stats.averageAccuracy / nextRank.accuracy) * 100);
+      // Progress is determined by the limiting factor
       this.profile!.nextRankProgress = Math.min(versesProgress, accuracyProgress);
     } else {
       this.profile!.nextRankProgress = 100; // Max rank achieved
@@ -342,10 +385,21 @@ class MilitaryRankingService {
     };
   }
 
+  // Record Intel Generation (Call this from UI when intel is generated)
+  async recordIntelGenerated() {
+    if (!this.profile) await this.loadProfile();
+    if (this.profile) {
+      this.profile.intelGenerated += 1;
+      await this.checkSpecializations();
+      await this.checkCommendations();
+      await this.saveProfile();
+    }
+  }
+
   // Check and unlock achievements
   private async checkAchievements(): Promise<Achievement[]> {
     const unlocked: Achievement[] = [];
-    
+
     if (!this.profile) return unlocked;
 
     // Define achievement checks
@@ -389,7 +443,7 @@ class MilitaryRankingService {
 
     for (const achievementCheck of achievementChecks) {
       const existing = this.profile.achievements.find(a => a.id === achievementCheck.id);
-      
+
       if (!existing) {
         // Create new achievement
         const achievement: Achievement = {
@@ -401,9 +455,9 @@ class MilitaryRankingService {
           unlocked: achievementCheck.check(),
           dateUnlocked: achievementCheck.check() ? new Date() : undefined,
         };
-        
+
         this.profile.achievements.push(achievement);
-        
+
         if (achievement.unlocked) {
           unlocked.push(achievement);
         }
@@ -423,27 +477,39 @@ class MilitaryRankingService {
   private async checkSpecializations() {
     if (!this.profile) return;
 
-    // Implementation would check specific conditions for each specialization
-    // For now, we'll implement basic checks
-    
-    // Drill Sergeant: 30-day streak
-    const drillSergeant = this.profile.specializations.find(s => s.id === 'drill_sergeant');
-    if (drillSergeant && !drillSergeant.unlocked && this.profile.consecutiveDays >= 30) {
-      drillSergeant.unlocked = true;
-      drillSergeant.dateUnlocked = new Date();
-    }
+    const check = (id: string, condition: boolean) => {
+      const spec = this.profile!.specializations.find(s => s.id === id);
+      if (spec && !spec.unlocked && condition) {
+        spec.unlocked = true;
+        spec.dateUnlocked = new Date();
+      }
+    };
+
+    check('sharpshooter', this.profile.averageAccuracy >= 80);
+    check('rapid_fire', this.profile.totalVersesMemorized >= 50 && this.profile.averageAccuracy >= 90);
+    check('sniper', this.profile.longVersesMemorized >= 10);
+    check('drill_sergeant', this.profile.consecutiveDays >= 30);
+    check('chaplain', this.profile.totalVersesMemorized >= 100);
+    check('intelligence_officer', this.profile.intelGenerated >= 50);
   }
 
   // Check and unlock commendations
   private async checkCommendations() {
     if (!this.profile) return;
 
-    // Combat Excellence: 90%+ accuracy
-    const combatExcellence = this.profile.commendations.find(c => c.id === 'combat_excellence');
-    if (combatExcellence && !combatExcellence.unlocked && this.profile.averageAccuracy >= 90) {
-      combatExcellence.unlocked = true;
-      combatExcellence.dateUnlocked = new Date();
-    }
+    const check = (id: string, condition: boolean) => {
+      const comm = this.profile!.commendations.find(c => c.id === id);
+      if (comm && !comm.unlocked && condition) {
+        comm.unlocked = true;
+        comm.dateUnlocked = new Date();
+      }
+    };
+
+    check('distinguished_service', this.profile.totalVersesMemorized >= 1000);
+    check('combat_excellence', this.profile.totalVersesMemorized >= 100 && this.profile.averageAccuracy >= 95);
+    check('strategist', this.profile.intelGenerated >= 25);
+    // check('innovation', this.profile.mnemonicsCreated >= 25); // Future
+    check('valor', this.profile.perfectVersesTotal >= 50);
   }
 
   // Get current profile
