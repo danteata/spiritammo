@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -13,7 +13,14 @@ import {
 import { FontAwesome } from '@expo/vector-icons';
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
-import { Collection, Scripture, Book } from '@/types/scripture';
+import {
+  Book,
+  Collection,
+  Scripture,
+  UserSettings,
+  UserStats,
+} from '@/types/scripture'
+import { BOOKS } from '@/mocks/books'
 import BookSelector from './BookSelector';
 import ChapterSelector from './ChapterSelector';
 import VerseSelector from './VerseSelector';
@@ -23,6 +30,7 @@ interface AddVersesModalProps {
   isVisible: boolean;
   onClose: () => void;
   onVersesAdded?: (collectionId: string, verses: Scripture[]) => void;
+  preselectedCollection?: Collection;
 }
 
 type TabType = 'BOOK' | 'CHAPTER' | 'VERSE';
@@ -31,7 +39,8 @@ type Step = 'collection' | 'navigation';
 export default function AddVersesModal({
   isVisible,
   onClose,
-  onVersesAdded
+  onVersesAdded,
+  preselectedCollection
 }: AddVersesModalProps) {
   const {
     collections,
@@ -52,9 +61,13 @@ export default function AddVersesModal({
   const [searchQuery, setSearchQuery] = useState('');
 
   const resetModal = () => {
-    setCurrentStep('collection');
+    if (!preselectedCollection) {
+      setCurrentStep('collection');
+    }
     setActiveTab('BOOK');
-    setSelectedCollection(null);
+    if (!preselectedCollection) {
+      setSelectedCollection(null);
+    }
     setSelectedBook(null);
     setSelectedChapter(null);
     setSelectedVerses([]);
@@ -62,6 +75,14 @@ export default function AddVersesModal({
     setNewCollectionName('');
     setSearchQuery('');
   };
+
+  // Set preselected collection when provided
+  useEffect(() => {
+    if (preselectedCollection && isVisible) {
+      setSelectedCollection(preselectedCollection);
+      setCurrentStep('navigation');
+    }
+  }, [preselectedCollection, isVisible]);
 
   const handleClose = () => {
     resetModal();
@@ -91,10 +112,62 @@ export default function AddVersesModal({
     setSelectedVerses(verses);
   };
 
-  const handleSearch = () => {
-    // Parse search query like "John 1" or "Gen 3:16"
-    // For now, just a placeholder
-    console.log('Search:', searchQuery);
+  const handleSearch = async () => {
+    // Parse search query like "John 1" or "Gen 3:16" or "John 3:16"
+    const query = searchQuery.trim();
+    if (!query) return;
+
+    console.log('Search:', query);
+
+    // Parse patterns like "John 1", "Gen 3", "John 3:16", "Genesis 1:1"
+    const patterns = [
+      /^([1-3]?\s*[A-Za-z]+)\s+(\d+):(\d+)$/,  // Book Chapter:Verse (e.g., "John 3:16", "1 John 3:16")
+      /^([1-3]?\s*[A-Za-z]+)\s+(\d+)$/,         // Book Chapter (e.g., "John 1", "1 John 1")
+    ];
+
+    let bookName = '';
+    let chapter = null;
+    let verse = null;
+
+    for (const pattern of patterns) {
+      const match = query.match(pattern);
+      if (match) {
+        bookName = match[1].trim();
+        chapter = parseInt(match[2]);
+        verse = match[3] ? parseInt(match[3]) : null;
+        break;
+      }
+    }
+
+    if (!bookName || !chapter) {
+      Alert.alert('Invalid Search', 'Please use format like "John 1" or "John 3:16"');
+      return;
+    }
+
+    // Find matching book from BOOKS
+    const book = BOOKS.find(b => 
+      b.name.toLowerCase() === bookName.toLowerCase() ||
+      b.abbreviations?.some(abbr => abbr.toLowerCase() === bookName.toLowerCase())
+    );
+
+    if (!book) {
+      Alert.alert('Book Not Found', `Could not find book "${bookName}"`);
+      return;
+    }
+
+    // Validate chapter
+    if (chapter > book.chapters) {
+      Alert.alert('Invalid Chapter', `${book.name} only has ${book.chapters} chapters`);
+      return;
+    }
+
+    // Set the book and chapter
+    setSelectedBook(book);
+    setSelectedChapter(chapter);
+    setActiveTab('VERSE');
+
+    // If specific verse was requested, we'll select it after verses load
+    // For now, just navigate to the verse tab
   };
 
   const handleConfirm = async () => {
@@ -140,7 +213,7 @@ export default function AddVersesModal({
       }
 
       console.log(`📦 Adding ${selectedVerses.length} verses to collection`);
-      
+
       // First, add the scripture objects to the global scriptures store
       const addScripturesSuccess = await addScriptures(selectedVerses);
       if (!addScripturesSuccess) {
@@ -160,10 +233,27 @@ export default function AddVersesModal({
         console.log(`✅ Added ${selectedVerses.length} verse IDs to collection ${targetCollection.name}`);
         Alert.alert(
           'Success',
-          `Added ${selectedVerses.length} verse${selectedVerses.length !== 1 ? 's' : ''} to "${targetCollection.name}"`
+          `Added ${selectedVerses.length} verse${selectedVerses.length !== 1 ? 's' : ''} to "${targetCollection.name}"`,
+          [
+            {
+              text: 'Done',
+              onPress: () => {
+                onVersesAdded?.(targetCollection.id, selectedVerses);
+                handleClose();
+              }
+            },
+            {
+              text: 'Add More',
+              onPress: () => {
+                // Reset selections but keep collection and stay in navigation
+                setSelectedBook(null);
+                setSelectedChapter(null);
+                setSelectedVerses([]);
+                setActiveTab('BOOK');
+              }
+            }
+          ]
         );
-        onVersesAdded?.(targetCollection.id, selectedVerses);
-        handleClose();
       } else {
         Alert.alert('Error', 'Failed to add verses to collection');
       }

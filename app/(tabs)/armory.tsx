@@ -192,16 +192,16 @@ export default function ArmoryScreen() {
           backgroundColor:
             selectedCollection?.id === item.id
               ? isDark
-                ? 'rgba(255, 165, 0, 0.2)'
+                ? 'rgba(255, 165, 0, 0.15)'
                 : 'rgba(255, 165, 0, 0.1)'
               : isDark
-                ? 'rgba(255, 255, 255, 0.1)'
-                : 'rgba(0, 0, 0, 0.05)',
+                ? 'rgba(255, 255, 255, 0.05)'
+                : 'rgba(0, 0, 0, 0.03)',
           borderColor:
             selectedCollection?.id === item.id
               ? TACTICAL_THEME.accent
-              : 'transparent',
-          borderWidth: selectedCollection?.id === item.id ? 2 : 0,
+              : 'rgba(255,255,255,0.1)',
+          borderWidth: 1,
         },
       ]}
       testID={`collection-${item.id}`}
@@ -211,37 +211,36 @@ export default function ArmoryScreen() {
         onPress={() => handleSelectCollection(item)}
       >
         <View style={styles.collectionInfo}>
-          <Text
-            style={[
-              styles.collectionName,
-              { color: isDark ? 'white' : 'black' },
-            ]}
-          >
-            {item.abbreviation
-              ? `${item.abbreviation} - ${item.name}`
-              : item.name}
-          </Text>
-          <View style={styles.collectionMeta}>
+          <View style={styles.collectionHeaderRow}>
             <Text
               style={[
-                styles.collectionCount,
-                {
-                  color: isDark
-                    ? 'rgba(255, 255, 255, 0.5)'
-                    : 'rgba(0, 0, 0, 0.5)',
-                },
+                styles.collectionName,
+                { color: isDark ? 'white' : 'black' },
               ]}
             >
-              {item.scriptures.length} rounds
+              {item.abbreviation || item.name}
             </Text>
-
-            {item.isChapterBased && item.chapters && (
-              <Text
-                style={[styles.chapterBadge, { color: TACTICAL_THEME.accent }]}
-              >
-                {item.chapters.length} chapters
-              </Text>
+            {item.isChapterBased && (
+              <View style={styles.chapterBadgeContainer}>
+                <Feather name="layers" size={10} color={TACTICAL_THEME.accent} />
+                <Text style={[styles.chapterBadgeText, { color: TACTICAL_THEME.accent }]}>
+                  CHAPTERS
+                </Text>
+              </View>
             )}
+          </View>
+
+          <Text style={[styles.collectionDescription, { color: isDark ? '#aaa' : '#666' }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+
+          <View style={styles.collectionMeta}>
+            <View style={styles.statBadge}>
+              <FontAwesome name="crosshairs" size={10} color={isDark ? '#888' : '#666'} />
+              <Text style={[styles.statText, { color: isDark ? '#ccc' : '#444' }]}>
+                {item.scriptures.length} ROUNDS
+              </Text>
+            </View>
           </View>
         </View>
       </TouchableOpacity>
@@ -250,7 +249,9 @@ export default function ArmoryScreen() {
         style={styles.collectionArrow}
         onPress={() => handleShowCollectionDetail(item)}
       >
-        <FontAwesome name="chevron-right" size={20} color={isDark ? 'white' : 'black'} />
+        <View style={styles.arrowCircle}>
+          <FontAwesome name="chevron-right" size={12} color={isDark ? 'white' : 'black'} />
+        </View>
       </TouchableOpacity>
     </View>
   )
@@ -382,34 +383,42 @@ export default function ArmoryScreen() {
           styles.bookItem,
           {
             backgroundColor: isDark
-              ? 'rgba(255, 255, 255, 0.1)'
-              : 'rgba(0, 0, 0, 0.05)',
+              ? 'rgba(255, 255, 255, 0.03)'
+              : 'rgba(0, 0, 0, 0.02)',
+            borderColor: 'rgba(255,255,255,0.05)',
+            borderWidth: 1,
           },
         ]}
         onPress={() => handleDefaultBookTap(item.name)}
         testID={`book-${item.id}`}
       >
-        <FontAwesome name="book" size={20} color={isDark ? 'white' : 'black'} />
-        <Text style={[styles.bookName, { color: isDark ? 'white' : 'black' }]}>
-          {item.name}
-        </Text>
-        <Text
-          style={[
-            styles.bookChapters,
-            {
-              color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
-            },
-          ]}
-        >
-          {bookScriptureCount} rounds
-        </Text>
-        <FontAwesome name="chevron-right" size={20} color={isDark ? 'white' : 'black'} />
+        <View style={styles.bookIconContainer}>
+          <FontAwesome name="book" size={18} color={TACTICAL_THEME.accent} />
+        </View>
+
+        <View style={styles.bookInfo}>
+          <Text style={[styles.bookName, { color: isDark ? 'white' : 'black' }]}>
+            {item.name}
+          </Text>
+          <View style={styles.progressBarContainer}>
+            <View style={[styles.progressBar, { width: `${Math.min(bookScriptureCount * 2, 100)}%`, backgroundColor: TACTICAL_THEME.accent }]} />
+          </View>
+        </View>
+
+        <View style={styles.bookStat}>
+          <Text style={[styles.bookCount, { color: TACTICAL_THEME.accent }]}>
+            {bookScriptureCount}
+          </Text>
+          <Text style={[styles.bookLabel, { color: isDark ? '#666' : '#999' }]}>
+            RNDS
+          </Text>
+        </View>
       </TouchableOpacity>
     )
   }
 
   const backgroundColors = isDark
-    ? (['#1a2f0a', '#2D5016', '#0f1a05'] as const) // Beautiful army green gradient
+    ? (['#0a1505', '#1a2f0a', '#0f1a05'] as const) // Darker, deeper green
     : (['#4A6B2A', '#2D5016', '#1a2f0a'] as const)
 
   return (
@@ -417,7 +426,7 @@ export default function ArmoryScreen() {
       colors={backgroundColors}
       style={styles.container}
       start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
+      end={{ x: 1, y: 1 }} // Diagonal gradient
     >
       <View style={styles.header}>
         <View style={styles.headerContent}>
@@ -425,254 +434,248 @@ export default function ArmoryScreen() {
             style={[
               styles.sectionTitle,
               MILITARY_TYPOGRAPHY.heading,
-              { color: TACTICAL_THEME.text },
+              { color: 'white', fontSize: 32, letterSpacing: 1 },
             ]}
           >
             ARMORY
           </Text>
-          <Text
-            style={[
-              styles.sectionSubtitle,
-              MILITARY_TYPOGRAPHY.caption,
-              { color: TACTICAL_THEME.textSecondary },
-            ]}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            Supply Lines
-          </Text>
+          <View style={styles.subtitleContainer}>
+            <View style={styles.subtitleLine} />
+            <Text
+              style={[
+                styles.sectionSubtitle,
+                MILITARY_TYPOGRAPHY.caption,
+                { color: TACTICAL_THEME.accent, letterSpacing: 2 },
+              ]}
+            >
+              SUPPLY LINES
+            </Text>
+          </View>
         </View>
 
         <View style={styles.headerButtons}>
           <TouchableOpacity
-            style={styles.addVersesButton}
+            style={styles.actionButton}
             onPress={() => setShowAddVerses(true)}
             testID="add-verses-button"
           >
-            <FontAwesome name="plus" size={16} color={TACTICAL_THEME.text} />
-            <Text style={[styles.addVersesText, MILITARY_TYPOGRAPHY.caption]}>
-              ADD VERSES
-            </Text>
+            <FontAwesome name="plus" size={14} color="white" />
+            <Text style={styles.actionButtonText}>ADD</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.uploadButton}
+            style={[styles.actionButton, styles.primaryAction]}
             onPress={() => setShowFileUploader(true)}
             testID="upload-file-button"
           >
-            <FontAwesome name="upload" size={20} color={TACTICAL_THEME.text} />
-            <Text style={[styles.uploadText, MILITARY_TYPOGRAPHY.caption]}>
-              SUPPLY DROP
-            </Text>
+            <FontAwesome name="download" size={14} color="black" />
+            <Text style={[styles.actionButtonText, { color: 'black' }]}>IMPORT</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <Text
-        style={[
-          styles.collectionsTitle,
-          MILITARY_TYPOGRAPHY.subheading,
-          { color: TACTICAL_THEME.text },
-        ]}
-      >
-        COLLECTIONS
-      </Text>
+      <View style={styles.contentContainer}>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={[styles.collectionsTitle, { color: '#888' }]}>
+            ARSENALS
+          </Text>
+          <View style={styles.headerLine} />
+        </View>
 
-      <FlatList
-        data={collections}
-        renderItem={renderCollectionItem}
-        keyExtractor={(item) => item.id}
-        style={styles.list}
-      />
+        <FlatList
+          data={collections}
+          renderItem={renderCollectionItem}
+          keyExtractor={(item) => item.id}
+          style={styles.list}
+          contentContainerStyle={{ paddingBottom: 20 }}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIconCircle}>
+                <Feather name="box" size={32} color="rgba(255,255,255,0.2)" />
+              </View>
+              <Text style={styles.emptyTitle}>Armory Empty</Text>
+              <Text style={styles.emptySubtitle}>Import a file or add verses to stock your arsenal.</Text>
+            </View>
+          }
+        />
 
-      <View style={styles.sectionHeader}>
-        <Text style={[styles.sectionSubtitle, { color: 'white' }]}>
-          {selectedCollection
-            ? `${selectedCollection.abbreviation || selectedCollection.name
-            } - Scripture Distribution`
-            : `Books (${scriptures.length} total rounds)`}
-        </Text>
-        {selectedCollection && (
-          <TouchableOpacity
-            style={styles.clearSelectionButton}
-            onPress={() => setSelectedCollection(null)}
-          >
-            <Text style={styles.clearSelectionText}>✕</Text>
-          </TouchableOpacity>
+        <View style={styles.sectionHeaderRow}>
+          <Text style={[styles.collectionsTitle, { color: '#888', marginTop: 20 }]}>
+            {selectedCollection ? 'CONTENTS' : 'ALL BOOKS'}
+          </Text>
+          <View style={[styles.headerLine, { marginTop: 20 }]} />
+          {selectedCollection && (
+            <TouchableOpacity onPress={() => setSelectedCollection(null)} style={{ marginTop: 20 }}>
+              <Text style={{ color: TACTICAL_THEME.accent, fontSize: 12, fontWeight: 'bold' }}>CLEAR FILTER</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {selectedCollection ? (
+          // ... (Keep existing filter logic but styled better if needed)
+          <View style={{ flex: 1 }}>
+            {/* Filter Tabs */}
+            <View style={styles.filterTabs}>
+              <TouchableOpacity
+                style={[
+                  styles.filterTab,
+                  filterTab === 'books' && styles.activeFilterTab,
+                ]}
+                onPress={() => setFilterTab('books')}
+              >
+                <FontAwesome
+                  name="book"
+                  size={16}
+                  color={
+                    filterTab === 'books'
+                      ? TACTICAL_THEME.text
+                      : TACTICAL_THEME.textSecondary
+                  }
+                />
+                <Text
+                  style={[
+                    styles.filterTabText,
+                    {
+                      color:
+                        filterTab === 'books'
+                          ? TACTICAL_THEME.text
+                          : TACTICAL_THEME.textSecondary,
+                    },
+                  ]}
+                >
+                  BOOKS
+                </Text>
+              </TouchableOpacity>
+
+              {selectedCollection.isChapterBased &&
+                selectedCollection.chapters &&
+                selectedCollection.chapters.length > 0 && (
+                  <TouchableOpacity
+                    style={[
+                      styles.filterTab,
+                      filterTab === 'chapters' && styles.activeFilterTab,
+                    ]}
+                    onPress={() => setFilterTab('chapters')}
+                  >
+                    <Feather
+                      name="layers"
+                      size={16}
+                      color={
+                        filterTab === 'chapters'
+                          ? TACTICAL_THEME.text
+                          : TACTICAL_THEME.textSecondary
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.filterTabText,
+                        {
+                          color:
+                            filterTab === 'chapters'
+                              ? TACTICAL_THEME.text
+                              : TACTICAL_THEME.textSecondary,
+                        },
+                      ]}
+                    >
+                      CHAPTERS
+                    </Text>
+                  </TouchableOpacity>
+                )}
+            </View>
+
+            {/* Filter Content */}
+            {filterTab === 'books' ? (
+              <FlatList
+                data={getScriptureDistribution()}
+                renderItem={renderBookDistribution}
+                keyExtractor={(item) => item.book}
+                style={styles.list}
+                ListEmptyComponent={
+                  <Text
+                    style={[
+                      styles.emptyText,
+                      { color: 'rgba(255, 255, 255, 0.5)' },
+                    ]}
+                  >
+                    No books found in this arsenal
+                  </Text>
+                }
+              />
+            ) : selectedCollection.isChapterBased &&
+              selectedCollection.chapters &&
+              selectedCollection.chapters.length > 0 ? (
+              <FlatList
+                data={getChapterDistribution()}
+                renderItem={renderChapterDistribution}
+                keyExtractor={(item) => item.chapter}
+                style={styles.list}
+                ListEmptyComponent={
+                  <Text
+                    style={[
+                      styles.emptyText,
+                      { color: 'rgba(255, 255, 255, 0.5)' },
+                    ]}
+                  >
+                    No chapters found in this arsenal
+                  </Text>
+                }
+              />
+            ) : (
+              <View style={styles.emptyStateContainer}>
+                <Text
+                  style={[
+                    styles.emptyText,
+                    { color: 'rgba(255, 255, 255, 0.5)' },
+                  ]}
+                >
+                  This arsenal is not organized by chapters
+                </Text>
+                <Text
+                  style={[
+                    styles.emptySubtext,
+                    { color: 'rgba(255, 255, 255, 0.3)' },
+                  ]}
+                >
+                  Use the Books tab to see scripture distribution
+                </Text>
+              </View>
+            )}
+          </View>
+        ) : (
+          <FlatList
+            data={books}
+            renderItem={renderBookItem}
+            keyExtractor={(item) => item.id}
+            style={styles.list}
+            contentContainerStyle={{ paddingBottom: 100 }}
+          />
         )}
       </View>
 
-      {selectedCollection ? (
-        <View>
-          {/* Filter Tabs */}
-          <View style={styles.filterTabs}>
-            <TouchableOpacity
-              style={[
-                styles.filterTab,
-                filterTab === 'books' && styles.activeFilterTab,
-              ]}
-              onPress={() => setFilterTab('books')}
-            >
-              <FontAwesome
-                name="book"
-                size={16}
-                color={
-                  filterTab === 'books'
-                    ? TACTICAL_THEME.text
-                    : TACTICAL_THEME.textSecondary
-                }
-              />
-              <Text
-                style={[
-                  styles.filterTabText,
-                  {
-                    color:
-                      filterTab === 'books'
-                        ? TACTICAL_THEME.text
-                        : TACTICAL_THEME.textSecondary,
-                  },
-                ]}
-              >
-                BOOKS
-              </Text>
-            </TouchableOpacity>
-
-            {selectedCollection.isChapterBased &&
-              selectedCollection.chapters &&
-              selectedCollection.chapters.length > 0 && (
-                <TouchableOpacity
-                  style={[
-                    styles.filterTab,
-                    filterTab === 'chapters' && styles.activeFilterTab,
-                  ]}
-                  onPress={() => setFilterTab('chapters')}
-                >
-                  <Feather
-                    name="layers"
-                    size={16}
-                    color={
-                      filterTab === 'chapters'
-                        ? TACTICAL_THEME.text
-                        : TACTICAL_THEME.textSecondary
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.filterTabText,
-                      {
-                        color:
-                          filterTab === 'chapters'
-                            ? TACTICAL_THEME.text
-                            : TACTICAL_THEME.textSecondary,
-                      },
-                    ]}
-                  >
-                    CHAPTERS
-                  </Text>
-                </TouchableOpacity>
-              )}
-          </View>
-
-          {/* Filter Content */}
-          {filterTab === 'books' ? (
-            <FlatList
-              data={getScriptureDistribution()}
-              renderItem={renderBookDistribution}
-              keyExtractor={(item) => item.book}
-              style={styles.list}
-              ListEmptyComponent={
-                <Text
-                  style={[
-                    styles.emptyText,
-                    { color: 'rgba(255, 255, 255, 0.5)' },
-                  ]}
-                >
-                  No books found in this collection
-                </Text>
-              }
-            />
-          ) : selectedCollection.isChapterBased &&
-            selectedCollection.chapters &&
-            selectedCollection.chapters.length > 0 ? (
-            <FlatList
-              data={getChapterDistribution()}
-              renderItem={renderChapterDistribution}
-              keyExtractor={(item) => item.chapter}
-              style={styles.list}
-              ListEmptyComponent={
-                <Text
-                  style={[
-                    styles.emptyText,
-                    { color: 'rgba(255, 255, 255, 0.5)' },
-                  ]}
-                >
-                  No chapters found in this collection
-                </Text>
-              }
-            />
-          ) : (
-            <View style={styles.emptyStateContainer}>
-              <Text
-                style={[
-                  styles.emptyText,
-                  { color: 'rgba(255, 255, 255, 0.5)' },
-                ]}
-              >
-                This collection is not organized by chapters
-              </Text>
-              <Text
-                style={[
-                  styles.emptySubtext,
-                  { color: 'rgba(255, 255, 255, 0.3)' },
-                ]}
-              >
-                Use the Books tab to see scripture distribution
-              </Text>
-            </View>
-          )}
-        </View>
-      ) : (
-        <FlatList
-          data={books}
-          renderItem={renderBookItem}
-          keyExtractor={(item) => item.id}
-          style={styles.list}
-        />
-      )}
-
-      {/* File Uploader Modal */}
+      {/* Modals remain same */}
       <FileUploader
         isVisible={showFileUploader}
         onClose={() => setShowFileUploader(false)}
         onVersesExtracted={handleVersesExtracted}
       />
-
-      {/* Collection Detail Modal */}
       {selectedCollection && (
         <CollectionDetailModal
           collection={selectedCollection}
           isVisible={showCollectionDetail}
-          onClose={() => {
-            setShowCollectionDetail(false)
-            // Keep selectedCollection active for filtering
-          }}
+          onClose={() => setShowCollectionDetail(false)}
         />
       )}
-
-      {/* Book Scriptures Modal */}
       <BookScripturesModal
         isVisible={showBookScriptures}
         onClose={() => setShowBookScriptures(false)}
         scriptures={bookScriptures}
         bookName={selectedBookName}
       />
-
-      {/* Add Verses Modal */}
       <AddVersesModal
         isVisible={showAddVerses}
         onClose={() => setShowAddVerses(false)}
         onVersesAdded={(collectionId, verses) => {
-          console.log(`Added ${verses.length} verses to collection ${collectionId}`);
+          console.log(`Added ${verses.length} verses`);
         }}
       />
     </LinearGradient>
@@ -682,127 +685,249 @@ export default function ArmoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
+    paddingTop: 60, // More top padding
+    paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
-    paddingTop: 20,
+    marginBottom: 30,
   },
   headerContent: {
     flex: 1,
-    marginRight: 12, // Add space between text and button
+  },
+  subtitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  subtitleLine: {
+    width: 20,
+    height: 2,
+    backgroundColor: TACTICAL_THEME.accent,
+    marginRight: 8,
   },
   headerButtons: {
-    gap: 8,
+    flexDirection: 'row',
+    gap: 10,
   },
-  sectionTitle: {
-    marginBottom: 8,
-  },
-  sectionSubtitle: {
-    marginBottom: 4,
-  },
-  addVersesButton: {
+  actionButton: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20, // Pill shape
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 6,
-    gap: 4,
-    minWidth: 80,
-  },
-  addVersesText: {
-    color: TACTICAL_THEME.text,
-    fontWeight: 'bold',
-    fontSize: 10,
-  },
-  uploadButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: TACTICAL_THEME.accent,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
     gap: 6,
-    minWidth: 100, // Ensure consistent width
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  uploadText: {
-    color: TACTICAL_THEME.text,
+  primaryAction: {
+    backgroundColor: TACTICAL_THEME.accent,
+    borderColor: TACTICAL_THEME.accent,
+  },
+  actionButtonText: {
+    color: 'white',
+    fontSize: 12,
     fontWeight: 'bold',
-    fontSize: 11,
+    letterSpacing: 0.5,
+  },
+  contentContainer: {
+    flex: 1,
+  },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    gap: 12,
+  },
+  headerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
   collectionsTitle: {
-    marginBottom: 16,
-    textAlign: 'center',
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 1.5,
   },
   list: {
     flex: 1,
   },
+  // Card Styles
   collectionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: 8,
-    marginBottom: 8,
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
   },
   collectionMainArea: {
     flex: 1,
     padding: 16,
   },
-  collectionArrow: {
-    padding: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   collectionInfo: {
     flex: 1,
+  },
+  collectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
   },
   collectionName: {
     fontSize: 18,
     fontWeight: 'bold',
+    letterSpacing: 0.5,
   },
   collectionDescription: {
-    fontSize: 14,
-    marginTop: 4,
+    fontSize: 13,
+    marginBottom: 12,
   },
-  collectionMeta: {
+  chapterBadgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  collectionCount: {
-    fontSize: 12,
-  },
-  chapterBadge: {
-    fontSize: 11,
-    fontWeight: 'bold',
-    backgroundColor: 'rgba(255, 107, 53, 0.2)',
+    backgroundColor: 'rgba(255, 165, 0, 0.1)',
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
-    overflow: 'hidden',
+    gap: 4,
   },
+  chapterBadgeText: {
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
+  collectionMeta: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  statText: {
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.5,
+  },
+  collectionArrow: {
+    padding: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderLeftWidth: 1,
+    borderLeftColor: 'rgba(255,255,255,0.05)',
+  },
+  arrowCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Book Item Styles
   bookItem: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     marginBottom: 8,
+  },
+  bookIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  bookInfo: {
+    flex: 1,
   },
   bookName: {
     fontSize: 16,
-    fontWeight: '500',
-    marginLeft: 12,
-    flex: 1,
+    fontWeight: '600',
+    marginBottom: 4,
   },
-  bookChapters: {
+  progressBarContainer: {
+    height: 3,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 1.5,
+    width: '60%',
+  },
+  progressBar: {
+    height: '100%',
+    borderRadius: 1.5,
+  },
+  bookStat: {
+    alignItems: 'flex-end',
+  },
+  bookCount: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  bookLabel: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 16,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  emptyIconCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  emptyTitle: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  emptySubtitle: {
+    color: '#888',
+    fontSize: 13,
+    textAlign: 'center',
+    maxWidth: 200,
+  },
+  // Legacy styles needed for filter tabs
+  filterTabs: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 12,
+  },
+  filterTab: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    gap: 8,
+  },
+  activeFilterTab: {
+    backgroundColor: TACTICAL_THEME.accent,
+  },
+  filterTabText: {
     fontSize: 12,
-    marginRight: 8,
+    fontWeight: 'bold',
   },
-  // Distribution styles
   distributionItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -811,10 +936,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   distributionBook: {
+    flex: 1,
+    marginLeft: 12,
     fontSize: 14,
     fontWeight: '500',
-    marginLeft: 8,
-    flex: 1,
   },
   distributionCount: {
     alignItems: 'flex-end',
@@ -832,31 +957,7 @@ const styles = StyleSheet.create({
     padding: 20,
     fontStyle: 'italic',
   },
-  // Filter tab styles
-  filterTabs: {
-    flexDirection: 'row',
-    backgroundColor: TACTICAL_THEME.surface,
-    borderRadius: 8,
-    padding: 4,
-    marginBottom: 16,
-  },
-  filterTab: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
-    gap: 6,
-  },
-  activeFilterTab: {
-    backgroundColor: TACTICAL_THEME.accent,
-  },
-  filterTabText: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
+
   // Section header styles
   sectionHeader: {
     flexDirection: 'row',
@@ -867,6 +968,12 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  sectionTitle: {
+    // Placeholder if needed, but overridden inline
+  },
+  sectionSubtitle: {
+    // Placeholder if needed, but overridden inline
   },
   clearSelectionButton: {
     padding: 8,

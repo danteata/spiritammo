@@ -1,75 +1,121 @@
 import { Collection, Scripture, CollectionChapter } from '@/types/scripture'
+import { bibleApiService } from '@/services/bibleApi'
+import { collections as rawCollections } from './collections-raw'
 
-// Helper function to clean HTML from text
-const cleanText = (htmlText: string): string => {
-  // First, extract and preserve Words of Jesus content
-  const wordsOfJesusRegex = /<span class="wj">(.*?)<\/span>/g
-  let cleanedText = htmlText
+// Helper function to parse verse reference
+const parseReference = (reference: string) => {
+  // Match "Book Chapter:Verse(s)"
+  // e.g., "John 3:16", "Psalm 23:1-6", "2 Samuel 3:20,21"
+  const match = reference.match(/^((?:[1-3]\s)?[A-Za-z]+)\s+(\d+):(.+)$/)
 
-  // Replace Words of Jesus spans with a special marker
-  cleanedText = cleanedText.replace(
-    wordsOfJesusRegex,
-    '{{WJ_START}}$1{{WJ_END}}'
-  )
-
-  // Remove all other HTML tags
-  cleanedText = cleanedText
-    .replace(/<[^>]*>/g, '') // Remove HTML tags
-    .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
-    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-    .trim()
-
-  return cleanedText
-}
-
-// Helper function to extract verse number from reference
-const extractVerseInfo = (reference: string) => {
-  const match = reference.match(/(\d*\s*\w+)\s+(\d+):?(\d+)?/)
-  if (match) {
-    const book = match[1].trim()
-    const chapter = parseInt(match[2])
-    const verse = match[3] ? parseInt(match[3]) : 1
-    return { book, chapter, verse }
+  if (!match) {
+    console.warn(`⚠️ Could not parse reference: "${reference}"`)
+    return null
   }
-  return { book: 'Unknown', chapter: 1, verse: 1 }
+
+  const book = match[1].trim()
+  const chapter = parseInt(match[2])
+  const versePart = match[3].trim()
+
+  return { book, chapter, versePart }
 }
 
 // Transform raw data to Scripture format
-const transformToScriptures = (
+const transformToScriptures = async (
   rawData: any,
   collectionAbbr: string
-): Scripture[] => {
+): Promise<Scripture[]> => {
   const scriptures: Scripture[] = []
   let scriptureId = 1
 
-  Object.keys(rawData).forEach((chapterKey) => {
+  // Ensure Bible API is ready
+  await bibleApiService.waitForInitialization()
+
+  const chapterKeys = Object.keys(rawData)
+
+  for (const chapterKey of chapterKeys) {
     const chapterNumber = parseInt(chapterKey)
     const verses = rawData[chapterKey]
 
-    verses.forEach((verse: any) => {
-      const {
-        book,
-        chapter,
-        verse: verseNum,
-      } = extractVerseInfo(verse.reference)
-      const cleanedText = cleanText(verse.text)
+    for (const verseData of verses) {
+      const parsed = parseReference(verseData.reference)
+
+      if (!parsed) {
+        // Fallback to existing text if parsing fails (stripping HTML)
+        const cleanedText = verseData.text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+        scriptures.push({
+          id: `${collectionAbbr}_${chapterNumber}_${scriptureId}`,
+          book: 'Unknown',
+          chapter: 1,
+          verse: 1,
+          text: cleanedText,
+          reference: verseData.reference,
+          accuracy: Math.floor(Math.random() * 30) + 70,
+          practiceCount: Math.floor(Math.random() * 10),
+          lastPracticed: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+        })
+        scriptureId++
+        continue
+      }
+
+      const { book, chapter, versePart } = parsed
+      let text = ''
+      let startVerse = 0
+      let endVerse = 0
+
+      // Handle ranges (e.g., "1-6")
+      if (versePart.includes('-')) {
+        const [start, end] = versePart.split('-').map(v => parseInt(v.trim()))
+        startVerse = start
+        endVerse = end
+
+        const rangeVerses = await bibleApiService.getVerseRange(book, chapter, start, end)
+        if (rangeVerses.length > 0) {
+          text = rangeVerses.map(v => v.text).join(' ')
+        }
+      }
+      // Handle comma-separated (e.g., "20,21")
+      else if (versePart.includes(',')) {
+        const verses = versePart.split(',').map(v => parseInt(v.trim()))
+        startVerse = verses[0]
+        endVerse = verses[verses.length - 1]
+
+        const fetchedVerses = []
+        for (const v of verses) {
+          const verseObj = await bibleApiService.getVerse(book, chapter, v)
+          if (verseObj) fetchedVerses.push(verseObj.text)
+        }
+        text = fetchedVerses.join(' ')
+      }
+      // Single verse
+      else {
+        startVerse = parseInt(versePart)
+        endVerse = startVerse
+        const verseObj = await bibleApiService.getVerse(book, chapter, startVerse)
+        if (verseObj) text = verseObj.text
+      }
+
+      // Fallback if Bible API returned nothing
+      if (!text) {
+        console.warn(`⚠️ Could not fetch text for ${verseData.reference}, using fallback`)
+        text = verseData.text.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
+      }
 
       scriptures.push({
         id: `${collectionAbbr}_${chapterNumber}_${scriptureId}`,
         book,
         chapter,
-        verse: verseNum,
-        text: cleanedText,
-        reference: verse.reference,
-        accuracy: Math.floor(Math.random() * 30) + 70, // Random accuracy 70-100%
+        verse: startVerse,
+        endVerse: endVerse > startVerse ? endVerse : undefined,
+        text,
+        reference: verseData.reference,
+        accuracy: Math.floor(Math.random() * 30) + 70,
         practiceCount: Math.floor(Math.random() * 10),
-        lastPracticed: new Date(
-          Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000
-        ).toISOString(),
+        lastPracticed: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
       })
       scriptureId++
-    })
-  })
+    }
+  }
 
   return scriptures
 }
@@ -94,13 +140,13 @@ const createChapters = (
       name: `Chapter ${chapterNumber}`,
       description: `${chapterScriptures.length} verses from chapter ${chapterNumber}`,
       scriptures: chapterScriptures.map((s) => s.id),
-      isCompleted: Math.random() > 0.7, // Random completion status
+      isCompleted: Math.random() > 0.7,
       averageAccuracy: Math.floor(Math.random() * 30) + 70,
       lastPracticed:
         Math.random() > 0.5
           ? new Date(
-              Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000
-            ).toISOString()
+            Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000
+          ).toISOString()
           : undefined,
       isCustomSection: false,
     })
@@ -109,19 +155,17 @@ const createChapters = (
   return chapters.sort((a, b) => a.chapterNumber - b.chapterNumber)
 }
 
-// Collection definitions with full names and abbreviations
+// Collection definitions
 const collectionDefinitions = {
   POSE: {
     name: 'What it Means to be a Shepherd',
     abbreviation: 'POSE',
-    description:
-      "Biblical teachings on pastoral care and shepherding God's people",
+    description: "Biblical teachings on pastoral care and shepherding God's people",
   },
   LAD: {
     name: 'Loyalty and Disloyalty',
     abbreviation: 'LAD',
-    description:
-      'Scriptures about faithfulness, betrayal, and loyalty in leadership',
+    description: 'Scriptures about faithfulness, betrayal, and loyalty in leadership',
   },
   MC: {
     name: 'MegaChurch',
@@ -140,115 +184,111 @@ const collectionDefinitions = {
   },
 }
 
-// Raw data import (you'll need to import your actual raw data here)
-import { collections as rawCollections } from './collections-raw'
+// Main transformation function
+export const transformCollections = async (): Promise<{
+  collections: Collection[]
+  scriptures: Scripture[]
+}> => {
+  const transformedCollections: Collection[] = []
+  const transformedScriptures: Scripture[] = []
 
-// Transform all collections
-export const transformedCollections: Collection[] = []
-export const transformedScriptures: Scripture[] = []
+  console.log('🔄 Starting legacy collection transformation...')
 
-// Process POSE collection (What it Means to be a Shepherd)
-if (rawCollections.POSE) {
-  const poseScriptures = transformToScriptures(rawCollections.POSE, 'POSE')
-  const poseChapters = createChapters(
-    rawCollections.POSE,
-    poseScriptures,
-    'POSE'
-  )
+  // Process POSE
+  if (rawCollections.POSE) {
+    const poseScriptures = await transformToScriptures(rawCollections.POSE, 'POSE')
+    const poseChapters = createChapters(rawCollections.POSE, poseScriptures, 'POSE')
 
-  transformedScriptures.push(...poseScriptures)
+    transformedScriptures.push(...poseScriptures)
+    transformedCollections.push({
+      id: 'collection_pose',
+      name: collectionDefinitions.POSE.name,
+      abbreviation: collectionDefinitions.POSE.abbreviation,
+      description: collectionDefinitions.POSE.description,
+      scriptures: poseScriptures.map((s) => s.id),
+      createdAt: new Date().toISOString(),
+      tags: ['pastoral', 'shepherding', 'leadership'],
+      isChapterBased: true,
+      chapters: poseChapters,
+      sourceBook: 'Mixed',
+      bookInfo: {
+        totalChapters: poseChapters.length,
+        completedChapters: poseChapters.filter((c) => c.isCompleted).length,
+        averageAccuracy:
+          poseChapters.reduce((sum, c) => sum + (c.averageAccuracy || 0), 0) /
+          poseChapters.length,
+      },
+    })
+  }
 
-  transformedCollections.push({
-    id: 'collection_pose',
-    name: collectionDefinitions.POSE.name,
-    abbreviation: collectionDefinitions.POSE.abbreviation,
-    description: collectionDefinitions.POSE.description,
-    scriptures: poseScriptures.map((s) => s.id),
-    createdAt: new Date().toISOString(),
-    tags: ['pastoral', 'shepherding', 'leadership'],
-    isChapterBased: true,
-    chapters: poseChapters,
-    sourceBook: 'Mixed',
-    bookInfo: {
-      totalChapters: poseChapters.length,
-      completedChapters: poseChapters.filter((c) => c.isCompleted).length,
-      averageAccuracy:
-        poseChapters.reduce((sum, c) => sum + (c.averageAccuracy || 0), 0) /
-        poseChapters.length,
+  // Process LAD
+  if (rawCollections.LAD) {
+    const ladScriptures = await transformToScriptures(rawCollections.LAD, 'LAD')
+    const ladChapters = createChapters(rawCollections.LAD, ladScriptures, 'LAD')
+
+    transformedScriptures.push(...ladScriptures)
+    transformedCollections.push({
+      id: 'collection_lad',
+      name: collectionDefinitions.LAD.name,
+      abbreviation: collectionDefinitions.LAD.abbreviation,
+      description: collectionDefinitions.LAD.description,
+      scriptures: ladScriptures.map((s) => s.id),
+      createdAt: new Date().toISOString(),
+      tags: ['loyalty', 'faithfulness', 'betrayal', 'leadership'],
+      isChapterBased: true,
+      chapters: ladChapters,
+      sourceBook: 'Mixed',
+      bookInfo: {
+        totalChapters: ladChapters.length,
+        completedChapters: ladChapters.filter((c) => c.isCompleted).length,
+        averageAccuracy:
+          ladChapters.reduce((sum, c) => sum + (c.averageAccuracy || 0), 0) /
+          ladChapters.length,
+      },
+    })
+  }
+
+  // Add placeholders for others
+  const placeholderCollections = [
+    {
+      id: 'collection_mc',
+      name: collectionDefinitions.MC.name,
+      abbreviation: collectionDefinitions.MC.abbreviation,
+      description: collectionDefinitions.MC.description,
+      scriptures: [],
+      createdAt: new Date().toISOString(),
+      tags: ['megachurch', 'large-ministry', 'leadership'],
+      isChapterBased: false,
     },
-  })
-}
-
-// Process LAD collection (Loyalty and Disloyalty)
-if (rawCollections.LAD) {
-  const ladScriptures = transformToScriptures(rawCollections.LAD, 'LAD')
-  const ladChapters = createChapters(rawCollections.LAD, ladScriptures, 'LAD')
-
-  transformedScriptures.push(...ladScriptures)
-
-  transformedCollections.push({
-    id: 'collection_lad',
-    name: collectionDefinitions.LAD.name,
-    abbreviation: collectionDefinitions.LAD.abbreviation,
-    description: collectionDefinitions.LAD.description,
-    scriptures: ladScriptures.map((s) => s.id),
-    createdAt: new Date().toISOString(),
-    tags: ['loyalty', 'faithfulness', 'betrayal', 'leadership'],
-    isChapterBased: true,
-    chapters: ladChapters,
-    sourceBook: 'Mixed',
-    bookInfo: {
-      totalChapters: ladChapters.length,
-      completedChapters: ladChapters.filter((c) => c.isCompleted).length,
-      averageAccuracy:
-        ladChapters.reduce((sum, c) => sum + (c.averageAccuracy || 0), 0) /
-        ladChapters.length,
+    {
+      id: 'collection_typm',
+      name: collectionDefinitions.TYPM.name,
+      abbreviation: collectionDefinitions.TYPM.abbreviation,
+      description: collectionDefinitions.TYPM.description,
+      scriptures: [],
+      createdAt: new Date().toISOString(),
+      tags: ['transformation', 'pastoral', 'ministry'],
+      isChapterBased: false,
     },
-  })
+    {
+      id: 'collection_aol',
+      name: collectionDefinitions.AOL.name,
+      abbreviation: collectionDefinitions.AOL.abbreviation,
+      description: collectionDefinitions.AOL.description,
+      scriptures: [],
+      createdAt: new Date().toISOString(),
+      tags: ['leadership', 'art', 'principles'],
+      isChapterBased: false,
+    },
+  ]
+
+  transformedCollections.push(...placeholderCollections)
+
+  console.log(`✅ Transformation complete: ${transformedCollections.length} collections, ${transformedScriptures.length} scriptures`)
+
+  return {
+    collections: transformedCollections,
+    scriptures: transformedScriptures,
+  }
 }
 
-// Process remaining collections if they exist in raw data
-// Note: Add MC, TYPM, AOL processing here when raw data is available
-
-// For now, create placeholder collections for the other abbreviations
-const placeholderCollections = [
-  {
-    id: 'collection_mc',
-    name: collectionDefinitions.MC.name,
-    abbreviation: collectionDefinitions.MC.abbreviation,
-    description: collectionDefinitions.MC.description,
-    scriptures: [],
-    createdAt: new Date().toISOString(),
-    tags: ['megachurch', 'large-ministry', 'leadership'],
-    isChapterBased: false,
-  },
-  {
-    id: 'collection_typm',
-    name: collectionDefinitions.TYPM.name,
-    abbreviation: collectionDefinitions.TYPM.abbreviation,
-    description: collectionDefinitions.TYPM.description,
-    scriptures: [],
-    createdAt: new Date().toISOString(),
-    tags: ['transformation', 'pastoral', 'ministry'],
-    isChapterBased: false,
-  },
-  {
-    id: 'collection_aol',
-    name: collectionDefinitions.AOL.name,
-    abbreviation: collectionDefinitions.AOL.abbreviation,
-    description: collectionDefinitions.AOL.description,
-    scriptures: [],
-    createdAt: new Date().toISOString(),
-    tags: ['leadership', 'art', 'principles'],
-    isChapterBased: false,
-  },
-]
-
-// Add placeholder collections (will be replaced when raw data is available)
-transformedCollections.push(...placeholderCollections)
-
-// Export for use in the app
-export {
-  transformedCollections as collections,
-  transformedScriptures as scriptures,
-}

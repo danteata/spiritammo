@@ -242,12 +242,11 @@ const styles = StyleSheet.create({
   versesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
   },
   verseButton: {
-    width: '14%',
+    width: '18%',
     aspectRatio: 1,
-    marginHorizontal: '1.5%',
     marginBottom: 12,
     backgroundColor: TACTICAL_THEME.surface,
     borderRadius: 50,

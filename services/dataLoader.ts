@@ -1,9 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Collection, Scripture } from '@/types/scripture'
-import {
-  collections as transformedCollections,
-  scriptures as transformedScriptures,
-} from '@/mocks/collections-transformed'
+import { transformCollections } from '@/mocks/collections-transformed'
 
 const COLLECTIONS_KEY = '@spiritammo_collections'
 const SCRIPTURES_KEY = '@spiritammo_scriptures'
@@ -40,6 +37,12 @@ export class DataLoaderService {
       // Get existing data
       const existingCollections = await this.getExistingCollections()
       const existingScriptures = await this.getExistingScriptures()
+
+      // Transform legacy data
+      const {
+        collections: transformedCollections,
+        scriptures: transformedScriptures
+      } = await transformCollections()
 
       // Merge with transformed data (avoid duplicates)
       const mergedCollections = this.mergeCollections(
