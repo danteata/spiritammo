@@ -3,7 +3,9 @@ const { withNativeWind } = require("nativewind/metro");
 
 const config = getDefaultConfig(__dirname);
 
-// Add XML files as text assets
-config.resolver.assetExts.push('xml');
+// Ensure XML files are treated as assets, not source files
+const { assetExts, sourceExts } = config.resolver;
+config.resolver.assetExts = [...assetExts, 'xml'];
+config.resolver.sourceExts = sourceExts.filter(ext => ext !== 'xml');
 
 module.exports = withNativeWind(config, { input: "./src/global.css" });

@@ -34,7 +34,7 @@ export default function TabLayout() {
         options={{
           title: 'SpiritAmmo',
           tabBarLabel: 'Home',
-          tabBarIcon: ({ color }) => <FontAwesome name="home" color={color} />,
+          tabBarIcon: ({ color }) => <FontAwesome name="home" size={24} color={color} />,
         }}
       />
       <Tabs.Screen

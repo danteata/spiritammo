@@ -1,6 +1,8 @@
 import React from 'react'
 import { StyleSheet, Text, ScrollView, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
+import { Feather } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
 import { GRADIENTS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 import { Collection } from '@/types/scripture'
@@ -19,6 +21,7 @@ export default function HomeScreen() {
     setCurrentScripture,
     updateScriptureAccuracy,
   } = useAppStore()
+  const router = useRouter()
 
   const [selectedCollection, setSelectedCollection] =
     React.useState<Collection | null>(null)
@@ -50,8 +53,12 @@ export default function HomeScreen() {
   }
 
   const handleRecordingComplete = (accuracy: number) => {
+    console.log('🏠 Home: handleRecordingComplete called with accuracy:', accuracy)
     if (currentScripture) {
+      console.log('🏠 Home: Updating scripture accuracy for:', currentScripture.id)
       updateScriptureAccuracy(currentScripture.id, accuracy)
+    } else {
+      console.warn('🏠 Home: No current scripture to update')
     }
   }
 
@@ -88,9 +95,18 @@ export default function HomeScreen() {
           </>
         ) : (
           <View style={styles.emptyState}>
-            <Text style={{ color: 'white', textAlign: 'center', opacity: 0.7 }}>
-              No ammunition loaded. Select an arsenal or import verses.
+            <View style={styles.emptyIconCircle}>
+              <Feather name="shield" size={48} color="rgba(255,255,255,0.2)" />
+            </View>
+            <Text style={[styles.emptyTitle, { color: 'white' }]}>NO AMMUNITION LOADED</Text>
+            <Text style={[styles.emptySubtitle, { color: 'rgba(255,255,255,0.6)' }]}>
+              Select an arsenal or import verses to begin your training.
             </Text>
+            <ActionButton
+              title="GO TO ARMORY"
+              onPress={() => router.push('/armory')}
+              style={{ marginTop: 24, width: '100%' }}
+            />
           </View>
         )}
       </ScrollView>
@@ -140,5 +156,30 @@ const styles = StyleSheet.create({
     padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
+    marginTop: 40,
+  },
+  emptyIconCircle: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 1.5,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptySubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    maxWidth: '80%',
   },
 })

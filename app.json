@@ -50,7 +50,8 @@
         }
       ],
       "expo-font",
-      "./plugins/withAndroidAsset"
+      "./plugins/withAndroidAsset",
+      "./plugins/withJvmTarget"
     ],
     "experiments": {
       "typedRoutes": true

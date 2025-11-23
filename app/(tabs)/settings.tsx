@@ -1,179 +1,166 @@
 import React, { useState } from 'react'
-import { StyleSheet, Text, View, ScrollView, Switch } from 'react-native'
-// import Slider from '@react-native-community/slider' // Temporarily disabled due to Android 15 crash
+import { StyleSheet, Text, View, ScrollView, Switch, TouchableOpacity } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { COLORS, GRADIENTS } from '@/constants/colors'
+import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
-import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function SettingsScreen() {
   const { isDark, setTheme, userSettings, saveUserSettings } = useAppStore()
-
-  const [localSettings, setLocalSettings] = useState(userSettings)
 
   const handleThemeChange = (value: boolean) => {
     setTheme(value ? 'dark' : 'light')
   }
 
-  const handleVoiceRateChange = (value: number) => {
-    setLocalSettings((prev) => ({
-      ...prev,
-      voiceRate: value,
-    }))
-
+  const handleVoiceEngineChange = (engine: 'whisper' | 'native') => {
     saveUserSettings({
-      ...localSettings,
-      voiceRate: value,
-    })
-  }
-
-  const handleVoicePitchChange = (value: number) => {
-    setLocalSettings((prev) => ({
-      ...prev,
-      voicePitch: value,
-    }))
-
-    saveUserSettings({
-      ...localSettings,
-      voicePitch: value,
+      ...userSettings,
+      voiceEngine: engine,
     })
   }
 
   const backgroundColors = isDark
-    ? GRADIENTS.primary.dark as [string, string, string]
-    : GRADIENTS.primary.light as [string, string, string]
-  const textColor = isDark ? COLORS.text.dark : COLORS.text.light
+    ? (['#0a1505', '#1a2f0a', '#0f1a05'] as const)
+    : (['#4A6B2A', '#2D5016', '#1a2f0a'] as const)
+
   const cardBackground = isDark
-    ? 'rgba(255, 255, 255, 0.1)'
-    : 'rgba(0, 0, 0, 0.05)'
+    ? 'rgba(255, 255, 255, 0.05)'
+    : 'rgba(0, 0, 0, 0.03)'
+
+  const borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
 
   return (
     <LinearGradient
       colors={backgroundColors}
       style={styles.container}
       start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
+      end={{ x: 1, y: 1 }}
     >
-      <ScrollView style={styles.scrollView}>
-        <Text style={[styles.sectionTitle, { color: 'white' }]}>
-          Command Center
-        </Text>
-
-        <View style={[styles.card, { backgroundColor: cardBackground }]}>
-          <Text style={[styles.cardTitle, { color: textColor }]}>
-            Display Settings
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 40 }}>
+        <View style={styles.header}>
+          <Text
+            style={[
+              MILITARY_TYPOGRAPHY.heading,
+              { color: 'white', fontSize: 28, letterSpacing: 1 },
+            ]}
+          >
+            COMMAND CENTER
           </Text>
+          <View style={styles.subtitleContainer}>
+            <View style={styles.subtitleLine} />
+            <Text
+              style={[
+                MILITARY_TYPOGRAPHY.caption,
+                { color: TACTICAL_THEME.accent, letterSpacing: 2 },
+              ]}
+            >
+              SYSTEM CONFIGURATION
+            </Text>
+          </View>
+        </View>
+
+        {/* Display Settings */}
+        <View style={[styles.card, { backgroundColor: cardBackground, borderColor, borderWidth: 1 }]}>
+          <View style={styles.cardHeader}>
+            <Feather name="monitor" size={18} color={TACTICAL_THEME.accent} />
+            <Text style={[styles.cardTitle, { color: isDark ? 'white' : 'black' }]}>
+              VISUAL INTERFACE
+            </Text>
+          </View>
 
           <View style={styles.settingRow}>
-            <View style={styles.settingLabelContainer}>
-              <Text style={[styles.settingLabel, { color: textColor }]}>
-                Dark Mode
+            <View style={styles.settingInfo}>
+              <Text style={[styles.settingLabel, { color: isDark ? 'white' : 'black' }]}>
+                Night Vision
               </Text>
-              {isDark ? (
-                <Ionicons name="moon" size={20} color={textColor} />
-              ) : (
-                <Ionicons name="sunny" size={20} color={textColor} />
-              )}
+              <Text style={[styles.settingDescription, { color: isDark ? '#aaa' : '#666' }]}>
+                Tactical dark mode for low-light operations
+              </Text>
             </View>
-
             <Switch
               value={isDark}
               onValueChange={handleThemeChange}
-              trackColor={{ false: '#767577', true: COLORS.primary.light }}
-              thumbColor={isDark ? COLORS.primary.main : '#f4f3f4'}
-              testID="dark-mode-switch"
+              trackColor={{ false: '#767577', true: 'rgba(255, 165, 0, 0.5)' }}
+              thumbColor={isDark ? TACTICAL_THEME.accent : '#f4f3f4'}
             />
           </View>
         </View>
 
-        <View style={[styles.card, { backgroundColor: cardBackground }]}>
-          <Text style={[styles.cardTitle, { color: textColor }]}>
-            Voice Settings
-          </Text>
-          
-          {/* Sliders temporarily disabled due to Android 15 crash bug */}
-          <Text style={[styles.aboutText, { color: textColor }]}>
-            Voice settings temporarily unavailable
-          </Text>
-
-          {/*
-          <View style={styles.settingRow}>
-            <View style={styles.settingLabelContainer}>
-              <Text style={[styles.settingLabel, { color: textColor }]}>
-                Speech Rate
-              </Text>
-              <Ionicons name="volume-high" size={20} color={textColor} />
-            </View>
-
-            <View style={styles.sliderContainer}>
-              <Ionicons name="volume-mute" size={16} color={textColor} />
-              <Slider
-                style={styles.slider}
-                minimumValue={0.5}
-                maximumValue={2.0}
-                step={0.1}
-                value={localSettings.voiceRate}
-                onValueChange={handleVoiceRateChange}
-                minimumTrackTintColor={COLORS.primary.main}
-                maximumTrackTintColor={
-                  isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
-                }
-                thumbTintColor={COLORS.primary.main}
-                testID="voice-rate-slider"
-              />
-              <Ionicons name="volume-high" size={16} color={textColor} />
-            </View>
-            <Text style={[styles.sliderValue, { color: textColor }]}>
-              {localSettings.voiceRate.toFixed(1)}x
+        {/* Audio Intelligence */}
+        <View style={[styles.card, { backgroundColor: cardBackground, borderColor, borderWidth: 1 }]}>
+          <View style={styles.cardHeader}>
+            <MaterialCommunityIcons name="waveform" size={20} color={TACTICAL_THEME.accent} />
+            <Text style={[styles.cardTitle, { color: isDark ? 'white' : 'black' }]}>
+              AUDIO INTELLIGENCE
             </Text>
           </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingLabelContainer}>
-              <Text style={[styles.settingLabel, { color: textColor }]}>
-                Speech Pitch
-              </Text>
-              <Ionicons name="volume-high" size={20} color={textColor} />
-            </View>
+          <Text style={[styles.sectionDescription, { color: isDark ? '#aaa' : '#666' }]}>
+            Select the protocol for analyzing your recitation accuracy.
+          </Text>
 
-            <View style={styles.sliderContainer}>
-              <Text style={{ color: textColor }}>Low</Text>
-              <Slider
-                style={styles.slider}
-                minimumValue={0.5}
-                maximumValue={2.0}
-                step={0.1}
-                value={localSettings.voicePitch}
-                onValueChange={handleVoicePitchChange}
-                minimumTrackTintColor={COLORS.primary.main}
-                maximumTrackTintColor={
-                  isDark ? 'rgba(255, 255, 255, 0.3)' : 'rgba(0, 0, 0, 0.3)'
-                }
-                thumbTintColor={COLORS.primary.main}
-                testID="voice-pitch-slider"
-              />
-              <Text style={{ color: textColor }}>High</Text>
+          <TouchableOpacity
+            style={[
+              styles.optionButton,
+              userSettings.voiceEngine === 'whisper' && styles.selectedOption,
+              { borderColor: userSettings.voiceEngine === 'whisper' ? TACTICAL_THEME.accent : borderColor }
+            ]}
+            onPress={() => handleVoiceEngineChange('whisper')}
+          >
+            <View style={styles.optionHeader}>
+              <View style={styles.optionTitleRow}>
+                <MaterialCommunityIcons name="brain" size={18} color={userSettings.voiceEngine === 'whisper' ? TACTICAL_THEME.accent : (isDark ? '#888' : '#666')} />
+                <Text style={[styles.optionTitle, { color: isDark ? 'white' : 'black' }]}>Neural Core (Whisper AI)</Text>
+              </View>
+              {userSettings.voiceEngine === 'whisper' && <View style={styles.activeDot} />}
             </View>
-            <Text style={[styles.sliderValue, { color: textColor }]}>
-              {localSettings.voicePitch.toFixed(1)}x
+            <Text style={[styles.optionDescription, { color: isDark ? '#aaa' : '#666' }]}>
+              Advanced AI processing. Highest accuracy for complex verses. Requires internet for best results.
             </Text>
-          </View>
-          */}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.optionButton,
+              userSettings.voiceEngine === 'native' && styles.selectedOption,
+              { borderColor: userSettings.voiceEngine === 'native' ? TACTICAL_THEME.accent : borderColor }
+            ]}
+            onPress={() => handleVoiceEngineChange('native')}
+          >
+            <View style={styles.optionHeader}>
+              <View style={styles.optionTitleRow}>
+                <Feather name="mic" size={18} color={userSettings.voiceEngine === 'native' ? TACTICAL_THEME.accent : (isDark ? '#888' : '#666')} />
+                <Text style={[styles.optionTitle, { color: isDark ? 'white' : 'black' }]}>Standard Comms (Native)</Text>
+              </View>
+              {userSettings.voiceEngine === 'native' && <View style={styles.activeDot} />}
+            </View>
+            <Text style={[styles.optionDescription, { color: isDark ? '#aaa' : '#666' }]}>
+              On-device speech recognition. Faster response time, works offline. Good for quick drills.
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        <View style={[styles.card, { backgroundColor: cardBackground }]}>
-          <Text style={[styles.cardTitle, { color: textColor }]}>About</Text>
+        {/* About */}
+        <View style={[styles.card, { backgroundColor: cardBackground, borderColor, borderWidth: 1 }]}>
+          <View style={styles.cardHeader}>
+            <FontAwesome name="info-circle" size={18} color={TACTICAL_THEME.accent} />
+            <Text style={[styles.cardTitle, { color: isDark ? 'white' : 'black' }]}>
+              MISSION BRIEF
+            </Text>
+          </View>
 
-          <Text style={[styles.aboutText, { color: textColor }]}>
-            SpiritAmmo v1.0.0
-          </Text>
+          <View style={styles.aboutContent}>
+            <Text style={[styles.aboutLabel, { color: TACTICAL_THEME.accent }]}>VERSION</Text>
+            <Text style={[styles.aboutValue, { color: isDark ? 'white' : 'black' }]}>1.0.0 (Alpha)</Text>
 
-          <Text style={[styles.aboutText, { color: textColor }]}>
-            Your spiritual armory for scripture memorization
-          </Text>
+            <Text style={[styles.aboutLabel, { color: TACTICAL_THEME.accent, marginTop: 12 }]}>OBJECTIVE</Text>
+            <Text style={[styles.aboutValue, { color: isDark ? 'white' : 'black' }]}>
+              To equip the saints with the Sword of the Spirit through tactical memorization and rigorous training.
+            </Text>
+          </View>
 
-          <Text style={[styles.copyright, { color: textColor }]}>
-            © 2025 SpiritAmmo
+          <Text style={[styles.copyright, { color: isDark ? '#666' : '#999' }]}>
+            © 2025 SpiritAmmo Defense Systems
           </Text>
         </View>
       </ScrollView>
@@ -187,59 +174,114 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    padding: 16,
+    padding: 20,
+    paddingTop: 60,
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 16,
+  header: {
+    marginBottom: 30,
+  },
+  subtitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  subtitleLine: {
+    width: 20,
+    height: 2,
+    backgroundColor: TACTICAL_THEME.accent,
+    marginRight: 8,
   },
   card: {
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
+    marginBottom: 20,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 16,
+    gap: 10,
   },
   cardTitle: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: 'bold',
-    marginBottom: 16,
+    letterSpacing: 1,
   },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
   },
-  settingLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  settingInfo: {
+    flex: 1,
+    marginRight: 16,
   },
   settingLabel: {
     fontSize: 16,
-    marginRight: 8,
+    fontWeight: '600',
+    marginBottom: 4,
   },
-  sliderContainer: {
-    flex: 1,
+  settingDescription: {
+    fontSize: 12,
+  },
+  sectionDescription: {
+    fontSize: 13,
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  optionButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 12,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  selectedOption: {
+    backgroundColor: 'rgba(255, 165, 0, 0.05)',
+  },
+  optionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  optionTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 16,
+    gap: 8,
   },
-  slider: {
-    flex: 1,
-    marginHorizontal: 8,
-  },
-  sliderValue: {
-    width: 40,
-    textAlign: 'right',
+  optionTitle: {
     fontSize: 14,
+    fontWeight: 'bold',
   },
-  aboutText: {
+  activeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: TACTICAL_THEME.accent,
+  },
+  optionDescription: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginLeft: 26, // Align with text
+  },
+  aboutContent: {
+    marginTop: 4,
+  },
+  aboutLabel: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  aboutValue: {
     fontSize: 14,
-    marginBottom: 8,
+    lineHeight: 20,
   },
   copyright: {
-    fontSize: 12,
-    marginTop: 16,
+    fontSize: 10,
+    marginTop: 20,
     textAlign: 'center',
+    opacity: 0.7,
   },
 })
