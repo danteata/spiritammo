@@ -108,7 +108,14 @@ export const generateBattleIntel = async (
 
     // Call the API route for all platforms
     console.log('📡 Requesting battle intelligence from API...');
-    const response = await fetch('/api/battle-intel', {
+
+    // Use configured API URL or fallback to relative path (works for web/dev)
+    const baseUrl = process.env.EXPO_PUBLIC_API_URL || '';
+    const apiUrl = `${baseUrl}/api/battle-intel`;
+
+    console.log(`📡 Fetching from: ${apiUrl}`);
+
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
