@@ -70,6 +70,7 @@ type AppState = {
   getScripturesByBookAndChapter: (bookId: string, chapter: number) => Scripture[]
   getRandomScripture: () => Scripture | null
   updateScriptureAccuracy: (scriptureId: string, accuracy: number) => Promise<boolean>
+  updateScriptureMnemonic: (scriptureId: string, mnemonic: string) => Promise<boolean>
   addCollection: (collection: Collection) => Promise<boolean>
   addScripturesToCollection: (collectionId: string, scriptureIds: string[]) => Promise<boolean>
   removeScriptureFromCollection: (collectionId: string, scriptureId: string) => Promise<boolean>
@@ -455,6 +456,42 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       return true
     } catch (error) {
       console.error('Failed to update scripture accuracy:', error)
+      return false
+    }
+  },
+
+  updateScriptureMnemonic: async (scriptureId: string, mnemonic: string) => {
+    try {
+      console.log('🧠 updateScriptureMnemonic called:', { scriptureId })
+      const db = await getDb();
+
+      if (!db) {
+        console.error('Database not initialized');
+        return false;
+      }
+
+      // 1. Update in DB
+      await db.update(scripturesTable)
+        .set({ mnemonic })
+        .where(eq(scripturesTable.id, scriptureId));
+
+      // 2. Update State
+      const updatedScriptures = get().scriptures.map((scripture: Scripture) =>
+        scripture.id === scriptureId
+          ? { ...scripture, mnemonic }
+          : scripture
+      )
+
+      set({ scriptures: updatedScriptures })
+
+      if (get().currentScripture?.id === scriptureId) {
+        set({ currentScripture: { ...get().currentScripture!, mnemonic } })
+      }
+
+      console.log('🧠 Mnemonic updated in DB and State');
+      return true
+    } catch (error) {
+      console.error('Failed to update scripture mnemonic:', error)
       return false
     }
   },

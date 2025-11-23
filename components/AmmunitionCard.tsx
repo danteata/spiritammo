@@ -20,7 +20,7 @@ interface AmmunitionCardProps {
   scripture: Scripture
   onFire: () => void
   onReload: () => void
-  onIntel: () => void // Generate mnemonic
+  onIntel: (force?: boolean) => void // Generate mnemonic
   isLoading?: boolean
 }
 
@@ -145,14 +145,42 @@ export default function AmmunitionCard({
         {scripture.mnemonic && (
           <View style={styles.mnemonicContainer}>
             <View style={styles.mnemonicHeader}>
-              <FontAwesome5 name="brain" size={16} color={TACTICAL_THEME.accent} />
-              <Text style={[styles.mnemonicLabel, MILITARY_TYPOGRAPHY.caption]}>
-                BATTLE INTEL
-              </Text>
+              <View style={styles.mnemonicTitle}>
+                <FontAwesome5 name="brain" size={16} color={TACTICAL_THEME.accent} />
+                <Text style={[styles.mnemonicLabel, MILITARY_TYPOGRAPHY.caption]}>
+                  BATTLE INTEL
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => onIntel(true)}
+                disabled={isLoading}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <FontAwesome name="refresh" size={14} color={TACTICAL_THEME.accent} />
+              </TouchableOpacity>
             </View>
-            <Text style={[styles.mnemonicText, MILITARY_TYPOGRAPHY.caption]}>
-              {scripture.mnemonic}
-            </Text>
+            <View style={styles.mnemonicContent}>
+              {scripture.mnemonic.includes('\n---\n') ? (
+                <>
+                  <View style={styles.planSection}>
+                    <Text style={[styles.planLabel, MILITARY_TYPOGRAPHY.caption]}>PLAN:</Text>
+                    <Text style={[styles.planText, MILITARY_TYPOGRAPHY.body]}>
+                      {scripture.mnemonic.split('\n---\n')[0]}
+                    </Text>
+                  </View>
+                  <View style={styles.notesSection}>
+                    <Text style={[styles.notesLabel, MILITARY_TYPOGRAPHY.caption]}>TACTICS:</Text>
+                    <Text style={[styles.notesText, MILITARY_TYPOGRAPHY.caption]}>
+                      {scripture.mnemonic.split('\n---\n')[1]}
+                    </Text>
+                  </View>
+                </>
+              ) : (
+                <Text style={[styles.mnemonicText, MILITARY_TYPOGRAPHY.caption]}>
+                  {scripture.mnemonic}
+                </Text>
+              )}
+            </View>
           </View>
         )}
 
@@ -217,8 +245,8 @@ export default function AmmunitionCard({
 
           <TouchableOpacity
             style={[styles.actionButton, styles.intelButton]}
-            onPress={onIntel}
-            disabled={isLoading}
+            onPress={() => onIntel(false)}
+            disabled={isLoading || !!scripture.mnemonic}
             testID="intel-button"
           >
             <FontAwesome5 name="brain" size={20} color={TACTICAL_THEME.text} />
@@ -304,11 +332,48 @@ const styles = StyleSheet.create({
   mnemonicHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 8,
+  },
+  mnemonicTitle: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   mnemonicLabel: {
     color: TACTICAL_THEME.accent,
     marginLeft: 8,
+  },
+  mnemonicContent: {
+    gap: 12,
+  },
+  planSection: {
+    marginBottom: 4,
+  },
+  planLabel: {
+    color: TACTICAL_THEME.accent,
+    fontSize: 10,
+    marginBottom: 2,
+    opacity: 0.8,
+  },
+  planText: {
+    color: TACTICAL_THEME.text,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  notesSection: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.1)',
+    paddingTop: 8,
+  },
+  notesLabel: {
+    color: TACTICAL_THEME.textSecondary,
+    fontSize: 10,
+    marginBottom: 2,
+  },
+  notesText: {
+    color: TACTICAL_THEME.textSecondary,
+    fontStyle: 'italic',
+    fontSize: 12,
   },
   mnemonicText: {
     color: TACTICAL_THEME.text,

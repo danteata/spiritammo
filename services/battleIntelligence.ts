@@ -1,5 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Scripture } from '@/types/scripture'
+import { OpenAI } from 'openai'
+
+// Initialize OpenAI client for Gemini compatibility
+const openai = new OpenAI({
+  apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'fake-key-for-dev',
+  dangerouslyAllowBrowser: true,
+  baseURL: `${process.env.EXPO_PUBLIC_GEMINI_API_BASE_URL ||
+    'https://generativelanguage.googleapis.com'
+    }/${process.env.EXPO_PUBLIC_GEMINI_API_VERSION || 'v1beta'}/openai/`,
+  defaultHeaders: {
+    'x-goog-api-key':
+      process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'fake-key-for-dev',
+  },
+})
 
 // Battle Intelligence Types
 export interface IntelRequest {
@@ -106,48 +120,63 @@ export const generateBattleIntel = async (
       }
     }
 
-    // Call the API route for all platforms
-    console.log('📡 Requesting battle intelligence from API...');
+    // Call Gemini API directly
+    console.log('📡 Requesting battle intelligence from Gemini...');
 
-    // Use configured API URL or fallback to relative path (works for web/dev)
-    const baseUrl = process.env.EXPO_PUBLIC_API_URL || '';
-    const apiUrl = `${baseUrl}/api/battle-intel`;
+    const { reference, text, missionContext } = request;
 
-    console.log(`📡 Fetching from: ${apiUrl}`);
+    // Create prompt for Gemini
+    const prompt = `You are a military strategist creating battle intelligence from biblical scriptures. 
+    Convert the following scripture into a military-themed mnemonic for memorization.
+    
+    CRITICAL OBJECTIVE: The mnemonic must be SHORTER and SIMPLER than the verse itself. It must be catchy and easy to recall.
+    
+    Scripture Reference: ${reference}
+    Scripture Text: ${text}
+    ${missionContext ? `Mission Context: ${missionContext}` : ''}
+    
+    Create a creative, memorable military-themed mnemonic that connects the scripture reference numbers 
+    and key words to military concepts. Include:
+    1. A battle plan/mnemonic (EXTREMELY CONCISE, catchy. MUST integrate the chapter and verse numbers into the sentence itself, not just as a prefix)
+    2. Tactical notes explaining the military metaphor
+    3. A reliability score (0-100) indicating confidence in the mnemonic quality
+    
+    Format your response as JSON with these exact keys:
+    - battlePlan: string
+    - tacticalNotes: string
+    - reliability: number
+    
+    Example format:
+    {
+      "battlePlan": "ACTS-6:4: 6 soldiers deployed with 4 weapons: Prayer and the Word!",
+      "tacticalNotes": "Military metaphor connecting Acts 6:4 to spiritual warfare with 6 soldiers representing the chapter and 4 weapons representing the verse.",
+      "reliability": 95
+    }`
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(request),
+    const completion = await openai.chat.completions.create({
+      model: process.env.EXPO_PUBLIC_GEMINI_API_MODEL || 'gemini-2.5-flash',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: parseFloat(process.env.EXPO_PUBLIC_GEMINI_API_TEMPERATURE || '0.7'),
     })
 
-    console.log('🎯 Battle Intel API Response:', {
-      status: response.status,
-      ok: response.ok,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
-    });
+    const responseContent = completion.choices[0]?.message?.content || '{}'
+    console.log('🎯 Gemini Response:', responseContent)
 
-    if (!response.ok) {
-      const errorBody = await response.text()
-      console.error('API request failed with status:', response.status, errorBody)
-      throw new Error(`API returned status ${response.status}: ${errorBody}`);
+    let intelResponse: IntelResponse
+
+    try {
+      // Clean the response content by removing markdown backticks and 'json' identifier
+      const cleanedContent = responseContent.replace(/```json\n|```/g, '');
+      intelResponse = JSON.parse(cleanedContent);
+    } catch (parseError) {
+      console.error('Failed to parse Gemini response:', parseError);
+      // Fallback response if parsing fails
+      intelResponse = {
+        battlePlan: `Military Strategy ${reference} - Apply spiritual principles from this verse to your mission.`,
+        tacticalNotes: 'Fallback response due to parsing error. Basic military structure applied.',
+        reliability: 60,
+      }
     }
-
-    // Check content type to ensure we're getting JSON
-    // const contentType = response.headers.get('content-type');
-    // if (!contentType || !contentType.includes('application/json')) {
-    //   const textResponse = await response.text();
-    //   console.error('❌ API returned non-JSON response:', {
-    //     contentType,
-    //     preview: textResponse.substring(0, 200)
-    //   });
-    //   throw new Error('API returned HTML instead of JSON. The API endpoint may not be working correctly.');
-    // }
-
-    const intelResponse: IntelResponse = await response.json();
 
     // Store the generated intelligence
     const storedIntel: StoredIntel = {
@@ -403,10 +432,13 @@ export const generateAndStoreIntel = async (
     const response = await generateBattleIntel(request)
 
     // The generateBattleIntel function now handles storage, so we just need to return the stored intel
+    // We need to get the LATEST one, not just the first one
     const storedIntel = await getBattleIntel(scripture.reference)
     const nonCustomIntel = storedIntel.filter((intel) => !intel.isCustomIntel)
 
     if (nonCustomIntel.length > 0) {
+      // Sort by date created (descending) to get the newest one
+      nonCustomIntel.sort((a, b) => new Date(b.dateCreated).getTime() - new Date(a.dateCreated).getTime())
       return nonCustomIntel[0]
     }
 

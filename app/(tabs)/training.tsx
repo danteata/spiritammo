@@ -40,6 +40,7 @@ export default function TrainingScreen() {
     getRandomScripture,
     scriptures,
     updateScriptureAccuracy,
+    updateScriptureMnemonic,
     userStats,
     collections,
     getScripturesByCollection,
@@ -147,18 +148,17 @@ export default function TrainingScreen() {
     }
   }
 
-  const handleGenerateIntel = async () => {
+  const handleGenerateIntel = async (force: boolean = false) => {
     if (currentScripture) {
       try {
-        const intel = await generateAndStoreIntel(currentScripture)
+        const intel = await generateAndStoreIntel(currentScripture, force)
         if (intel) {
           console.log('Generated battle intel:', intel.battlePlan)
           setGeneratedIntel(intel)
           await militaryRankingService.recordIntelGenerated()
-          setCurrentScripture({
-            ...currentScripture,
-            mnemonic: `${intel.battlePlan}: ${intel.tacticalNotes}`,
-          })
+
+          const mnemonicText = `${intel.battlePlan}\n---\n${intel.tacticalNotes}`;
+          await updateScriptureMnemonic(currentScripture.id, mnemonicText);
         }
       } catch (error) {
         console.error('Failed to generate intel:', error)

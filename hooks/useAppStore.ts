@@ -35,6 +35,7 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const getScripturesByBookAndChapter = useZustandStore((s) => s.getScripturesByBookAndChapter)
   const getRandomScripture = useZustandStore((s) => s.getRandomScripture)
   const updateScriptureAccuracy = useZustandStore((s) => s.updateScriptureAccuracy)
+  const updateScriptureMnemonic = useZustandStore((s) => s.updateScriptureMnemonic)
   const addCollection = useZustandStore((s) => s.addCollection)
   const addScripturesToCollection = useZustandStore((s) => s.addScripturesToCollection)
   const addScriptures = useZustandStore((s) => s.addScriptures)
@@ -70,6 +71,7 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     getScripturesByBookAndChapter,
     getRandomScripture,
     updateScriptureAccuracy,
+    updateScriptureMnemonic,
     addCollection,
     addScripturesToCollection,
     addScriptures,
