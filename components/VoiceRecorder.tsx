@@ -61,31 +61,38 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
   const [audioRecording, setAudioRecording] = useState<AudioRecordingResult | null>(null);
   const [localTranscript, setLocalTranscript] = useState('');
   const [whisperReady, setWhisperReady] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // Clear transcript when scripture changes
+  useEffect(() => {
+    setLocalTranscript('');
+    resetTranscript();
+    setAccuracy(0);
+    setShowAccuracy(false);
+    setAudioRecording(null);
+  }, [scriptureText]);
 
   // Initialize Whisper and check availability
   useEffect(() => {
     const init = async () => {
       try {
+        setIsInitializing(true);
         setStatusMessage('Initializing Whisper model...');
         await whisperService.init();
         console.log('Whisper initialized');
         setWhisperReady(true);
-
-        setStatusMessage('Ready to record (Whisper active)');
       } catch (error) {
         console.error('Failed to init whisper:', error);
-        setStatusMessage('Failed to load Whisper model');
-        // Fallback to native status if whisper fails
-        if (isAvailable) {
-          setStatusMessage(hasPermission ? 'Ready to record (Native)' : 'Microphone permission needed');
-        }
+        // Fallback handled by status effect
+      } finally {
+        setIsInitializing(false);
       }
     };
 
     init();
   }, [isAvailable, hasPermission]);
 
-  // Update status message during recording
+  // Update status message during recording or settings change
   useEffect(() => {
     if (isRecognizing) {
       setStatusMessage('Listening... Speak now');
@@ -93,8 +100,19 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
       setStatusMessage(`Recording... ${Math.floor(recordingDuration / 1000)}s`);
     } else if (showAccuracy) {
       setStatusMessage(`Accuracy: ${accuracy}%`);
+    } else if (!isInitializing) {
+      // Idle state - check settings
+      if (!hasPermission) {
+        setStatusMessage('Microphone permission needed');
+      } else if (userSettings.voiceEngine === 'whisper' && whisperReady) {
+        setStatusMessage('Ready to record');
+      } else if (isAvailable) {
+        setStatusMessage('Ready to listen');
+      } else {
+        setStatusMessage('Ready to listen');
+      }
     }
-  }, [isRecognizing, audioIsRecording, recordingDuration, showAccuracy, accuracy]);
+  }, [isRecognizing, audioIsRecording, recordingDuration, showAccuracy, accuracy, isInitializing, userSettings.voiceEngine, whisperReady, hasPermission, isAvailable]);
 
   // Speak the intel text
   const speakIntel = async () => {
@@ -125,29 +143,50 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
   };  // Start recording
   const startRecording = async () => {
     try {
+      // Clear previous results
       resetTranscript();
+      setLocalTranscript('');
       setAccuracy(0);
       setShowAccuracy(false);
       setAudioRecording(null);
 
-      // 1. Prefer Whisper (Audio Recording) if available
-      if (whisperReady) {
-        if (Platform.OS !== 'web') {
-          const audioSuccess = await startAudioRecording();
-          if (audioSuccess) {
-            console.log('Audio recording started (Whisper mode)');
-            setStatusMessage('Recording... (Whisper)');
-            return;
+      // Check if we should use Whisper based on settings and availability
+      console.log('🎤 VoiceRecorder: userSettings.voiceEngine:', userSettings.voiceEngine)
+      console.log('🎤 VoiceRecorder: whisperReady:', whisperReady)
+
+      if (whisperReady && userSettings.voiceEngine === 'whisper') {
+        try {
+          console.log('🎤 Starting Whisper recording...')
+          // 1. Prefer Whisper (Audio Recording) if available
+          if (Platform.OS !== 'web') {
+            const audioSuccess = await startAudioRecording();
+            if (audioSuccess) {
+              console.log('Audio recording started (Whisper mode)');
+              setStatusMessage('Recording... (Whisper)');
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Whisper recording failed, falling back to native:', error)
+          // Fallback to native if Whisper fails
+          // 2. Fallback to Native Speech Recognition
+          if (isAvailable) {
+            const success = await startSpeechRecognition();
+            if (success) {
+              setStatusMessage('Speech recognition active');
+              return;
+            }
           }
         }
-      }
-
-      // 2. Fallback to Native Speech Recognition
-      if (isAvailable) {
-        const success = await startSpeechRecognition();
-        if (success) {
-          setStatusMessage('Speech recognition active');
-          return;
+      } else {
+        console.log('🎤 Starting Native recording (Preference: ' + userSettings.voiceEngine + ')')
+        // 2. Fallback to Native Speech Recognition
+        if (isAvailable) {
+          const success = await startSpeechRecognition();
+          if (success) {
+            setStatusMessage('Speech recognition active');
+            return;
+          }
         }
       }
 
@@ -196,17 +235,19 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
   const processAudioRecording = async (audioResult: AudioRecordingResult) => {
     try {
       setStatusMessage('Transcribing...');
-      console.log('Processing audio with Whisper:', audioResult.uri);
+      console.log('🎙️ VoiceRecorder: Processing audio with Whisper:', audioResult.uri);
 
       try {
         const result = await whisperService.transcribeFromFile(audioResult.uri);
-        console.log('Whisper result:', result);
+        console.log('🎙️ VoiceRecorder: Whisper result:', result);
 
         if (result && result.text) {
           setLocalTranscript(result.text);
           const calculatedAccuracy = calculateAccuracy(scriptureText, result.text);
+          console.log('🎙️ VoiceRecorder: Calculated accuracy from Whisper:', calculatedAccuracy);
           setAccuracy(calculatedAccuracy);
           setShowAccuracy(true);
+          console.log('🎙️ VoiceRecorder: Calling onRecordingComplete with accuracy:', calculatedAccuracy);
           onRecordingComplete(calculatedAccuracy);
         } else {
           console.warn('No transcription received from whisper service');
@@ -225,14 +266,17 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
   // Process the final transcript and calculate accuracy
   const processTranscript = async (finalTranscript: string) => {
     try {
+      console.log('🎙️ VoiceRecorder: processTranscript called with:', finalTranscript);
       // For native platforms or when web speech isn't available, try whisper
       if (Platform.OS !== 'web' || !isAvailable) {
         // If we have a final transcript from native dictation, use it.
         // Otherwise, if we were doing audio recording, we handled it in processAudioRecording.
         if (finalTranscript) {
           const calculatedAccuracy = calculateAccuracy(scriptureText, finalTranscript);
+          console.log('🎙️ VoiceRecorder: Calculated accuracy:', calculatedAccuracy);
           setAccuracy(calculatedAccuracy);
           setShowAccuracy(true);
+          console.log('🎙️ VoiceRecorder: Calling onRecordingComplete with accuracy:', calculatedAccuracy);
           onRecordingComplete(calculatedAccuracy);
           return;
         }
@@ -240,9 +284,11 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
 
       // Calculate accuracy for web speech or fallback
       const calculatedAccuracy = calculateAccuracy(scriptureText, finalTranscript);
+      console.log('🎙️ VoiceRecorder: Calculated accuracy (fallback):', calculatedAccuracy);
       setAccuracy(calculatedAccuracy);
       setShowAccuracy(true);
 
+      console.log('🎙️ VoiceRecorder: Calling onRecordingComplete with accuracy:', calculatedAccuracy);
       onRecordingComplete(calculatedAccuracy);
     } catch (error) {
       console.error('Error processing transcript:', error);
