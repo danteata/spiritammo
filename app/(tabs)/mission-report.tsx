@@ -11,8 +11,10 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   TACTICAL_THEME,
+  GARRISON_THEME,
   MILITARY_TYPOGRAPHY,
 } from '@/constants/colors'
+import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 import RankBadge from '@/components/RankBadge'
 import AccuracyMeter from '@/components/AccuracyMeter'
@@ -20,6 +22,7 @@ import { militaryRankingService } from '@/services/militaryRanking'
 import { getDb } from '@/db/client'
 import { practiceLogs as practiceLogsTable } from '@/db/schema'
 import { desc } from 'drizzle-orm'
+import ScreenHeader from '@/components/ScreenHeader'
 
 const { width } = Dimensions.get('window')
 
@@ -76,9 +79,9 @@ export default function MissionReportScreen() {
     <View style={styles.tabContent}>
       {/* Rank Section - Centered Layout */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
+        <ThemedText variant="subheading" style={styles.sectionTitle}>
           CURRENT RANK
-        </Text>
+        </ThemedText>
 
         <View style={styles.rankContainer}>
           <View style={styles.rankGlow} />
@@ -95,9 +98,9 @@ export default function MissionReportScreen() {
         {militaryProfile && (
           <View style={styles.progressContainer}>
             <View style={styles.progressHeader}>
-              <Text style={[styles.progressLabel, { color: isDark ? '#aaa' : '#666' }]}>
+              <ThemedText variant="caption" style={styles.progressLabel}>
                 PROMOTION PROGRESS
-              </Text>
+              </ThemedText>
               <Text style={[styles.progressValue, { color: TACTICAL_THEME.accent }]}>
                 {militaryProfile.nextRankProgress.toFixed(0)}%
               </Text>
@@ -110,68 +113,138 @@ export default function MissionReportScreen() {
                 ]}
               />
             </View>
-            <Text style={[styles.nextRankText, { color: isDark ? '#888' : '#666' }]}>
+            <ThemedText variant="caption" style={styles.nextRankText}>
               {militaryProfile.nextRank ? `Next Rank: ${militaryProfile.nextRank}` : 'Max Rank Achieved'}
-            </Text>
+            </ThemedText>
           </View>
         )}
       </View>
 
       {/* Combat Statistics - Darker & Centered */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
+        <ThemedText variant="subheading" style={styles.sectionTitle}>
           COMBAT STATISTICS
-        </Text>
+        </ThemedText>
         <View style={styles.statsGrid}>
-          <View style={[styles.statCard, { backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(255,255,255,0.1)' }]}>
-            <MaterialCommunityIcons name="target" size={28} color={TACTICAL_THEME.accent} style={{ marginBottom: 8 }} />
-            <Text style={[styles.statValue, { color: 'white' }]}>
-              {userStats.totalPracticed}
-            </Text>
-            <Text style={[styles.statLabel, { color: '#ccc' }]}>
-              ROUNDS FIRED
-            </Text>
-          </View>
+          {isDark ? (
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: '#0D0D0D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }
+              ]}
+            >
+              <MaterialCommunityIcons name="target" size={28} color={TACTICAL_THEME.accent} style={{ marginBottom: 8 }} />
+              <ThemedText variant="heading" style={styles.statValue}>
+                {userStats.totalPracticed}
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.statLabel}>
+                ROUNDS FIRED
+              </ThemedText>
+            </View>
+          ) : (
+            <ThemedCard style={styles.statCard} variant="default">
+              <MaterialCommunityIcons name="target" size={28} color={TACTICAL_THEME.accent} style={{ marginBottom: 8 }} />
+              <ThemedText variant="heading" style={styles.statValue}>
+                {userStats.totalPracticed}
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.statLabel}>
+                ROUNDS FIRED
+              </ThemedText>
+            </ThemedCard>
+          )}
 
-          <View style={[styles.statCard, { backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(255,255,255,0.1)' }]}>
-            <MaterialCommunityIcons name="crosshairs-gps" size={28} color={TACTICAL_THEME.success} style={{ marginBottom: 8 }} />
-            <Text style={[styles.statValue, { color: 'white' }]}>
-              {userStats.averageAccuracy.toFixed(1)}%
-            </Text>
-            <Text style={[styles.statLabel, { color: '#ccc' }]}>
-              AVG ACCURACY
-            </Text>
-          </View>
+          {isDark ? (
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: '#0D0D0D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }
+              ]}
+            >
+              <MaterialCommunityIcons name="crosshairs-gps" size={28} color={TACTICAL_THEME.success} style={{ marginBottom: 8 }} />
+              <ThemedText variant="heading" style={styles.statValue}>
+                {userStats.averageAccuracy.toFixed(1)}%
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.statLabel}>
+                AVG ACCURACY
+              </ThemedText>
+            </View>
+          ) : (
+            <ThemedCard style={styles.statCard} variant="default">
+              <MaterialCommunityIcons name="crosshairs-gps" size={28} color={TACTICAL_THEME.success} style={{ marginBottom: 8 }} />
+              <ThemedText variant="heading" style={styles.statValue}>
+                {userStats.averageAccuracy.toFixed(1)}%
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.statLabel}>
+                AVG ACCURACY
+              </ThemedText>
+            </ThemedCard>
+          )}
 
-          <View style={[styles.statCard, { backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(255,255,255,0.1)' }]}>
-            <MaterialCommunityIcons name="fire" size={28} color={TACTICAL_THEME.warning} style={{ marginBottom: 8 }} />
-            <Text style={[styles.statValue, { color: 'white' }]}>
-              {userStats.streak}
-            </Text>
-            <Text style={[styles.statLabel, { color: '#ccc' }]}>
-              DAY STREAK
-            </Text>
-          </View>
+          {isDark ? (
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: '#0D0D0D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }
+              ]}
+            >
+              <MaterialCommunityIcons name="fire" size={28} color={TACTICAL_THEME.warning} style={{ marginBottom: 8 }} />
+              <ThemedText variant="heading" style={styles.statValue}>
+                {userStats.streak}
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.statLabel}>
+                DAY STREAK
+              </ThemedText>
+            </View>
+          ) : (
+            <ThemedCard style={styles.statCard} variant="default">
+              <MaterialCommunityIcons name="fire" size={28} color={TACTICAL_THEME.warning} style={{ marginBottom: 8 }} />
+              <ThemedText variant="heading" style={styles.statValue}>
+                {userStats.streak}
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.statLabel}>
+                DAY STREAK
+              </ThemedText>
+            </ThemedCard>
+          )}
 
-          <View style={[styles.statCard, { backgroundColor: 'rgba(0, 0, 0, 0.6)', borderColor: 'rgba(255,255,255,0.1)' }]}>
-            <MaterialCommunityIcons name="calendar-clock" size={28} color="#aaa" style={{ marginBottom: 8 }} />
-            <Text style={[styles.statValue, { color: 'white', fontSize: 16 }]}>
-              {userStats.lastPracticeDate
-                ? new Date(userStats.lastPracticeDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
-                : 'N/A'}
-            </Text>
-            <Text style={[styles.statLabel, { color: '#ccc' }]}>
-              LAST MISSION
-            </Text>
-          </View>
+          {isDark ? (
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: '#0D0D0D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }
+              ]}
+            >
+              <MaterialCommunityIcons name="calendar-clock" size={28} color={isDark ? "#aaa" : "#666"} style={{ marginBottom: 8 }} />
+              <ThemedText variant="heading" style={[styles.statValue, { fontSize: 16 }]}>
+                {userStats.lastPracticeDate
+                  ? new Date(userStats.lastPracticeDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                  : 'N/A'}
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.statLabel}>
+                LAST MISSION
+              </ThemedText>
+            </View>
+          ) : (
+            <ThemedCard style={styles.statCard} variant="default">
+              <MaterialCommunityIcons name="calendar-clock" size={28} color={isDark ? "#aaa" : "#666"} style={{ marginBottom: 8 }} />
+              <ThemedText variant="heading" style={[styles.statValue, { fontSize: 16 }]}>
+                {userStats.lastPracticeDate
+                  ? new Date(userStats.lastPracticeDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+                  : 'N/A'}
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.statLabel}>
+                LAST MISSION
+              </ThemedText>
+            </ThemedCard>
+          )}
         </View>
       </View>
 
       {/* Accuracy Analysis */}
       <View style={[styles.section, { marginTop: 8 }]}>
-        <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
+        <ThemedText variant="subheading" style={styles.sectionTitle}>
           MARKSMANSHIP ANALYSIS
-        </Text>
+        </ThemedText>
         <View style={{ width: '100%', paddingVertical: 10 }}>
           <AccuracyMeter
             accuracy={userStats.averageAccuracy}
@@ -470,7 +543,7 @@ export default function MissionReportScreen() {
                     key={log.id}
                     style={[
                       styles.logItem,
-                      { 
+                      {
                         backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
                         borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
                       }
@@ -478,13 +551,13 @@ export default function MissionReportScreen() {
                   >
                     <View style={styles.logHeader}>
                       <View style={styles.logDateContainer}>
-                        <MaterialCommunityIcons 
-                          name={isToday ? "clock-outline" : "calendar"} 
-                          size={14} 
-                          color={isDark ? '#888' : '#666'} 
+                        <MaterialCommunityIcons
+                          name={isToday ? "clock-outline" : "calendar"}
+                          size={14}
+                          color={isDark ? '#888' : '#666'}
                         />
                         <Text style={[styles.logDate, { color: isDark ? '#888' : '#666' }]}>
-                          {isToday 
+                          {isToday
                             ? `Today ${date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`
                             : date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
                           }
@@ -505,7 +578,7 @@ export default function MissionReportScreen() {
                         <Text style={[styles.logReference, { color: TACTICAL_THEME.accent }]}>
                           {scripture.reference}
                         </Text>
-                        <Text 
+                        <Text
                           style={[styles.logText, { color: isDark ? '#ccc' : '#444' }]}
                           numberOfLines={2}
                         >
@@ -524,35 +597,12 @@ export default function MissionReportScreen() {
   }
 
   return (
-    <LinearGradient
-      colors={backgroundColors}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
+    <ThemedContainer style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 40 }}>
-        <View style={styles.header}>
-          <Text
-            style={[
-              MILITARY_TYPOGRAPHY.heading,
-              { color: 'white', fontSize: 28, letterSpacing: 1 },
-            ]}
-          >
-            MISSION REPORT
-          </Text>
-          <View style={styles.subtitleContainer}>
-            <View style={styles.subtitleLine} />
-            <Text
-              style={[
-                MILITARY_TYPOGRAPHY.caption,
-                { color: TACTICAL_THEME.accent, letterSpacing: 2 },
-              ]}
-            >
-              OPERATIONAL STATUS
-            </Text>
-          </View>
-        </View>
-
+        <ScreenHeader
+          title="MISSION REPORT"
+          subtitle="PERFORMANCE ANALYSIS"
+        />
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
           {[
@@ -584,7 +634,7 @@ export default function MissionReportScreen() {
         {selectedTab === 'achievements' && renderAchievements()}
         {selectedTab === 'history' && renderHistory()}
       </ScrollView>
-    </LinearGradient>
+    </ThemedContainer>
   )
 }
 
@@ -594,22 +644,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    padding: 20,
-    paddingTop: 60,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  subtitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  subtitleLine: {
-    width: 20,
-    height: 2,
-    backgroundColor: TACTICAL_THEME.accent,
-    marginRight: 8,
   },
   tabContainer: {
     flexDirection: 'row',
@@ -637,12 +671,12 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     flex: 1,
+    paddingHorizontal: 20,
   },
   section: {
     marginBottom: 24,
   },
   sectionTitle: {
-    color: 'white',
     marginBottom: 16,
     textAlign: 'center',
     fontSize: 14,
@@ -729,7 +763,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 20,
     alignItems: 'center',
-    borderWidth: 1,
     elevation: 2,
   },
   statValue: {
@@ -742,6 +775,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     letterSpacing: 0.5,
     textAlign: 'center',
+    opacity: 0.7,
   },
   achievementGrid: {
     flexDirection: 'row',

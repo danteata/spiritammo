@@ -4,9 +4,11 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome } from '@expo/vector-icons';
 import {
   TACTICAL_THEME,
+  GARRISON_THEME,
   MILITARY_TYPOGRAPHY,
   ACCURACY_COLORS,
 } from '@/constants/colors'
+import { useAppStore } from '@/hooks/useAppStore'
 
 interface AccuracyMeterProps {
   accuracy: number
@@ -29,6 +31,8 @@ export default function AccuracyMeter({
 }: AccuracyMeterProps) {
   const animatedValue = useRef(new Animated.Value(0)).current
   const pulseAnimation = useRef(new Animated.Value(1)).current
+  const { isDark } = useAppStore()
+  const theme = isDark ? TACTICAL_THEME : GARRISON_THEME
 
   useEffect(() => {
     if (animated) {
@@ -140,7 +144,7 @@ export default function AccuracyMeter({
       <View style={styles.header}>
         <View style={styles.labelContainer}>
           <FontAwesome name="bullseye" size={16} color={accuracyColor} />
-          <Text style={[styles.label, MILITARY_TYPOGRAPHY.caption]}>
+          <Text style={[styles.label, MILITARY_TYPOGRAPHY.caption, { color: theme.text }]}>
             {label}: {accuracy.toFixed(1)}%
           </Text>
         </View>
@@ -172,7 +176,7 @@ export default function AccuracyMeter({
 
       {/* Meter */}
       <View style={styles.meterContainer}>
-        <View style={[styles.meterBackground, sizeStyles.meter]}>
+        <View style={[styles.meterBackground, sizeStyles.meter, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }]}>
           <Animated.View
             style={[
               styles.meterFill,
@@ -209,17 +213,17 @@ export default function AccuracyMeter({
 
       {/* Performance zones */}
       <View style={styles.zones}>
-        <View style={[styles.zone, styles.traineeZone]}>
-          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>TRAINEE</Text>
+        <View style={[styles.zone, styles.traineeZone, { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)' }]}>
+          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>TRAINEE</Text>
         </View>
-        <View style={[styles.zone, styles.qualifiedZone]}>
-          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>QUALIFIED</Text>
+        <View style={[styles.zone, styles.qualifiedZone, { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)' }]}>
+          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>QUALIFIED</Text>
         </View>
-        <View style={[styles.zone, styles.sharpZone]}>
-          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>SHARP</Text>
+        <View style={[styles.zone, styles.sharpZone, { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)' }]}>
+          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>SHARP</Text>
         </View>
-        <View style={[styles.zone, styles.marksZone]}>
-          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption]}>MARKS</Text>
+        <View style={[styles.zone, styles.marksZone, { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)' }]}>
+          <Text style={[styles.zoneLabel, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>MARKS</Text>
         </View>
       </View>
     </Animated.View>
@@ -260,7 +264,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: TACTICAL_THEME.text,
     fontWeight: 'bold',
     letterSpacing: 1,
   },
@@ -297,7 +300,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   meterBackground: {
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 4,
     overflow: 'hidden',
     width: '100%',
@@ -335,12 +337,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingVertical: 4,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
     borderRadius: 2,
     marginHorizontal: 1,
   },
   zoneLabel: {
-    color: TACTICAL_THEME.textSecondary,
     fontSize: 8,
     fontWeight: 'bold',
     textAlign: 'center',

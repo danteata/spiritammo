@@ -11,13 +11,13 @@ interface RankBadgeProps {
   animated?: boolean;
 }
 
-export default function RankBadge({ 
-  rank, 
-  size = 'medium', 
-  showLabel = true, 
-  animated = false 
+export default function RankBadge({
+  rank,
+  size = 'medium',
+  showLabel = true,
+  animated = false
 }: RankBadgeProps) {
-  
+
   const getRankInfo = (rank: UserStats['rank']) => {
     switch (rank) {
       case 'recruit':
@@ -136,7 +136,7 @@ export default function RankBadge({
             {rankInfo.insignia}
           </Text>
         </View>
-        
+
         <View style={[styles.border, { borderColor: rankColor }]} />
       </LinearGradient>
 
@@ -147,9 +147,7 @@ export default function RankBadge({
           </Text>
           {size === 'large' && (
             <>
-              <Text style={[styles.description, sizeStyles.description]}>
-                {rankInfo.description}
-              </Text>
+              {/* Description removed per user request */}
               <Text style={[styles.requirements, sizeStyles.description]}>
                 {rankInfo.requirements}
               </Text>
