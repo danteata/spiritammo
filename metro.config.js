@@ -8,4 +8,4 @@ const { assetExts, sourceExts } = config.resolver;
 config.resolver.assetExts = [...assetExts, 'xml'];
 config.resolver.sourceExts = sourceExts.filter(ext => ext !== 'xml');
 
-module.exports = withNativeWind(config, { input: "./src/global.css" });
+module.exports = withNativeWind(config, { input: "./global.css" });

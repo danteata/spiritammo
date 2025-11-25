@@ -4,15 +4,16 @@ export const TACTICAL_THEME = {
   primary: '#2D5016', // Military Green
   secondary: '#8B4513', // Brown
   accent: '#FF6B35', // Orange (target/fire)
-  background: '#1A1A1A', // Dark Tactical
-  surface: '#2C2C2C', // Darker Surface
+  background: '#050505', // Deepest Black/Dark
+  surface: '#0D0D0D', // Deep Dark Surface (was #2C2C2C)
   text: '#FFFFFF', // White Text
   textSecondary: '#B0B0B0', // Gray Text
   success: '#32CD32', // Lime Green (hit)
   warning: '#FFD700', // Gold (caution)
   error: '#FF4500', // Red Orange (miss)
-  border: '#4A4A4A', // Dark Border
-  shadow: 'rgba(0, 0, 0, 0.5)',
+  border: '#333333', // Darker Border
+  shadow: 'rgba(0, 0, 0, 0.8)',
+  surfaceHighlight: '#1A1A1A', // Lighter surface for interaction
 }
 
 export const STEALTH_THEME = {
@@ -28,6 +29,23 @@ export const STEALTH_THEME = {
   error: '#FF453A', // Red
   border: '#38383A', // Dark Border
   shadow: 'rgba(0, 0, 0, 0.7)',
+  surfaceHighlight: '#2C2C2E',
+}
+
+export const GARRISON_THEME = {
+  primary: '#4A6B2A', // Olive Green
+  secondary: '#8B4513', // Brown
+  accent: '#FF6B35', // Orange
+  background: '#F5F5F0', // Bone/Off-White
+  surface: '#FFFFFF', // White
+  surfaceHighlight: '#F0F0E8', // Slightly darker white for interaction
+  text: '#1C1C1E', // Dark Gunmetal
+  textSecondary: '#666666', // Gray
+  success: '#32CD32', // Lime Green
+  warning: '#FFD700', // Gold
+  error: '#FF4500', // Red Orange
+  border: '#E0E0E0', // Light Border
+  shadow: 'rgba(0, 0, 0, 0.08)', // Softer shadow for light mode
 }
 
 // Legacy colors for backward compatibility
@@ -45,15 +63,15 @@ export const COLORS = {
   accent: TACTICAL_THEME.accent,
   background: {
     dark: TACTICAL_THEME.background,
-    light: '#f5f5f5',
+    light: GARRISON_THEME.background,
   },
   surface: {
     dark: TACTICAL_THEME.surface,
-    light: '#ffffff',
+    light: GARRISON_THEME.surface,
   },
   text: {
     dark: TACTICAL_THEME.text,
-    light: '#212121',
+    light: GARRISON_THEME.text,
   },
   success: TACTICAL_THEME.success,
   error: TACTICAL_THEME.error,
@@ -65,22 +83,22 @@ export const COLORS = {
 
 export const GRADIENTS = {
   primary: {
-    dark: [TACTICAL_THEME.background, TACTICAL_THEME.primary],
-    light: ['#4A6B2A', TACTICAL_THEME.primary],
+    dark: [TACTICAL_THEME.background, TACTICAL_THEME.primary] as const,
+    light: [GARRISON_THEME.background, '#E8E8E0'] as const,
   },
   secondary: {
-    dark: [TACTICAL_THEME.surface, TACTICAL_THEME.secondary],
-    light: ['#A0522D', TACTICAL_THEME.secondary],
+    dark: [TACTICAL_THEME.surface, TACTICAL_THEME.secondary] as const,
+    light: [GARRISON_THEME.surface, '#F0F0E8'] as const,
   },
   tactical: {
-    background: [TACTICAL_THEME.background, '#0D0D0D'],
-    surface: [TACTICAL_THEME.surface, TACTICAL_THEME.background],
-    accent: [TACTICAL_THEME.accent, '#CC5529'],
+    background: [TACTICAL_THEME.background, '#0D0D0D'] as const,
+    surface: [TACTICAL_THEME.surface, TACTICAL_THEME.background] as const,
+    accent: [TACTICAL_THEME.accent, '#CC5529'] as const,
   },
   stealth: {
-    background: [STEALTH_THEME.background, '#0A0A0A'],
-    surface: [STEALTH_THEME.surface, STEALTH_THEME.background],
-    accent: [STEALTH_THEME.accent, '#0066CC'],
+    background: [STEALTH_THEME.background, '#0A0A0A'] as const,
+    surface: [STEALTH_THEME.surface, STEALTH_THEME.background] as const,
+    accent: [STEALTH_THEME.accent, '#0066CC'] as const,
   },
 }
 
