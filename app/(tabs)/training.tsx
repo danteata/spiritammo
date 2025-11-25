@@ -28,13 +28,14 @@ import AccuracyMeter from '@/components/AccuracyMeter'
 import ActionButton from '@/components/ActionButton'
 import CollectionSelector from '@/components/CollectionSelector'
 import ScreenHeader from '@/components/ScreenHeader'
-
+import { LoadingOverlay } from '@/components/LoadingOverlay'
 import CollectionChapterSelector from '@/components/CollectionChapterSelector'
 import {
   generateAndStoreIntel,
   StoredIntel,
 } from '@/services/battleIntelligence'
 import { militaryRankingService } from '@/services/militaryRanking'
+import { errorHandler } from '@/services/errorHandler'
 
 export default function TrainingScreen() {
   const params = useLocalSearchParams()
@@ -64,6 +65,7 @@ export default function TrainingScreen() {
     useState(false)
   const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
   const [generatedIntel, setGeneratedIntel] = useState<StoredIntel | null>(null)
+  const [isLoadingIntel, setIsLoadingIntel] = useState(false)
 
   // Safe formatter for numeric percentages that might be null/undefined
   const fmt = (v?: number | null, digits = 1) =>
@@ -155,6 +157,7 @@ export default function TrainingScreen() {
   const handleGenerateIntel = async (force: boolean = false) => {
     if (currentScripture) {
       try {
+        setIsLoadingIntel(true)
         const intel = await generateAndStoreIntel(currentScripture, force)
         if (intel) {
           console.log('Generated battle intel:', intel.battlePlan)
@@ -163,9 +166,23 @@ export default function TrainingScreen() {
 
           const mnemonicText = `${intel.battlePlan}\n---\n${intel.tacticalNotes}`;
           await updateScriptureMnemonic(currentScripture.id, mnemonicText);
+          
+          errorHandler.showSuccess(
+            'Battle intelligence deployed successfully! Tactical advantage secured.',
+            'Intel Acquired'
+          )
         }
       } catch (error) {
-        console.error('Failed to generate intel:', error)
+        await errorHandler.handleError(
+          error,
+          'Generate Intel',
+          { 
+            customMessage: 'Intel generation failed. Command unable to provide tactical support. Retry?',
+            retry: () => handleGenerateIntel(force)
+          }
+        )
+      } finally {
+        setIsLoadingIntel(false)
       }
     }
   }
@@ -453,6 +470,12 @@ export default function TrainingScreen() {
           onClose={() => setShowTargetPractice(false)}
         />
       )}
+
+      {/* Loading Overlay */}
+      <LoadingOverlay 
+        visible={isLoadingIntel} 
+        message="Requesting tactical intelligence from command..."
+      />
     </ThemedContainer>
   )
 }

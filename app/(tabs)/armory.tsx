@@ -25,6 +25,8 @@ import CollectionDetailModal from '@/components/CollectionDetailModal'
 import BookScripturesModal from '@/components/BookScripturesModal'
 import AddVersesModal from '@/components/AddVersesModal'
 import ScreenHeader from '@/components/ScreenHeader'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
+import { errorHandler } from '@/services/errorHandler'
 
 import { CollectionChapterService } from '@/services/collectionChapters'
 
@@ -48,6 +50,7 @@ export default function ArmoryScreen() {
   const [bookScriptures, setBookScriptures] = useState<Scripture[]>([])
   const [selectedBookName, setSelectedBookName] = useState<string>('')
   const [showAddVerses, setShowAddVerses] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
 
   const handleSelectCollection = (collection: Collection) => {
     console.log('Selecting collection:', collection.name, collection.id)
@@ -107,89 +110,107 @@ export default function ArmoryScreen() {
 
   const handleVersesExtracted = async (extractedVerses: Scripture[], targetCollectionId?: string) => {
     if (extractedVerses.length === 0) {
-      Alert.alert('No Verses', 'No verses were extracted from the file.')
+      Alert.alert('No Ammunition', 'No rounds were extracted from the file.')
       return
     }
 
-    // Add the scriptures to the main store first
-    await addScriptures(extractedVerses)
+    try {
+      setIsImporting(true)
 
-    // If user selected a target collection, add to it directly
-    if (targetCollectionId) {
-      await addScripturesToCollection(targetCollectionId, extractedVerses.map(v => v.id))
-      // Alert is already shown in FileUploader
-      return
-    }
+      // Add the scriptures to the main store first
+      await addScriptures(extractedVerses)
 
-    // Analyze for chapter organization
-    const analysis =
-      CollectionChapterService.analyzeScripturesForChapters(extractedVerses)
+      // If user selected a target collection, add to it directly
+      if (targetCollectionId) {
+        await addScripturesToCollection(targetCollectionId, extractedVerses.map(v => v.id))
+        errorHandler.showSuccess(
+          `Deployed ${extractedVerses.length} rounds to arsenal successfully!`,
+          'Ammunition Loaded'
+        )
+        return
+      }
 
-    let newCollection: Collection = {
-      id: `imported_${Date.now()}`,
-      name: analysis.sourceBook
-        ? `${analysis.sourceBook} Collection`
-        : `Imported Collection ${new Date().toLocaleDateString()}`,
-      description: `${extractedVerses.length} verses imported from file`,
-      scriptures: extractedVerses.map((v) => v.id),
-      createdAt: new Date().toISOString(),
-      tags: ['imported', 'file-upload'],
-    }
+      // Analyze for chapter organization
+      const analysis =
+        CollectionChapterService.analyzeScripturesForChapters(extractedVerses)
 
-    // If it can be chapter-based, offer the option
-    if (analysis.canBeChapterBased) {
-      Alert.alert(
-        'Chapter Organization Available',
-        `This collection can be organized by chapters (${analysis.stats.totalChapters
-        } chapters from ${analysis.stats.totalBooks} book${analysis.stats.totalBooks > 1 ? 's' : ''
-        }). Would you like to enable chapter-based organization?`,
-        [
-          {
-            text: 'Simple Collection',
-            onPress: async () => {
-              await addCollection(newCollection)
-              Alert.alert(
-                'Import Successful!',
-                `Created collection "${newCollection.name}" with ${extractedVerses.length} verses.`
-              )
-            },
-          },
-          {
-            text: 'Chapter-Based',
-            onPress: async () => {
-              try {
-                const chapterBasedCollection =
-                  await CollectionChapterService.convertToChapterBased(
-                    newCollection,
-                    extractedVerses
-                  )
-                await addCollection(chapterBasedCollection)
-                Alert.alert(
-                  'Import Successful!',
-                  `Created chapter-based collection "${chapterBasedCollection.name}" with ${analysis.stats.totalChapters} chapters.`
-                )
-              } catch (error) {
-                console.error(
-                  'Failed to create chapter-based collection:',
-                  error
-                )
+      let newCollection: Collection = {
+        id: `imported_${Date.now()}`,
+        name: analysis.sourceBook
+          ? `${analysis.sourceBook} Collection`
+          : `Imported Collection ${new Date().toLocaleDateString()}`,
+        description: `${extractedVerses.length} verses imported from file`,
+        scriptures: extractedVerses.map((v) => v.id),
+        createdAt: new Date().toISOString(),
+        tags: ['imported', 'file-upload'],
+      }
+
+      // If it can be chapter-based, offer the option
+      if (analysis.canBeChapterBased) {
+        Alert.alert(
+          'Chapter Organization Available',
+          `This collection can be organized by chapters (${analysis.stats.totalChapters
+          } chapters from ${analysis.stats.totalBooks} book${analysis.stats.totalBooks > 1 ? 's' : ''
+          }). Would you like to enable chapter-based organization?`,
+          [
+            {
+              text: 'Simple Collection',
+              onPress: async () => {
                 await addCollection(newCollection)
-                Alert.alert(
-                  'Import Successful!',
-                  `Created collection "${newCollection.name}" with ${extractedVerses.length} verses.`
+                errorHandler.showSuccess(
+                  `Arsenal "${newCollection.name}" established with ${extractedVerses.length} rounds.`,
+                  'Arsenal Created'
                 )
-              }
+              },
             },
-          },
-        ]
+            {
+              text: 'Chapter-Based',
+              onPress: async () => {
+                try {
+                  const chapterBasedCollection =
+                    await CollectionChapterService.convertToChapterBased(
+                      newCollection,
+                      extractedVerses
+                    )
+                  await addCollection(chapterBasedCollection)
+                  errorHandler.showSuccess(
+                    `Chapter-based arsenal "${chapterBasedCollection.name}" established with ${analysis.stats.totalChapters} chapters.`,
+                    'Arsenal Created'
+                  )
+                } catch (error) {
+                  console.error(
+                    'Failed to create chapter-based collection:',
+                    error
+                  )
+                  await addCollection(newCollection)
+                  errorHandler.showSuccess(
+                    `Arsenal "${newCollection.name}" established with ${extractedVerses.length} rounds.`,
+                    'Arsenal Created'
+                  )
+                }
+              },
+            },
+          ]
+        )
+      } else {
+        // Create simple collection
+        await addCollection(newCollection)
+        errorHandler.showSuccess(
+          `Arsenal "${newCollection.name}" established with ${extractedVerses.length} rounds.`,
+          'Arsenal Created'
+        )
+      }
+    } catch (error) {
+      await errorHandler.handleError(
+        error,
+        'Import Verses',
+        { 
+          customMessage: 'Failed to import ammunition from file. Please retry operation.',
+          retry: () => handleVersesExtracted(extractedVerses, targetCollectionId)
+        }
       )
-    } else {
-      // Create simple collection
-      await addCollection(newCollection)
-      Alert.alert(
-        'Import Successful!',
-        `Created collection "${newCollection.name}" with ${extractedVerses.length} verses.`
-      )
+    } finally {
+      setIsImporting(false)
     }
   }
 
@@ -620,6 +641,12 @@ export default function ArmoryScreen() {
         onVersesAdded={(collectionId, verses) => {
           console.log(`Added ${verses.length} verses`);
         }}
+      />
+
+      {/* Loading Overlay */}
+      <LoadingOverlay 
+        visible={isImporting} 
+        message="Deploying ammunition to arsenal..."
       />
     </ThemedContainer >
   )

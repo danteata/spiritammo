@@ -22,6 +22,8 @@ import { TACTICAL_THEME, GARRISON_THEME, MILITARY_TYPOGRAPHY } from '@/constants
 import { Collection, Scripture } from '@/types/scripture'
 import { useAppStore } from '@/hooks/useAppStore'
 import AddVersesModal from './AddVersesModal'
+import { LoadingOverlay } from './LoadingOverlay'
+import { errorHandler } from '@/services/errorHandler'
 
 const { width } = Dimensions.get('window')
 
@@ -56,6 +58,7 @@ export default function CollectionDetailModal({
   const [localScriptures, setLocalScriptures] = useState<Scripture[]>([])
   const [showAddVersesModal, setShowAddVersesModal] = useState(false)
   const [expandedScriptureIds, setExpandedScriptureIds] = useState<Set<string>>(new Set())
+  const [isProcessing, setIsProcessing] = useState(false)
 
   // Memoized callbacks for better performance
   const toggleExpand = React.useCallback((id: string) => {
@@ -276,20 +279,38 @@ export default function CollectionDetailModal({
 
   const handleSaveInfo = async () => {
     if (!editedName.trim()) {
-      Alert.alert('Error', 'Arsenal name cannot be empty')
+      Alert.alert('Invalid Input', 'Arsenal designation cannot be empty')
       return
     }
 
-    const success = await updateCollection({
-      ...collection,
-      name: editedName.trim(),
-      description: editedDescription.trim()
-    })
+    try {
+      setIsProcessing(true)
+      const success = await updateCollection({
+        ...collection,
+        name: editedName.trim(),
+        description: editedDescription.trim()
+      })
 
-    if (success) {
-      setIsEditingInfo(false)
-    } else {
-      Alert.alert('Error', 'Failed to update arsenal')
+      if (success) {
+        setIsEditingInfo(false)
+        errorHandler.showSuccess(
+          'Arsenal information updated successfully!',
+          'Update Complete'
+        )
+      } else {
+        throw new Error('Update failed')
+      }
+    } catch (error) {
+      await errorHandler.handleError(
+        error,
+        'Update Arsenal Info',
+        { 
+          customMessage: 'Failed to update arsenal information. Please retry operation.',
+          retry: () => handleSaveInfo()
+        }
+      )
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -337,52 +358,82 @@ export default function CollectionDetailModal({
   const handleBulkDelete = async () => {
     if (selectedScriptureIds.size === 0) return
 
-    Alert.alert(
-      'Remove Rounds',
-      `Are you sure you want to remove ${selectedScriptureIds.size} rounds from the arsenal?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            const ids = Array.from(selectedScriptureIds)
-            const success = await bulkRemoveScripturesFromCollection(collection.id, ids)
-            if (success) {
-              // Immediately update local state to reflect the deletions
-              setLocalScriptures(prev => prev.filter(s => !ids.includes(s.id)))
-              setIsBulkSelecting(false)
-              setSelectedScriptureIds(new Set())
-              Alert.alert('Success', `Removed ${ids.length} round${ids.length !== 1 ? 's' : ''} from arsenal`)
-            } else {
-              Alert.alert('Error', 'Failed to remove rounds')
-            }
-          }
-        }
-      ]
+    const count = selectedScriptureIds.size
+    const confirmed = await errorHandler.confirm(
+      `Remove ${count} round${count !== 1 ? 's' : ''} from the arsenal?`,
+      'Confirm Removal',
+      'Remove',
+      'Cancel'
     )
+
+    if (!confirmed) return
+
+    try {
+      setIsProcessing(true)
+      const ids = Array.from(selectedScriptureIds)
+      const success = await bulkRemoveScripturesFromCollection(collection.id, ids)
+      
+      if (success) {
+        // Immediately update local state to reflect the deletions
+        setLocalScriptures(prev => prev.filter(s => !ids.includes(s.id)))
+        setIsBulkSelecting(false)
+        setSelectedScriptureIds(new Set())
+        errorHandler.showSuccess(
+          `Removed ${count} round${count !== 1 ? 's' : ''} from arsenal.`,
+          'Rounds Removed'
+        )
+      } else {
+        throw new Error('Bulk delete failed')
+      }
+    } catch (error) {
+      await errorHandler.handleError(
+        error,
+        'Remove Rounds',
+        { 
+          customMessage: 'Failed to remove rounds from arsenal. Please retry operation.',
+          retry: () => handleBulkDelete()
+        }
+      )
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
-  const handleDeleteCollection = () => {
-    Alert.alert(
+  const handleDeleteCollection = async () => {
+    const confirmed = await errorHandler.confirm(
+      `Permanently delete arsenal "${collection.name}"? This action cannot be undone.`,
       'Delete Arsenal',
-      `Are you sure you want to permanently delete "${collection.name}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            const success = await deleteCollection(collection.id)
-            if (success) {
-              onClose()
-            } else {
-              Alert.alert('Error', 'Failed to delete arsenal')
-            }
-          }
-        }
-      ]
+      'Delete',
+      'Cancel'
     )
+
+    if (!confirmed) return
+
+    try {
+      setIsProcessing(true)
+      const success = await deleteCollection(collection.id)
+      
+      if (success) {
+        errorHandler.showSuccess(
+          `Arsenal "${collection.name}" dismantled successfully.`,
+          'Arsenal Deleted'
+        )
+        onClose()
+      } else {
+        throw new Error('Delete collection failed')
+      }
+    } catch (error) {
+      await errorHandler.handleError(
+        error,
+        'Delete Arsenal',
+        { 
+          customMessage: 'Failed to dismantle arsenal. Please retry operation.',
+          retry: () => handleDeleteCollection()
+        }
+      )
+    } finally {
+      setIsProcessing(false)
+    }
   }
 
   const handleGoToTraining = () => {
@@ -798,6 +849,12 @@ export default function CollectionDetailModal({
         onClose={() => setShowAddVersesModal(false)}
         preselectedCollection={collection}
         onVersesAdded={handleVersesAdded}
+      />
+
+      {/* Loading Overlay */}
+      <LoadingOverlay 
+        visible={isProcessing} 
+        message="Processing arsenal operation..."
       />
     </Modal>
   )

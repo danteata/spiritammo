@@ -16,6 +16,8 @@ import { useAppStore } from '@/hooks/useAppStore';
 import { Collection, Scripture, Book } from '@/types/scripture';
 import { bibleApiService } from '@/services/bibleApi';
 import VerseSelector from './VerseSelector';
+import { LoadingOverlay } from './LoadingOverlay';
+import { errorHandler } from '@/services/errorHandler';
 
 interface SimpleVerseModalProps {
   isVisible: boolean;
@@ -44,6 +46,7 @@ export default function SimpleVerseModal({
   const [newCollectionName, setNewCollectionName] = useState('');
   const [availableChapters, setAvailableChapters] = useState<number[]>([]);
   const [isLoadingChapters, setIsLoadingChapters] = useState(false);
+  const [isAddingVerses, setIsAddingVerses] = useState(false);
 
   const resetModal = () => {
     setSelectedCollection(null);
@@ -126,25 +129,39 @@ export default function SimpleVerseModal({
 
   const handleAddVerses = async () => {
     if (!selectedCollection || selectedVerses.length === 0) {
-      Alert.alert('Error', 'Please select verses to add');
-      return;
+      Alert.alert('Invalid Selection', 'Please select verses to add')
+      return
     }
 
-    const success = await addScripturesToCollection(
-      selectedCollection.id,
-      selectedVerses.map(v => v.id)
-    );
+    try {
+      setIsAddingVerses(true)
+      const success = await addScripturesToCollection(
+        selectedCollection.id,
+        selectedVerses.map(v => v.id)
+      )
 
-    if (success) {
-      Alert.alert(
-        'Success',
-        `Added ${selectedVerses.length} verse${selectedVerses.length !== 1 ? 's' : ''} to "${selectedCollection.name}"`
-      );
-      handleClose();
-    } else {
-      Alert.alert('Error', 'Failed to add verses to collection');
+      if (success) {
+        errorHandler.showSuccess(
+          `Added ${selectedVerses.length} round${selectedVerses.length !== 1 ? 's' : ''} to arsenal "${selectedCollection.name}".`,
+          'Rounds Deployed'
+        )
+        handleClose()
+      } else {
+        throw new Error('Add verses failed')
+      }
+    } catch (error) {
+      await errorHandler.handleError(
+        error,
+        'Add Verses',
+        { 
+          customMessage: 'Failed to add rounds to arsenal. Please retry operation.',
+          retry: () => handleAddVerses()
+        }
+      )
+    } finally {
+      setIsAddingVerses(false)
     }
-  };
+  }
 
   const renderCollectionStep = () => {
     if (isCreatingNewCollection) {
@@ -446,6 +463,16 @@ export default function SimpleVerseModal({
           )}
         </View>
       </View>
+
+      {/* Loading Overlays */}
+      <LoadingOverlay 
+        visible={isLoadingChapters} 
+        message="Loading chapter data..."
+      />
+      <LoadingOverlay 
+        visible={isAddingVerses} 
+        message="Deploying rounds to arsenal..."
+      />
     </Modal>
   );
 }

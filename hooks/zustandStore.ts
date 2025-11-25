@@ -21,6 +21,7 @@ import { COLLECTIONS } from '@/mocks/collections'
 import { SCRIPTURES } from '@/mocks/scriptures'
 import { DataLoaderService } from '@/services/dataLoader'
 import { militaryRankingService } from '@/services/militaryRanking'
+import { errorHandler } from '@/services/errorHandler'
 
 // Generate a simple UUID for React Native
 function generateUUID(): string {
@@ -285,7 +286,11 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       set({ userSettings: settings })
       return true
     } catch (error) {
-      console.error('Failed to save user settings:', error)
+      await errorHandler.handleError(
+        error,
+        'Save User Settings',
+        { customMessage: 'Failed to save field operations settings. Please retry, soldier.' }
+      )
       return false
     }
   },
@@ -334,6 +339,7 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
         }
       } catch (rankError) {
         console.error('Failed to sync military ranking:', rankError)
+        // Don't fail the whole operation if ranking sync fails
       }
 
       console.log('📊 Updated stats:', updatedStats)
@@ -344,7 +350,14 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       console.log('📊 Stats updated in state')
       return true
     } catch (error) {
-      console.error('Failed to update user stats:', error)
+      await errorHandler.handleError(
+        error,
+        'Update User Stats',
+        { 
+          customMessage: 'Failed to log mission results. Your combat record may not be updated.',
+          silent: true // Don't show alert for stats updates
+        }
+      )
       return false
     }
   },
@@ -397,17 +410,13 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       const db = await getDb();
 
       if (!db) {
-        console.error('Database not initialized');
-        return false;
+        throw new Error('Database not initialized');
       }
 
       // 1. Update in DB
-      // We need to fetch current values first or calculate in SQL. Drizzle doesn't support 'update ... set x = x + 1' easily without raw sql
-      // So we'll use the in-memory state to calculate new values
       const currentScripture = get().scriptures.find(s => s.id === scriptureId);
       if (!currentScripture) {
-        console.error('Scripture not found:', scriptureId);
-        return false;
+        throw new Error(`Scripture not found: ${scriptureId}`);
       }
 
       const newAccuracy = currentScripture.accuracy ? (currentScripture.accuracy + accuracy) / 2 : accuracy;
@@ -455,7 +464,14 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       console.log('🎯 updateScriptureAccuracy completed successfully');
       return true
     } catch (error) {
-      console.error('Failed to update scripture accuracy:', error)
+      await errorHandler.handleError(
+        error,
+        'Update Scripture Accuracy',
+        { 
+          customMessage: 'Failed to record target practice results. Please retry mission.',
+          retry: () => get().updateScriptureAccuracy(scriptureId, accuracy)
+        }
+      )
       return false
     }
   },
@@ -466,8 +482,7 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       const db = await getDb();
 
       if (!db) {
-        console.error('Database not initialized');
-        return false;
+        throw new Error('Database not initialized');
       }
 
       // 1. Update in DB
@@ -491,7 +506,14 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       console.log('🧠 Mnemonic updated in DB and State');
       return true
     } catch (error) {
-      console.error('Failed to update scripture mnemonic:', error)
+      await errorHandler.handleError(
+        error,
+        'Update Mnemonic',
+        { 
+          customMessage: 'Failed to save battle intelligence. Please retry operation.',
+          retry: () => get().updateScriptureMnemonic(scriptureId, mnemonic)
+        }
+      )
       return false
     }
   },
@@ -501,8 +523,7 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       const db = await getDb();
 
       if (!db) {
-        console.error('Database not initialized');
-        return false;
+        throw new Error('Database not initialized');
       }
 
       // Insert into DB
@@ -526,7 +547,14 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       set({ collections: updatedCollections })
       return true
     } catch (error) {
-      console.error('Failed to add collection:', error)
+      await errorHandler.handleError(
+        error,
+        'Add Collection',
+        { 
+          customMessage: 'Failed to establish new arsenal. Please retry deployment.',
+          retry: () => get().addCollection(collection)
+        }
+      )
       return false
     }
   },
@@ -579,15 +607,13 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
   removeScriptureFromCollection: async (collectionId: string, scriptureId: string) => {
     try {
       if (!collectionId || !scriptureId) {
-        console.error('Invalid params for removeScriptureFromCollection:', { collectionId, scriptureId });
-        return false;
+        throw new Error('Invalid parameters: collectionId and scriptureId are required');
       }
 
       const db = await getDb();
 
       if (!db) {
-        console.error('Database not initialized');
-        return false;
+        throw new Error('Database not initialized');
       }
 
       // Use Drizzle ORM with proper error handling
@@ -613,7 +639,14 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       set({ collections: updatedCollections });
       return true;
     } catch (error) {
-      console.error('Failed to remove scripture from collection:', error);
+      await errorHandler.handleError(
+        error,
+        'Remove Scripture',
+        { 
+          customMessage: 'Failed to remove round from arsenal. Please retry operation.',
+          retry: () => get().removeScriptureFromCollection(collectionId, scriptureId)
+        }
+      )
       return false;
     }
   },
@@ -695,8 +728,7 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       const db = await getDb();
 
       if (!db) {
-        console.error('Database not initialized');
-        return false;
+        throw new Error('Database not initialized');
       }
 
       // Delete collection and related data (CASCADE will handle collection_scriptures)
@@ -708,7 +740,14 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       set({ collections: updatedCollections });
       return true;
     } catch (error) {
-      console.error('Failed to delete collection:', error);
+      await errorHandler.handleError(
+        error,
+        'Delete Arsenal',
+        { 
+          customMessage: 'Failed to dismantle arsenal. Please retry operation.',
+          retry: () => get().deleteCollection(collectionId)
+        }
+      )
       return false;
     }
   },

@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Scripture } from '@/types/scripture'
 import { OpenAI } from 'openai'
+import { errorHandler } from './errorHandler'
 
 // Initialize OpenAI client for Gemini compatibility
 const openai = new OpenAI({
@@ -195,6 +196,16 @@ export const generateBattleIntel = async (
     return intelResponse
   } catch (error) {
     console.error('Failed to generate battle intelligence:', error)
+
+    // Use error handler for network errors
+    await errorHandler.handleError(
+      error,
+      'Generate Battle Intelligence',
+      { 
+        customMessage: 'Intel generation failed. Deploying standard tactical pattern.',
+        silent: true // Don't show alert, just use fallback
+      }
+    )
 
     // Fallback to pattern-based generation if API fails
     const missionType = determineMissionType(request.text)

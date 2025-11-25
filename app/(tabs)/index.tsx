@@ -12,6 +12,8 @@ import ActionButton from '@/components/ActionButton'
 import { ThemedContainer, ThemedText } from '@/components/Themed'
 import { TACTICAL_THEME, GARRISON_THEME } from '@/constants/colors'
 import ScreenHeader from '@/components/ScreenHeader'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
+import { errorHandler } from '@/services/errorHandler'
 
 export default function HomeScreen() {
   const {
@@ -22,35 +24,48 @@ export default function HomeScreen() {
     getScripturesByCollection,
     setCurrentScripture,
     updateScriptureAccuracy,
+    isLoading,
   } = useAppStore()
   const router = useRouter()
 
   const [selectedCollection, setSelectedCollection] =
     React.useState<Collection | null>(null)
-  const [isInitializing, setIsInitializing] = React.useState(true)
+  const [isLoadingScripture, setIsLoadingScripture] = React.useState(false)
 
   const handleSelectCollection = (collection: Collection) => {
-    setSelectedCollection(collection)
-    const scriptures = getScripturesByCollection(collection.id)
-    if (scriptures.length > 0) {
-      // Reset to first scripture when switching collections
-      setCurrentScripture(scriptures[0])
+    try {
+      setIsLoadingScripture(true)
+      setSelectedCollection(collection)
+      const scriptures = getScripturesByCollection(collection.id)
+      if (scriptures.length > 0) {
+        // Reset to first scripture when switching collections
+        setCurrentScripture(scriptures[0])
+      }
+    } catch (error) {
+      errorHandler.handleError(
+        error,
+        'Select Arsenal',
+        { 
+          customMessage: 'Failed to load arsenal. Please try again.',
+          silent: true
+        }
+      )
+    } finally {
+      setIsLoadingScripture(false)
     }
   }
 
   // Auto-select first collection on load if no scripture is selected
   React.useEffect(() => {
-    const initialize = async () => {
-      if (!currentScripture && collections.length > 0 && !selectedCollection) {
-        const firstCollection = collections[0]
-        handleSelectCollection(firstCollection)
+    if (!isLoading && !currentScripture && collections.length > 0 && !selectedCollection) {
+      const firstCollection = collections[0]
+      const scriptures = getScripturesByCollection(firstCollection.id)
+      if (scriptures.length > 0) {
+        setSelectedCollection(firstCollection)
+        setCurrentScripture(scriptures[0])
       }
-      // Brief delay to prevent empty state flash
-      setTimeout(() => setIsInitializing(false), 150)
     }
-
-    initialize()
-  }, [collections, currentScripture, selectedCollection])
+  }, [isLoading, collections, currentScripture, selectedCollection])
 
   const handleNextScripture = () => {
     if (selectedCollection) {
@@ -69,11 +84,29 @@ export default function HomeScreen() {
     }
   }
 
-  const handleRecordingComplete = (accuracy: number) => {
+  const handleRecordingComplete = async (accuracy: number) => {
     console.log('🏠 Home: handleRecordingComplete called with accuracy:', accuracy)
     if (currentScripture) {
       console.log('🏠 Home: Updating scripture accuracy for:', currentScripture.id)
-      updateScriptureAccuracy(currentScripture.id, accuracy)
+      try {
+        setIsLoadingScripture(true)
+        await updateScriptureAccuracy(currentScripture.id, accuracy)
+        errorHandler.showSuccess(
+          `Target hit with ${accuracy.toFixed(1)}% accuracy! Mission complete.`,
+          'Hit Confirmed'
+        )
+      } catch (error) {
+        await errorHandler.handleError(
+          error,
+          'Record Practice Session',
+          { 
+            customMessage: 'Failed to record your practice results. Please try again.',
+            retry: () => handleRecordingComplete(accuracy)
+          }
+        )
+      } finally {
+        setIsLoadingScripture(false)
+      }
     } else {
       console.warn('🏠 Home: No current scripture to update')
     }
@@ -105,7 +138,7 @@ export default function HomeScreen() {
               onRecordingComplete={handleRecordingComplete}
             />
           </>
-        ) : !isInitializing ? (
+        ) : !isLoading ? (
           <View style={styles.emptyState}>
             <View
               style={[styles.emptyIconCircle, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}
@@ -139,6 +172,16 @@ export default function HomeScreen() {
           />
         </View>
       )}
+
+      {/* Loading Overlays */}
+      <LoadingOverlay 
+        visible={isLoading} 
+        message="Mobilizing forces..."
+      />
+      <LoadingOverlay 
+        visible={isLoadingScripture} 
+        message="Loading ammunition..."
+      />
     </ThemedContainer>
   )
 }
