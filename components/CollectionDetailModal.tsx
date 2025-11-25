@@ -33,11 +33,11 @@ interface CollectionDetailModalProps {
   onClose: () => void
 }
 
-export default function CollectionDetailModal({
+const CollectionDetailModal = React.memo(({
   collection,
   isVisible,
   onClose,
-}: CollectionDetailModalProps) {
+}: CollectionDetailModalProps) => {
   const router = useRouter()
   const {
     getScripturesByCollection,
@@ -304,7 +304,7 @@ export default function CollectionDetailModal({
       await errorHandler.handleError(
         error,
         'Update Arsenal Info',
-        { 
+        {
           customMessage: 'Failed to update arsenal information. Please retry operation.',
           retry: () => handleSaveInfo()
         }
@@ -372,7 +372,7 @@ export default function CollectionDetailModal({
       setIsProcessing(true)
       const ids = Array.from(selectedScriptureIds)
       const success = await bulkRemoveScripturesFromCollection(collection.id, ids)
-      
+
       if (success) {
         // Immediately update local state to reflect the deletions
         setLocalScriptures(prev => prev.filter(s => !ids.includes(s.id)))
@@ -389,7 +389,7 @@ export default function CollectionDetailModal({
       await errorHandler.handleError(
         error,
         'Remove Rounds',
-        { 
+        {
           customMessage: 'Failed to remove rounds from arsenal. Please retry operation.',
           retry: () => handleBulkDelete()
         }
@@ -412,7 +412,7 @@ export default function CollectionDetailModal({
     try {
       setIsProcessing(true)
       const success = await deleteCollection(collection.id)
-      
+
       if (success) {
         errorHandler.showSuccess(
           `Arsenal "${collection.name}" dismantled successfully.`,
@@ -426,7 +426,7 @@ export default function CollectionDetailModal({
       await errorHandler.handleError(
         error,
         'Delete Arsenal',
-        { 
+        {
           customMessage: 'Failed to dismantle arsenal. Please retry operation.',
           retry: () => handleDeleteCollection()
         }
@@ -852,13 +852,15 @@ export default function CollectionDetailModal({
       />
 
       {/* Loading Overlay */}
-      <LoadingOverlay 
-        visible={isProcessing} 
+      <LoadingOverlay
+        visible={isProcessing}
         message="Processing arsenal operation..."
       />
     </Modal>
   )
-}
+});
+
+export default CollectionDetailModal;
 
 const styles = StyleSheet.create({
   container: {

@@ -202,14 +202,33 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
           });
 
           // Merge into collections
-          // @ts-ignore - Drizzle types might need slight mapping if JSON fields are involved
-          const mergedCollections = dbCollections.map(c => ({
-            ...c,
+          // Merge into collections
+          const mergedCollections: Collection[] = dbCollections.map(c => ({
+            id: c.id,
+            name: c.name,
+            abbreviation: c.abbreviation || undefined,
+            description: c.description || undefined,
+            createdAt: c.createdAt || undefined,
+            tags: (c.tags as string[]) || [],
+            isChapterBased: c.isChapterBased || false,
+            sourceBook: c.sourceBook || undefined,
+            bookInfo: (c.bookInfo as Collection['bookInfo']) || undefined,
+            chapters: (c.chapters as Collection['chapters']) || undefined,
             scriptures: scripturesByCollection[c.id] || []
           }));
 
-          // @ts-ignore
-          set({ scriptures: dbScriptures, collections: mergedCollections })
+          set({
+            scriptures: dbScriptures.map(s => ({
+              ...s,
+              endVerse: s.endVerse || undefined,
+              mnemonic: s.mnemonic || undefined,
+              lastPracticed: s.lastPracticed || undefined,
+              accuracy: s.accuracy || undefined,
+              practiceCount: s.practiceCount || 0,
+              isJesusWords: s.isJesusWords || false,
+            })),
+            collections: mergedCollections
+          })
         } else {
           // First time load: Seed from Mocks/DataLoader
           console.log('Seeding database...');
@@ -218,21 +237,41 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
           let initialCollections = transformedData.success ? transformedData.collections : COLLECTIONS;
 
           // Insert into SQLite
+          // Insert into SQLite
           // Batch insert scriptures
           if (initialScriptures.length > 0) {
-            // @ts-ignore
-            await db.insert(scripturesTable).values(initialScriptures);
+            const scripturesToInsert = initialScriptures.map(s => ({
+              id: s.id,
+              book: s.book,
+              chapter: s.chapter,
+              verse: s.verse,
+              endVerse: s.endVerse,
+              text: s.text,
+              reference: s.reference,
+              mnemonic: s.mnemonic,
+              lastPracticed: s.lastPracticed,
+              accuracy: s.accuracy,
+              practiceCount: s.practiceCount,
+              isJesusWords: s.isJesusWords
+            }));
+            await db.insert(scripturesTable).values(scripturesToInsert);
           }
 
           // Batch insert collections
           if (initialCollections.length > 0) {
-            // @ts-ignore
-            await db.insert(collectionsTable).values(initialCollections.map(c => ({
-              ...c,
-              tags: c.tags, // Drizzle handles JSON
+            const collectionsToInsert = initialCollections.map(c => ({
+              id: c.id,
+              name: c.name,
+              abbreviation: c.abbreviation,
+              description: c.description,
+              createdAt: c.createdAt,
+              tags: c.tags,
+              isChapterBased: c.isChapterBased,
+              sourceBook: c.sourceBook,
               bookInfo: c.bookInfo,
               chapters: c.chapters
-            })));
+            }));
+            await db.insert(collectionsTable).values(collectionsToInsert);
 
             // Handle relationships for collections
             for (const col of initialCollections) {
@@ -256,11 +295,13 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
         // Success - break retry loop
         break;
       } catch (error) {
-        console.error(`Failed to initialize app data (attempt ${retryCount + 1}/${maxRetries}):`, error)
+        await errorHandler.handleError(error, `Initialize App Data (Attempt ${retryCount + 1}/${maxRetries})`, { silent: true });
         retryCount++;
 
         if (retryCount >= maxRetries) {
-          console.error('Max retries reached. Database initialization failed.');
+          await errorHandler.handleError(new Error('Database initialization failed after max retries'), 'Initialize App Data', {
+            customMessage: 'Critical failure: Unable to access ammunition depot. Please restart the application.'
+          });
           // Set error state or fallback to in-memory data
           set({
             scriptures: SCRIPTURES,
@@ -353,7 +394,7 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       await errorHandler.handleError(
         error,
         'Update User Stats',
-        { 
+        {
           customMessage: 'Failed to log mission results. Your combat record may not be updated.',
           silent: true // Don't show alert for stats updates
         }
@@ -467,7 +508,7 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       await errorHandler.handleError(
         error,
         'Update Scripture Accuracy',
-        { 
+        {
           customMessage: 'Failed to record target practice results. Please retry mission.',
           retry: () => get().updateScriptureAccuracy(scriptureId, accuracy)
         }
@@ -509,7 +550,7 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       await errorHandler.handleError(
         error,
         'Update Mnemonic',
-        { 
+        {
           customMessage: 'Failed to save battle intelligence. Please retry operation.',
           retry: () => get().updateScriptureMnemonic(scriptureId, mnemonic)
         }
@@ -527,13 +568,19 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       }
 
       // Insert into DB
-      // @ts-ignore
-      const { scriptures, ...collectionData } = collection;
+      // Insert into DB
+      const { scriptures: _scriptures, ...collectionData } = collection;
       await db.insert(collectionsTable).values({
-        ...collectionData,
-        tags: collection.tags,
-        bookInfo: collection.bookInfo,
-        chapters: collection.chapters
+        id: collectionData.id,
+        name: collectionData.name,
+        abbreviation: collectionData.abbreviation,
+        description: collectionData.description,
+        createdAt: collectionData.createdAt,
+        tags: collectionData.tags,
+        isChapterBased: collectionData.isChapterBased,
+        sourceBook: collectionData.sourceBook,
+        bookInfo: collectionData.bookInfo,
+        chapters: collectionData.chapters
       });
 
       // Insert relationships
@@ -550,7 +597,7 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       await errorHandler.handleError(
         error,
         'Add Collection',
-        { 
+        {
           customMessage: 'Failed to establish new arsenal. Please retry deployment.',
           retry: () => get().addCollection(collection)
         }
@@ -599,7 +646,9 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       set({ collections: updatedCollections });
       return true;
     } catch (error) {
-      console.error('Failed to add scriptures to collection:', error);
+      await errorHandler.handleError(error, 'Add Scriptures to Collection', {
+        customMessage: 'Failed to add rounds to arsenal.'
+      });
       return false;
     }
   },
@@ -642,7 +691,7 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       await errorHandler.handleError(
         error,
         'Remove Scripture',
-        { 
+        {
           customMessage: 'Failed to remove round from arsenal. Please retry operation.',
           retry: () => get().removeScriptureFromCollection(collectionId, scriptureId)
         }
@@ -689,7 +738,9 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       set({ collections: updatedCollections });
       return true;
     } catch (error) {
-      console.error('Failed to bulk remove scriptures from collection:', error);
+      await errorHandler.handleError(error, 'Bulk Remove Scriptures', {
+        customMessage: 'Failed to remove rounds from arsenal.'
+      });
       return false;
     }
   },
@@ -711,14 +762,29 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       if (uniqueNewScriptures.length === 0) return true;
 
       // Insert into DB
-      // @ts-ignore
-      await db.insert(scripturesTable).values(uniqueNewScriptures).onConflictDoNothing();
+      const scripturesToInsert = uniqueNewScriptures.map(s => ({
+        id: s.id,
+        book: s.book,
+        chapter: s.chapter,
+        verse: s.verse,
+        endVerse: s.endVerse,
+        text: s.text,
+        reference: s.reference,
+        mnemonic: s.mnemonic,
+        lastPracticed: s.lastPracticed,
+        accuracy: s.accuracy,
+        practiceCount: s.practiceCount,
+        isJesusWords: s.isJesusWords
+      }));
+      await db.insert(scripturesTable).values(scripturesToInsert).onConflictDoNothing();
 
       const updatedScriptures = [...existingScriptures, ...uniqueNewScriptures];
       set({ scriptures: updatedScriptures });
       return true;
     } catch (error) {
-      console.error('Failed to add scriptures:', error);
+      await errorHandler.handleError(error, 'Add Scriptures', {
+        customMessage: 'Failed to requisition new ammunition.'
+      });
       return false;
     }
   },
@@ -743,7 +809,7 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       await errorHandler.handleError(
         error,
         'Delete Arsenal',
-        { 
+        {
           customMessage: 'Failed to dismantle arsenal. Please retry operation.',
           retry: () => get().deleteCollection(collectionId)
         }
@@ -775,8 +841,10 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       set({ collections: updatedCollections })
       return true
     } catch (error) {
-      console.error('Failed to update collection:', error)
-      return false
+      await errorHandler.handleError(error, 'Update Collection', {
+        customMessage: 'Failed to update arsenal specifications.'
+      });
+      return false;
     }
   },
 }))

@@ -68,8 +68,12 @@ export const initializeDatabase = async () => {
                 date_created TEXT NOT NULL,
                 mission_type TEXT
             );
+
+            CREATE INDEX IF NOT EXISTS idx_book_chapter ON scriptures(book, chapter);
+            CREATE INDEX IF NOT EXISTS idx_reference ON scriptures(reference);
+            CREATE INDEX IF NOT EXISTS idx_accuracy ON scriptures(accuracy);
         `);
-        
+
         console.log('Database initialized successfully');
     } catch (error) {
         console.error('Failed to initialize database:', error);

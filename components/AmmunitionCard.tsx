@@ -28,14 +28,14 @@ interface AmmunitionCardProps {
   isDark?: boolean
 }
 
-export default function AmmunitionCard({
+const AmmunitionCard = React.memo(({
   scripture,
   onFire,
   onReload,
   onIntel,
   isLoading = false,
   isDark = false,
-}: AmmunitionCardProps) {
+}: AmmunitionCardProps) => {
   const [fireAnimation] = useState(new Animated.Value(1))
   const [pulseAnimation] = useState(new Animated.Value(1))
 
@@ -330,7 +330,9 @@ export default function AmmunitionCard({
       </>
     )
   }
-}
+});
+
+export default AmmunitionCard;
 
 
 const styles = StyleSheet.create({

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, primaryKey, index } from 'drizzle-orm/sqlite-core';
 
 // Scriptures Table
 export const scriptures = sqliteTable('scriptures', {
@@ -14,7 +14,11 @@ export const scriptures = sqliteTable('scriptures', {
     accuracy: real('accuracy'),
     practiceCount: integer('practice_count').default(0),
     isJesusWords: integer('is_jesus_words', { mode: 'boolean' }).default(false),
-});
+}, (table) => ({
+    bookChapterIdx: index('idx_book_chapter').on(table.book, table.chapter),
+    referenceIdx: index('idx_reference').on(table.reference),
+    accuracyIdx: index('idx_accuracy').on(table.accuracy),
+}));
 
 // Collections Table
 export const collections = sqliteTable('collections', {
