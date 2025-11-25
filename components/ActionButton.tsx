@@ -18,6 +18,7 @@ interface ActionButtonProps {
   testID?: string
   size?: 'small' | 'medium' | 'large'
   animated?: boolean
+  textStyle?: any
   style?: any
 }
 
@@ -29,6 +30,7 @@ export default function ActionButton({
   size = 'medium',
   animated = false,
   style,
+  textStyle,
 }: ActionButtonProps) {
   const { isDark } = useAppStore()
   const [pulseAnimation] = useState(new Animated.Value(1))
@@ -113,7 +115,7 @@ export default function ActionButton({
             style={{ marginBottom: 4 }}
           />
         )}
-        <Text style={[styles.title, sizeStyles.title, { color: textColor }]}>
+        <Text style={[styles.title, sizeStyles.title, { color: textColor }, textStyle]}>
           {title}
         </Text>
         {subtitle && (

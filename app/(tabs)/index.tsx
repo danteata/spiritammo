@@ -3,13 +3,15 @@ import { StyleSheet, Text, ScrollView, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Feather } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { GRADIENTS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 import { Collection } from '@/types/scripture'
 import ScriptureCard from '@/components/ScriptureCard'
 import CollectionSelector from '@/components/CollectionSelector'
 import VoiceRecorder from '@/components/VoiceRecorder'
 import ActionButton from '@/components/ActionButton'
+import { ThemedContainer, ThemedText } from '@/components/Themed'
+import { TACTICAL_THEME, GARRISON_THEME } from '@/constants/colors'
+import ScreenHeader from '@/components/ScreenHeader'
 
 export default function HomeScreen() {
   const {
@@ -25,6 +27,7 @@ export default function HomeScreen() {
 
   const [selectedCollection, setSelectedCollection] =
     React.useState<Collection | null>(null)
+  const [isInitializing, setIsInitializing] = React.useState(true)
 
   const handleSelectCollection = (collection: Collection) => {
     setSelectedCollection(collection)
@@ -34,6 +37,20 @@ export default function HomeScreen() {
       setCurrentScripture(scriptures[0])
     }
   }
+
+  // Auto-select first collection on load if no scripture is selected
+  React.useEffect(() => {
+    const initialize = async () => {
+      if (!currentScripture && collections.length > 0 && !selectedCollection) {
+        const firstCollection = collections[0]
+        handleSelectCollection(firstCollection)
+      }
+      // Brief delay to prevent empty state flash
+      setTimeout(() => setIsInitializing(false), 150)
+    }
+    
+    initialize()
+  }, [collections, currentScripture, selectedCollection])
 
   const handleNextScripture = () => {
     if (selectedCollection) {
@@ -62,18 +79,13 @@ export default function HomeScreen() {
     }
   }
 
-  const backgroundColors = isDark
-    ? (GRADIENTS.primary.dark as [string, string])
-    : (GRADIENTS.primary.light as [string, string])
-
   return (
-    <LinearGradient
-      colors={backgroundColors}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-    >
+    <ThemedContainer style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        <ScreenHeader
+          title="WARFARE"
+          subtitle="BATTLE READY"
+        />
 
 
         <CollectionSelector
@@ -93,40 +105,38 @@ export default function HomeScreen() {
               onRecordingComplete={handleRecordingComplete}
             />
           </>
-        ) : (
+        ) : !isInitializing ? (
           <View style={styles.emptyState}>
-            <View style={styles.emptyIconCircle}>
-              <Feather name="shield" size={48} color="rgba(255,255,255,0.2)" />
+            <View style={[styles.emptyIconCircle, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+              <Feather name="shield" size={48} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
             </View>
-            <Text style={[styles.emptyTitle, { color: 'white' }]}>NO AMMUNITION LOADED</Text>
-            <Text style={[styles.emptySubtitle, { color: 'rgba(255,255,255,0.6)' }]}>
+            <ThemedText variant="heading" style={styles.emptyTitle}>NO AMMUNITION LOADED</ThemedText>
+            <ThemedText variant="body" style={styles.emptySubtitle}>
               Select an arsenal or import verses to begin your training.
-            </Text>
+            </ThemedText>
             <ActionButton
               title="GO TO ARMORY"
               onPress={() => router.push('/armory')}
               style={{ marginTop: 24, width: '100%' }}
             />
           </View>
-        )}
+        ) : null}
       </ScrollView>
 
       {currentScripture && (
         <View style={styles.footer}>
           <ActionButton
             title="Ready! Aim! Fire!"
-            subtitle="LOAD NEXT ROUND"
             onPress={handleNextScripture}
             testID="load-next-round-button"
             animated={true}
-            style={{ paddingVertical: 12, marginVertical: 0 }}
+            style={{ paddingVertical: 16, marginVertical: 0, minWidth: 200, backgroundColor: '#CC5529' }}
           />
         </View>
       )}
-    </LinearGradient>
+    </ThemedContainer>
   )
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
