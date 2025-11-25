@@ -7,16 +7,21 @@ import {
   Animated,
   Modal,
   Alert,
+  Platform,
+  StatusBar,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { FontAwesome, Feather } from '@expo/vector-icons';
+import { FontAwesome, Feather, Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import {
   TACTICAL_THEME,
+  GARRISON_THEME,
   MILITARY_TYPOGRAPHY,
   ACCURACY_COLORS,
 } from '@/constants/colors'
 import VoiceRecorder from '@/components/VoiceRecorder'
+import { useAppStore } from '@/hooks/useAppStore'
+import { ThemedText } from '@/components/Themed'
 
 interface TargetPracticeProps {
   onRecordingComplete: (transcript: string, accuracy: number) => void
@@ -46,6 +51,9 @@ export default function TargetPractice({
   isVisible,
   onClose,
 }: TargetPracticeProps) {
+  const { isDark } = useAppStore()
+  const theme = isDark ? TACTICAL_THEME : GARRISON_THEME
+
   const [shotResults, setShotResults] = useState<ShotResult[]>([])
   const [currentAccuracy, setCurrentAccuracy] = useState(0)
   const [windCondition, setWindCondition] = useState<
@@ -203,186 +211,199 @@ export default function TargetPractice({
       shotResults.length
       : 0
 
+
+  const renderContent = () => (
+    <>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity
+          onPress={onClose}
+          style={[styles.closeButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}
+        >
+          <Ionicons name="close" size={24} color={theme.text} />
+        </TouchableOpacity>
+
+        <View style={styles.headerCenter}>
+          <ThemedText variant="heading" style={styles.title}>
+            TARGET PRACTICE
+          </ThemedText>
+          <View style={styles.windIndicator}>
+            {getWindIcon()}
+            <ThemedText variant="caption" style={styles.subTitle}>
+              {getWindDescription()}
+            </ThemedText>
+          </View>
+        </View>
+
+        <View style={{ width: 40 }} />
+      </View>
+
+      {/* Voice Recorder Modal */}
+      {showVoiceRecorder && (
+        <VoiceRecorder
+          scriptureText={targetVerse}
+          intelText={intelText}
+          onRecordingComplete={handleVoiceRecorderComplete}
+        />
+      )}
+
+      {/* Target area - Hide when recording to prevent clutter */}
+      {!showVoiceRecorder && (
+        <View style={styles.targetArea}>
+          <Animated.View
+            style={[styles.target, { transform: [{ scale: targetAnimation }] }]}
+          >
+            {/* Crosshair - always visible */}
+            <View style={styles.crosshair}>
+              <View style={[styles.crosshairHorizontal, { backgroundColor: theme.accent }]} />
+              <View style={[styles.crosshairVertical, { backgroundColor: theme.accent }]} />
+            </View>
+
+            {/* Target rings */}
+            <View style={[styles.targetRing, styles.outerRing, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' }]} />
+            <View style={[styles.targetRing, styles.middleRing, { borderColor: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)' }]} />
+            <View style={[styles.targetRing, styles.innerRing, { borderColor: TACTICAL_THEME.warning }]} />
+            <View style={[styles.targetRing, styles.bullseye, { borderColor: theme.accent, backgroundColor: 'rgba(255, 107, 53, 0.2)' }]} />
+
+            {/* Bullet Holes */}
+            {shots.map(shot => (
+              <View
+                key={shot.id}
+                style={[
+                  styles.bulletHole,
+                  {
+                    left: shot.x - 4, // Center the 8px hole
+                    top: shot.y - 4,
+                    backgroundColor: shot.isHit ? (isDark ? '#1a1a1a' : '#000') : TACTICAL_THEME.error,
+                    borderColor: shot.isHit ? 'rgba(255,255,255,0.5)' : 'rgba(255,0,0,0.3)',
+                  }
+                ]}
+              />
+            ))}
+          </Animated.View>
+        </View>
+      )}
+
+      {/* Verse Display - Hide when recording */}
+      {!showVoiceRecorder && (
+        <View style={[styles.verseContainer, {
+          backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.8)',
+          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+        }]}>
+          <Text style={[styles.verseText, MILITARY_TYPOGRAPHY.body, { color: theme.text }]}>
+            "{targetVerse}"
+          </Text>
+        </View>
+      )}
+
+      {/* Shot grouping display */}
+      {shotResults.length > 0 && (
+        <View style={styles.shotGrouping}>
+          <ThemedText variant="subheading" style={styles.groupingTitle}>
+            SHOT GROUPING
+          </ThemedText>
+          <View style={styles.groupingStats}>
+            <ThemedText variant="body" style={styles.statText}>
+              SHOTS: {shotResults.length}
+            </ThemedText>
+            <ThemedText variant="body" style={styles.statText}>
+              AVG: {averageAccuracy.toFixed(1)}%
+            </ThemedText>
+            <Text
+              style={[
+                styles.statText,
+                MILITARY_TYPOGRAPHY.body,
+                { color: getAccuracyColor(currentAccuracy) },
+              ]}
+            >
+              LAST: {getHitZone(currentAccuracy)}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Controls */}
+      <View style={styles.controls}>
+        <TouchableOpacity
+          style={[styles.controlButton, styles.speakButton, { backgroundColor: isDark ? '#5D4037' : '#D7CCC8' }]}
+          onPress={speakTarget}
+          testID="speak-target-button"
+        >
+          <FontAwesome
+            name={isPlaying ? "volume-up" : "volume-off"}
+            size={20}
+            color={isPlaying ? theme.accent : (isDark ? 'white' : 'black')}
+          />
+          <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button, { color: isDark ? 'white' : 'black' }, isPlaying && { color: theme.accent }]}>
+            {isPlaying ? "PLAYING..." : "HEAR TARGET"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.controlButton, styles.recordButton]}
+          onPress={() => setShowVoiceRecorder(true)}
+          testID="start-recording"
+        >
+          <View style={styles.recordIconOuter}>
+            <View style={styles.recordIconInner} />
+          </View>
+          <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button, { color: 'white' }]}>
+            ENGAGE TARGET
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Last shot result */}
+      {currentAccuracy > 0 && (
+        <View style={styles.lastShotResult}>
+          <ThemedText variant="subheading" style={styles.resultTitle}>
+            SHOT RESULT
+          </ThemedText>
+          <Text
+            style={[
+              styles.resultAccuracy,
+              MILITARY_TYPOGRAPHY.title,
+              { color: getAccuracyColor(currentAccuracy), fontSize: 48 },
+            ]}
+          >
+            {currentAccuracy.toFixed(1)}%
+          </Text>
+          <Text
+            style={[
+              styles.resultZone,
+              MILITARY_TYPOGRAPHY.body,
+              { color: getAccuracyColor(currentAccuracy), letterSpacing: 2 },
+            ]}
+          >
+            {getHitZone(currentAccuracy)}
+          </Text>
+        </View>
+      )}
+    </>
+
+  )
+
   return (
     <Modal
       visible={isVisible}
       animationType="slide"
       presentationStyle="fullScreen"
+      statusBarTranslucent
     >
-      <LinearGradient
-        colors={[TACTICAL_THEME.background, '#0D0D0D']}
-        style={styles.container}
-      >
-        {/* Header */}
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButtonContainer}>
-              <Text style={[styles.statusText, MILITARY_TYPOGRAPHY.button]}>
-                CEASE FIRE
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.headerCenter}>
-            <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
-              TARGET PRACTICE
-            </Text>
-            <Text style={[styles.subTitle, MILITARY_TYPOGRAPHY.caption]}>
-              {getWindDescription()}
-            </Text>
-          </View>
-
-          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-            <FontAwesome name="times" size={24} color={TACTICAL_THEME.error} />
-          </TouchableOpacity>
+      {isDark ? (
+        <LinearGradient
+          colors={[TACTICAL_THEME.background, '#0D0D0D']}
+          style={styles.container}
+        >
+          {renderContent()}
+        </LinearGradient>
+      ) : (
+        <View style={[styles.container, { backgroundColor: theme.background }]}>
+          {renderContent()}
         </View>
-
-        {/* Wind conditions */}
-
-
-        {/* Voice Recorder Modal */}
-        {showVoiceRecorder && (
-          <VoiceRecorder
-            scriptureText={targetVerse}
-            intelText={intelText}
-            onRecordingComplete={handleVoiceRecorderComplete}
-          />
-        )}
-
-        {/* Target area - Hide when recording to prevent clutter */}
-        {!showVoiceRecorder && (
-          <View style={styles.targetArea}>
-            <Animated.View
-              style={[styles.target, { transform: [{ scale: targetAnimation }] }]}
-            >
-              {/* Crosshair - always visible */}
-              <View style={styles.crosshair}>
-                <View style={styles.crosshairHorizontal} />
-                <View style={styles.crosshairVertical} />
-              </View>
-
-              {/* Target rings */}
-              <View style={[styles.targetRing, styles.outerRing]} />
-              <View style={[styles.targetRing, styles.middleRing]} />
-              <View style={[styles.targetRing, styles.innerRing]} />
-              <View style={[styles.targetRing, styles.bullseye]} />
-
-              {/* Bullet Holes */}
-              {shots.map(shot => (
-                <View
-                  key={shot.id}
-                  style={[
-                    styles.bulletHole,
-                    {
-                      left: shot.x - 4, // Center the 8px hole
-                      top: shot.y - 4,
-                      backgroundColor: shot.isHit ? '#1a1a1a' : TACTICAL_THEME.error,
-                      borderColor: shot.isHit ? 'rgba(255,255,255,0.2)' : 'rgba(255,0,0,0.3)',
-                    }
-                  ]}
-                />
-              ))}
-            </Animated.View>
-          </View>
-        )}
-
-        {/* Verse Display - Hide when recording */}
-        {!showVoiceRecorder && (
-          <View style={styles.verseContainer}>
-            <Text style={[styles.verseText, MILITARY_TYPOGRAPHY.body]}>
-              "{targetVerse}"
-            </Text>
-          </View>
-        )}
-
-        {/* Shot grouping display */}
-        {shotResults.length > 0 && (
-          <View style={styles.shotGrouping}>
-            <Text
-              style={[styles.groupingTitle, MILITARY_TYPOGRAPHY.subheading]}
-            >
-              SHOT GROUPING
-            </Text>
-            <View style={styles.groupingStats}>
-              <Text style={[styles.statText, MILITARY_TYPOGRAPHY.body]}>
-                SHOTS: {shotResults.length}
-              </Text>
-              <Text style={[styles.statText, MILITARY_TYPOGRAPHY.body]}>
-                AVG: {averageAccuracy.toFixed(1)}%
-              </Text>
-              <Text
-                style={[
-                  styles.statText,
-                  MILITARY_TYPOGRAPHY.body,
-                  { color: getAccuracyColor(currentAccuracy) },
-                ]}
-              >
-                LAST: {getHitZone(currentAccuracy)}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Controls */}
-        <View style={styles.controls}>
-          <TouchableOpacity
-            style={[styles.controlButton, styles.speakButton]}
-            onPress={speakTarget}
-            testID="speak-target-button"
-          >
-            <FontAwesome
-              name={isPlaying ? "volume-up" : "volume-off"}
-              size={20}
-              color={isPlaying ? TACTICAL_THEME.accent : TACTICAL_THEME.text}
-            />
-            <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button, isPlaying && { color: TACTICAL_THEME.accent }]}>
-              {isPlaying ? "PLAYING..." : "HEAR TARGET"}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.controlButton, styles.recordButton]}
-            onPress={() => setShowVoiceRecorder(true)}
-            testID="start-recording"
-          >
-            <View style={styles.recordIconOuter}>
-              <View style={styles.recordIconInner} />
-            </View>
-            <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button]}>
-              ENGAGE TARGET
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Last shot result */}
-        {/* Last shot result */}
-        {currentAccuracy > 0 && (
-          <View style={styles.lastShotResult}>
-            <Text style={[styles.resultTitle, MILITARY_TYPOGRAPHY.subheading]}>
-              SHOT RESULT
-            </Text>
-            <Text
-              style={[
-                styles.resultAccuracy,
-                MILITARY_TYPOGRAPHY.title,
-                { color: getAccuracyColor(currentAccuracy), fontSize: 48 },
-              ]}
-            >
-              {currentAccuracy.toFixed(1)}%
-            </Text>
-            <Text
-              style={[
-                styles.resultZone,
-                MILITARY_TYPOGRAPHY.body,
-                { color: getAccuracyColor(currentAccuracy), letterSpacing: 2 },
-              ]}
-            >
-              {getHitZone(currentAccuracy)}
-            </Text>
-          </View>
-        )}
-      </LinearGradient>
+      )}
     </Modal>
   )
 }
@@ -390,69 +411,41 @@ export default function TargetPractice({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 50,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 50,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
     paddingBottom: 10,
   },
-  headerLeft: {
-    flex: 1,
-    alignItems: 'flex-start',
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
-  },
-  closeButtonContainer: {
-    padding: 8,
-    marginLeft: -8, // Align with padding
-  },
-  headerCenter: {
-    flex: 2,
     alignItems: 'center',
   },
-  statusText: {
-    color: TACTICAL_THEME.error,
-    fontSize: 12,
-    fontWeight: 'bold',
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
   },
   title: {
-    color: TACTICAL_THEME.text,
     fontSize: 20,
-    fontWeight: 'bold',
     letterSpacing: 1,
   },
   subTitle: {
-    color: TACTICAL_THEME.textSecondary,
     fontSize: 10,
-    marginTop: 4,
+    marginLeft: 4,
     letterSpacing: 1,
     textTransform: 'uppercase',
-  },
-  closeButton: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  rangeInfo: {
-    alignItems: 'flex-end',
-  },
-  rangeText: {
-    color: TACTICAL_THEME.textSecondary,
-  },
-  conditionsContainer: {
-    paddingHorizontal: 20,
-    marginBottom: 20,
   },
   windIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-  },
-  windText: {
-    color: TACTICAL_THEME.textSecondary,
+    marginTop: 4,
   },
   targetArea: {
     flex: 1,
@@ -479,13 +472,11 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 40,
     height: 2,
-    backgroundColor: TACTICAL_THEME.accent,
   },
   crosshairVertical: {
     position: 'absolute',
     width: 2,
     height: 40,
-    backgroundColor: TACTICAL_THEME.accent,
   },
   targetRing: {
     position: 'absolute',
@@ -495,42 +486,49 @@ const styles = StyleSheet.create({
   outerRing: {
     width: 200,
     height: 200,
-    borderColor: TACTICAL_THEME.border,
   },
   middleRing: {
     width: 150,
     height: 150,
-    borderColor: TACTICAL_THEME.textSecondary,
   },
   innerRing: {
     width: 100,
     height: 100,
-    borderColor: TACTICAL_THEME.warning,
   },
   bullseye: {
     width: 50,
     height: 50,
-    borderColor: TACTICAL_THEME.accent,
-    backgroundColor: 'rgba(255, 107, 53, 0.2)',
   },
-  recordingIndicator: {
+  bulletHole: {
     position: 'absolute',
-    top: -40,
-    backgroundColor: TACTICAL_THEME.error,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    borderWidth: 1,
+    zIndex: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.5,
+    shadowRadius: 1,
   },
-  recordingText: {
-    color: TACTICAL_THEME.text,
-    fontWeight: 'bold',
+  verseContainer: {
+    marginHorizontal: 20,
+    marginBottom: 20,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  verseText: {
+    textAlign: 'center',
+    fontStyle: 'italic',
+    fontSize: 16,
+    lineHeight: 24,
   },
   shotGrouping: {
     paddingHorizontal: 20,
     marginBottom: 20,
   },
   groupingTitle: {
-    color: TACTICAL_THEME.text,
     textAlign: 'center',
     marginBottom: 12,
   },
@@ -539,7 +537,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
   },
   statText: {
-    color: TACTICAL_THEME.textSecondary,
+    opacity: 0.8,
   },
   controls: {
     flexDirection: 'row',
@@ -557,7 +555,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   speakButton: {
-    backgroundColor: '#5D4037', // Brownish
+    // Background color handled inline
   },
   recordButton: {
     backgroundColor: '#FF6B35', // Orange
@@ -578,7 +576,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
   },
   controlText: {
-    color: 'white',
     fontWeight: 'bold',
     fontSize: 14,
     letterSpacing: 0.5,
@@ -588,10 +585,8 @@ const styles = StyleSheet.create({
     paddingBottom: 50,
   },
   resultTitle: {
-    color: TACTICAL_THEME.textSecondary,
     marginBottom: 10,
-    fontSize: 14,
-    letterSpacing: 1,
+    opacity: 0.8,
   },
   resultAccuracy: {
     marginBottom: 8,
@@ -601,33 +596,5 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
     textTransform: 'uppercase',
-  },
-  bulletHole: {
-    position: 'absolute',
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    borderWidth: 1,
-    zIndex: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.5,
-    shadowRadius: 1,
-  },
-  verseContainer: {
-    marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 16,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  verseText: {
-    color: TACTICAL_THEME.text,
-    textAlign: 'center',
-    fontStyle: 'italic',
-    fontSize: 16,
-    lineHeight: 24,
   },
 })

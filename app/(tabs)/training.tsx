@@ -10,10 +10,13 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router'
 import {
+  COLORS,
   GRADIENTS,
-  TACTICAL_THEME,
   MILITARY_TYPOGRAPHY,
+  TACTICAL_THEME,
+  GARRISON_THEME,
 } from '@/constants/colors'
+import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 import { Collection, Scripture } from '@/types/scripture'
 import { runWordsOfJesusUpdate } from '@/scripts/updateWordsOfJesus'
@@ -24,6 +27,7 @@ import RankBadge from '@/components/RankBadge'
 import AccuracyMeter from '@/components/AccuracyMeter'
 import ActionButton from '@/components/ActionButton'
 import CollectionSelector from '@/components/CollectionSelector'
+import ScreenHeader from '@/components/ScreenHeader'
 
 import CollectionChapterSelector from '@/components/CollectionChapterSelector'
 import {
@@ -218,97 +222,70 @@ export default function TrainingScreen() {
     }
   }
 
-  const backgroundColors = isDark
-    ? (GRADIENTS.tactical.background as [string, string])
-    : (GRADIENTS.primary.light as [string, string])
-
   return (
-    <LinearGradient
-      colors={backgroundColors}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }}
-    >
+    <ThemedContainer style={styles.container}>
+
       <ScrollView style={styles.scrollView}>
-        {/* Military Header */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <Text
-              style={[
-                styles.title,
-                MILITARY_TYPOGRAPHY.heading,
-                { color: TACTICAL_THEME.text },
-              ]}
-            >
-              TRAINING RANGE
-            </Text>
-
-            {militaryProfile && (
-              <RankBadge
-                rank={militaryProfile.currentRank}
-                size="small"
-                showLabel={false}
-              />
-            )}
-          </View>
-
-          <Text
-            style={[
-              styles.subtitle,
-              MILITARY_TYPOGRAPHY.caption,
-              { color: TACTICAL_THEME.textSecondary },
-            ]}
-          >
-            {selectedCollection
-              ? `${selectedCollection.name} OPERATIONS`
-              : 'ALL UNITS DEPLOYMENT'}
-          </Text>
-
-          <View style={styles.modeSelectorContainer}>
-            <View style={styles.modeSelector}>
-              {(['single', 'burst', 'automatic'] as const).map((mode) => (
-                <TouchableOpacity
-                  key={mode}
-                  style={[
-                    styles.modeButton,
-                    trainingMode === mode && styles.activeModeButton,
-                  ]}
-                  onPress={() => setTrainingMode(mode)}
-                >
-                  <Text
-                    style={[
-                      styles.modeText,
-                      MILITARY_TYPOGRAPHY.caption,
-                      {
-                        color:
-                          trainingMode === mode
-                            ? TACTICAL_THEME.text
-                            : TACTICAL_THEME.textSecondary,
-                      },
-                    ]}
-                  >
-                    {mode === 'automatic' ? 'AUTO' : mode.toUpperCase()}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+        <ScreenHeader
+          title="TRAINING"
+          subtitle="TARGET PRACTICE"
+          rightAction={
+            <View style={styles.headerActions}>
+              <TouchableOpacity
+                onPress={handleReloadAmmunition}
+                style={styles.randomButton}
+              >
+                <FontAwesome name="random" size={16} color={TACTICAL_THEME.text} />
+              </TouchableOpacity>
+              {selectedCollection && selectedCollection.isChapterBased && (
+                <ActionButton
+                  title="CHAPTERS"
+                  onPress={() => setShowMultiChapterSelector(true)}
+                  testID="toggle-chapters-button"
+                  style={{ paddingVertical: 6, paddingHorizontal: 12, minWidth: 0, height: 32 }}
+                  textStyle={{ fontSize: 10 }}
+                />
+              )}
             </View>
-            <TouchableOpacity
-              style={styles.randomButtonCompact}
-              onPress={handleReloadAmmunition}
-            >
-              <FontAwesome name="random" size={16} color={TACTICAL_THEME.text} />
-            </TouchableOpacity>
-          </View>
+          }
+        />
 
-          <View style={styles.tabButtons}>
-            {selectedCollection && selectedCollection.isChapterBased && (
-              <ActionButton
-                title="CHAPTERS"
-                onPress={() => setShowMultiChapterSelector(true)}
-                testID="toggle-chapters-button"
-                style={{ flex: 1 }}
-              />
-            )}
+        <View style={{ height: 10 }} />
+
+        {/* Mode Selector */}
+        <View style={[styles.modeSelectorContainer, { paddingHorizontal: 20 }]}>
+          <View style={[
+            styles.modeSelector,
+            {
+              backgroundColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(0, 0, 0, 0.05)',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'
+            }
+          ]}>
+            {(['single', 'burst', 'automatic'] as const).map((mode) => (
+              <TouchableOpacity
+                key={mode}
+                style={[
+                  styles.modeButton,
+                  trainingMode === mode && styles.activeModeButton,
+                ]}
+                onPress={() => setTrainingMode(mode)}
+              >
+                <ThemedText
+                  variant="caption"
+                  style={[
+                    styles.modeText,
+                    {
+                      color:
+                        trainingMode === mode
+                          ? TACTICAL_THEME.text
+                          : (isDark ? TACTICAL_THEME.textSecondary : GARRISON_THEME.textSecondary),
+                    },
+                  ]}
+                >
+                  {mode === 'automatic' ? 'AUTO' : mode.toUpperCase()}
+                </ThemedText>
+              </TouchableOpacity>
+            ))}
           </View>
         </View>
 
@@ -349,90 +326,112 @@ export default function TrainingScreen() {
             onFire={handleFireAmmunition}
             onReload={handleReloadAmmunition}
             onIntel={handleGenerateIntel}
+            isDark={isDark}
           />
         )}
 
         {/* Mission Status */}
         {militaryProfile && (
-          <View style={styles.missionStatus}>
-            <Text
-              style={[
-                styles.statusTitle,
-                MILITARY_TYPOGRAPHY.subheading,
-                { color: TACTICAL_THEME.text },
-              ]}
-            >
+          <ThemedCard style={styles.missionStatus} variant="default">
+            <ThemedText variant="subheading" style={styles.statusTitle}>
               MISSION STATUS
-            </Text>
+            </ThemedText>
 
             <View style={styles.statusGrid}>
-              <View style={styles.statusItem}>
-                <FontAwesome name="bullseye" size={20} color={TACTICAL_THEME.accent} />
-                <Text
-                  style={[
-                    styles.statusLabel,
-                    MILITARY_TYPOGRAPHY.caption,
-                    { color: TACTICAL_THEME.textSecondary },
-                  ]}
+              {isDark ? (
+                <LinearGradient
+                  colors={[TACTICAL_THEME.surface, '#1a1a1a']}
+                  style={styles.statusItem}
                 >
-                  ROUNDS FIRED
-                </Text>
-                <Text
-                  style={[
-                    styles.statusValue,
-                    MILITARY_TYPOGRAPHY.body,
-                    { color: TACTICAL_THEME.text },
-                  ]}
-                >
-                  {militaryProfile.totalVersesMemorized}
-                </Text>
-              </View>
+                  <FontAwesome name="bullseye" size={20} color={TACTICAL_THEME.accent} />
+                  <ThemedText variant="body" style={{ textAlign: 'center', marginBottom: 24, color: TACTICAL_THEME.text }}>
+                    ROUNDS FIRED
+                  </ThemedText>
+                  <ThemedText variant="body" style={styles.statusValue}>
+                    {militaryProfile.totalVersesMemorized}
+                  </ThemedText>
+                </LinearGradient>
+              ) : (
+                <View style={[
+                  styles.statusItem,
+                  {
+                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                    borderColor: 'rgba(0, 0, 0, 0.1)'
+                  }
+                ]}>
+                  <FontAwesome name="bullseye" size={20} color={TACTICAL_THEME.accent} />
+                  <ThemedText variant="body" style={{ textAlign: 'center', marginBottom: 24 }}>
+                    ROUNDS FIRED
+                  </ThemedText>
+                  <ThemedText variant="body" style={styles.statusValue}>
+                    {militaryProfile.totalVersesMemorized}
+                  </ThemedText>
+                </View>
+              )}
 
-              <View style={styles.statusItem}>
-                <FontAwesome name="trophy" size={20} color={TACTICAL_THEME.success} />
-                <Text
-                  style={[
-                    styles.statusLabel,
-                    MILITARY_TYPOGRAPHY.caption,
-                    { color: TACTICAL_THEME.textSecondary },
-                  ]}
+              {isDark ? (
+                <LinearGradient
+                  colors={[TACTICAL_THEME.surface, '#1a1a1a']}
+                  style={styles.statusItem}
                 >
-                  AVG ACCURACY
-                </Text>
-                <Text
-                  style={[
-                    styles.statusValue,
-                    MILITARY_TYPOGRAPHY.body,
-                    { color: TACTICAL_THEME.text },
-                  ]}
-                >
-                  {fmt(militaryProfile.averageAccuracy)}%
-                </Text>
-              </View>
+                  <FontAwesome name="trophy" size={20} color={TACTICAL_THEME.success} />
+                  <ThemedText variant="caption" style={styles.statusLabel}>
+                    AVG ACCURACY
+                  </ThemedText>
+                  <ThemedText variant="body" style={styles.statusValue}>
+                    {fmt(militaryProfile.averageAccuracy)}%
+                  </ThemedText>
+                </LinearGradient>
+              ) : (
+                <View style={[
+                  styles.statusItem,
+                  {
+                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                    borderColor: 'rgba(0, 0, 0, 0.1)'
+                  }
+                ]}>
+                  <FontAwesome name="trophy" size={20} color={TACTICAL_THEME.success} />
+                  <ThemedText variant="caption" style={styles.statusLabel}>
+                    AVG ACCURACY
+                  </ThemedText>
+                  <ThemedText variant="body" style={styles.statusValue}>
+                    {fmt(militaryProfile.averageAccuracy)}%
+                  </ThemedText>
+                </View>
+              )}
 
-              <View style={styles.statusItem}>
-                <FontAwesome name="long-arrow-up" size={20} color={TACTICAL_THEME.warning} />
-                <Text
-                  style={[
-                    styles.statusLabel,
-                    MILITARY_TYPOGRAPHY.caption,
-                    { color: TACTICAL_THEME.textSecondary },
-                  ]}
+              {isDark ? (
+                <LinearGradient
+                  colors={[TACTICAL_THEME.surface, '#1a1a1a']}
+                  style={styles.statusItem}
                 >
-                  STREAK
-                </Text>
-                <Text
-                  style={[
-                    styles.statusValue,
-                    MILITARY_TYPOGRAPHY.body,
-                    { color: TACTICAL_THEME.text },
-                  ]}
-                >
-                  {militaryProfile.consecutiveDays} DAYS
-                </Text>
-              </View>
+                  <FontAwesome name="long-arrow-up" size={20} color={TACTICAL_THEME.warning} />
+                  <ThemedText variant="caption" style={styles.statusLabel}>
+                    STREAK
+                  </ThemedText>
+                  <ThemedText variant="body" style={styles.statusValue}>
+                    {militaryProfile.consecutiveDays} DAYS
+                  </ThemedText>
+                </LinearGradient>
+              ) : (
+                <View style={[
+                  styles.statusItem,
+                  {
+                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                    borderColor: 'rgba(0, 0, 0, 0.1)'
+                  }
+                ]}>
+                  <FontAwesome name="long-arrow-up" size={20} color={TACTICAL_THEME.warning} />
+                  <ThemedText variant="caption" style={styles.statusLabel}>
+                    STREAK
+                  </ThemedText>
+                  <ThemedText variant="body" style={styles.statusValue}>
+                    {militaryProfile.consecutiveDays} DAYS
+                  </ThemedText>
+                </View>
+              )}
             </View>
-          </View>
+          </ThemedCard>
         )}
       </ScrollView>
 
@@ -450,7 +449,7 @@ export default function TrainingScreen() {
           onClose={() => setShowTargetPractice(false)}
         />
       )}
-    </LinearGradient>
+    </ThemedContainer>
   )
 }
 
@@ -461,30 +460,17 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  header: {
-    padding: 20,
-    paddingTop: 20, // Reduced from 60
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    marginBottom: 10, // Reduced from 20
-  },
-  headerTop: {
+  headerActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    gap: 8,
   },
-  title: {
-    flex: 1,
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-    fontSize: 24,
-    letterSpacing: 1,
-  },
-  subtitle: {
-    marginBottom: 4,
-    opacity: 0.7,
-    letterSpacing: 2,
+  randomButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modeSelectorContainer: {
     flexDirection: 'row',
@@ -545,15 +531,9 @@ const styles = StyleSheet.create({
   missionStatus: {
     margin: 16,
     padding: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    // Removed hardcoded background to let ThemedCard handle it
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    // Removed hardcoded border/shadow to let ThemedCard handle it
   },
   statusTitle: {
     marginBottom: 20,
