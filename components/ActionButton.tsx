@@ -20,6 +20,8 @@ interface ActionButtonProps {
   animated?: boolean
   textStyle?: any
   style?: any
+  accessibilityRole?: 'button' | 'link' | 'image' | 'text' | 'none'
+  accessibilityLabel?: string
 }
 
 export default function ActionButton({
@@ -31,6 +33,8 @@ export default function ActionButton({
   animated = false,
   style,
   textStyle,
+  accessibilityRole = 'button',
+  accessibilityLabel,
 }: ActionButtonProps) {
   const { isDark } = useAppStore()
   const [pulseAnimation] = useState(new Animated.Value(1))
@@ -105,6 +109,8 @@ export default function ActionButton({
       style={[styles.button, sizeStyles.button, { backgroundColor }, style]}
       onPress={onPress}
       testID={testID}
+      accessibilityRole={accessibilityRole as any}
+      accessibilityLabel={accessibilityLabel || title}
     >
       <View style={styles.textContainer}>
         {size !== 'small' && (

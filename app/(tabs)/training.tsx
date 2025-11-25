@@ -234,6 +234,8 @@ export default function TrainingScreen() {
               <TouchableOpacity
                 onPress={handleReloadAmmunition}
                 style={styles.randomButton}
+                accessibilityRole="button"
+                accessibilityLabel="Reload Ammunition"
               >
                 <FontAwesome name="random" size={16} color={TACTICAL_THEME.text} />
               </TouchableOpacity>
@@ -269,6 +271,8 @@ export default function TrainingScreen() {
                   trainingMode === mode && styles.activeModeButton,
                 ]}
                 onPress={() => setTrainingMode(mode)}
+                accessibilityRole="button"
+                accessibilityLabel={`Select ${mode} mode`}
               >
                 <ThemedText
                   variant="caption"

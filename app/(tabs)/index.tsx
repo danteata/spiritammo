@@ -48,7 +48,7 @@ export default function HomeScreen() {
       // Brief delay to prevent empty state flash
       setTimeout(() => setIsInitializing(false), 150)
     }
-    
+
     initialize()
   }, [collections, currentScripture, selectedCollection])
 
@@ -107,7 +107,12 @@ export default function HomeScreen() {
           </>
         ) : !isInitializing ? (
           <View style={styles.emptyState}>
-            <View style={[styles.emptyIconCircle, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+            <View
+              style={[styles.emptyIconCircle, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}
+              accessible={true}
+              accessibilityRole="image"
+              accessibilityLabel="Shield icon indicating no ammunition loaded"
+            >
               <Feather name="shield" size={48} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
             </View>
             <ThemedText variant="heading" style={styles.emptyTitle}>NO AMMUNITION LOADED</ThemedText>

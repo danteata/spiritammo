@@ -215,6 +215,8 @@ export default function ArmoryScreen() {
       <TouchableOpacity
         style={styles.collectionMainArea}
         onPress={() => handleSelectCollection(item)}
+        accessibilityRole="button"
+        accessibilityLabel={`Select collection ${item.name}`}
       >
         <View style={styles.collectionInfo}>
           <View style={styles.collectionHeaderRow}>
@@ -249,6 +251,8 @@ export default function ArmoryScreen() {
       <TouchableOpacity
         style={styles.collectionArrow}
         onPress={() => handleShowCollectionDetail(item)}
+        accessibilityRole="button"
+        accessibilityLabel={`View details for ${item.name}`}
       >
         <View style={styles.arrowCircle}>
           <FontAwesome name="chevron-right" size={12} color={isDark ? 'white' : 'black'} />
@@ -356,6 +360,8 @@ export default function ArmoryScreen() {
         onPress={() => handleDefaultBookTap(item.name)}
         testID={`book-${item.id}`}
         variant="flat"
+        accessibilityRole="button"
+        accessibilityLabel={`View scriptures in ${item.name}`}
       >
         <View style={styles.bookIconContainer}>
           <FontAwesome name="book" size={18} color={TACTICAL_THEME.accent} />
@@ -397,6 +403,8 @@ export default function ArmoryScreen() {
               ]}
               onPress={() => setShowAddVerses(true)}
               testID="add-verses-button"
+              accessibilityRole="button"
+              accessibilityLabel="Add Verses"
             >
               <FontAwesome name="plus" size={14} color={isDark ? "white" : "black"} />
               <Text style={[styles.actionButtonText, { color: isDark ? "white" : "black" }]}>ADD</Text>
@@ -409,6 +417,8 @@ export default function ArmoryScreen() {
               ]}
               onPress={() => setShowFileUploader(true)}
               testID="upload-file-button"
+              accessibilityRole="button"
+              accessibilityLabel="Import File"
             >
               <FontAwesome name="download" size={14} color={isDark ? "white" : "black"} />
               <Text style={[styles.actionButtonText, { color: isDark ? "white" : "black" }]}>IMPORT</Text>

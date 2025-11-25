@@ -162,6 +162,8 @@ export default function CollectionDetailModal({
         onLongPress={handleLongPressItem}
         onPress={handlePress}
         activeOpacity={0.6}
+        accessibilityRole="button"
+        accessibilityLabel={`${item.reference}. ${needsExpandHint && !isExpanded ? 'Double tap to expand.' : ''} ${isSelected ? 'Selected.' : ''}`}
       >
         {/* Mastery progress indicator bar */}
         {masteryPercentage > 0 && (
@@ -179,29 +181,29 @@ export default function CollectionDetailModal({
         )}
 
         <View style={styles.scriptureItemContent}>
-            {isBulkSelecting ? (
-              <View style={[styles.checkbox, isSelected && { backgroundColor: theme.accent, borderColor: theme.accent }, { borderColor: theme.textSecondary }]}>
-                {isSelected && <Feather name="check" size={14} color="#FFF" />}
+          {isBulkSelecting ? (
+            <View style={[styles.checkbox, isSelected && { backgroundColor: theme.accent, borderColor: theme.accent }, { borderColor: theme.textSecondary }]}>
+              {isSelected && <Feather name="check" size={14} color="#FFF" />}
+            </View>
+          ) : (
+            <View style={styles.scriptureIconContainer}>
+              <View
+                style={[
+                  styles.scriptureIconBadge,
+                  {
+                    backgroundColor: isDark ? 'rgba(60, 60, 60, 0.6)' : 'rgba(240, 240, 240, 0.9)',
+                    borderColor: isDark ? 'rgba(100, 100, 100, 0.4)' : 'rgba(200, 200, 200, 0.6)'
+                  }
+                ]}
+              >
+                <FontAwesome
+                  name="book"
+                  size={14}
+                  color={isDark ? 'rgba(180, 180, 180, 0.8)' : 'rgba(100, 100, 100, 0.7)'}
+                />
               </View>
-            ) : (
-              <View style={styles.scriptureIconContainer}>
-                <View
-                  style={[
-                    styles.scriptureIconBadge,
-                    {
-                      backgroundColor: isDark ? 'rgba(60, 60, 60, 0.6)' : 'rgba(240, 240, 240, 0.9)',
-                      borderColor: isDark ? 'rgba(100, 100, 100, 0.4)' : 'rgba(200, 200, 200, 0.6)'
-                    }
-                  ]}
-                >
-                  <FontAwesome
-                    name="book"
-                    size={14}
-                    color={isDark ? 'rgba(180, 180, 180, 0.8)' : 'rgba(100, 100, 100, 0.7)'}
-                  />
-                </View>
-              </View>
-            )}
+            </View>
+          )}
 
           <View style={styles.scriptureInfo}>
             <View style={styles.scriptureHeader}>
@@ -242,6 +244,8 @@ export default function CollectionDetailModal({
                 }
               ]}
               onPress={handleRemoveItem}
+              accessibilityRole="button"
+              accessibilityLabel="Remove round from arsenal"
             >
               <Feather name="x" size={16} color={theme.textSecondary} />
             </TouchableOpacity>
@@ -452,10 +456,10 @@ export default function CollectionDetailModal({
             <View style={styles.headerActions}>
               {isEditingInfo ? (
                 <>
-                  <TouchableOpacity style={[styles.cancelButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]} onPress={handleCancelEdit}>
+                  <TouchableOpacity style={[styles.cancelButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]} onPress={handleCancelEdit} accessibilityRole="button" accessibilityLabel="Cancel editing">
                     <Text style={[styles.cancelButtonText, { color: theme.text }]}>CANCEL</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.saveButton, { backgroundColor: theme.accent }]} onPress={handleSaveInfo}>
+                  <TouchableOpacity style={[styles.saveButton, { backgroundColor: theme.accent }]} onPress={handleSaveInfo} accessibilityRole="button" accessibilityLabel="Save changes">
                     <Text style={styles.saveButtonText}>SAVE</Text>
                   </TouchableOpacity>
                 </>
@@ -464,6 +468,8 @@ export default function CollectionDetailModal({
                   <TouchableOpacity
                     style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}
                     onPress={handleSelectAll}
+                    accessibilityRole="button"
+                    accessibilityLabel={selectedScriptureIds.size === localScriptures.length ? "Deselect all" : "Select all"}
                   >
                     <MaterialCommunityIcons
                       name={selectedScriptureIds.size === localScriptures.length ? "checkbox-multiple-marked" : "checkbox-multiple-blank-outline"}
@@ -476,6 +482,8 @@ export default function CollectionDetailModal({
                     style={[styles.iconButton, { backgroundColor: TACTICAL_THEME.error, borderColor: TACTICAL_THEME.error }]}
                     onPress={handleBulkDelete}
                     disabled={selectedScriptureIds.size === 0}
+                    accessibilityRole="button"
+                    accessibilityLabel="Delete selected rounds"
                   >
                     <Feather name="trash-2" size={22} color={TACTICAL_THEME.text} />
                   </TouchableOpacity>
@@ -486,6 +494,8 @@ export default function CollectionDetailModal({
                       setIsBulkSelecting(false)
                       setSelectedScriptureIds(new Set())
                     }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel selection"
                   >
                     <Feather name="x" size={22} color={theme.text} />
                   </TouchableOpacity>
@@ -495,16 +505,20 @@ export default function CollectionDetailModal({
                   <TouchableOpacity
                     style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}
                     onPress={() => setShowAddVersesModal(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add verses"
                   >
                     <Feather name="plus" size={22} color={TACTICAL_THEME.accent} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}
                     onPress={() => setIsEditingInfo(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="Edit arsenal info"
                   >
                     <Feather name="edit-3" size={22} color={theme.text} />
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.closeButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} onPress={onClose}>
+                  <TouchableOpacity style={[styles.closeButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close modal">
                     <Feather name="x" size={22} color={theme.text} />
                   </TouchableOpacity>
                 </>
@@ -600,7 +614,7 @@ export default function CollectionDetailModal({
                 <Feather name="inbox" size={32} color={theme.textSecondary} style={{ opacity: 0.5 }} />
                 <Text style={[styles.emptyVersesText, { color: theme.textSecondary }]}>No ammunition loaded yet.</Text>
               </View>
-            )}  
+            )}
           </View>
 
           {/* Stats Section */}
@@ -765,6 +779,8 @@ export default function CollectionDetailModal({
                 onClose()
                 router.push('/(tabs)/training')
               }}
+              accessibilityRole="button"
+              accessibilityLabel="Enter Training Range"
             >
               <View style={styles.trainingButtonContent}>
                 <MaterialCommunityIcons name="target" size={24} color="#FFFFFF" />

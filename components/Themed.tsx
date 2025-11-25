@@ -42,6 +42,8 @@ export type ThemedCardProps = ThemeProps & {
     onPress?: () => void;
     variant?: 'default' | 'outlined' | 'flat';
     testID?: string;
+    accessibilityRole?: 'button' | 'link' | 'image' | 'text' | 'none';
+    accessibilityLabel?: string;
 };
 
 export type ThemedButtonProps = ThemeProps & TouchableOpacityProps & {
@@ -145,6 +147,8 @@ export function ThemedCard({
     onPress,
     variant = 'default',
     testID,
+    accessibilityRole,
+    accessibilityLabel,
 }: ThemedCardProps) {
     const { isDark } = useAppStore();
     const theme = isDark ? TACTICAL_THEME : GARRISON_THEME;
@@ -177,7 +181,14 @@ export function ThemedCard({
 
     if (onPress) {
         return (
-            <TouchableOpacity style={cardStyles} onPress={onPress} activeOpacity={0.7} testID={testID}>
+            <TouchableOpacity
+                style={cardStyles}
+                onPress={onPress}
+                activeOpacity={0.7}
+                testID={testID}
+                accessibilityRole={accessibilityRole as any}
+                accessibilityLabel={accessibilityLabel}
+            >
                 {children}
             </TouchableOpacity>
         );
