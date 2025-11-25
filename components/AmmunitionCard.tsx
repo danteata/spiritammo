@@ -5,6 +5,7 @@ import {
   View,
   TouchableOpacity,
   Animated,
+  ActivityIndicator,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Ionicons, FontAwesome5 } from '@expo/vector-icons';
@@ -305,10 +306,16 @@ export default function AmmunitionCard({
             disabled={isLoading || !!scripture.mnemonic}
             testID="intel-button"
           >
-            <FontAwesome5 name="brain" size={20} color={TACTICAL_THEME.text} />
-            <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
-              INTEL
-            </Text>
+            {isLoading ? (
+              <ActivityIndicator size="small" color={TACTICAL_THEME.text} />
+            ) : (
+              <>
+                <FontAwesome5 name="brain" size={20} color={TACTICAL_THEME.text} />
+                <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
+                  INTEL
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
 

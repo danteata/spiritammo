@@ -74,7 +74,7 @@ export default function BookScripturesModal({
               </Text>
             </View>
 
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close modal">
               <FontAwesome name="close" size={24} color={TACTICAL_THEME.text} />
             </TouchableOpacity>
           </View>
@@ -92,6 +92,14 @@ export default function BookScripturesModal({
           style={styles.list}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <FontAwesome name="book" size={48} color={TACTICAL_THEME.textSecondary} style={{ opacity: 0.5, marginBottom: 16 }} />
+              <Text style={[styles.emptyText, MILITARY_TYPOGRAPHY.body]}>
+                No rounds found in this book.
+              </Text>
+            </View>
+          }
         />
       </LinearGradient>
     </Modal>
@@ -155,5 +163,16 @@ const styles = StyleSheet.create({
   scriptureText: {
     color: TACTICAL_THEME.textSecondary,
     lineHeight: 18,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+    marginTop: 40,
+  },
+  emptyText: {
+    color: TACTICAL_THEME.textSecondary,
+    textAlign: 'center',
+    fontSize: 16,
   },
 })

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
@@ -354,7 +354,11 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
     <View style={styles.container}>
       {/* Comms Panel Header */}
       <View style={styles.panelHeader}>
-        <View style={[styles.statusIndicator, isRecording ? styles.statusActive : styles.statusStandby]} />
+        {isInitializing || statusMessage.includes('Transcribing') || statusMessage.includes('Initializing') ? (
+          <ActivityIndicator size="small" color={textColor} style={{ marginRight: 8 }} />
+        ) : (
+          <View style={[styles.statusIndicator, isRecording ? styles.statusActive : styles.statusStandby]} />
+        )}
         <Text style={[styles.statusText, { color: textColor }]}>
           {statusMessage.toUpperCase()}
         </Text>
