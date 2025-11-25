@@ -11,7 +11,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors';
+import { TACTICAL_THEME, GARRISON_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
 import {
   Book,
@@ -49,6 +49,8 @@ export default function AddVersesModal({
     addScriptures,
     isDark
   } = useAppStore();
+
+  const theme = isDark ? TACTICAL_THEME : GARRISON_THEME;
 
   const [currentStep, setCurrentStep] = useState<Step>('collection');
   const [activeTab, setActiveTab] = useState<TabType>('BOOK');
@@ -145,7 +147,7 @@ export default function AddVersesModal({
     }
 
     // Find matching book from BOOKS
-    const book = BOOKS.find(b => 
+    const book = BOOKS.find(b =>
       b.name.toLowerCase() === bookName.toLowerCase() ||
       b.abbreviations?.some(abbr => abbr.toLowerCase() === bookName.toLowerCase())
     );
@@ -302,10 +304,10 @@ export default function AddVersesModal({
                 />
 
                 <TouchableOpacity
-                  style={[styles.newCollectionButton, { backgroundColor: TACTICAL_THEME.accent }]}
+                  style={[styles.newCollectionButton, { backgroundColor: theme.accent }]}
                   onPress={handleCreateNewCollection}
                 >
-                  <FontAwesome name="plus" size={16} color={TACTICAL_THEME.text} />
+                  <FontAwesome name="plus" size={16} color={theme.text} />
                   <Text style={[styles.newCollectionText, MILITARY_TYPOGRAPHY.button]}>
                     ESTABLISH NEW DEPOT
                   </Text>
@@ -317,16 +319,16 @@ export default function AddVersesModal({
                   Depot Designation:
                 </Text>
                 <TextInput
-                  style={[styles.collectionNameInput, { color: TACTICAL_THEME.text, borderColor: TACTICAL_THEME.border }]}
+                  style={[styles.collectionNameInput, { color: theme.text, borderColor: theme.border }]}
                   placeholder="Enter depot name"
-                  placeholderTextColor={TACTICAL_THEME.textSecondary}
+                  placeholderTextColor={theme.textSecondary}
                   value={newCollectionName}
                   onChangeText={setNewCollectionName}
                   autoFocus={true}
                 />
                 <View style={styles.formActions}>
                   <TouchableOpacity
-                    style={[styles.cancelButton, { backgroundColor: TACTICAL_THEME.surface }]}
+                    style={[styles.cancelButton, { backgroundColor: theme.surface }]}
                     onPress={() => {
                       setIsCreatingNewCollection(false);
                       setNewCollectionName('');
@@ -339,7 +341,7 @@ export default function AddVersesModal({
                   <TouchableOpacity
                     style={[
                       styles.createButton,
-                      newCollectionName.trim() && { backgroundColor: TACTICAL_THEME.accent }
+                      newCollectionName.trim() && { backgroundColor: theme.accent }
                     ]}
                     onPress={() => newCollectionName.trim() && setCurrentStep('navigation')}
                     disabled={!newCollectionName.trim()}
@@ -359,11 +361,11 @@ export default function AddVersesModal({
           <View style={styles.navigationContent}>
             {/* Search Bar */}
             <View style={styles.searchContainer}>
-              <FontAwesome name="book" size={20} color={TACTICAL_THEME.accent} style={styles.searchIcon} />
+              <FontAwesome name="book" size={20} color={theme.accent} style={styles.searchIcon} />
               <TextInput
-                style={[styles.searchInput, { color: TACTICAL_THEME.text }]}
+                style={[styles.searchInput, { color: theme.text }]}
                 placeholder="John 1"
-                placeholderTextColor={TACTICAL_THEME.textSecondary}
+                placeholderTextColor={theme.textSecondary}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -381,7 +383,7 @@ export default function AddVersesModal({
                 style={[styles.tab, activeTab === 'BOOK' && styles.tabActive]}
                 onPress={() => setActiveTab('BOOK')}
               >
-                <FontAwesome name="book" size={16} color={activeTab === 'BOOK' ? TACTICAL_THEME.accent : TACTICAL_THEME.text} />
+                <FontAwesome name="book" size={16} color={activeTab === 'BOOK' ? theme.accent : theme.text} />
                 <Text style={[styles.tabText, activeTab === 'BOOK' && styles.tabTextActive]}>
                   BOOK
                 </Text>
@@ -392,7 +394,7 @@ export default function AddVersesModal({
                 onPress={() => setActiveTab('CHAPTER')}
                 disabled={!selectedBook}
               >
-                <FontAwesome name="bookmark" size={16} color={activeTab === 'CHAPTER' ? TACTICAL_THEME.accent : TACTICAL_THEME.textSecondary} />
+                <FontAwesome name="bookmark" size={16} color={activeTab === 'CHAPTER' ? theme.accent : theme.textSecondary} />
                 <Text style={[styles.tabText, activeTab === 'CHAPTER' && styles.tabTextActive, !selectedBook && styles.tabTextDisabled]}>
                   CHAPTER
                 </Text>
@@ -403,7 +405,7 @@ export default function AddVersesModal({
                 onPress={() => setActiveTab('VERSE')}
                 disabled={!selectedChapter}
               >
-                <FontAwesome name="list-ol" size={16} color={activeTab === 'VERSE' ? TACTICAL_THEME.accent : TACTICAL_THEME.textSecondary} />
+                <FontAwesome name="list-ol" size={16} color={activeTab === 'VERSE' ? theme.accent : theme.textSecondary} />
                 <Text style={[styles.tabText, activeTab === 'VERSE' && styles.tabTextActive, !selectedChapter && styles.tabTextDisabled]}>
                   VERSE
                 </Text>
@@ -452,6 +454,8 @@ export default function AddVersesModal({
     }
   };
 
+  const styles = getStyles(theme);
+
   return (
     <Modal
       animationType="slide"
@@ -459,10 +463,10 @@ export default function AddVersesModal({
       visible={isVisible}
       onRequestClose={handleClose}
     >
-      <StatusBar barStyle="light-content" backgroundColor={TACTICAL_THEME.background} />
-      <View style={[styles.modalContainer, { backgroundColor: TACTICAL_THEME.background }]}>
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
+      <View style={[styles.modalContainer, { backgroundColor: theme.background }]}>
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: TACTICAL_THEME.background }]}>
+        <View style={[styles.header, { backgroundColor: theme.background }]}>
           <TouchableOpacity
             style={styles.backButton}
             onPress={currentStep !== 'collection' ? handleBack : handleClose}
@@ -470,7 +474,7 @@ export default function AddVersesModal({
             <FontAwesome
               name={currentStep !== 'collection' ? "arrow-left" : "times"}
               size={24}
-              color={TACTICAL_THEME.text}
+              color={theme.text}
             />
           </TouchableOpacity>
 
@@ -479,7 +483,7 @@ export default function AddVersesModal({
           </Text>
 
           <TouchableOpacity style={styles.settingsButton}>
-            <FontAwesome name="cog" size={24} color={TACTICAL_THEME.text} />
+            <FontAwesome name="cog" size={24} color={theme.text} />
           </TouchableOpacity>
         </View>
 
@@ -500,10 +504,10 @@ export default function AddVersesModal({
               </Text>
             </View>
             <TouchableOpacity
-              style={[styles.deployButton, { backgroundColor: TACTICAL_THEME.accent }]}
+              style={[styles.deployButton, { backgroundColor: theme.accent }]}
               onPress={handleConfirm}
             >
-              <FontAwesome name="rocket" size={20} color={TACTICAL_THEME.text} style={{ marginRight: 8 }} />
+              <FontAwesome name="rocket" size={20} color={theme.text} style={{ marginRight: 8 }} />
               <Text style={[styles.deployButtonText, MILITARY_TYPOGRAPHY.button]}>
                 DEPLOY AMMUNITION
               </Text>
@@ -515,9 +519,12 @@ export default function AddVersesModal({
   );
 }
 
-const styles = StyleSheet.create({
+// Helper function to get theme colors since we can't use hooks in StyleSheet
+// We'll use inline styles for theme-dependent colors or a style generator
+const getStyles = (theme: typeof TACTICAL_THEME) => StyleSheet.create({
   modalContainer: {
     flex: 1,
+    backgroundColor: theme.background,
   },
   header: {
     flexDirection: 'row',
@@ -527,7 +534,8 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: TACTICAL_THEME.border,
+    borderBottomColor: theme.border,
+    backgroundColor: theme.background,
   },
   backButton: {
     padding: 8,
@@ -536,7 +544,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   headerTitle: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontSize: 20,
   },
   content: {
@@ -547,7 +555,7 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   stepDescription: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -557,7 +565,7 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     marginHorizontal: 16,
     marginTop: 16,
     marginBottom: 16,
@@ -571,16 +579,16 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     paddingVertical: 12,
-    color: TACTICAL_THEME.text,
+    color: theme.text,
   },
   goButton: {
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
     paddingHorizontal: 24,
     paddingVertical: 8,
     borderRadius: 6,
   },
   goButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text, // Accent usually has light text, but let's stick to theme.text for now or hardcode white if needed
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -598,27 +606,27 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     gap: 8,
   },
   tabActive: {
     borderWidth: 2,
-    borderColor: TACTICAL_THEME.accent,
+    borderColor: theme.accent,
   },
   tabText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontSize: 12,
     fontWeight: 'bold',
   },
   tabTextActive: {
-    color: TACTICAL_THEME.accent,
+    color: theme.accent,
   },
   tabTextDisabled: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     opacity: 0.5,
   },
   currentSelection: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
@@ -638,7 +646,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   newCollectionText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text, // Check contrast
     fontWeight: 'bold',
   },
   footer: {
@@ -646,21 +654,21 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingBottom: 32,
     borderTopWidth: 1,
-    borderTopColor: TACTICAL_THEME.border,
-    backgroundColor: TACTICAL_THEME.surface,
+    borderTopColor: theme.border,
+    backgroundColor: theme.surface,
   },
   deployInfo: {
     marginBottom: 12,
   },
   deployInfoText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: 4,
   },
   deployTargetText: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     fontSize: 12,
     textAlign: 'center',
   },
@@ -672,15 +680,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   deployButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text, // Check contrast
   },
   newCollectionForm: {
     padding: 20,
-    backgroundColor: TACTICAL_THEME.background,
+    backgroundColor: theme.background,
     borderRadius: 8,
   },
   formLabel: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     marginBottom: 8,
     fontWeight: '500',
   },
@@ -704,7 +712,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   createButton: {
@@ -712,10 +720,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 6,
     alignItems: 'center',
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
   },
   createButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
 });

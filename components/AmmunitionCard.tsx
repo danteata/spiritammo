@@ -9,8 +9,10 @@ import {
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import {
-  TACTICAL_THEME,
+  COLORS,
   MILITARY_TYPOGRAPHY,
+  TACTICAL_THEME,
+  GARRISON_THEME,
   ACCURACY_COLORS,
 } from '@/constants/colors'
 import { Scripture } from '@/types/scripture'
@@ -22,6 +24,7 @@ interface AmmunitionCardProps {
   onReload: () => void
   onIntel: (force?: boolean) => void // Generate mnemonic
   isLoading?: boolean
+  isDark?: boolean
 }
 
 export default function AmmunitionCard({
@@ -30,6 +33,7 @@ export default function AmmunitionCard({
   onReload,
   onIntel,
   isLoading = false,
+  isDark = false,
 }: AmmunitionCardProps) {
   const [fireAnimation] = useState(new Animated.Value(1))
   const [pulseAnimation] = useState(new Animated.Value(1))
@@ -97,16 +101,49 @@ export default function AmmunitionCard({
     <Animated.View
       style={[styles.container, { transform: [{ scale: fireAnimation }] }]}
     >
-      <LinearGradient
-        colors={[TACTICAL_THEME.surface, TACTICAL_THEME.background]}
-        style={styles.card}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
+      {isDark ? (
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: '#0D0D0D',
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+            },
+          ]}
+        >
+          {renderCardContent()}
+        </View>
+      ) : (
+        <View
+          style={[
+            styles.card,
+            {
+              backgroundColor: GARRISON_THEME.surface,
+              borderColor: GARRISON_THEME.border,
+            },
+          ]}
+        >
+          {renderCardContent()}
+        </View>
+      )}
+    </Animated.View>
+  )
+
+  function renderCardContent() {
+    return (
+      <>
         {/* Header with ammunition info */}
         <View style={styles.header}>
           <View style={styles.ammunitionInfo}>
-            <Text style={[styles.reference, MILITARY_TYPOGRAPHY.code]}>
+            <Text
+              style={[
+                MILITARY_TYPOGRAPHY.heading,
+                {
+                  color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text,
+                  marginBottom: 4,
+                },
+              ]}
+            >
               {scripture.reference}
             </Text>
             <Text style={[styles.roundsCount, MILITARY_TYPOGRAPHY.caption]}>
@@ -133,11 +170,18 @@ export default function AmmunitionCard({
         </View>
 
         {/* Scripture text */}
-        <View style={styles.textContainer}>
+        <View style={[
+          styles.textContainer,
+          { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.03)' }
+        ]}>
           <ScriptureText
             text={scripture.text}
             isJesusWords={scripture.isJesusWords}
-            style={[styles.scriptureText, MILITARY_TYPOGRAPHY.body]}
+            style={[
+              styles.scriptureText,
+              MILITARY_TYPOGRAPHY.body,
+              { color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text }
+            ]}
           />
         </View>
 
@@ -164,7 +208,11 @@ export default function AmmunitionCard({
                 <>
                   <View style={styles.planSection}>
                     <Text style={[styles.planLabel, MILITARY_TYPOGRAPHY.caption]}>PLAN:</Text>
-                    <Text style={[styles.planText, MILITARY_TYPOGRAPHY.body]}>
+                    <Text style={[
+                      styles.planText,
+                      MILITARY_TYPOGRAPHY.body,
+                      { color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text }
+                    ]}>
                       {scripture.mnemonic.split('\n---\n')[0]}
                     </Text>
                   </View>
@@ -176,7 +224,11 @@ export default function AmmunitionCard({
                   </View>
                 </>
               ) : (
-                <Text style={[styles.mnemonicText, MILITARY_TYPOGRAPHY.caption]}>
+                <Text style={[
+                  styles.mnemonicText,
+                  MILITARY_TYPOGRAPHY.caption,
+                  { color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text }
+                ]}>
                   {scripture.mnemonic}
                 </Text>
               )}
@@ -188,7 +240,11 @@ export default function AmmunitionCard({
         <View style={styles.accuracyContainer}>
           <View style={styles.accuracyHeader}>
             <FontAwesome name="bullseye" size={16} color={getAccuracyColor(accuracy)} />
-            <Text style={[styles.accuracyLabel, MILITARY_TYPOGRAPHY.caption]}>
+            <Text style={[
+              styles.accuracyLabel,
+              MILITARY_TYPOGRAPHY.caption,
+              { color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text }
+            ]}>
               ACCURACY: {accuracy.toFixed(1)}%
             </Text>
             <Text
@@ -264,10 +320,11 @@ export default function AmmunitionCard({
             </Text>
           </View>
         )}
-      </LinearGradient>
-    </Animated.View>
-  )
+      </>
+    )
+  }
 }
+
 
 const styles = StyleSheet.create({
   container: {
@@ -312,13 +369,12 @@ const styles = StyleSheet.create({
   textContainer: {
     marginBottom: 16,
     padding: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    // Use theme-aware background logic in component
     borderRadius: 8,
     borderLeftWidth: 3,
     borderLeftColor: TACTICAL_THEME.accent,
   },
   scriptureText: {
-    color: TACTICAL_THEME.text,
     lineHeight: 24,
   },
   mnemonicContainer: {
@@ -356,7 +412,6 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   planText: {
-    color: TACTICAL_THEME.text,
     fontWeight: 'bold',
     fontSize: 16,
   },
@@ -376,7 +431,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   mnemonicText: {
-    color: TACTICAL_THEME.text,
     fontStyle: 'italic',
   },
   accuracyContainer: {
@@ -388,7 +442,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   accuracyLabel: {
-    color: TACTICAL_THEME.text,
     marginLeft: 8,
     flex: 1,
   },

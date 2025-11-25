@@ -11,6 +11,7 @@ export interface Scripture {
   accuracy?: number
   practiceCount?: number
   isJesusWords?: boolean // Flag to indicate if this verse contains words of Jesus
+  masteryLevel?: number
 }
 
 export interface Book {

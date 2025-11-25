@@ -18,7 +18,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router'
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
+import { TACTICAL_THEME, GARRISON_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection, Scripture } from '@/types/scripture'
 import { useAppStore } from '@/hooks/useAppStore'
 import AddVersesModal from './AddVersesModal'
@@ -43,7 +43,10 @@ export default function CollectionDetailModal({
     removeScriptureFromCollection,
     bulkRemoveScripturesFromCollection,
     deleteCollection,
+    isDark,
   } = useAppStore()
+
+  const theme = isDark ? TACTICAL_THEME : GARRISON_THEME
 
   const [isBulkSelecting, setIsBulkSelecting] = useState(false)
   const [selectedScriptureIds, setSelectedScriptureIds] = useState<Set<string>>(new Set())
@@ -52,6 +55,201 @@ export default function CollectionDetailModal({
   const [editedDescription, setEditedDescription] = useState(collection.description || '')
   const [localScriptures, setLocalScriptures] = useState<Scripture[]>([])
   const [showAddVersesModal, setShowAddVersesModal] = useState(false)
+  const [expandedScriptureIds, setExpandedScriptureIds] = useState<Set<string>>(new Set())
+
+  // Memoized callbacks for better performance
+  const toggleExpand = React.useCallback((id: string) => {
+    setExpandedScriptureIds(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(id)) {
+        newSet.delete(id)
+      } else {
+        newSet.add(id)
+      }
+      return newSet
+    })
+  }, [])
+
+  const toggleScriptureSelection = React.useCallback((scriptureId: string) => {
+    setSelectedScriptureIds(prev => {
+      const newSelection = new Set(prev)
+      if (newSelection.has(scriptureId)) {
+        newSelection.delete(scriptureId)
+      } else {
+        newSelection.add(scriptureId)
+      }
+      return newSelection
+    })
+  }, [])
+
+  // Memoized render function for better performance
+  const renderScriptureItem = React.useCallback(({ item }: { item: Scripture }) => {
+    const isSelected = selectedScriptureIds.has(item.id)
+    const isExpanded = expandedScriptureIds.has(item.id)
+    const masteryPercentage = item.masteryLevel || 0
+
+    // Card background - match ThemedCard surface
+    const cardBackground = isDark
+      ? 'rgba(20, 20, 20, 0.8)'
+      : '#FFFFFF'
+
+    // Border color - professional
+    const borderColor = isDark
+      ? 'rgba(60, 60, 60, 0.4)'
+      : 'rgba(0, 0, 0, 0.08)'
+
+    // Mastery badge color only
+    const getMasteryBadgeColor = () => {
+      if (masteryPercentage >= 80) return isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.5)'
+      if (masteryPercentage >= 50) return isDark ? 'rgba(234, 179, 8, 0.3)' : 'rgba(234, 179, 8, 0.5)'
+      return isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.5)'
+    }
+
+    // Check if text needs expand hint (more than 2 lines worth of text)
+    const textLength = item.text.length
+    const needsExpandHint = textLength > 80 // Approximately 2 lines
+
+    const handlePress = () => {
+      if (isBulkSelecting) {
+        toggleScriptureSelection(item.id)
+      } else {
+        toggleExpand(item.id)
+      }
+    }
+
+    const handleLongPressItem = () => {
+      if (!isBulkSelecting && !isEditingInfo) {
+        setIsBulkSelecting(true)
+        toggleScriptureSelection(item.id)
+        Vibration.vibrate(50)
+      }
+    }
+
+    const handleRemoveItem = (e: any) => {
+      e.stopPropagation()
+      Alert.alert(
+        'Remove Round',
+        'Are you sure you want to remove this round from the arsenal?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: async () => {
+              const success = await removeScriptureFromCollection(collection.id, item.id)
+              if (success) {
+                setLocalScriptures(prev => prev.filter(s => s.id !== item.id))
+                Alert.alert('Success', 'Round removed from arsenal')
+              } else {
+                Alert.alert('Error', 'Failed to remove round')
+              }
+            }
+          }
+        ]
+      )
+    }
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.scriptureItem,
+          { backgroundColor: cardBackground, borderWidth: 1, borderColor },
+          isBulkSelecting && isSelected && {
+            backgroundColor: isDark ? 'rgba(255, 107, 53, 0.15)' : 'rgba(255, 107, 53, 0.08)',
+            borderColor: theme.accent
+          }
+        ]}
+        onLongPress={handleLongPressItem}
+        onPress={handlePress}
+        activeOpacity={0.6}
+      >
+        {/* Mastery progress indicator bar */}
+        {masteryPercentage > 0 && (
+          <View style={styles.masteryBar}>
+            <View
+              style={[
+                styles.masteryProgress,
+                {
+                  width: `${masteryPercentage}%`,
+                  backgroundColor: getMasteryBadgeColor()
+                }
+              ]}
+            />
+          </View>
+        )}
+
+        <View style={styles.scriptureItemContent}>
+            {isBulkSelecting ? (
+              <View style={[styles.checkbox, isSelected && { backgroundColor: theme.accent, borderColor: theme.accent }, { borderColor: theme.textSecondary }]}>
+                {isSelected && <Feather name="check" size={14} color="#FFF" />}
+              </View>
+            ) : (
+              <View style={styles.scriptureIconContainer}>
+                <View
+                  style={[
+                    styles.scriptureIconBadge,
+                    {
+                      backgroundColor: isDark ? 'rgba(60, 60, 60, 0.6)' : 'rgba(240, 240, 240, 0.9)',
+                      borderColor: isDark ? 'rgba(100, 100, 100, 0.4)' : 'rgba(200, 200, 200, 0.6)'
+                    }
+                  ]}
+                >
+                  <FontAwesome
+                    name="book"
+                    size={14}
+                    color={isDark ? 'rgba(180, 180, 180, 0.8)' : 'rgba(100, 100, 100, 0.7)'}
+                  />
+                </View>
+              </View>
+            )}
+
+          <View style={styles.scriptureInfo}>
+            <View style={styles.scriptureHeader}>
+              <Text style={[styles.scriptureRef, { color: theme.accent }]}>{item.reference}</Text>
+              {masteryPercentage > 0 && (
+                <View style={[styles.masteryBadge, { borderColor: getMasteryBadgeColor(), backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(0,0,0,0.04)' }]}>
+                  <MaterialCommunityIcons
+                    name="target"
+                    size={10}
+                    color={getMasteryBadgeColor()}
+                  />
+                  <Text style={[styles.masteryText, { color: getMasteryBadgeColor() }]}>
+                    {masteryPercentage}%
+                  </Text>
+                </View>
+              )}
+            </View>
+            <Text
+              style={[styles.scriptureText, { color: theme.textSecondary }]}
+              numberOfLines={isExpanded ? undefined : 2}
+            >
+              {item.text}
+            </Text>
+            {!isExpanded && needsExpandHint && (
+              <Text style={[styles.expandHint, { color: isDark ? 'rgba(180, 180, 180, 0.6)' : 'rgba(120, 120, 120, 0.7)' }]}>
+                Tap to expand...
+              </Text>
+            )}
+          </View>
+
+          {!isBulkSelecting && (
+            <TouchableOpacity
+              style={[
+                styles.removeButton,
+                {
+                  backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)',
+                  borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'
+                }
+              ]}
+              onPress={handleRemoveItem}
+            >
+              <Feather name="x" size={16} color={theme.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </TouchableOpacity>
+    )
+  }, [selectedScriptureIds, expandedScriptureIds, isBulkSelecting, isEditingInfo, isDark, theme, toggleExpand, toggleScriptureSelection, removeScriptureFromCollection, collection.id])
 
   useEffect(() => {
     if (isVisible) {
@@ -61,6 +259,7 @@ export default function CollectionDetailModal({
       setIsEditingInfo(false)
       setIsBulkSelecting(false)
       setSelectedScriptureIds(new Set())
+      setExpandedScriptureIds(new Set())
     }
   }, [isVisible, collection])
 
@@ -118,16 +317,6 @@ export default function CollectionDetailModal({
         }
       ]
     )
-  }
-
-  const toggleScriptureSelection = (scriptureId: string) => {
-    const newSelection = new Set(selectedScriptureIds)
-    if (newSelection.has(scriptureId)) {
-      newSelection.delete(scriptureId)
-    } else {
-      newSelection.add(scriptureId)
-    }
-    setSelectedScriptureIds(newSelection)
   }
 
   const handleSelectAll = () => {
@@ -205,54 +394,18 @@ export default function CollectionDetailModal({
     setLocalScriptures(getScripturesByCollection(collection.id))
   }
 
-  const renderScriptureItem = ({ item }: { item: Scripture }) => {
-    const isSelected = selectedScriptureIds.has(item.id)
+  const handleLongPressScripture = (scriptureId: string) => {
+    if (!isBulkSelecting && !isEditingInfo) {
+      setIsBulkSelecting(true)
+      toggleScriptureSelection(scriptureId)
+      Vibration.vibrate(50)
+    }
+  }
 
-    return (
-      <TouchableOpacity
-        style={[
-          styles.scriptureItem,
-          isBulkSelecting && isSelected && styles.scriptureItemSelected
-        ]}
-        onPress={() => {
-          if (isBulkSelecting) {
-            toggleScriptureSelection(item.id)
-          }
-        }}
-        onLongPress={() => {
-          if (!isBulkSelecting && !isEditingInfo) {
-            setIsBulkSelecting(true)
-            toggleScriptureSelection(item.id)
-            Vibration.vibrate(50)
-          }
-        }}
-        activeOpacity={isBulkSelecting ? 0.7 : 1}
-      >
-        {isBulkSelecting ? (
-          <View style={[styles.checkbox, isSelected && styles.checkboxSelected]}>
-            {isSelected && <MaterialCommunityIcons name="check" size={16} color="#000" />}
-          </View>
-        ) : (
-          <View style={styles.scriptureIcon}>
-            <MaterialCommunityIcons name="bullet" size={16} color={TACTICAL_THEME.accent} />
-          </View>
-        )}
-
-        <View style={styles.scriptureInfo}>
-          <Text style={styles.scriptureRef}>{item.reference}</Text>
-          <Text style={styles.scriptureText} numberOfLines={2}>{item.text}</Text>
-        </View>
-
-        {!isBulkSelecting && (
-          <TouchableOpacity
-            style={styles.removeButton}
-            onPress={() => handleRemoveScripture(item.id)}
-          >
-            <MaterialCommunityIcons name="close-circle-outline" size={20} color={TACTICAL_THEME.error || '#FF4444'} />
-          </TouchableOpacity>
-        )}
-      </TouchableOpacity>
-    )
+  const handlePressScripture = (scriptureId: string) => {
+    if (isBulkSelecting) {
+      toggleScriptureSelection(scriptureId)
+    }
   }
 
   return (
@@ -263,11 +416,11 @@ export default function CollectionDetailModal({
       onRequestClose={onClose}
     >
       <LinearGradient
-        colors={['#0a1505', '#1a2f0a', '#0f1a05']}
+        colors={isDark ? ['#0a1505', '#1a2f0a', '#0f1a05'] : ['#f5f5f5', '#e8e8e8', '#f0f0f0']}
         style={styles.container}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.95)', borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)' }]}>
           <View style={styles.headerContent}>
             <View style={styles.titleSection}>
               {!isBulkSelecting && !isEditingInfo && (
@@ -277,18 +430,18 @@ export default function CollectionDetailModal({
               )}
               {isEditingInfo ? (
                 <TextInput
-                  style={[styles.titleInput, MILITARY_TYPOGRAPHY.heading]}
+                  style={[styles.titleInput, MILITARY_TYPOGRAPHY.heading, { color: theme.text, borderBottomColor: theme.accent }]}
                   value={editedName}
                   onChangeText={setEditedName}
                   placeholder="Arsenal Name"
-                  placeholderTextColor="#666"
+                  placeholderTextColor={isDark ? '#666' : '#999'}
                 />
               ) : isBulkSelecting ? (
-                <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]} numberOfLines={1}>
+                <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]} numberOfLines={1}>
                   {selectedScriptureIds.size} Selected
                 </Text>
               ) : (
-                <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]} numberOfLines={1}>
+                <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]} numberOfLines={1}>
                   {collection.abbreviation
                     ? `${collection.abbreviation} - ${collection.name}`
                     : collection.name}
@@ -299,313 +452,325 @@ export default function CollectionDetailModal({
             <View style={styles.headerActions}>
               {isEditingInfo ? (
                 <>
-                  <TouchableOpacity style={styles.cancelButton} onPress={handleCancelEdit}>
-                    <Text style={styles.cancelButtonText}>CANCEL</Text>
+                  <TouchableOpacity style={[styles.cancelButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]} onPress={handleCancelEdit}>
+                    <Text style={[styles.cancelButtonText, { color: theme.text }]}>CANCEL</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.saveButton} onPress={handleSaveInfo}>
+                  <TouchableOpacity style={[styles.saveButton, { backgroundColor: theme.accent }]} onPress={handleSaveInfo}>
                     <Text style={styles.saveButtonText}>SAVE</Text>
                   </TouchableOpacity>
                 </>
               ) : isBulkSelecting ? (
                 <>
                   <TouchableOpacity
-                    style={styles.iconButton}
+                    style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}
                     onPress={handleSelectAll}
                   >
                     <MaterialCommunityIcons
                       name={selectedScriptureIds.size === localScriptures.length ? "checkbox-multiple-marked" : "checkbox-multiple-blank-outline"}
                       size={22}
-                      color={TACTICAL_THEME.text}
+                      color={theme.text}
                     />
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.iconButton, { backgroundColor: 'rgba(255, 68, 68, 0.15)', borderColor: 'rgba(255, 68, 68, 0.3)' }]}
+                    style={[styles.iconButton, { backgroundColor: TACTICAL_THEME.error, borderColor: TACTICAL_THEME.error }]}
                     onPress={handleBulkDelete}
                     disabled={selectedScriptureIds.size === 0}
                   >
-                    <MaterialCommunityIcons
-                      name="trash-can-outline"
-                      size={22}
-                      color={selectedScriptureIds.size === 0 ? 'rgba(255, 255, 255, 0.3)' : (TACTICAL_THEME.error || '#FF4444')}
-                    />
+                    <Feather name="trash-2" size={22} color={TACTICAL_THEME.text} />
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={styles.cancelButton}
+                    style={[styles.closeButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}
                     onPress={() => {
                       setIsBulkSelecting(false)
                       setSelectedScriptureIds(new Set())
                     }}
                   >
-                    <Text style={styles.cancelButtonText}>CANCEL</Text>
+                    <Feather name="x" size={22} color={theme.text} />
                   </TouchableOpacity>
                 </>
               ) : (
                 <>
-                  <TouchableOpacity 
-                    style={[styles.iconButton, { backgroundColor: 'rgba(255, 68, 68, 0.15)', borderColor: 'rgba(255, 68, 68, 0.3)' }]} 
-                    onPress={handleDeleteCollection}
+                  <TouchableOpacity
+                    style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}
+                    onPress={() => setShowAddVersesModal(true)}
                   >
-                    <MaterialCommunityIcons name="delete-outline" size={16} color={TACTICAL_THEME.error || '#FF4444'} />
+                    <Feather name="plus" size={22} color={TACTICAL_THEME.accent} />
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.selectButton} onPress={() => setIsBulkSelecting(true)}>
-                    <Text style={styles.selectButtonText}>SELECT</Text>
+                  <TouchableOpacity
+                    style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}
+                    onPress={() => setIsEditingInfo(true)}
+                  >
+                    <Feather name="edit-3" size={22} color={theme.text} />
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.editButton} onPress={() => setIsEditingInfo(true)}>
-                    <MaterialCommunityIcons name="pencil" size={16} color={TACTICAL_THEME.text} />
+                  <TouchableOpacity style={[styles.closeButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} onPress={onClose}>
+                    <Feather name="x" size={22} color={theme.text} />
                   </TouchableOpacity>
                 </>
-              )}
-
-              {!isEditingInfo && !isBulkSelecting && (
-                <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-                  <MaterialCommunityIcons name="close" size={20} color={TACTICAL_THEME.text} />
-                </TouchableOpacity>
               )}
             </View>
           </View>
 
-          {isEditingInfo ? (
+          {!isEditingInfo && !isBulkSelecting && (
+            <View style={styles.descriptionContainer}>
+              {collection.description ? (
+                <Text style={[styles.description, MILITARY_TYPOGRAPHY.body]} numberOfLines={3}>
+                  {collection.description}
+                </Text>
+              ) : (
+                <Text style={[styles.description, MILITARY_TYPOGRAPHY.body, { opacity: 0.6 }]}>
+                  No description provided.
+                </Text>
+              )}
+            </View>
+          )}
+
+          {isEditingInfo && (
             <TextInput
-              style={[styles.descriptionInput, MILITARY_TYPOGRAPHY.body]}
+              style={[styles.descriptionInput, { color: theme.text, backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.05)' }]}
               value={editedDescription}
               onChangeText={setEditedDescription}
-              placeholder="Description (optional)"
-              placeholderTextColor="#666"
+              placeholder="Description (Optional)"
+              placeholderTextColor={theme.textSecondary}
               multiline
             />
-          ) : collection.description && (
-            <Text style={[styles.description, MILITARY_TYPOGRAPHY.body]}>
-              {collection.description}
-            </Text>
+          )}
+
+          {isEditingInfo && (
+            <View style={styles.editActions}>
+              <TouchableOpacity onPress={handleSaveInfo} style={[styles.saveInfoButton, { backgroundColor: theme.accent }]}>
+                <Text style={styles.saveInfoText}>SAVE CHANGES</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
 
-        <View style={styles.content}>
-          {isBulkSelecting ? (
-            <View style={styles.editContent}>
-              <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
-                SELECT ROUNDS TO REMOVE
-              </Text>
+        <ScrollView
+          style={styles.content}
+          contentContainerStyle={styles.contentContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Stats Grid - Match Mission Report Style */}
+          <View style={styles.statsSection}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>STATISTICS</Text>
+            <View style={styles.statsGrid}>
+              <View style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}>
+                <Feather name="target" size={16} color={theme.accent} />
+                <Text style={[styles.statValue, { color: theme.text }]}>{localScriptures.length}</Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>ROUNDS</Text>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}>
+                <Feather name="check-circle" size={16} color={theme.success} />
+                <Text style={[styles.statValue, { color: theme.text }]}>
+                  {localScriptures.filter(s => (s.masteryLevel || 0) > 80).length}
+                </Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>MASTERED</Text>
+              </View>
+              <View style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}>
+                <Feather name="clock" size={16} color={theme.warning} />
+                <Text style={[styles.statValue, { color: theme.text }]}>
+                  {localScriptures.filter(s => (s.masteryLevel || 0) < 50).length}
+                </Text>
+                <Text style={[styles.statLabel, { color: theme.textSecondary }]}>TRAINING</Text>
+              </View>
+            </View>
+          </View>
 
+          {/* Verses List */}
+          <View style={styles.versesSection}>
+            <View style={styles.versesSectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0 }]}>AMMUNITION INVENTORY</Text>
+            </View>
+
+            {localScriptures.length > 0 ? (
               <FlatList
                 data={localScriptures}
                 renderItem={renderScriptureItem}
-                keyExtractor={item => item.id}
-                style={styles.scriptureList}
-                contentContainerStyle={{ paddingBottom: 40 }}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                initialNumToRender={8}
+                maxToRenderPerBatch={8}
+                windowSize={3}
+                removeClippedSubviews={true}
+                updateCellsBatchingPeriod={50}
               />
-            </View>
-          ) : (
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Verses List Section */}
-              <View style={styles.versesSection}>
-                <View style={styles.versesSectionHeader}>
-                  <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
-                    AMMUNITION ({localScriptures.length} ROUNDS)
-                  </Text>
-                  <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={() => setShowAddVersesModal(true)}
-                  >
-                    <MaterialCommunityIcons name="plus" size={20} color={TACTICAL_THEME.text} />
-                  </TouchableOpacity>
-                </View>
+            ) : (
+              <View style={[styles.emptyVerses, { backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+                <Feather name="inbox" size={32} color={theme.textSecondary} style={{ opacity: 0.5 }} />
+                <Text style={[styles.emptyVersesText, { color: theme.textSecondary }]}>No ammunition loaded yet.</Text>
+              </View>
+            )}  
+          </View>
 
-                {localScriptures.length > 0 ? (
-                  <FlatList
-                    data={localScriptures}
-                    renderItem={renderScriptureItem}
-                    keyExtractor={item => item.id}
-                    scrollEnabled={false}
-                    contentContainerStyle={{ paddingBottom: 16 }}
-                  />
-                ) : (
-                  <View style={styles.emptyVerses}>
-                    <MaterialCommunityIcons name="ammunition" size={48} color="rgba(255,255,255,0.2)" />
-                    <Text style={styles.emptyVersesText}>No rounds in this arsenal</Text>
-                  </View>
+          {/* Stats Section */}
+          <View style={styles.statsSection}>
+            <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading, { color: theme.text }]}>
+              AMMUNITION STATS
+            </Text>
+
+            <View style={styles.statsGrid}>
+              <View
+                style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
+              >
+                <MaterialCommunityIcons name="ammunition" size={24} color={theme.accent} />
+                <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]}>
+                  {localScriptures.length}
+                </Text>
+                <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>
+                  ROUNDS
+                </Text>
+              </View>
+
+              {collection.isChapterBased && collection.chapters && (
+                <View
+                  style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
+                >
+                  <MaterialCommunityIcons name="book-open-variant" size={24} color={theme.accent} />
+                  <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]}>
+                    {collection.chapters.length}
+                  </Text>
+                  <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>
+                    CHAPTERS
+                  </Text>
+                </View>
+              )}
+
+              {collection.bookInfo && (
+                <View
+                  style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
+                >
+                  <MaterialCommunityIcons name="crosshairs-gps" size={24} color={theme.success} />
+                  <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]}>
+                    {collection.bookInfo.averageAccuracy?.toFixed(0) || '0'}%
+                  </Text>
+                  <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>
+                    ACCURACY
+                  </Text>
+                </View>
+              )}
+
+              <View
+                style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
+              >
+                <MaterialCommunityIcons name="calendar-month" size={24} color={isDark ? '#AAA' : '#666'} />
+                <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]}>
+                  {new Date(
+                    collection.createdAt || Date.now()
+                  ).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </Text>
+                <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>
+                  CREATED
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Tags Section */}
+          {collection.tags && collection.tags.length > 0 && (
+            <View style={styles.tagsSection}>
+              <Text
+                style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading, { color: theme.text }]}
+              >
+                MISSION TAGS
+              </Text>
+              <View style={styles.tagsContainer}>
+                {collection.tags.map((tag, index) => (
+                  <LinearGradient
+                    key={index}
+                    colors={[TACTICAL_THEME.accent, '#CC5529']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.tag}
+                  >
+                    <MaterialCommunityIcons name="tag-text-outline" size={12} color="#FFFFFF" />
+                    <Text style={[styles.tagText, MILITARY_TYPOGRAPHY.caption, { color: '#FFFFFF' }]}>
+                      {tag.toUpperCase()}
+                    </Text>
+                  </LinearGradient>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Chapter Progress Section */}
+          {collection.isChapterBased && collection.chapters && (
+            <View style={styles.chaptersSection}>
+              <Text
+                style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}
+              >
+                CHAPTER PROGRESS
+              </Text>
+
+              <View style={styles.chaptersList}>
+                {collection.chapters.slice(0, 5).map((chapter) => (
+                  <LinearGradient
+                    key={chapter.id}
+                    colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
+                    style={styles.chapterItem}
+                  >
+                    <View style={styles.chapterInfo}>
+                      <Text
+                        style={[styles.chapterName, MILITARY_TYPOGRAPHY.body]}
+                      >
+                        {chapter.name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.chapterStats,
+                          MILITARY_TYPOGRAPHY.caption,
+                        ]}
+                      >
+                        {chapter.scriptures.length} verses
+                        {chapter.averageAccuracy &&
+                          ` • ${chapter.averageAccuracy.toFixed(0)}%`}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.chapterStatus,
+                        {
+                          backgroundColor: chapter.isCompleted
+                            ? TACTICAL_THEME.success
+                            : 'rgba(255,255,255,0.1)',
+                          borderWidth: chapter.isCompleted ? 0 : 1,
+                          borderColor: chapter.isCompleted ? 'transparent' : 'rgba(255,255,255,0.2)'
+                        },
+                      ]}
+                    />
+                  </LinearGradient>
+                ))}
+
+                {collection.chapters.length > 5 && (
+                  <Text
+                    style={[styles.moreChapters, MILITARY_TYPOGRAPHY.caption]}
+                  >
+                    +{collection.chapters.length - 5} more chapters
+                  </Text>
                 )}
               </View>
-
-              {/* Stats Section */}
-              <View style={styles.statsSection}>
-                <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
-                  AMMUNITION STATS
-                </Text>
-
-                <View style={styles.statsGrid}>
-                  <LinearGradient
-                    colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
-                    style={styles.statCard}
-                  >
-                    <MaterialCommunityIcons name="ammunition" size={24} color={TACTICAL_THEME.accent} />
-                    <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading]}>
-                      {localScriptures.length}
-                    </Text>
-                    <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption]}>
-                      ROUNDS
-                    </Text>
-                  </LinearGradient>
-
-                  {collection.isChapterBased && collection.chapters && (
-                    <LinearGradient
-                      colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
-                      style={styles.statCard}
-                    >
-                      <MaterialCommunityIcons name="book-open-variant" size={24} color={TACTICAL_THEME.accent} />
-                      <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading]}>
-                        {collection.chapters.length}
-                      </Text>
-                      <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption]}>
-                        CHAPTERS
-                      </Text>
-                    </LinearGradient>
-                  )}
-
-                  {collection.bookInfo && (
-                    <LinearGradient
-                      colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
-                      style={styles.statCard}
-                    >
-                      <MaterialCommunityIcons name="crosshairs-gps" size={24} color={TACTICAL_THEME.success} />
-                      <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading]}>
-                        {collection.bookInfo.averageAccuracy?.toFixed(0) || '0'}%
-                      </Text>
-                      <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption]}>
-                        ACCURACY
-                      </Text>
-                    </LinearGradient>
-                  )}
-
-                  <LinearGradient
-                    colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
-                    style={styles.statCard}
-                  >
-                    <MaterialCommunityIcons name="calendar-month" size={24} color="#AAA" />
-                    <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading]}>
-                      {new Date(
-                        collection.createdAt || Date.now()
-                      ).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                      })}
-                    </Text>
-                    <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption]}>
-                      CREATED
-                    </Text>
-                  </LinearGradient>
-                </View>
-              </View>
-
-              {/* Tags Section */}
-              {collection.tags && collection.tags.length > 0 && (
-                <View style={styles.tagsSection}>
-                  <Text
-                    style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}
-                  >
-                    MISSION TAGS
-                  </Text>
-                  <View style={styles.tagsContainer}>
-                    {collection.tags.map((tag, index) => (
-                      <LinearGradient
-                        key={index}
-                        colors={[TACTICAL_THEME.accent, '#CC5529']}
-                        start={{ x: 0, y: 0 }}
-                        end={{ x: 1, y: 1 }}
-                        style={styles.tag}
-                      >
-                        <MaterialCommunityIcons name="tag-text-outline" size={12} color="black" />
-                        <Text style={[styles.tagText, MILITARY_TYPOGRAPHY.caption]}>
-                          {tag.toUpperCase()}
-                        </Text>
-                      </LinearGradient>
-                    ))}
-                  </View>
-                </View>
-              )}
-
-              {/* Chapter Progress Section */}
-              {collection.isChapterBased && collection.chapters && (
-                <View style={styles.chaptersSection}>
-                  <Text
-                    style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}
-                  >
-                    CHAPTER PROGRESS
-                  </Text>
-
-                  <View style={styles.chaptersList}>
-                    {collection.chapters.slice(0, 5).map((chapter) => (
-                      <LinearGradient
-                        key={chapter.id}
-                        colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
-                        style={styles.chapterItem}
-                      >
-                        <View style={styles.chapterInfo}>
-                          <Text
-                            style={[styles.chapterName, MILITARY_TYPOGRAPHY.body]}
-                          >
-                            {chapter.name}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.chapterStats,
-                              MILITARY_TYPOGRAPHY.caption,
-                            ]}
-                          >
-                            {chapter.scriptures.length} verses
-                            {chapter.averageAccuracy &&
-                              ` • ${chapter.averageAccuracy.toFixed(0)}%`}
-                          </Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.chapterStatus,
-                            {
-                              backgroundColor: chapter.isCompleted
-                                ? TACTICAL_THEME.success
-                                : 'rgba(255,255,255,0.1)',
-                              borderWidth: chapter.isCompleted ? 0 : 1,
-                              borderColor: chapter.isCompleted ? 'transparent' : 'rgba(255,255,255,0.2)'
-                            },
-                          ]}
-                        />
-                      </LinearGradient>
-                    ))}
-
-                    {collection.chapters.length > 5 && (
-                      <Text
-                        style={[styles.moreChapters, MILITARY_TYPOGRAPHY.caption]}
-                      >
-                        +{collection.chapters.length - 5} more chapters
-                      </Text>
-                    )}
-                  </View>
-                </View>
-              )}
-            </ScrollView>
+            </View>
           )}
-        </View>
+        </ScrollView>
 
         {/* Training Range Button - Only show when not editing or selecting */}
         {!isEditingInfo && !isBulkSelecting && (
           <View style={styles.footer}>
-            <TouchableOpacity onPress={handleGoToTraining} activeOpacity={0.9}>
-              <LinearGradient
-                colors={[TACTICAL_THEME.accent, '#CC5529']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.trainingButton}
-              >
-                <View style={styles.trainingButtonContent}>
-                  <MaterialCommunityIcons name="target" size={24} color="#000" />
-                  <Text style={styles.trainingButtonText}>
-                    ENTER TRAINING RANGE
-                  </Text>
-                </View>
-                <MaterialCommunityIcons name="chevron-right" size={24} color="#000" />
-              </LinearGradient>
+            <TouchableOpacity
+              style={[styles.trainingButton, { backgroundColor: TACTICAL_THEME.primary }]} // Keep button always military green
+              onPress={() => {
+                onClose()
+                router.push('/(tabs)/training')
+              }}
+            >
+              <View style={styles.trainingButtonContent}>
+                <MaterialCommunityIcons name="target" size={24} color="#FFFFFF" />
+                <Text style={styles.trainingButtonText}>ENTER TRAINING RANGE</Text>
+              </View>
+              <Feather name="arrow-right" size={20} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         )}
@@ -630,9 +795,7 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 20 : 50,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    backgroundColor: 'rgba(0,0,0,0.3)',
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.05)',
   },
   headerContent: {
     flexDirection: 'row',
@@ -663,16 +826,13 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255, 107, 53, 0.3)',
   },
   title: {
-    color: TACTICAL_THEME.text,
     flex: 1,
     fontSize: 20,
     letterSpacing: 0.5,
   },
   titleInput: {
-    color: TACTICAL_THEME.text,
     flex: 1,
     borderBottomWidth: 1,
-    borderBottomColor: TACTICAL_THEME.accent,
     paddingVertical: 4,
   },
   descriptionInput: {
@@ -702,7 +862,6 @@ const styles = StyleSheet.create({
   saveButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: TACTICAL_THEME.accent,
     borderRadius: 8,
   },
   saveButtonText: {
@@ -714,28 +873,22 @@ const styles = StyleSheet.create({
   cancelButton: {
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 8,
   },
   cancelButtonText: {
-    color: TACTICAL_THEME.text,
     fontSize: 12,
     fontWeight: 'bold',
     letterSpacing: 1,
   },
   closeButton: {
     padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.05)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   iconButton: {
     padding: 8,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -787,14 +940,64 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scriptureItem: {
+    borderRadius: 14,
+    marginBottom: 10,
+    overflow: 'hidden',
+  },
+  scriptureItemContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 16,
+  },
+  masteryBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 2.5,
+    backgroundColor: 'rgba(100,100,100,0.15)',
+  },
+  masteryProgress: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  scriptureIconContainer: {
+    marginRight: 12,
+    marginTop: 2,
+  },
+  scriptureIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+  },
+  scriptureHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  masteryBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    borderWidth: 1.5,
+  },
+  masteryText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  expandHint: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    marginTop: 4,
+    opacity: 0.7,
   },
   scriptureItemSelected: {
     backgroundColor: 'rgba(255, 107, 53, 0.1)',
@@ -825,16 +1028,20 @@ const styles = StyleSheet.create({
     color: TACTICAL_THEME.accent,
     fontWeight: 'bold',
     fontSize: 15,
-    marginBottom: 4,
     letterSpacing: 0.5,
+    flex: 1,
   },
   scriptureText: {
     color: TACTICAL_THEME.textSecondary,
-    fontSize: 13,
+    fontSize: 14,
+    lineHeight: 22,
+    letterSpacing: 0.2,
   },
   removeButton: {
-    padding: 8,
+    padding: 6,
     marginLeft: 8,
+    borderRadius: 6,
+    borderWidth: 1,
   },
   statsSection: {
     marginBottom: 24,
@@ -912,7 +1119,6 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tagText: {
-    color: '#000',
     fontWeight: 'bold',
     fontSize: 11,
     letterSpacing: 0.5,
@@ -960,13 +1166,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: TACTICAL_THEME.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    padding: 20,
+    borderRadius: 30,
+    backgroundColor: TACTICAL_THEME.primary, // Military Green
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.30,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
   trainingButtonContent: {
     flexDirection: 'row',
@@ -974,7 +1184,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   trainingButtonText: {
-    color: '#000',
+    color: '#FFFFFF', // White text for contrast
     fontSize: 16,
     fontWeight: 'bold',
     letterSpacing: 1,
@@ -991,5 +1201,58 @@ const styles = StyleSheet.create({
     backgroundColor: TACTICAL_THEME.accent,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  editActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 12,
+  },
+  saveInfoButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  saveInfoText: {
+    color: '#000',
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  addVersesButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    gap: 8,
+    marginBottom: 24,
+  },
+  addVersesButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  descriptionContainer: {
+    marginBottom: 16,
+  },
+  contentContainer: {
+    paddingBottom: 40,
+  },
+  bulkDeleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 68, 68, 0.1)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    gap: 6,
+  },
+  bulkDeleteText: {
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 })

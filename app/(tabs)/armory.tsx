@@ -6,16 +6,25 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
+  ScrollView,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Feather } from '@expo/vector-icons';
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
+import {
+  COLORS,
+  GRADIENTS,
+  MILITARY_TYPOGRAPHY,
+  TACTICAL_THEME,
+  GARRISON_THEME,
+} from '@/constants/colors'
+import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 import { Collection, Scripture } from '@/types/scripture'
 import FileUploader from '@/components/FileUploader'
 import CollectionDetailModal from '@/components/CollectionDetailModal'
 import BookScripturesModal from '@/components/BookScripturesModal'
 import AddVersesModal from '@/components/AddVersesModal'
+import ScreenHeader from '@/components/ScreenHeader'
 
 import { CollectionChapterService } from '@/services/collectionChapters'
 
@@ -185,26 +194,23 @@ export default function ArmoryScreen() {
   }
 
   const renderCollectionItem = ({ item }: { item: Collection }) => (
-    <View
+    <ThemedCard
       style={[
         styles.collectionItem,
+        // Force background color for unselected items to prevent them from going blank
         {
-          backgroundColor:
-            selectedCollection?.id === item.id
-              ? isDark
-                ? 'rgba(255, 165, 0, 0.15)'
-                : 'rgba(255, 165, 0, 0.1)'
-              : isDark
-                ? 'rgba(255, 255, 255, 0.05)'
-                : 'rgba(0, 0, 0, 0.03)',
-          borderColor:
-            selectedCollection?.id === item.id
-              ? TACTICAL_THEME.accent
-              : 'rgba(255,255,255,0.1)',
+          backgroundColor: selectedCollection?.id === item.id
+            ? 'transparent'
+            : (isDark ? TACTICAL_THEME.surface : GARRISON_THEME.surface),
+          borderColor: selectedCollection?.id === item.id
+            ? TACTICAL_THEME.accent
+            : 'transparent',
           borderWidth: 1,
-        },
+        }
       ]}
-      testID={`collection-${item.id}`}
+      lightColor={GARRISON_THEME.surface}
+      darkColor={TACTICAL_THEME.surface}
+      variant="outlined"
     >
       <TouchableOpacity
         style={styles.collectionMainArea}
@@ -212,14 +218,9 @@ export default function ArmoryScreen() {
       >
         <View style={styles.collectionInfo}>
           <View style={styles.collectionHeaderRow}>
-            <Text
-              style={[
-                styles.collectionName,
-                { color: isDark ? 'white' : 'black' },
-              ]}
-            >
+            <ThemedText variant="heading" style={styles.collectionName}>
               {item.abbreviation || item.name}
-            </Text>
+            </ThemedText>
             {item.isChapterBased && (
               <View style={styles.chapterBadgeContainer}>
                 <Feather name="layers" size={10} color={TACTICAL_THEME.accent} />
@@ -230,16 +231,16 @@ export default function ArmoryScreen() {
             )}
           </View>
 
-          <Text style={[styles.collectionDescription, { color: isDark ? '#aaa' : '#666' }]} numberOfLines={1}>
+          <ThemedText variant="body" style={styles.collectionDescription} numberOfLines={1}>
             {item.name}
-          </Text>
+          </ThemedText>
 
           <View style={styles.collectionMeta}>
             <View style={styles.statBadge}>
               <FontAwesome name="crosshairs" size={10} color={isDark ? '#888' : '#666'} />
-              <Text style={[styles.statText, { color: isDark ? '#ccc' : '#444' }]}>
+              <ThemedText variant="caption" style={styles.statText}>
                 {item.scriptures.length} ROUNDS
-              </Text>
+              </ThemedText>
             </View>
           </View>
         </View>
@@ -253,7 +254,7 @@ export default function ArmoryScreen() {
           <FontAwesome name="chevron-right" size={12} color={isDark ? 'white' : 'black'} />
         </View>
       </TouchableOpacity>
-    </View>
+    </ThemedCard>
   )
 
   // Get scripture distribution by book for selected collection
@@ -296,39 +297,25 @@ export default function ArmoryScreen() {
   }: {
     item: { book: string; count: number }
   }) => (
-    <TouchableOpacity
-      style={[
-        styles.distributionItem,
-        {
-          backgroundColor: isDark
-            ? 'rgba(255, 255, 255, 0.1)'
-            : 'rgba(0, 0, 0, 0.05)',
-        },
-      ]}
+    <ThemedCard
+      style={styles.distributionItem}
       onPress={() => handleBookDistributionTap(item.book)}
+      variant="flat"
     >
       <FontAwesome name="book" size={16} color={TACTICAL_THEME.accent} />
-      <Text
-        style={[styles.distributionBook, { color: isDark ? 'white' : 'black' }]}
-      >
+      <ThemedText style={styles.distributionBook}>
         {item.book}
-      </Text>
+      </ThemedText>
       <View style={styles.distributionCount}>
         <Text style={[styles.countText, { color: TACTICAL_THEME.accent }]}>
           {item.count}
         </Text>
-        <Text
-          style={[
-            styles.countLabel,
-            {
-              color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
-            },
-          ]}
-        >
+        <ThemedText variant="caption" style={styles.countLabel}>
           rounds
-        </Text>
+        </ThemedText>
       </View>
-    </TouchableOpacity>
+      <FontAwesome name="chevron-right" size={12} color={TACTICAL_THEME.textSecondary} style={{ marginLeft: 12, opacity: 0.5 }} />
+    </ThemedCard>
   )
 
   const renderChapterDistribution = ({
@@ -336,39 +323,25 @@ export default function ArmoryScreen() {
   }: {
     item: { chapter: string; count: number }
   }) => (
-    <TouchableOpacity
-      style={[
-        styles.distributionItem,
-        {
-          backgroundColor: isDark
-            ? 'rgba(255, 255, 255, 0.1)'
-            : 'rgba(0, 0, 0, 0.05)',
-        },
-      ]}
+    <ThemedCard
+      style={styles.distributionItem}
       onPress={() => handleChapterDistributionTap(item.chapter)}
+      variant="flat"
     >
       <Feather name="layers" size={16} color={TACTICAL_THEME.accent} />
-      <Text
-        style={[styles.distributionBook, { color: isDark ? 'white' : 'black' }]}
-      >
+      <ThemedText style={styles.distributionBook}>
         {item.chapter}
-      </Text>
+      </ThemedText>
       <View style={styles.distributionCount}>
         <Text style={[styles.countText, { color: TACTICAL_THEME.accent }]}>
           {item.count}
         </Text>
-        <Text
-          style={[
-            styles.countLabel,
-            {
-              color: isDark ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)',
-            },
-          ]}
-        >
+        <ThemedText variant="caption" style={styles.countLabel}>
           rounds
-        </Text>
+        </ThemedText>
       </View>
-    </TouchableOpacity>
+      <FontAwesome name="chevron-right" size={12} color={TACTICAL_THEME.textSecondary} style={{ marginLeft: 12, opacity: 0.5 }} />
+    </ThemedCard>
   )
 
   const renderBookItem = ({ item }: { item: any }) => {
@@ -378,28 +351,20 @@ export default function ArmoryScreen() {
     ).length
 
     return (
-      <TouchableOpacity
-        style={[
-          styles.bookItem,
-          {
-            backgroundColor: isDark
-              ? 'rgba(255, 255, 255, 0.03)'
-              : 'rgba(0, 0, 0, 0.02)',
-            borderColor: 'rgba(255,255,255,0.05)',
-            borderWidth: 1,
-          },
-        ]}
+      <ThemedCard
+        style={styles.bookItem}
         onPress={() => handleDefaultBookTap(item.name)}
         testID={`book-${item.id}`}
+        variant="flat"
       >
         <View style={styles.bookIconContainer}>
           <FontAwesome name="book" size={18} color={TACTICAL_THEME.accent} />
         </View>
 
         <View style={styles.bookInfo}>
-          <Text style={[styles.bookName, { color: isDark ? 'white' : 'black' }]}>
+          <ThemedText style={styles.bookName}>
             {item.name}
-          </Text>
+          </ThemedText>
           <View style={styles.progressBarContainer}>
             <View style={[styles.progressBar, { width: `${Math.min(bookScriptureCount * 2, 100)}%`, backgroundColor: TACTICAL_THEME.accent }]} />
           </View>
@@ -409,110 +374,89 @@ export default function ArmoryScreen() {
           <Text style={[styles.bookCount, { color: TACTICAL_THEME.accent }]}>
             {bookScriptureCount}
           </Text>
-          <Text style={[styles.bookLabel, { color: isDark ? '#666' : '#999' }]}>
+          <ThemedText variant="caption" style={styles.bookLabel}>
             RNDS
-          </Text>
+          </ThemedText>
         </View>
-      </TouchableOpacity>
+        <FontAwesome name="chevron-right" size={12} color={TACTICAL_THEME.textSecondary} style={{ marginLeft: 12, opacity: 0.5 }} />
+      </ThemedCard>
     )
   }
 
-  const backgroundColors = isDark
-    ? (['#0a1505', '#1a2f0a', '#0f1a05'] as const) // Darker, deeper green
-    : (['#4A6B2A', '#2D5016', '#1a2f0a'] as const)
-
   return (
-    <LinearGradient
-      colors={backgroundColors}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }} // Diagonal gradient
-    >
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text
-            style={[
-              styles.sectionTitle,
-              MILITARY_TYPOGRAPHY.heading,
-              { color: 'white', fontSize: 32, letterSpacing: 1 },
-            ]}
-          >
-            ARMORY
-          </Text>
-          <View style={styles.subtitleContainer}>
-            <View style={styles.subtitleLine} />
-            <Text
+    <ThemedContainer style={styles.container}>
+      <ScreenHeader
+        title="ARMORY"
+        subtitle="AMMUNITION BANK"
+        rightAction={
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
               style={[
-                styles.sectionSubtitle,
-                MILITARY_TYPOGRAPHY.caption,
-                { color: TACTICAL_THEME.accent, letterSpacing: 2 },
+                styles.actionButton,
+                { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }
               ]}
+              onPress={() => setShowAddVerses(true)}
+              testID="add-verses-button"
             >
-              SUPPLY LINES
-            </Text>
+              <FontAwesome name="plus" size={14} color={isDark ? "white" : "black"} />
+              <Text style={[styles.actionButtonText, { color: isDark ? "white" : "black" }]}>ADD</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionButton,
+                { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }
+              ]}
+              onPress={() => setShowFileUploader(true)}
+              testID="upload-file-button"
+            >
+              <FontAwesome name="download" size={14} color={isDark ? "white" : "black"} />
+              <Text style={[styles.actionButtonText, { color: isDark ? "white" : "black" }]}>IMPORT</Text>
+            </TouchableOpacity>
           </View>
-        </View>
-
-        <View style={styles.headerButtons}>
-          <TouchableOpacity
-            style={styles.actionButton}
-            onPress={() => setShowAddVerses(true)}
-            testID="add-verses-button"
-          >
-            <FontAwesome name="plus" size={14} color="white" />
-            <Text style={styles.actionButtonText}>ADD</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.primaryAction]}
-            onPress={() => setShowFileUploader(true)}
-            testID="upload-file-button"
-          >
-            <FontAwesome name="download" size={14} color="black" />
-            <Text style={[styles.actionButtonText, { color: 'black' }]}>IMPORT</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+        }
+      />
 
       <View style={styles.contentContainer}>
         <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.collectionsTitle, { color: '#888' }]}>
-            ARSENALS
-          </Text>
-          <View style={styles.headerLine} />
+          <ThemedText variant="caption" style={styles.collectionsTitle}>
+            AMMUNITION
+          </ThemedText>
+          <View style={[styles.headerLine, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} />
         </View>
 
-        <FlatList
-          data={collections}
-          renderItem={renderCollectionItem}
-          keyExtractor={(item) => item.id}
-          style={styles.list}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIconCircle}>
-                <Feather name="box" size={32} color="rgba(255,255,255,0.2)" />
+        <View style={{ maxHeight: '45%', flexGrow: 0 }}>
+          <FlatList
+            data={collections}
+            extraData={selectedCollection}
+            renderItem={renderCollectionItem}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            ListEmptyComponent={
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIconCircle}>
+                  <Feather name="box" size={32} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
+                </View>
+                <ThemedText style={styles.emptyTitle}>Armory Empty</ThemedText>
+                <ThemedText variant="caption" style={styles.emptySubtitle}>Import a file or add verses to stock your arsenal.</ThemedText>
               </View>
-              <Text style={styles.emptyTitle}>Armory Empty</Text>
-              <Text style={styles.emptySubtitle}>Import a file or add verses to stock your arsenal.</Text>
-            </View>
-          }
-        />
+            }
+          />
+        </View>
 
         <View style={styles.sectionHeaderRow}>
-          <Text style={[styles.collectionsTitle, { color: '#888', marginTop: 20 }]}>
+          <ThemedText variant="caption" style={[styles.collectionsTitle, { marginTop: 10 }]}>
             {selectedCollection ? 'CONTENTS' : 'ALL BOOKS'}
-          </Text>
-          <View style={[styles.headerLine, { marginTop: 20 }]} />
+          </ThemedText>
+          <View style={[styles.headerLine, { marginTop: 10, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} />
           {selectedCollection && (
-            <TouchableOpacity onPress={() => setSelectedCollection(null)} style={{ marginTop: 20 }}>
+            <TouchableOpacity onPress={() => setSelectedCollection(null)} style={{ marginTop: 10 }}>
               <Text style={{ color: TACTICAL_THEME.accent, fontSize: 12, fontWeight: 'bold' }}>CLEAR FILTER</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {selectedCollection ? (
-          // ... (Keep existing filter logic but styled better if needed)
           <View style={{ flex: 1 }}>
             {/* Filter Tabs */}
             <View style={styles.filterTabs}>
@@ -591,14 +535,9 @@ export default function ArmoryScreen() {
                 keyExtractor={(item) => item.book}
                 style={styles.list}
                 ListEmptyComponent={
-                  <Text
-                    style={[
-                      styles.emptyText,
-                      { color: 'rgba(255, 255, 255, 0.5)' },
-                    ]}
-                  >
+                  <ThemedText variant="caption" style={styles.emptyText}>
                     No books found in this arsenal
-                  </Text>
+                  </ThemedText>
                 }
               />
             ) : selectedCollection.isChapterBased &&
@@ -610,47 +549,39 @@ export default function ArmoryScreen() {
                 keyExtractor={(item) => item.chapter}
                 style={styles.list}
                 ListEmptyComponent={
-                  <Text
-                    style={[
-                      styles.emptyText,
-                      { color: 'rgba(255, 255, 255, 0.5)' },
-                    ]}
-                  >
+                  <ThemedText variant="caption" style={styles.emptyText}>
                     No chapters found in this arsenal
-                  </Text>
+                  </ThemedText>
                 }
               />
             ) : (
               <View style={styles.emptyStateContainer}>
-                <Text
-                  style={[
-                    styles.emptyText,
-                    { color: 'rgba(255, 255, 255, 0.5)' },
-                  ]}
-                >
+                <ThemedText variant="caption" style={styles.emptyText}>
                   This arsenal is not organized by chapters
-                </Text>
-                <Text
-                  style={[
-                    styles.emptySubtext,
-                    { color: 'rgba(255, 255, 255, 0.3)' },
-                  ]}
-                >
+                </ThemedText>
+                <ThemedText variant="caption" style={styles.emptySubtext}>
                   Use the Books tab to see scripture distribution
-                </Text>
+                </ThemedText>
               </View>
             )}
           </View>
         ) : (
-          <FlatList
-            data={books}
-            renderItem={renderBookItem}
-            keyExtractor={(item) => item.id}
-            style={styles.list}
-            contentContainerStyle={{ paddingBottom: 100 }}
-          />
+          <ThemedContainer
+            useGradient={true}
+            style={styles.listGradient}
+          >
+            <FlatList
+              data={books}
+              renderItem={renderBookItem}
+              keyExtractor={(item) => item.id}
+              style={styles.list}
+              contentContainerStyle={{ paddingBottom: 100 }}
+            />
+          </ThemedContainer>
+
         )}
       </View>
+
 
       {/* Modals remain same */}
       <FileUploader
@@ -658,13 +589,15 @@ export default function ArmoryScreen() {
         onClose={() => setShowFileUploader(false)}
         onVersesExtracted={handleVersesExtracted}
       />
-      {selectedCollection && (
-        <CollectionDetailModal
-          collection={selectedCollection}
-          isVisible={showCollectionDetail}
-          onClose={() => setShowCollectionDetail(false)}
-        />
-      )}
+      {
+        selectedCollection && (
+          <CollectionDetailModal
+            collection={selectedCollection}
+            isVisible={showCollectionDetail}
+            onClose={() => setShowCollectionDetail(false)}
+          />
+        )
+      }
       <BookScripturesModal
         isVisible={showBookScriptures}
         onClose={() => setShowBookScriptures(false)}
@@ -678,21 +611,41 @@ export default function ArmoryScreen() {
           console.log(`Added ${verses.length} verses`);
         }}
       />
-    </LinearGradient>
+    </ThemedContainer >
   )
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60, // More top padding
-    paddingHorizontal: 20,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  listContent: {
+    padding: 20,
+    paddingTop: 10,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 30,
+  },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    letterSpacing: 1.2,
+  },
+  subHeader: {
+    fontSize: 14,
+    fontWeight: '600',
+    letterSpacing: 2,
+  },
+  listGradient: {
+    flex: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   headerContent: {
     flex: 1,
@@ -713,7 +666,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   actionButton: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20, // Pill shape
@@ -735,6 +687,7 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
+    paddingHorizontal: 20,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -760,12 +713,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 12,
-    marginBottom: 12,
-    overflow: 'hidden',
+    marginBottom: 8, // Reduced from 12
+    // overflow: 'hidden', // Removed to prevent clipping issues with shadows/content
+    padding: 0, // Remove default card padding
+    minHeight: 80, // Ensure minimum height to prevent blank rendering
   },
   collectionMainArea: {
     flex: 1,
-    padding: 16,
+    padding: 10, // Reduced from 12
   },
   collectionInfo: {
     flex: 1,
@@ -782,8 +737,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   collectionDescription: {
-    fontSize: 13,
-    marginBottom: 12,
+    fontSize: 12, // Slightly smaller font
+    marginBottom: 4, // Reduced from 8
   },
   chapterBadgeContainer: {
     flexDirection: 'row',

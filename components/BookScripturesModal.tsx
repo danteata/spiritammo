@@ -26,19 +26,31 @@ export default function BookScripturesModal({
   scriptures,
   bookName,
 }: BookScripturesModalProps) {
+  const ExpandableScriptureItem = ({ item }: { item: Scripture }) => {
+    const [expanded, setExpanded] = React.useState(false)
+
+    return (
+      <TouchableOpacity
+        style={styles.scriptureItem}
+        onPress={() => setExpanded(!expanded)}
+        activeOpacity={0.7}
+      >
+        <Text style={[styles.reference, MILITARY_TYPOGRAPHY.body]}>
+          {item.reference}
+        </Text>
+        <ScriptureText
+          text={item.text}
+          isJesusWords={item.isJesusWords}
+          style={[styles.scriptureText, MILITARY_TYPOGRAPHY.caption]}
+          numberOfLines={expanded ? undefined : 2}
+          ellipsizeMode="tail"
+        />
+      </TouchableOpacity>
+    )
+  }
+
   const renderScriptureItem = ({ item }: { item: Scripture }) => (
-    <View style={styles.scriptureItem}>
-      <Text style={[styles.reference, MILITARY_TYPOGRAPHY.body]}>
-        {item.reference}
-      </Text>
-      <ScriptureText
-        text={item.text}
-        isJesusWords={item.isJesusWords}
-        style={[styles.scriptureText, MILITARY_TYPOGRAPHY.caption]}
-        numberOfLines={2}
-        ellipsizeMode="tail"
-      />
-    </View>
+    <ExpandableScriptureItem item={item} />
   )
 
   return (

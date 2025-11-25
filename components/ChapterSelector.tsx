@@ -36,17 +36,13 @@ export default function ChapterSelector({ book, onSelectChapter, selectedChapter
     }
     return chapters;
   };
-  
+
   return (
     <View style={styles.container}>
-      {/* Current Book Title */}
-      <Text style={styles.bookTitle}>
-        {book.name}
-      </Text>
-      
-      {/* Separator Line */}
-      <View style={styles.separatorLine} />
-      
+      {/* Book Title removed as it's in the header */}
+
+      {/* Separator Line removed */}
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
