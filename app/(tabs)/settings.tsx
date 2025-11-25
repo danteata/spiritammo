@@ -1,9 +1,10 @@
 import React, { useState } from 'react'
 import { StyleSheet, Text, View, ScrollView, Switch, TouchableOpacity } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
+import { TACTICAL_THEME, GARRISON_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
+import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 import { FontAwesome, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import ScreenHeader from '@/components/ScreenHeader'
 
 export default function SettingsScreen() {
   const { isDark, setTheme, userSettings, saveUserSettings } = useAppStore()
@@ -19,63 +20,31 @@ export default function SettingsScreen() {
     })
   }
 
-  const backgroundColors = isDark
-    ? (['#0a1505', '#1a2f0a', '#0f1a05'] as const)
-    : (['#4A6B2A', '#2D5016', '#1a2f0a'] as const)
-
-  const cardBackground = isDark
-    ? 'rgba(255, 255, 255, 0.05)'
-    : 'rgba(0, 0, 0, 0.03)'
-
-  const borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-
   return (
-    <LinearGradient
-      colors={backgroundColors}
-      style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-    >
+    <ThemedContainer style={styles.container}>
+      <ScreenHeader
+        title="COMMAND CENTER"
+        subtitle="SYSTEM CONFIGURATION"
+      />
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 40 }}>
-        <View style={styles.header}>
-          <Text
-            style={[
-              MILITARY_TYPOGRAPHY.heading,
-              { color: 'white', fontSize: 28, letterSpacing: 1 },
-            ]}
-          >
-            COMMAND CENTER
-          </Text>
-          <View style={styles.subtitleContainer}>
-            <View style={styles.subtitleLine} />
-            <Text
-              style={[
-                MILITARY_TYPOGRAPHY.caption,
-                { color: TACTICAL_THEME.accent, letterSpacing: 2 },
-              ]}
-            >
-              SYSTEM CONFIGURATION
-            </Text>
-          </View>
-        </View>
 
         {/* Display Settings */}
-        <View style={[styles.card, { backgroundColor: cardBackground, borderColor, borderWidth: 1 }]}>
+        <ThemedCard style={styles.card} variant="default">
           <View style={styles.cardHeader}>
             <Feather name="monitor" size={18} color={TACTICAL_THEME.accent} />
-            <Text style={[styles.cardTitle, { color: isDark ? 'white' : 'black' }]}>
+            <ThemedText variant="subheading" style={styles.cardTitle}>
               VISUAL INTERFACE
-            </Text>
+            </ThemedText>
           </View>
 
           <View style={styles.settingRow}>
             <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: isDark ? 'white' : 'black' }]}>
+              <ThemedText variant="body" style={styles.settingLabel}>
                 Night Vision
-              </Text>
-              <Text style={[styles.settingDescription, { color: isDark ? '#aaa' : '#666' }]}>
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.settingDescription}>
                 Tactical dark mode for low-light operations
-              </Text>
+              </ThemedText>
             </View>
             <Switch
               value={isDark}
@@ -84,87 +53,87 @@ export default function SettingsScreen() {
               thumbColor={isDark ? TACTICAL_THEME.accent : '#f4f3f4'}
             />
           </View>
-        </View>
+        </ThemedCard>
 
         {/* Audio Intelligence */}
-        <View style={[styles.card, { backgroundColor: cardBackground, borderColor, borderWidth: 1 }]}>
+        <ThemedCard style={styles.card} variant="default">
           <View style={styles.cardHeader}>
             <MaterialCommunityIcons name="waveform" size={20} color={TACTICAL_THEME.accent} />
-            <Text style={[styles.cardTitle, { color: isDark ? 'white' : 'black' }]}>
+            <ThemedText variant="subheading" style={styles.cardTitle}>
               AUDIO INTELLIGENCE
-            </Text>
+            </ThemedText>
           </View>
 
-          <Text style={[styles.sectionDescription, { color: isDark ? '#aaa' : '#666' }]}>
+          <ThemedText variant="body" style={styles.sectionDescription}>
             Select the protocol for analyzing your recitation accuracy.
-          </Text>
+          </ThemedText>
 
           <TouchableOpacity
             style={[
               styles.optionButton,
               userSettings.voiceEngine === 'whisper' && styles.selectedOption,
-              { borderColor: userSettings.voiceEngine === 'whisper' ? TACTICAL_THEME.accent : borderColor }
+              { borderColor: userSettings.voiceEngine === 'whisper' ? TACTICAL_THEME.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'), backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)' }
             ]}
             onPress={() => handleVoiceEngineChange('whisper')}
           >
             <View style={styles.optionHeader}>
               <View style={styles.optionTitleRow}>
                 <MaterialCommunityIcons name="brain" size={18} color={userSettings.voiceEngine === 'whisper' ? TACTICAL_THEME.accent : (isDark ? '#888' : '#666')} />
-                <Text style={[styles.optionTitle, { color: isDark ? 'white' : 'black' }]}>Neural Core (Whisper AI)</Text>
+                <ThemedText variant="body" style={styles.optionTitle}>Neural Core (Whisper AI)</ThemedText>
               </View>
               {userSettings.voiceEngine === 'whisper' && <View style={styles.activeDot} />}
             </View>
-            <Text style={[styles.optionDescription, { color: isDark ? '#aaa' : '#666' }]}>
+            <ThemedText variant="caption" style={styles.optionDescription}>
               Advanced AI processing. Highest accuracy for complex verses. Requires internet for best results.
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[
               styles.optionButton,
               userSettings.voiceEngine === 'native' && styles.selectedOption,
-              { borderColor: userSettings.voiceEngine === 'native' ? TACTICAL_THEME.accent : borderColor }
+              { borderColor: userSettings.voiceEngine === 'native' ? TACTICAL_THEME.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'), backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)' }
             ]}
             onPress={() => handleVoiceEngineChange('native')}
           >
             <View style={styles.optionHeader}>
               <View style={styles.optionTitleRow}>
                 <Feather name="mic" size={18} color={userSettings.voiceEngine === 'native' ? TACTICAL_THEME.accent : (isDark ? '#888' : '#666')} />
-                <Text style={[styles.optionTitle, { color: isDark ? 'white' : 'black' }]}>Standard Comms (Native)</Text>
+                <ThemedText variant="body" style={styles.optionTitle}>Standard Comms (Native)</ThemedText>
               </View>
               {userSettings.voiceEngine === 'native' && <View style={styles.activeDot} />}
             </View>
-            <Text style={[styles.optionDescription, { color: isDark ? '#aaa' : '#666' }]}>
+            <ThemedText variant="caption" style={styles.optionDescription}>
               On-device speech recognition. Faster response time, works offline. Good for quick drills.
-            </Text>
+            </ThemedText>
           </TouchableOpacity>
-        </View>
+        </ThemedCard>
 
         {/* About */}
-        <View style={[styles.card, { backgroundColor: cardBackground, borderColor, borderWidth: 1 }]}>
+        <ThemedCard style={styles.card} variant="default">
           <View style={styles.cardHeader}>
             <FontAwesome name="info-circle" size={18} color={TACTICAL_THEME.accent} />
-            <Text style={[styles.cardTitle, { color: isDark ? 'white' : 'black' }]}>
+            <ThemedText variant="subheading" style={styles.cardTitle}>
               MISSION BRIEF
-            </Text>
+            </ThemedText>
           </View>
 
           <View style={styles.aboutContent}>
             <Text style={[styles.aboutLabel, { color: TACTICAL_THEME.accent }]}>VERSION</Text>
-            <Text style={[styles.aboutValue, { color: isDark ? 'white' : 'black' }]}>1.0.0 (Alpha)</Text>
+            <ThemedText variant="body" style={styles.aboutValue}>1.0.0 (Alpha)</ThemedText>
 
             <Text style={[styles.aboutLabel, { color: TACTICAL_THEME.accent, marginTop: 12 }]}>OBJECTIVE</Text>
-            <Text style={[styles.aboutValue, { color: isDark ? 'white' : 'black' }]}>
+            <ThemedText variant="body" style={styles.aboutValue}>
               To equip the saints with the Sword of the Spirit through tactical memorization and rigorous training.
-            </Text>
+            </ThemedText>
           </View>
 
-          <Text style={[styles.copyright, { color: isDark ? '#666' : '#999' }]}>
+          <ThemedText variant="caption" style={styles.copyright}>
             © 2025 SpiritAmmo Defense Systems
-          </Text>
-        </View>
+          </ThemedText>
+        </ThemedCard>
       </ScrollView>
-    </LinearGradient>
+    </ThemedContainer>
   )
 }
 
@@ -174,27 +143,12 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    padding: 20,
-    paddingTop: 60,
-  },
-  header: {
-    marginBottom: 30,
-  },
-  subtitleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  subtitleLine: {
-    width: 20,
-    height: 2,
-    backgroundColor: TACTICAL_THEME.accent,
-    marginRight: 8,
+    paddingHorizontal: 20,
   },
   card: {
+    marginBottom: 16,
     borderRadius: 12,
-    padding: 20,
-    marginBottom: 20,
+    padding: 16,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -223,18 +177,19 @@ const styles = StyleSheet.create({
   },
   settingDescription: {
     fontSize: 12,
+    opacity: 0.7,
   },
   sectionDescription: {
     fontSize: 13,
     marginBottom: 16,
     lineHeight: 18,
+    opacity: 0.7,
   },
   optionButton: {
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
     marginBottom: 12,
-    backgroundColor: 'rgba(0,0,0,0.1)',
   },
   selectedOption: {
     backgroundColor: 'rgba(255, 165, 0, 0.05)',
@@ -264,6 +219,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
     marginLeft: 26, // Align with text
+    opacity: 0.7,
   },
   aboutContent: {
     marginTop: 4,
@@ -282,6 +238,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     marginTop: 20,
     textAlign: 'center',
-    opacity: 0.7,
+    opacity: 0.5,
   },
 })

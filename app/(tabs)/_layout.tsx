@@ -27,6 +27,7 @@ export default function TabLayout() {
         headerTitleStyle: {
           fontWeight: 'bold',
         },
+        headerShown: false,
       }}
     >
       <Tabs.Screen

@@ -13,10 +13,13 @@ import { FontAwesome, Ionicons } from '@expo/vector-icons'
 import {
     GRADIENTS,
     TACTICAL_THEME,
+    GARRISON_THEME,
     MILITARY_TYPOGRAPHY,
 } from '@/constants/colors'
+import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 import ActionButton from '@/components/ActionButton'
+import ScreenHeader from '@/components/ScreenHeader'
 
 // Mock Data
 const SQUAD_MEMBERS = [
@@ -52,85 +55,92 @@ export default function SquadScreen() {
     }
 
     return (
-        <LinearGradient
-            colors={backgroundColors}
-            style={styles.container}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 0, y: 1 }}
-        >
-            <View style={styles.header}>
-                <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
-                    SQUADRON COMMAND
-                </Text>
-                <Text style={[styles.subtitle, MILITARY_TYPOGRAPHY.caption]}>
-                    MANAGE UNIT & ENGAGEMENTS
-                </Text>
-            </View>
-
-            {/* Tab Switcher */}
-            <View style={styles.tabContainer}>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === 'squad' && styles.activeTab]}
-                    onPress={() => setActiveTab('squad')}
-                >
-                    <Text
-                        style={[
-                            styles.tabText,
-                            activeTab === 'squad' && styles.activeTabText,
-                        ]}
-                    >
-                        MY SQUAD
-                    </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                    style={[styles.tab, activeTab === 'leaderboard' && styles.activeTab]}
-                    onPress={() => setActiveTab('leaderboard')}
-                >
-                    <Text
-                        style={[
-                            styles.tabText,
-                            activeTab === 'leaderboard' && styles.activeTabText,
-                        ]}
-                    >
-                        LEADERBOARD
-                    </Text>
-                </TouchableOpacity>
-            </View>
-
+        <ThemedContainer style={styles.container}>
+            <ScreenHeader
+                title="SQUADRON COMMAND"
+                subtitle="MANAGE UNIT & ENGAGEMENTS"
+            />
             <ScrollView style={styles.content}>
+
+                {/* Tab Switcher */}
+                <View style={styles.tabContainer}>
+                    <TouchableOpacity
+                        style={[
+                            styles.tab,
+                            activeTab === 'squad' && styles.activeTab,
+                            {
+                                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)',
+                                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                            }
+                        ]}
+                        onPress={() => setActiveTab('squad')}
+                    >
+                        <ThemedText
+                            variant="caption"
+                            style={[
+                                styles.tabText,
+                                activeTab === 'squad' && { color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text },
+                            ]}
+                        >
+                            MY SQUAD
+                        </ThemedText>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                        style={[
+                            styles.tab,
+                            activeTab === 'leaderboard' && styles.activeTab,
+                            {
+                                backgroundColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.05)',
+                                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                            }
+                        ]}
+                        onPress={() => setActiveTab('leaderboard')}
+                    >
+                        <ThemedText
+                            variant="caption"
+                            style={[
+                                styles.tabText,
+                                activeTab === 'leaderboard' && { color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text },
+                            ]}
+                        >
+                            LEADERBOARD
+                        </ThemedText>
+                    </TouchableOpacity>
+                </View>
+
                 {activeTab === 'squad' ? (
                     <>
                         {/* Active Challenges */}
                         <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
+                            <ThemedText variant="subheading" style={styles.sectionTitle}>
                                 ACTIVE OPERATIONS
-                            </Text>
-                            <View style={styles.challengeCard}>
+                            </ThemedText>
+                            <ThemedCard style={styles.challengeCard} variant="default">
                                 <View style={styles.challengeHeader}>
                                     <Ionicons name="flag" size={20} color={TACTICAL_THEME.warning} />
-                                    <Text style={styles.challengeTitle}>RACE TO 100 ROUNDS</Text>
+                                    <ThemedText variant="heading" style={styles.challengeTitle}>RACE TO 100 ROUNDS</ThemedText>
                                 </View>
-                                <Text style={styles.challengeDesc}>
+                                <ThemedText variant="body" style={styles.challengeDesc}>
                                     First to complete 100 perfect rounds wins the "Sharpshooter" badge.
-                                </Text>
+                                </ThemedText>
                                 <View style={styles.progressBar}>
                                     <View style={[styles.progressFill, { width: '65%' }]} />
                                 </View>
-                                <Text style={styles.progressText}>65 / 100 ROUNDS</Text>
-                            </View>
+                                <ThemedText variant="caption" style={styles.progressText}>65 / 100 ROUNDS</ThemedText>
+                            </ThemedCard>
                         </View>
 
                         {/* Squad List */}
                         <View style={styles.section}>
-                            <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
+                            <ThemedText variant="subheading" style={styles.sectionTitle}>
                                 UNIT ROSTER
-                            </Text>
+                            </ThemedText>
                             {SQUAD_MEMBERS.map((member) => (
-                                <View key={member.id} style={styles.memberCard}>
+                                <ThemedCard key={member.id} style={styles.memberCard} variant="flat">
                                     <Image source={{ uri: member.avatar }} style={styles.avatar} />
                                     <View style={styles.memberInfo}>
-                                        <Text style={styles.memberName}>{member.name}</Text>
-                                        <Text style={styles.memberRank}>{member.rank}</Text>
+                                        <ThemedText variant="body" style={styles.memberName}>{member.name}</ThemedText>
+                                        <ThemedText variant="caption" style={styles.memberRank}>{member.rank}</ThemedText>
                                     </View>
                                     <View style={styles.statusContainer}>
                                         <View
@@ -142,13 +152,13 @@ export default function SquadScreen() {
                                                             ? TACTICAL_THEME.success
                                                             : member.status === 'Training'
                                                                 ? TACTICAL_THEME.warning
-                                                                : TACTICAL_THEME.textSecondary,
+                                                                : (isDark ? TACTICAL_THEME.textSecondary : GARRISON_THEME.textSecondary),
                                                 },
                                             ]}
                                         />
-                                        <Text style={styles.statusText}>{member.status}</Text>
+                                        <ThemedText variant="caption" style={styles.statusText}>{member.status}</ThemedText>
                                     </View>
-                                </View>
+                                </ThemedCard>
                             ))}
                         </View>
 
@@ -162,10 +172,10 @@ export default function SquadScreen() {
                 ) : (
                     /* Leaderboard */
                     <View style={styles.section}>
-                        <View style={styles.leaderboardHeader}>
-                            <Text style={styles.colRank}>#</Text>
-                            <Text style={styles.colName}>SOLDIER</Text>
-                            <Text style={styles.colScore}>SCORE</Text>
+                        <View style={[styles.leaderboardHeader, { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)' }]}>
+                            <ThemedText variant="caption" style={styles.colRank}>#</ThemedText>
+                            <ThemedText variant="caption" style={styles.colName}>SOLDIER</ThemedText>
+                            <ThemedText variant="caption" style={styles.colScore}>SCORE</ThemedText>
                         </View>
                         {LEADERBOARD.map((item, index) => (
                             <View
@@ -173,17 +183,18 @@ export default function SquadScreen() {
                                 style={[
                                     styles.leaderboardRow,
                                     item.name === 'You' && styles.currentUserRow,
+                                    { borderBottomColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)' }
                                 ]}
                             >
-                                <Text style={styles.rankText}>{item.rank}</Text>
-                                <Text style={styles.nameText}>{item.name}</Text>
-                                <Text style={styles.scoreText}>{item.score}</Text>
+                                <ThemedText variant="body" style={styles.rankText}>{item.rank}</ThemedText>
+                                <ThemedText variant="body" style={styles.nameText}>{item.name}</ThemedText>
+                                <ThemedText variant="body" style={styles.scoreText}>{item.score}</ThemedText>
                             </View>
                         ))}
                     </View>
                 )}
             </ScrollView>
-        </LinearGradient>
+        </ThemedContainer>
     )
 }
 
@@ -191,30 +202,19 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
     },
-    header: {
-        padding: 20,
-        paddingTop: 60,
-        borderBottomWidth: 1,
-        borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    title: {
-        color: TACTICAL_THEME.text,
-        marginBottom: 4,
-    },
-    subtitle: {
-        color: TACTICAL_THEME.textSecondary,
-    },
     tabContainer: {
         flexDirection: 'row',
-        padding: 16,
-        gap: 12,
+        paddingHorizontal: 20,
+        marginBottom: 20,
+        gap: 10,
+        marginTop: 10,
     },
     tab: {
         flex: 1,
         paddingVertical: 12,
         alignItems: 'center',
         borderRadius: 8,
-        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        // Removed hardcoded background
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
     },
@@ -223,13 +223,9 @@ const styles = StyleSheet.create({
         borderColor: TACTICAL_THEME.accent,
     },
     tabText: {
-        color: TACTICAL_THEME.textSecondary,
         fontWeight: 'bold',
         fontSize: 12,
         letterSpacing: 1,
-    },
-    activeTabText: {
-        color: TACTICAL_THEME.text,
     },
     content: {
         flex: 1,
@@ -239,13 +235,10 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     sectionTitle: {
-        color: TACTICAL_THEME.text,
         marginBottom: 12,
         letterSpacing: 1,
     },
     challengeCard: {
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-        borderRadius: 12,
         padding: 16,
         borderWidth: 1,
         borderColor: TACTICAL_THEME.warning,
@@ -262,13 +255,12 @@ const styles = StyleSheet.create({
         fontSize: 16,
     },
     challengeDesc: {
-        color: TACTICAL_THEME.textSecondary,
         fontSize: 12,
         marginBottom: 12,
     },
     progressBar: {
         height: 6,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        backgroundColor: 'rgba(128, 128, 128, 0.2)', // Visible on both backgrounds
         borderRadius: 3,
         marginBottom: 8,
     },
@@ -278,7 +270,6 @@ const styles = StyleSheet.create({
         borderRadius: 3,
     },
     progressText: {
-        color: TACTICAL_THEME.text,
         fontSize: 10,
         fontWeight: 'bold',
         textAlign: 'right',
@@ -286,9 +277,7 @@ const styles = StyleSheet.create({
     memberCard: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(255, 255, 255, 0.05)',
         padding: 12,
-        borderRadius: 12,
         marginBottom: 8,
     },
     avatar: {
@@ -302,13 +291,12 @@ const styles = StyleSheet.create({
         marginLeft: 12,
     },
     memberName: {
-        color: TACTICAL_THEME.text,
         fontWeight: 'bold',
         fontSize: 14,
     },
     memberRank: {
-        color: TACTICAL_THEME.textSecondary,
         fontSize: 12,
+        opacity: 0.7,
     },
     statusContainer: {
         flexDirection: 'row',
@@ -321,8 +309,8 @@ const styles = StyleSheet.create({
         borderRadius: 4,
     },
     statusText: {
-        color: TACTICAL_THEME.textSecondary,
         fontSize: 10,
+        opacity: 0.7,
     },
     leaderboardHeader: {
         flexDirection: 'row',
@@ -331,9 +319,9 @@ const styles = StyleSheet.create({
         borderBottomColor: 'rgba(255, 255, 255, 0.1)',
         marginBottom: 8,
     },
-    colRank: { width: 40, color: TACTICAL_THEME.textSecondary, fontWeight: 'bold' },
-    colName: { flex: 1, color: TACTICAL_THEME.textSecondary, fontWeight: 'bold' },
-    colScore: { width: 60, color: TACTICAL_THEME.textSecondary, fontWeight: 'bold', textAlign: 'right' },
+    colRank: { width: 40, fontWeight: 'bold' },
+    colName: { flex: 1, fontWeight: 'bold' },
+    colScore: { width: 60, fontWeight: 'bold', textAlign: 'right' },
     leaderboardRow: {
         flexDirection: 'row',
         paddingVertical: 12,
@@ -347,7 +335,7 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         borderRadius: 8,
     },
-    rankText: { width: 40, color: TACTICAL_THEME.text, fontWeight: 'bold' },
-    nameText: { flex: 1, color: TACTICAL_THEME.text },
+    rankText: { width: 40, fontWeight: 'bold' },
+    nameText: { flex: 1 },
     scoreText: { width: 60, color: TACTICAL_THEME.accent, fontWeight: 'bold', textAlign: 'right' },
 })
