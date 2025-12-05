@@ -23,6 +23,7 @@ import { runWordsOfJesusUpdate } from '@/scripts/updateWordsOfJesus'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import AmmunitionCard from '@/components/AmmunitionCard'
 import TargetPractice from '@/components/TargetPractice'
+import StealthDrill from '@/components/StealthDrill'
 import RankBadge from '@/components/RankBadge'
 import AccuracyMeter from '@/components/AccuracyMeter'
 import ActionButton from '@/components/ActionButton'
@@ -56,6 +57,7 @@ export default function TrainingScreen() {
     useState<Collection | null>(null)
 
   const [showTargetPractice, setShowTargetPractice] = useState(false)
+  const [showStealthDrill, setShowStealthDrill] = useState(false)
   const [trainingMode, setTrainingMode] = useState<
     'single' | 'burst' | 'automatic'
   >('single')
@@ -129,6 +131,10 @@ export default function TrainingScreen() {
     setShowTargetPractice(true)
   }
 
+  const handleStealthDrill = () => {
+    setShowStealthDrill(true)
+  }
+
   const handleReloadAmmunition = () => {
     if (selectedCollection) {
       // Get the latest collection data to ensure we have updated scripture IDs
@@ -166,7 +172,7 @@ export default function TrainingScreen() {
 
           const mnemonicText = `${intel.battlePlan}\n---\n${intel.tacticalNotes}`;
           await updateScriptureMnemonic(currentScripture.id, mnemonicText);
-          
+
           errorHandler.showSuccess(
             'Battle intelligence deployed successfully! Tactical advantage secured.',
             'Intel Acquired'
@@ -176,7 +182,7 @@ export default function TrainingScreen() {
         await errorHandler.handleError(
           error,
           'Generate Intel',
-          { 
+          {
             customMessage: 'Intel generation failed. Command unable to provide tactical support. Retry?',
             retry: () => handleGenerateIntel(force)
           }
@@ -212,6 +218,31 @@ export default function TrainingScreen() {
     }
     // Keep the practice modal open so the user can view the transcript and
     // shot result. The modal is closed by the user via the CEASE FIRE button.
+  }
+
+  const handleStealthDrillComplete = async (accuracy: number) => {
+    console.log('🕵️‍♀️ Training: handleStealthDrillComplete called with accuracy:', accuracy)
+    if (currentScripture) {
+      setPreviousAccuracy(currentScripture.accuracy || 0)
+      await updateScriptureAccuracy(currentScripture.id, accuracy)
+
+      // Log stats (could add a flag for 'stealth' mode later in service)
+      await militaryRankingService.updateProfile({
+        versesMemorized: userStats.totalPracticed + 1,
+        averageAccuracy: userStats.averageAccuracy,
+        consecutiveDays: userStats.streak,
+        lastSessionAccuracy: accuracy,
+        lastSessionWordCount: currentScripture.text.split(' ').length,
+      })
+
+      await loadMilitaryProfile()
+    }
+    // Modal closes automatically via component prop, or we can force it here if needed
+    // setShowStealthDrill(false) is called by the component via onStealthDrillClose if we passed one,
+    // but the component calls internal onClose -> onComplete -> which calls this.
+    // Wait, the component calls onComplete and THEN onClose?
+    // StealthDrill calls: onComplete(accuracy); onClose();
+    // So we don't need to manually close it here if onClose prop handles it.
   }
 
   const handleMultiChapterSelection = (chapterIds: string[]) => {
@@ -347,6 +378,7 @@ export default function TrainingScreen() {
             onFire={handleFireAmmunition}
             onReload={handleReloadAmmunition}
             onIntel={handleGenerateIntel}
+            onStealth={handleStealthDrill}
             isDark={isDark}
           />
         )}
@@ -471,9 +503,24 @@ export default function TrainingScreen() {
         />
       )}
 
+      {/* Stealth Drill Modal */}
+      {currentScripture && (
+        <StealthDrill
+          isVisible={showStealthDrill}
+          targetVerse={currentScripture.text}
+          reference={currentScripture.reference}
+          /* Wait, StealthDrill expects onComplete: (accuracy) => void. 
+             handleTargetPracticeComplete expects (transcript, accuracy).
+             I need to use handleStealthDrillComplete created above.
+          */
+          onComplete={handleStealthDrillComplete}
+          onClose={() => setShowStealthDrill(false)}
+        />
+      )}
+
       {/* Loading Overlay */}
-      <LoadingOverlay 
-        visible={isLoadingIntel} 
+      <LoadingOverlay
+        visible={isLoadingIntel}
         message="Requesting tactical intelligence from command..."
       />
     </ThemedContainer>

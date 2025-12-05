@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { FontAwesome, Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { FontAwesome, Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   COLORS,
   MILITARY_TYPOGRAPHY,
@@ -24,6 +24,7 @@ interface AmmunitionCardProps {
   onFire: () => void
   onReload: () => void
   onIntel: (force?: boolean) => void // Generate mnemonic
+  onStealth?: () => void // Silent Drill
   isLoading?: boolean
   isDark?: boolean
 }
@@ -33,6 +34,7 @@ const AmmunitionCard = React.memo(({
   onFire,
   onReload,
   onIntel,
+  onStealth,
   isLoading = false,
   isDark = false,
 }: AmmunitionCardProps) => {
@@ -300,6 +302,20 @@ const AmmunitionCard = React.memo(({
             </Text>
           </TouchableOpacity>
 
+          {onStealth && (
+            <TouchableOpacity
+              style={[styles.actionButton, styles.stealthButton]}
+              onPress={onStealth}
+              disabled={isLoading}
+              testID="stealth-button"
+            >
+              <MaterialCommunityIcons name="incognito" size={20} color={TACTICAL_THEME.text} />
+              <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
+                STEALTH
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={[styles.actionButton, styles.intelButton]}
             onPress={() => onIntel(false)}
@@ -490,6 +506,11 @@ const styles = StyleSheet.create({
     backgroundColor: TACTICAL_THEME.secondary,
     flex: 1.3, // Slightly larger for better spacing
     marginRight: 8, // Add right padding
+  },
+  stealthButton: {
+    backgroundColor: '#4E5D6C', // Slate gray for stealth
+    flex: 1.2,
+    marginRight: 8,
   },
   intelButton: {
     backgroundColor: TACTICAL_THEME.primary,
