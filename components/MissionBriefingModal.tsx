@@ -4,6 +4,7 @@ import {
     View,
     Text,
     Modal,
+    ScrollView,
     TouchableOpacity,
     Animated,
     Dimensions,
@@ -30,7 +31,7 @@ interface MissionBriefingModalProps {
     scripture: Scripture | null
 }
 
-const { width } = Dimensions.get('window')
+const { width, height } = Dimensions.get('window')
 
 export default function MissionBriefingModal({
     isVisible,
@@ -94,94 +95,105 @@ export default function MissionBriefingModal({
             onRequestClose={onClose}
         >
             <View style={styles.overlay}>
-                <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
+                <TouchableOpacity
+                    style={StyleSheet.absoluteFill}
+                    activeOpacity={1}
+                    onPress={onClose}
+                >
+                    <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
+                </TouchableOpacity>
 
                 <Animated.View
                     style={[
                         styles.modalContainer,
                         {
                             transform: [{ translateY: slideAnim }],
-                            backgroundColor: isDark ? '#1a1a1a' : '#f0f0f0',
+                            backgroundColor: isDark ? '#1A1A1A' : '#F0F0F0',
                             borderColor: theme.border
                         }
                     ]}
                 >
                     <LinearGradient
-                        colors={isDark ? ['#2a2a2a', '#1a1a1a'] : ['#ffffff', '#f5f5f5']}
+                        colors={isDark ? ['#2A2A2A', '#1A1A1A'] : ['#FFFFFF', '#F5F5F5']}
                         style={styles.gradient}
                     >
-                        {/* Header */}
-                        <View style={styles.header}>
-                            <View style={styles.headerTitleContainer}>
-                                <MaterialCommunityIcons name="file-document-outline" size={24} color={theme.accent} />
-                                <ThemedText variant="heading" style={styles.headerTitle}>MISSION BRIEFING</ThemedText>
+                        <ScrollView
+                            contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? 40 : 24 }}
+                            showsVerticalScrollIndicator={false}
+                            bounces={false}
+                        >
+                            {/* Header */}
+                            <View style={styles.header}>
+                                <View style={styles.headerTitleContainer}>
+                                    <MaterialCommunityIcons name="file-document-outline" size={24} color={theme.accent} />
+                                    <ThemedText variant="heading" style={styles.headerTitle}>MISSION BRIEFING</ThemedText>
+                                </View>
+                                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                                    <Ionicons name="close" size={24} color={theme.textSecondary} />
+                                </TouchableOpacity>
                             </View>
-                            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                                <Ionicons name="close" size={24} color={theme.textSecondary} />
-                            </TouchableOpacity>
-                        </View>
 
-                        {/* Intel Card */}
-                        <View style={[styles.intelCard, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-                            <View style={styles.intelRow}>
-                                <ThemedText variant="caption" style={styles.intelLabel}>TARGET SECTOR</ThemedText>
-                                <ThemedText variant="subheading" style={{ color: theme.primary }}>{scripture.reference.toUpperCase()}</ThemedText>
-                            </View>
-                            <View style={styles.divider} />
-                            <View style={styles.intelRow}>
-                                <ThemedText variant="caption" style={styles.intelLabel}>PASS REQUIREMENT</ThemedText>
-                                <View style={styles.requirementBadge}>
-                                    <FontAwesome5 name="crosshairs" size={12} color={theme.text} style={{ marginRight: 6 }} />
-                                    <ThemedText variant="body" style={{ fontWeight: 'bold' }}>{node.requiredAccuracy}% ACCURACY</ThemedText>
+                            {/* Intel Card */}
+                            <View style={[styles.intelCard, { borderColor: theme.border, backgroundColor: theme.surface }]}>
+                                <View style={styles.intelRow}>
+                                    <ThemedText variant="caption" style={styles.intelLabel}>TARGET SECTOR</ThemedText>
+                                    <ThemedText variant="subheading" style={{ color: theme.primary }}>{scripture.reference.toUpperCase()}</ThemedText>
+                                </View>
+                                <View style={styles.divider} />
+                                <View style={styles.intelRow}>
+                                    <ThemedText variant="caption" style={styles.intelLabel}>PASS REQUIREMENT</ThemedText>
+                                    <View style={styles.requirementBadge}>
+                                        <FontAwesome5 name="crosshairs" size={12} color={theme.text} style={{ marginRight: 6 }} />
+                                        <ThemedText variant="body" style={{ fontWeight: 'bold' }}>{node.requiredAccuracy}% ACCURACY</ThemedText>
+                                    </View>
                                 </View>
                             </View>
-                        </View>
 
-                        <ThemedText variant="caption" style={styles.sectionTitle}>SELECT ENGAGEMENT PROTOCOL</ThemedText>
+                            <ThemedText variant="caption" style={styles.sectionTitle}>SELECT ENGAGEMENT PROTOCOL</ThemedText>
 
-                        {/* Action Buttons */}
-                        <View style={styles.actionsContainer}>
-                            <TouchableOpacity
-                                style={[styles.missionButton, styles.stealthButton]}
-                                onPress={() => handleStart('STEALTH')}
-                                activeOpacity={0.9}
-                            >
-                                <LinearGradient
-                                    colors={['#4E5D6C', '#37474F']}
-                                    style={styles.buttonGradient}
+                            {/* Action Buttons */}
+                            <View style={styles.actionsContainer}>
+                                <TouchableOpacity
+                                    style={[styles.missionButton, styles.stealthButton]}
+                                    onPress={() => handleStart('STEALTH')}
+                                    activeOpacity={0.9}
                                 >
-                                    <MaterialCommunityIcons name="incognito" size={32} color="#FFF" style={styles.buttonIcon} />
-                                    <View>
-                                        <Text style={[MILITARY_TYPOGRAPHY.heading, styles.buttonTitle]}>STEALTH OP</Text>
-                                        <Text style={[MILITARY_TYPOGRAPHY.caption, styles.buttonSubtitle]}>SILENT DRILL</Text>
-                                    </View>
-                                    <MaterialCommunityIcons name="chevron-right" size={24} color="rgba(255,255,255,0.5)" style={styles.chevron} />
-                                </LinearGradient>
-                            </TouchableOpacity>
+                                    <LinearGradient
+                                        colors={['#4E5D6C', '#37474F']}
+                                        style={styles.buttonGradient}
+                                    >
+                                        <MaterialCommunityIcons name="incognito" size={32} color="#FFF" style={styles.buttonIcon} />
+                                        <View>
+                                            <Text style={[MILITARY_TYPOGRAPHY.heading, styles.buttonTitle]}>STEALTH OP</Text>
+                                            <Text style={[MILITARY_TYPOGRAPHY.caption, styles.buttonSubtitle]}>SILENT DRILL</Text>
+                                        </View>
+                                        <MaterialCommunityIcons name="chevron-right" size={24} color="rgba(255,255,255,0.5)" style={styles.chevron} />
+                                    </LinearGradient>
+                                </TouchableOpacity>
 
-                            <TouchableOpacity
-                                style={[styles.missionButton, styles.voiceButton, { borderColor: theme.accent }]}
-                                onPress={() => handleStart('VOICE')}
-                                activeOpacity={0.9}
-                            >
-                                <LinearGradient
-                                    colors={[theme.accent, '#D84315']} // Orange gradient
-                                    style={styles.buttonGradient}
+                                <TouchableOpacity
+                                    style={[styles.missionButton, styles.voiceButton, { borderColor: theme.accent }]}
+                                    onPress={() => handleStart('VOICE')}
+                                    activeOpacity={0.9}
                                 >
-                                    <Ionicons name="mic" size={32} color="#FFF" style={styles.buttonIcon} />
-                                    <View>
-                                        <Text style={[MILITARY_TYPOGRAPHY.heading, styles.buttonTitle]}>LIVE FIRE</Text>
-                                        <Text style={[MILITARY_TYPOGRAPHY.caption, styles.buttonSubtitle]}>VOICE RECOGNITION</Text>
-                                    </View>
-                                    <MaterialCommunityIcons name="chevron-right" size={24} color="rgba(255,255,255,0.5)" style={styles.chevron} />
-                                </LinearGradient>
-                            </TouchableOpacity>
-                        </View>
+                                    <LinearGradient
+                                        colors={[theme.accent, '#D84315']} // Orange gradient
+                                        style={styles.buttonGradient}
+                                    >
+                                        <Ionicons name="mic" size={32} color="#FFF" style={styles.buttonIcon} />
+                                        <View>
+                                            <Text style={[MILITARY_TYPOGRAPHY.heading, styles.buttonTitle]}>LIVE FIRE</Text>
+                                            <Text style={[MILITARY_TYPOGRAPHY.caption, styles.buttonSubtitle]}>VOICE RECOGNITION</Text>
+                                        </View>
+                                        <MaterialCommunityIcons name="chevron-right" size={24} color="rgba(255,255,255,0.5)" style={styles.chevron} />
+                                    </LinearGradient>
+                                </TouchableOpacity>
+                            </View>
 
-                        <Text style={[styles.footerText, { color: theme.textSecondary }]}>
-                            CONFIRM PROTOCOL TO BEGIN OPERATION
-                        </Text>
-
+                            <Text style={[styles.footerText, { color: theme.textSecondary }]}>
+                                CONFIRM PROTOCOL TO BEGIN OPERATION
+                            </Text>
+                        </ScrollView>
                     </LinearGradient>
                 </Animated.View>
             </View>
@@ -206,6 +218,7 @@ const styles = StyleSheet.create({
         borderLeftWidth: 1,
         borderRightWidth: 1,
         minHeight: 450,
+        maxHeight: '90%',
         elevation: 10,
         shadowColor: '#000',
         shadowOffset: { width: 0, height: -4 },
@@ -215,7 +228,7 @@ const styles = StyleSheet.create({
     gradient: {
         flex: 1,
         padding: 24,
-        paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+        paddingBottom: 0, // Handled by ScrollView
     },
     header: {
         flexDirection: 'row',

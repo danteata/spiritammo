@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router'
 import {
   COLORS,
@@ -383,108 +383,82 @@ export default function TrainingScreen() {
           />
         )}
 
-        {/* Mission Status */}
-        {militaryProfile && (
-          <ThemedCard style={styles.missionStatus} variant="default">
-            <ThemedText variant="subheading" style={styles.statusTitle}>
-              MISSION STATUS
-            </ThemedText>
+        <ThemedCard style={styles.missionStatus} variant="default">
+          <ThemedText variant="subheading" style={styles.statusTitle}>
+            MISSION STATUS
+          </ThemedText>
 
-            <View style={styles.statusGrid}>
-              {isDark ? (
-                <LinearGradient
-                  colors={[TACTICAL_THEME.surface, '#1a1a1a']}
-                  style={styles.statusItem}
-                >
-                  <FontAwesome name="bullseye" size={20} color={TACTICAL_THEME.accent} />
-                  <ThemedText variant="body" style={{ textAlign: 'center', marginBottom: 24, color: TACTICAL_THEME.text }}>
-                    ROUNDS FIRED
-                  </ThemedText>
-                  <ThemedText variant="body" style={styles.statusValue}>
-                    {militaryProfile.totalVersesMemorized}
-                  </ThemedText>
-                </LinearGradient>
-              ) : (
-                <View style={[
-                  styles.statusItem,
-                  {
-                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                    borderColor: 'rgba(0, 0, 0, 0.1)'
-                  }
-                ]}>
-                  <FontAwesome name="bullseye" size={20} color={TACTICAL_THEME.accent} />
-                  <ThemedText variant="body" style={{ textAlign: 'center', marginBottom: 24 }}>
-                    ROUNDS FIRED
-                  </ThemedText>
-                  <ThemedText variant="body" style={styles.statusValue}>
-                    {militaryProfile.totalVersesMemorized}
-                  </ThemedText>
-                </View>
-              )}
+          <View style={styles.statusGrid}>
+            {/* Rounds Fired */}
+            {isDark ? (
+              <View style={[styles.statusItem, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.05)' }]}>
+                <MaterialCommunityIcons name="target" size={24} color={TACTICAL_THEME.accent} style={{ marginBottom: 8 }} />
+                <ThemedText variant="heading" style={styles.statusValue}>
+                  {militaryProfile.totalVersesMemorized}
+                </ThemedText>
+                <ThemedText variant="caption" style={styles.statusLabel}>
+                  ROUNDS FIRED
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={[styles.statusItem, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.1)' }]}>
+                <MaterialCommunityIcons name="target" size={24} color={TACTICAL_THEME.accent} style={{ marginBottom: 8 }} />
+                <ThemedText variant="heading" style={styles.statusValue}>
+                  {militaryProfile.totalVersesMemorized}
+                </ThemedText>
+                <ThemedText variant="caption" style={styles.statusLabel}>
+                  ROUNDS FIRED
+                </ThemedText>
+              </View>
+            )}
 
-              {isDark ? (
-                <LinearGradient
-                  colors={[TACTICAL_THEME.surface, '#1a1a1a']}
-                  style={styles.statusItem}
-                >
-                  <FontAwesome name="trophy" size={20} color={TACTICAL_THEME.success} />
-                  <ThemedText variant="caption" style={styles.statusLabel}>
-                    AVG ACCURACY
-                  </ThemedText>
-                  <ThemedText variant="body" style={styles.statusValue}>
-                    {fmt(militaryProfile.averageAccuracy)}%
-                  </ThemedText>
-                </LinearGradient>
-              ) : (
-                <View style={[
-                  styles.statusItem,
-                  {
-                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                    borderColor: 'rgba(0, 0, 0, 0.1)'
-                  }
-                ]}>
-                  <FontAwesome name="trophy" size={20} color={TACTICAL_THEME.success} />
-                  <ThemedText variant="caption" style={styles.statusLabel}>
-                    AVG ACCURACY
-                  </ThemedText>
-                  <ThemedText variant="body" style={styles.statusValue}>
-                    {fmt(militaryProfile.averageAccuracy)}%
-                  </ThemedText>
-                </View>
-              )}
+            {/* Accuracy */}
+            {isDark ? (
+              <View style={[styles.statusItem, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.05)' }]}>
+                <MaterialCommunityIcons name="crosshairs-gps" size={24} color={TACTICAL_THEME.success} style={{ marginBottom: 8 }} />
+                <ThemedText variant="heading" style={styles.statusValue}>
+                  {fmt(militaryProfile.averageAccuracy)}%
+                </ThemedText>
+                <ThemedText variant="caption" style={styles.statusLabel}>
+                  AVG ACCURACY
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={[styles.statusItem, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.1)' }]}>
+                <MaterialCommunityIcons name="crosshairs-gps" size={24} color={TACTICAL_THEME.success} style={{ marginBottom: 8 }} />
+                <ThemedText variant="heading" style={styles.statusValue}>
+                  {fmt(militaryProfile.averageAccuracy)}%
+                </ThemedText>
+                <ThemedText variant="caption" style={styles.statusLabel}>
+                  AVG ACCURACY
+                </ThemedText>
+              </View>
+            )}
 
-              {isDark ? (
-                <LinearGradient
-                  colors={[TACTICAL_THEME.surface, '#1a1a1a']}
-                  style={styles.statusItem}
-                >
-                  <FontAwesome name="long-arrow-up" size={20} color={TACTICAL_THEME.warning} />
-                  <ThemedText variant="caption" style={styles.statusLabel}>
-                    STREAK
-                  </ThemedText>
-                  <ThemedText variant="body" style={styles.statusValue}>
-                    {militaryProfile.consecutiveDays} DAYS
-                  </ThemedText>
-                </LinearGradient>
-              ) : (
-                <View style={[
-                  styles.statusItem,
-                  {
-                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-                    borderColor: 'rgba(0, 0, 0, 0.1)'
-                  }
-                ]}>
-                  <FontAwesome name="long-arrow-up" size={20} color={TACTICAL_THEME.warning} />
-                  <ThemedText variant="caption" style={styles.statusLabel}>
-                    STREAK
-                  </ThemedText>
-                  <ThemedText variant="body" style={styles.statusValue}>
-                    {militaryProfile.consecutiveDays} DAYS
-                  </ThemedText>
-                </View>
-              )}
-            </View>
-          </ThemedCard>
+            {/* Streak */}
+            {isDark ? (
+              <View style={[styles.statusItem, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.05)' }]}>
+                <MaterialCommunityIcons name="fire" size={24} color={TACTICAL_THEME.warning} style={{ marginBottom: 8 }} />
+                <ThemedText variant="heading" style={styles.statusValue}>
+                  {militaryProfile.consecutiveDays}
+                </ThemedText>
+                <ThemedText variant="caption" style={styles.statusLabel}>
+                  DAY STREAK
+                </ThemedText>
+              </View>
+            ) : (
+              <View style={[styles.statusItem, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.1)' }]}>
+                <MaterialCommunityIcons name="fire" size={24} color={TACTICAL_THEME.warning} style={{ marginBottom: 8 }} />
+                <ThemedText variant="heading" style={styles.statusValue}>
+                  {militaryProfile.consecutiveDays}
+                </ThemedText>
+                <ThemedText variant="caption" style={styles.statusLabel}>
+                  DAY STREAK
+                </ThemedText>
+              </View>
+            )}
+          </View>
+        </ThemedCard>
         )}
       </ScrollView>
 
