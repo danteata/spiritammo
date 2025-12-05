@@ -201,7 +201,7 @@ export const generateBattleIntel = async (
     await errorHandler.handleError(
       error,
       'Generate Battle Intelligence',
-      { 
+      {
         customMessage: 'Intel generation failed. Deploying standard tactical pattern.',
         silent: true // Don't show alert, just use fallback
       }
@@ -457,5 +457,35 @@ export const generateAndStoreIntel = async (
   } catch (error) {
     console.error('Failed to generate and store intelligence:', error)
     return null
+  }
+}
+
+// Fetch scripture text using Gemini API
+export const fetchScriptureText = async (reference: string): Promise<string | null> => {
+  try {
+    console.log(`📡 Fetching scripture text for ${reference} from Gemini...`);
+
+    const prompt = `Provide the King James Version (KJV) text for the bible verse: ${reference}.
+    RETURN ONLY THE TEXT. Do not include the reference, verse numbers, or any other commentary.
+    If the verse does not exist, return "NOT_FOUND".`;
+
+    const completion = await openai.chat.completions.create({
+      model: process.env.EXPO_PUBLIC_GEMINI_API_MODEL || 'gemini-2.5-flash',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.1, // Low temperature for exact retrieval
+    });
+
+    const text = completion.choices[0]?.message?.content?.trim();
+
+    if (!text || text === 'NOT_FOUND') {
+      return null;
+    }
+
+    // specific cleanup for common AI artifacts
+    return text.replace(/^"|"$/g, '').trim();
+  } catch (error) {
+    console.error(`Failed to fetch scripture text for ${reference}:`, error);
+    await errorHandler.handleError(error, 'Fetch Scripture Text', { silent: true });
+    return null;
   }
 }

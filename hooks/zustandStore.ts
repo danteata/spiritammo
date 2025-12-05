@@ -24,6 +24,8 @@ import { militaryRankingService } from '@/services/militaryRanking'
 import { errorHandler } from '@/services/errorHandler'
 import { Campaign, CampaignNode, NodeStatus } from '@/types/campaign'
 import { INITIAL_CAMPAIGNS } from '@/data/campaigns'
+import { fetchScriptureText, generateBattleIntel } from '@/services/battleIntelligence'
+import { bibleApiService } from '@/services/bibleApi'
 
 // Generate a simple UUID for React Native
 function generateUUID(): string {
@@ -91,6 +93,7 @@ type AppState = {
   unlockNode: (campaignId: string, nodeId: string) => void
   completeNode: (campaignId: string, nodeId: string, accuracy: number) => Promise<boolean>
   resetCampaignProgress: (campaignId: string) => void
+  provisionCampaignScripture: (node: CampaignNode) => Promise<Scripture | null>
 }
 
 export const useZustandStore = create<AppState>((set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void, get: () => AppState) => ({
@@ -922,6 +925,65 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
 
     set({ campaigns: updatedCampaigns })
     AsyncStorage.setItem('user_campaigns', JSON.stringify(updatedCampaigns))
+  },
+
+  provisionCampaignScripture: async (node: CampaignNode): Promise<Scripture | null> => {
+    try {
+      const { book, chapter, verse } = node.scriptureReference;
+      const scriptures = get().scriptures;
+
+      // 1. Try to find locally
+      const found = scriptures.find(s =>
+        s.book === book &&
+        s.chapter === chapter &&
+        s.verse === verse
+      );
+
+      if (found) return found;
+
+      // 2. Not found, provision from Offline Database (Robust Existing Service)
+      const reference = `${book} ${chapter}:${verse}`;
+      let text: string | null = null;
+
+      try {
+        const verseData = await bibleApiService.getVerse(book, chapter, verse);
+        if (verseData) {
+          text = verseData.text;
+        }
+      } catch (dbError) {
+        console.warn('Offline DB retrieval failed:', dbError);
+      }
+
+      // 3. Fallback to AI if offline DB fails (robustness)
+      if (!text) {
+        console.log('Offline DB miss, falling back to AI Intel...');
+        text = await fetchScriptureText(reference);
+      }
+
+      if (!text) {
+        throw new Error('Could not retrieve intel from Database or AI.');
+      }
+
+      // 4. Create new Scripture
+      const newScripture: Scripture = {
+        id: generateUUID(),
+        book,
+        chapter,
+        verse,
+        text,
+        reference,
+        practiceCount: 0,
+        isJesusWords: false // Default
+      };
+
+      // 4. Add to Store & DB
+      await get().addScriptures([newScripture]);
+
+      return newScripture;
+    } catch (error) {
+      console.error('Provisioning failed:', error);
+      return null;
+    }
   },
 
 

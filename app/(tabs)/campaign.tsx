@@ -5,6 +5,7 @@ import {
     ScrollView,
     TouchableOpacity,
     Alert,
+    ActivityIndicator,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome5 } from '@expo/vector-icons'
@@ -17,6 +18,7 @@ import StealthDrill from '@/components/StealthDrill'
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Campaign, CampaignNode } from '@/types/campaign'
 import { Scripture } from '@/types/scripture'
+import useZustandStore from '@/hooks/zustandStore' // Import direct store for actionscripture'
 import { router } from 'expo-router'
 
 export default function CampaignScreen() {
@@ -35,6 +37,9 @@ export default function CampaignScreen() {
     const [targetScripture, setTargetScripture] = useState<Scripture | null>(null)
     const [practiceMode, setPracticeMode] = useState<'VOICE' | 'STEALTH' | null>(null)
 
+    // Constants
+    const [isLoadingScripture, setIsLoadingScripture] = useState(false)
+
     useEffect(() => {
         if (activeCampaignId) {
             const campaign = campaigns.find(c => c.id === activeCampaignId)
@@ -46,16 +51,14 @@ export default function CampaignScreen() {
         startCampaign(campaignId)
     }
 
-    const handleNodeSelect = (node: CampaignNode) => {
-        // Find the scripture object
-        const foundScripture = scriptures.find(s =>
-            s.book === node.scriptureReference.book &&
-            s.chapter === node.scriptureReference.chapter &&
-            s.verse === node.scriptureReference.verse
-        )
+    const handleNodeSelect = async (node: CampaignNode) => {
+        // 1. Try to provision (find or fetch) the scripture
+        setIsLoadingScripture(true)
+        const scripture = await useZustandStore.getState().provisionCampaignScripture(node)
+        setIsLoadingScripture(false)
 
-        if (foundScripture) {
-            setTargetScripture(foundScripture)
+        if (scripture) {
+            setTargetScripture(scripture)
             setSelectedNode(node)
 
             // Ask for mode
@@ -69,8 +72,7 @@ export default function CampaignScreen() {
                 ]
             )
         } else {
-            // Handle missing scripture (should be seeded)
-            Alert.alert('Error', 'Intel for this mission is missing from database.')
+            Alert.alert('Intel Missing', 'Could not retrieve data for this mission. Please check connection and try again.')
         }
     }
 
@@ -160,6 +162,14 @@ export default function CampaignScreen() {
                             campaign={activeCampaign}
                             onNodeSelect={handleNodeSelect}
                         />
+
+                        {/* Loading Overlay */}
+                        {isLoadingScripture && (
+                            <View style={styles.loadingOverlay}>
+                                <ActivityIndicator size="large" color={TACTICAL_THEME.accent} />
+                                <ThemedText style={{ marginTop: 10 }}>DECRYPTING INTEL...</ThemedText>
+                            </View>
+                        )}
                     </View>
                 )}
             </View>
@@ -225,5 +235,12 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 12,
+    },
+    loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 20
     }
 })

@@ -48,6 +48,7 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const startCampaign = useZustandStore((s) => s.startCampaign)
   const completeNode = useZustandStore((s) => s.completeNode)
   const resetCampaignProgress = useZustandStore((s) => s.resetCampaignProgress)
+  const provisionCampaignScripture = useZustandStore((s) => s.provisionCampaignScripture)
 
   return {
     // Theme
@@ -89,5 +90,6 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     startCampaign,
     completeNode,
     resetCampaignProgress,
+    provisionCampaignScripture,
   }
 })
