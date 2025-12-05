@@ -275,64 +275,71 @@ const AmmunitionCard = React.memo(({
         </View>
 
         {/* Action buttons */}
-        <View style={styles.actionButtons}>
-          <Animated.View style={{ transform: [{ scale: pulseAnimation }] }}>
-            <TouchableOpacity
-              style={[styles.actionButton, styles.fireButton]}
-              onPress={handleFire}
-              disabled={isLoading}
-              testID="fire-button"
-            >
-              <Ionicons name="flash" size={20} color={TACTICAL_THEME.text} />
-              <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
-                FIRE!
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.reloadButton]}
-            onPress={onReload}
-            disabled={isLoading}
-            testID="reload-button"
-          >
-            <FontAwesome name="undo" size={20} color={TACTICAL_THEME.text} />
-            <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
-              RELOAD
-            </Text>
-          </TouchableOpacity>
-
-          {onStealth && (
-            <TouchableOpacity
-              style={[styles.actionButton, styles.stealthButton]}
-              onPress={onStealth}
-              disabled={isLoading}
-              testID="stealth-button"
-            >
-              <MaterialCommunityIcons name="incognito" size={20} color={TACTICAL_THEME.text} />
-              <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
-                STEALTH
-              </Text>
-            </TouchableOpacity>
-          )}
-
-          <TouchableOpacity
-            style={[styles.actionButton, styles.intelButton]}
-            onPress={() => onIntel(false)}
-            disabled={isLoading || !!scripture.mnemonic}
-            testID="intel-button"
-          >
-            {isLoading ? (
-              <ActivityIndicator size="small" color={TACTICAL_THEME.text} />
-            ) : (
-              <>
-                <FontAwesome5 name="brain" size={20} color={TACTICAL_THEME.text} />
+        {/* Action buttons - 2x2 Grid */}
+        <View style={styles.actionGrid}>
+          {/* Row 1: Combat Actions */}
+          <View style={styles.actionRow}>
+            <Animated.View style={{ flex: 1, transform: [{ scale: pulseAnimation }] }}>
+              <TouchableOpacity
+                style={[styles.actionButton, styles.fireButton]}
+                onPress={handleFire}
+                disabled={isLoading}
+                testID="fire-button"
+              >
+                <Ionicons name="flash" size={20} color={TACTICAL_THEME.text} />
                 <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
-                  INTEL
+                  FIRE!
                 </Text>
-              </>
+              </TouchableOpacity>
+            </Animated.View>
+
+            <TouchableOpacity
+              style={[styles.actionButton, styles.reloadButton]}
+              onPress={onReload}
+              disabled={isLoading}
+              testID="reload-button"
+            >
+              <FontAwesome name="undo" size={20} color={TACTICAL_THEME.text} />
+              <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
+                RELOAD
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Row 2: Tactical Actions */}
+          <View style={styles.actionRow}>
+            {onStealth && (
+              <TouchableOpacity
+                style={[styles.actionButton, styles.stealthButton]}
+                onPress={onStealth}
+                disabled={isLoading}
+                testID="stealth-button"
+              >
+                <MaterialCommunityIcons name="incognito" size={20} color={TACTICAL_THEME.text} />
+                <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
+                  STEALTH
+                </Text>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, styles.intelButton]}
+              onPress={() => onIntel(false)}
+              disabled={isLoading || !!scripture.mnemonic}
+              testID="intel-button"
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color={TACTICAL_THEME.text} />
+              ) : (
+                <>
+                  <FontAwesome5 name="brain" size={20} color={TACTICAL_THEME.text} />
+                  <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
+                    INTEL
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Damage/wear indicators */}
@@ -483,9 +490,11 @@ const styles = StyleSheet.create({
     height: '100%',
     borderRadius: 2,
   },
-  actionButtons: {
+  actionGrid: {
+    gap: 12,
+  },
+  actionRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     gap: 12,
   },
   actionButton: {
@@ -493,24 +502,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 14, // Slightly taller for better touch target
+    paddingHorizontal: 8, // Reduce horizontal padding to fit text
     borderRadius: 8,
     gap: 8,
   },
   fireButton: {
     backgroundColor: TACTICAL_THEME.accent,
-    flex: 1.2, // Slightly smaller than equal
   },
   reloadButton: {
     backgroundColor: TACTICAL_THEME.secondary,
-    flex: 1.3, // Slightly larger for better spacing
-    marginRight: 8, // Add right padding
   },
   stealthButton: {
     backgroundColor: '#4E5D6C', // Slate gray for stealth
-    flex: 1.2,
-    marginRight: 8,
   },
   intelButton: {
     backgroundColor: TACTICAL_THEME.primary,
