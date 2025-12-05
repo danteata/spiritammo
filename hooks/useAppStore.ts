@@ -53,6 +53,8 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const provisionCampaignScripture = useZustandStore((s) => s.provisionCampaignScripture)
   const loadSquadData = useZustandStore((s) => s.loadSquadData)
   const updateChallengeProgress = useZustandStore((s) => s.updateChallengeProgress)
+  const addSquadMember = useZustandStore((s) => s.addSquadMember)
+  const addSquadChallenge = useZustandStore((s) => s.addSquadChallenge)
 
   return {
     // Theme
@@ -99,5 +101,7 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     provisionCampaignScripture,
     loadSquadData,
     updateChallengeProgress,
+    addSquadMember,
+    addSquadChallenge,
   }
 })

@@ -99,6 +99,8 @@ type AppState = {
   provisionCampaignScripture: (node: CampaignNode) => Promise<Scripture | null>
   loadSquadData: () => Promise<void>
   updateChallengeProgress: () => void
+  addSquadMember: (member: SquadMember) => void
+  addSquadChallenge: (challenge: SquadChallenge) => void
 }
 
 export const useZustandStore = create<AppState>((set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void, get: () => AppState) => ({
@@ -1061,6 +1063,21 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
     })
 
     set({ squadChallenges: updatedChallenges })
+  },
+
+  addSquadMember: (member) => {
+    const { squadMembers } = get()
+    // Avoid duplicates
+    if (!squadMembers.find(m => m.id === member.id)) {
+      set({ squadMembers: [...squadMembers, member] })
+    }
+  },
+
+  addSquadChallenge: (challenge) => {
+    const { squadChallenges } = get()
+    if (!squadChallenges.find(c => c.id === challenge.id)) {
+      set({ squadChallenges: [...squadChallenges, challenge] })
+    }
   },
 
   updateCollection: async (updatedCollection) => {

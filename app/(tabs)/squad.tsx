@@ -25,6 +25,9 @@ import ScreenHeader from '@/components/ScreenHeader'
 import { useAuth, useUser } from '@clerk/clerk-expo'
 import { useRouter } from 'expo-router'
 
+import CreateOperationModal from '@/components/CreateOperationModal'
+import * as Linking from 'expo-linking'
+
 const { width } = Dimensions.get('window')
 
 export default function SquadScreen() {
@@ -35,6 +38,8 @@ export default function SquadScreen() {
 
     const [activeTab, setActiveTab] = useState<'squad' | 'leaderboard'>('squad')
 
+    const [showCreateOp, setShowCreateOp] = useState(false)
+
     useEffect(() => {
         if (isSignedIn) {
             loadSquadData()
@@ -44,6 +49,7 @@ export default function SquadScreen() {
     if (!isLoaded) return <View style={{ flex: 1 }} />
 
     if (!isSignedIn) {
+        // ... existing gated code handles this ...
         return (
             <ThemedContainer style={styles.container}>
                 <ScreenHeader
@@ -85,12 +91,48 @@ export default function SquadScreen() {
 
     const handleInvite = async () => {
         try {
+            // Create a deep link: spiritammo://recruit?commanderId=...
+            const redirectUrl = Linking.createURL('recruit', {
+                queryParams: {
+                    commanderId: user?.id || 'unknown',
+                    name: user?.firstName || 'Commander'
+                },
+            })
+
+            const message = `⚠️ MISSION BRIEF: You have been drafted by Commander ${user?.firstName || 'SpiritAmmo'}.\n\nJoin the squad: ${redirectUrl}`
+
             await Share.share({
-                message: 'Join my squad in SpiritAmmo! Use code: ALPHA-7',
-                title: 'Recruit Soldier',
+                message: message,
+                title: 'SpiritAmmo Recruitment',
+                url: redirectUrl // iOS often uses this
             })
         } catch (error) {
             console.error('Error sharing:', error)
+        }
+    }
+
+    const handleShareOperation = async (challenge: any) => {
+        try {
+            const redirectUrl = Linking.createURL('recruit', {
+                queryParams: {
+                    commanderId: user?.id || 'unknown',
+                    name: user?.firstName || 'Commander',
+                    opId: challenge.id,
+                    opTitle: challenge.title,
+                    opTarget: challenge.targetValue.toString(),
+                    opType: challenge.type
+                },
+            })
+
+            const message = `🚨 ORDERS RECEIVED: Commander ${user?.firstName} has issued a new directive: ${challenge.title}.\n\nTarget: ${challenge.targetValue} ${challenge.type}.\n\nAccept Mission: ${redirectUrl}`
+
+            await Share.share({
+                message: message,
+                title: `Operation: ${challenge.title}`,
+                url: redirectUrl
+            })
+        } catch (error) {
+            console.error('Share error:', error)
         }
     }
 
@@ -100,8 +142,13 @@ export default function SquadScreen() {
         return (
             <ThemedCard key={challenge.id} style={styles.challengeCard} variant="default">
                 <View style={styles.challengeHeader}>
-                    <Ionicons name="flag" size={20} color={TACTICAL_THEME.warning} />
-                    <ThemedText variant="heading" style={styles.challengeTitle}>{challenge.title}</ThemedText>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="flag" size={20} color={TACTICAL_THEME.warning} />
+                        <ThemedText variant="heading" style={styles.challengeTitle}>{challenge.title}</ThemedText>
+                    </View>
+                    <TouchableOpacity onPress={() => handleShareOperation(challenge)} style={{ padding: 4 }}>
+                        <Ionicons name="share-outline" size={20} color={TACTICAL_THEME.accent} />
+                    </TouchableOpacity>
                 </View>
                 <ThemedText variant="body" style={styles.challengeDesc}>
                     {challenge.description}
@@ -127,6 +174,13 @@ export default function SquadScreen() {
                 title="SQUADRON COMMAND"
                 subtitle="MANAGE UNIT & ENGAGEMENTS"
             />
+
+            {/* Create Operation Modal */}
+            <CreateOperationModal
+                visible={showCreateOp}
+                onClose={() => setShowCreateOp(false)}
+            />
+
             <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
 
                 {/* Tab Switcher */}
@@ -179,10 +233,26 @@ export default function SquadScreen() {
                     <>
                         {/* Active Challenges */}
                         <View style={styles.section}>
-                            <ThemedText variant="subheading" style={styles.sectionTitle}>
-                                ACTIVE OPERATIONS
-                            </ThemedText>
-                            {squadChallenges.map(renderChallenge)}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                                <ThemedText variant="subheading" style={{ letterSpacing: 1 }}>
+                                    ACTIVE OPERATIONS
+                                </ThemedText>
+                                <TouchableOpacity onPress={() => setShowCreateOp(true)}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                                        <Ionicons name="add-circle" size={18} color={TACTICAL_THEME.accent} />
+                                        <ThemedText variant="caption" style={{ color: TACTICAL_THEME.accent, fontWeight: 'bold' }}>NEW ORDER</ThemedText>
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+
+                            {squadChallenges.length > 0 ? (
+                                squadChallenges.map(renderChallenge)
+                            ) : (
+                                <ThemedCard style={{ padding: 20, alignItems: 'center', borderStyle: 'dashed', borderWidth: 1, borderColor: 'rgba(128,128,128,0.3)' }} variant="flat">
+                                    <ThemedText variant="body" style={{ opacity: 0.6 }}>No active directives.</ThemedText>
+                                    <ThemedText variant="caption" style={{ opacity: 0.4, marginTop: 4 }}>Press "NEW ORDER" to issue commands.</ThemedText>
+                                </ThemedCard>
+                            )}
                         </View>
 
                         {/* Squad List */}
@@ -190,6 +260,20 @@ export default function SquadScreen() {
                             <ThemedText variant="subheading" style={styles.sectionTitle}>
                                 UNIT ROSTER
                             </ThemedText>
+
+                            {/* ME Card */}
+                            <ThemedCard style={styles.memberCard} variant="flat">
+                                <Image source={{ uri: user?.imageUrl }} style={styles.avatar} />
+                                <View style={styles.memberInfo}>
+                                    <ThemedText variant="body" style={styles.memberName}>{user?.fullName || 'You'} (Cmdr)</ThemedText>
+                                    <ThemedText variant="caption" style={styles.memberRank}>{userStats.rank.toUpperCase()}</ThemedText>
+                                </View>
+                                <View style={styles.statusContainer}>
+                                    <View style={[styles.statusDot, { backgroundColor: TACTICAL_THEME.success }]} />
+                                    <ThemedText variant="caption" style={styles.statusText}>Online</ThemedText>
+                                </View>
+                            </ThemedCard>
+
                             {squadMembers.map((member) => (
                                 <ThemedCard key={member.id} style={styles.memberCard} variant="flat">
                                     <Image source={{ uri: member.avatar }} style={styles.avatar} />
@@ -215,25 +299,19 @@ export default function SquadScreen() {
                                     </View>
                                 </ThemedCard>
                             ))}
-                            {/* Add 'You' to the roster as well simply */}
-                            <ThemedCard style={styles.memberCard} variant="flat">
-                                <View style={[styles.avatar, { backgroundColor: TACTICAL_THEME.accent, alignItems: 'center', justifyContent: 'center' }]}>
-                                    <Text style={{ fontWeight: 'bold', color: 'black' }}>ME</Text>
+
+                            {squadMembers.length === 0 && (
+                                <View style={{ padding: 20, backgroundColor: 'rgba(255,165,0,0.05)', borderRadius: 8, marginBottom: 12, alignItems: 'center' }}>
+                                    <Ionicons name="people-outline" size={32} color={TACTICAL_THEME.warning} style={{ opacity: 0.5 }} />
+                                    <ThemedText variant="body" style={{ textAlign: 'center', marginTop: 8, opacity: 0.8 }}>Unit Strength: 1 (You)</ThemedText>
+                                    <ThemedText variant="caption" style={{ textAlign: 'center', marginTop: 4, opacity: 0.6 }}>Recruit soldiers to build your fireteam.</ThemedText>
                                 </View>
-                                <View style={styles.memberInfo}>
-                                    <ThemedText variant="body" style={styles.memberName}>You</ThemedText>
-                                    <ThemedText variant="caption" style={styles.memberRank}>{userStats.rank.toUpperCase()}</ThemedText>
-                                </View>
-                                <View style={styles.statusContainer}>
-                                    <View style={[styles.statusDot, { backgroundColor: TACTICAL_THEME.success }]} />
-                                    <ThemedText variant="caption" style={styles.statusText}>Online</ThemedText>
-                                </View>
-                            </ThemedCard>
+                            )}
                         </View>
 
                         <ActionButton
                             title="RECRUIT SOLDIER"
-                            subtitle="INVITE FRIEND"
+                            subtitle="SEND ENLISTMENT LINK"
                             onPress={handleInvite}
                             style={{ marginTop: 20 }}
                         />
@@ -315,7 +393,7 @@ const styles = StyleSheet.create({
     challengeHeader: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 8,
+        justifyContent: 'space-between',
         marginBottom: 8,
     },
     challengeTitle: {
