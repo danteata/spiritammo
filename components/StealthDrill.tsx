@@ -44,9 +44,19 @@ export default function StealthDrill({
     targetVerse,
     reference,
 }: StealthDrillProps) {
+    type DifficultyLevel = 'RECRUIT' | 'SOLDIER' | 'SNIPER' | 'GHOST'
+
+    const DIFFICULTIES: Record<DifficultyLevel, { label: string, percent: number, icon: keyof typeof MaterialCommunityIcons.glyphMap, color: string }> = {
+        'RECRUIT': { label: 'RECRUIT', percent: 0.25, icon: 'shield-outline', color: '#4CAF50' },
+        'SOLDIER': { label: 'SOLDIER', percent: 0.50, icon: 'shield-half-full', color: '#FFC107' },
+        'SNIPER': { label: 'SNIPER', percent: 0.75, icon: 'crosshairs', color: '#FF5722' },
+        'GHOST': { label: 'GHOST', percent: 1.00, icon: 'ghost', color: '#9C27B0' }
+    }
+
     const { isDark } = useAppStore()
     const theme = isDark ? TACTICAL_THEME : GARRISON_THEME
 
+    const [difficulty, setDifficulty] = useState<DifficultyLevel | null>(null)
     const [tokens, setTokens] = useState<WordToken[]>([])
     const [wordBank, setWordBank] = useState<WordToken[]>([])
     const [filledBlanks, setFilledBlanks] = useState<{ [key: number]: WordToken }>({})
@@ -60,38 +70,58 @@ export default function StealthDrill({
 
     useEffect(() => {
         if (isVisible) {
-            initializeDrill()
-            Animated.parallel([
-                Animated.timing(fadeAnim, {
-                    toValue: 1,
-                    duration: 300,
-                    useNativeDriver: true,
-                }),
-                Animated.timing(slideAnim, {
-                    toValue: 0,
-                    duration: 300,
-                    useNativeDriver: true,
-                }),
-            ]).start()
-        } else {
-            setDrillComplete(false)
+            // Reset state on open
+            setDifficulty(null)
+            setTokens([])
+            setWordBank([])
             setFilledBlanks({})
+            setDrillComplete(false)
             setAccuracy(0)
+
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }).start()
         }
     }, [isVisible, targetVerse])
 
-    const initializeDrill = () => {
+    const startDrill = (selectedLevel: DifficultyLevel) => {
+        setDifficulty(selectedLevel)
+        initializeDrill(selectedLevel)
+
+        Animated.parallel([
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 300,
+                useNativeDriver: true,
+            }),
+            Animated.timing(slideAnim, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+            }),
+        ]).start()
+    }
+
+    const initializeDrill = (level: DifficultyLevel) => {
         // 1. Tokenize verse
-        // Simple split by space, keeping punctuation attached for now to keep it simple
-        // A more robust tokenizer would separate punctuation
         const words = targetVerse.split(/\s+/)
 
-        // 2. Determine blanks (Level 1: 40% blanks)
-        const blankCount = Math.max(1, Math.floor(words.length * 0.4))
-        const indicesToHide = new Set<number>()
+        // 2. Determine blanks based on difficulty
+        const percent = DIFFICULTIES[level].percent
+        const blankCount = Math.max(1, Math.floor(words.length * percent))
 
-        while (indicesToHide.size < blankCount) {
-            indicesToHide.add(Math.floor(Math.random() * words.length))
+        let indicesToHide = new Set<number>()
+
+        if (percent === 1.0) {
+            // All blanks
+            indicesToHide = new Set(words.map((_, i) => i))
+        } else {
+            // Random selection
+            while (indicesToHide.size < blankCount) {
+                indicesToHide.add(Math.floor(Math.random() * words.length))
+            }
         }
 
         const newTokens: WordToken[] = words.map((word, index) => ({
@@ -187,6 +217,34 @@ export default function StealthDrill({
         return ACCURACY_COLORS.poor
     }
 
+    const renderDifficultySelection = () => (
+        <View style={styles.difficultyContainer}>
+            <ThemedText variant="heading" style={styles.difficultyTitle}>SELECT DIFFICULTY</ThemedText>
+            <View style={styles.difficultyGrid}>
+                {(Object.keys(DIFFICULTIES) as DifficultyLevel[]).map((level) => (
+                    <TouchableOpacity
+                        key={level}
+                        style={[styles.difficultyCard, { borderColor: theme.border, backgroundColor: theme.surface }]}
+                        onPress={() => startDrill(level)}
+                    >
+                        <MaterialCommunityIcons
+                            name={DIFFICULTIES[level].icon}
+                            size={40}
+                            color={DIFFICULTIES[level].color}
+                            style={{ marginBottom: 12 }}
+                        />
+                        <ThemedText variant="heading" style={{ color: DIFFICULTIES[level].color, fontSize: 18 }}>
+                            {DIFFICULTIES[level].label}
+                        </ThemedText>
+                        <ThemedText variant="caption" style={{ marginTop: 4 }}>
+                            {DIFFICULTIES[level].percent * 100}% HIDDEN
+                        </ThemedText>
+                    </TouchableOpacity>
+                ))}
+            </View>
+        </View>
+    )
+
     const renderContent = () => (
         <>
             <StatusBar barStyle="light-content" />
@@ -200,7 +258,7 @@ export default function StealthDrill({
                             STEALTH DRILL
                         </ThemedText>
                         <ThemedText variant="caption" style={styles.subtitle}>
-                            SILENT OPERATION
+                            {difficulty ? `LEVEL: ${difficulty}` : 'SILENT OPERATION'}
                         </ThemedText>
                     </View>
                 </View>
@@ -213,108 +271,114 @@ export default function StealthDrill({
                 </TouchableOpacity>
             </View>
 
-            {/* Mission Objective (Verse Reference) */}
-            <View style={styles.missionInfo}>
-                <ThemedText variant="subheading" style={{ color: theme.textSecondary }}>
-                    TARGET: {reference}
-                </ThemedText>
-            </View>
+            {!difficulty ? (
+                renderDifficultySelection()
+            ) : (
+                <>
+                    {/* Mission Objective (Verse Reference) */}
+                    <View style={styles.missionInfo}>
+                        <ThemedText variant="subheading" style={{ color: theme.textSecondary }}>
+                            TARGET: {reference}
+                        </ThemedText>
+                    </View>
 
-            {/* Drill Area */}
-            <View style={styles.drillContainer}>
-                <View style={[styles.verseContainer, {
-                    backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.8)',
-                    borderColor: theme.border
-                }]}>
-                    <View style={styles.wordsContainer}>
-                        {tokens.map((token, i) => {
-                            if (token.isBlank) {
-                                const filled = filledBlanks[token.originalIndex]
-                                const isCorrect = drillComplete && filled?.text === token.text
-                                const isWrong = drillComplete && filled && filled.text !== token.text
+                    {/* Drill Area */}
+                    <View style={styles.drillContainer}>
+                        <View style={[styles.verseContainer, {
+                            backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.8)',
+                            borderColor: theme.border
+                        }]}>
+                            <View style={styles.wordsContainer}>
+                                {tokens.map((token, i) => {
+                                    if (token.isBlank) {
+                                        const filled = filledBlanks[token.originalIndex]
+                                        const isCorrect = drillComplete && filled?.text === token.text
+                                        const isWrong = drillComplete && filled && filled.text !== token.text
 
-                                return (
-                                    <TouchableOpacity
-                                        key={`blank-${i}`}
-                                        onPress={() => handleBlankPress(token.originalIndex)}
-                                        style={[
-                                            styles.blank,
-                                            {
-                                                borderColor: isWrong ? theme.error : (filled ? theme.accent : theme.textSecondary),
-                                                backgroundColor: filled ? (isWrong ? 'rgba(255,0,0,0.1)' : 'rgba(255, 107, 53, 0.1)') : 'transparent'
-                                            }
-                                        ]}
-                                    >
-                                        <Text style={[
-                                            styles.wordText,
-                                            {
-                                                color: filled ? theme.text : 'transparent',
-                                                fontWeight: filled ? 'bold' : 'normal'
-                                            }
-                                        ]}>
-                                            {filled ? filled.text : '_______'}
+                                        return (
+                                            <TouchableOpacity
+                                                key={`blank-${i}`}
+                                                onPress={() => handleBlankPress(token.originalIndex)}
+                                                style={[
+                                                    styles.blank,
+                                                    {
+                                                        borderColor: isWrong ? theme.error : (filled ? theme.accent : theme.textSecondary),
+                                                        backgroundColor: filled ? (isWrong ? 'rgba(255,0,0,0.1)' : 'rgba(255, 107, 53, 0.1)') : 'transparent'
+                                                    }
+                                                ]}
+                                            >
+                                                <Text style={[
+                                                    styles.wordText,
+                                                    {
+                                                        color: filled ? theme.text : 'transparent',
+                                                        fontWeight: filled ? 'bold' : 'normal'
+                                                    }
+                                                ]}>
+                                                    {filled ? filled.text : '_______'}
+                                                </Text>
+                                            </TouchableOpacity>
+                                        )
+                                    }
+                                    return (
+                                        <Text key={`word-${i}`} style={[styles.wordText, { color: theme.text }]}>
+                                            {token.text}
                                         </Text>
-                                    </TouchableOpacity>
-                                )
-                            }
-                            return (
-                                <Text key={`word-${i}`} style={[styles.wordText, { color: theme.text }]}>
-                                    {token.text}
-                                </Text>
-                            )
-                        })}
+                                    )
+                                })}
+                            </View>
+                        </View>
                     </View>
-                </View>
-            </View>
 
-            {/* Result Overlay */}
-            {drillComplete && (
-                <Animated.View style={[styles.resultContainer, { opacity: fadeAnim }]}>
-                    <Text style={[styles.resultTitle, MILITARY_TYPOGRAPHY.heading, { color: getAccuracyColor(accuracy) }]}>
-                        MISSION {accuracy === 100 ? 'ACCOMPLISHED' : 'REPORT'}
-                    </Text>
-                    <Text style={[styles.accuracyText, MILITARY_TYPOGRAPHY.display, { color: getAccuracyColor(accuracy) }]}>
-                        {accuracy.toFixed(0)}%
-                    </Text>
-
-                    <TouchableOpacity
-                        style={[styles.actionButton, { backgroundColor: theme.accent }]}
-                        onPress={handleComplete}
-                    >
-                        <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
-                            CONFIRM INTEL
-                        </Text>
-                    </TouchableOpacity>
-
-                    {accuracy < 100 && (
-                        <TouchableOpacity
-                            style={[styles.retryButton]}
-                            onPress={initializeDrill}
-                        >
-                            <Text style={[styles.retryText, MILITARY_TYPOGRAPHY.button, { color: theme.textSecondary }]}>
-                                RETRY MISSION
+                    {/* Result Overlay */}
+                    {drillComplete && (
+                        <Animated.View style={[styles.resultContainer, { opacity: fadeAnim }]}>
+                            <Text style={[styles.resultTitle, MILITARY_TYPOGRAPHY.heading, { color: getAccuracyColor(accuracy) }]}>
+                                MISSION {accuracy === 100 ? 'ACCOMPLISHED' : 'REPORT'}
                             </Text>
-                        </TouchableOpacity>
-                    )}
-                </Animated.View>
-            )}
+                            <Text style={[styles.accuracyText, MILITARY_TYPOGRAPHY.display, { color: getAccuracyColor(accuracy) }]}>
+                                {accuracy.toFixed(0)}%
+                            </Text>
 
-            {/* Ammo Supply (Word Bank) - Hide when complete */}
-            {!drillComplete && (
-                <View style={[styles.bankContainer, { borderTopColor: theme.border }]}>
-                    <ThemedText variant="caption" style={styles.bankTitle}>AMMO SUPPLY</ThemedText>
-                    <View style={styles.bankGrid}>
-                        {wordBank.map((token) => (
                             <TouchableOpacity
-                                key={token.id}
-                                style={[styles.bankWord, { backgroundColor: theme.surface, borderColor: theme.border }]}
-                                onPress={() => handleBankWordSelect(token)}
+                                style={[styles.actionButton, { backgroundColor: theme.accent }]}
+                                onPress={handleComplete}
                             >
-                                <Text style={[styles.bankWordText, { color: theme.text }]}>{token.text}</Text>
+                                <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
+                                    CONFIRM INTEL
+                                </Text>
                             </TouchableOpacity>
-                        ))}
-                    </View>
-                </View>
+
+                            {accuracy < 100 && (
+                                <TouchableOpacity
+                                    style={[styles.retryButton]}
+                                    onPress={() => startDrill(difficulty)}
+                                >
+                                    <Text style={[styles.retryText, MILITARY_TYPOGRAPHY.button, { color: theme.textSecondary }]}>
+                                        RETRY MISSION
+                                    </Text>
+                                </TouchableOpacity>
+                            )}
+                        </Animated.View>
+                    )}
+
+                    {/* Ammo Supply (Word Bank) - Hide when complete */}
+                    {!drillComplete && (
+                        <View style={[styles.bankContainer, { borderTopColor: theme.border }]}>
+                            <ThemedText variant="caption" style={styles.bankTitle}>AMMO SUPPLY</ThemedText>
+                            <View style={styles.bankGrid}>
+                                {wordBank.map((token) => (
+                                    <TouchableOpacity
+                                        key={token.id}
+                                        style={[styles.bankWord, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                                        onPress={() => handleBankWordSelect(token)}
+                                    >
+                                        <Text style={[styles.bankWordText, { color: theme.text }]}>{token.text}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+                        </View>
+                    )}
+                </>
             )}
         </>
     )
@@ -487,4 +551,35 @@ const styles = StyleSheet.create({
     retryText: {
         fontSize: 14,
     },
+    difficultyContainer: {
+        flex: 1,
+        padding: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    difficultyTitle: {
+        fontSize: 24,
+        marginBottom: 32,
+        letterSpacing: 2,
+    },
+    difficultyGrid: {
+        width: '100%',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 16,
+        justifyContent: 'center',
+    },
+    difficultyCard: {
+        width: '45%',
+        aspectRatio: 1,
+        borderRadius: 16,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        elevation: 4,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.25,
+        shadowRadius: 3.84,
+    }
 })
