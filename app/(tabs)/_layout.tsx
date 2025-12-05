@@ -60,6 +60,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="campaign"
+        options={{
+          title: 'Conquest',
+          tabBarIcon: ({ color }) => <FontAwesome name="map-marker" size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="mission-report"
         options={{
           title: 'Report',

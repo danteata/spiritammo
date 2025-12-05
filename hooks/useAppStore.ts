@@ -24,6 +24,8 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const currentScripture = useZustandStore((s) => s.currentScripture)
   const userSettings = useZustandStore((s) => s.userSettings)
   const userStats = useZustandStore((s) => s.userStats)
+  const campaigns = useZustandStore((s) => s.campaigns)
+  const activeCampaignId = useZustandStore((s) => s.activeCampaignId)
   const isLoading = useZustandStore((s) => s.isLoading)
 
   // Actions
@@ -43,6 +45,9 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const deleteCollection = useZustandStore((s) => s.deleteCollection)
   const removeScriptureFromCollection = useZustandStore((s) => s.removeScriptureFromCollection)
   const bulkRemoveScripturesFromCollection = useZustandStore((s) => s.bulkRemoveScripturesFromCollection)
+  const startCampaign = useZustandStore((s) => s.startCampaign)
+  const completeNode = useZustandStore((s) => s.completeNode)
+  const resetCampaignProgress = useZustandStore((s) => s.resetCampaignProgress)
 
   return {
     // Theme
@@ -60,6 +65,8 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     currentScripture,
     userSettings,
     userStats,
+    campaigns,
+    activeCampaignId,
     isLoading,
 
     // Actions
@@ -79,5 +86,8 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     deleteCollection,
     removeScriptureFromCollection,
     bulkRemoveScripturesFromCollection,
+    startCampaign,
+    completeNode,
+    resetCampaignProgress,
   }
 })
