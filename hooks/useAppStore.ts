@@ -26,6 +26,8 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const userStats = useZustandStore((s) => s.userStats)
   const campaigns = useZustandStore((s) => s.campaigns)
   const activeCampaignId = useZustandStore((s) => s.activeCampaignId)
+  const squadMembers = useZustandStore((s) => s.squadMembers)
+  const squadChallenges = useZustandStore((s) => s.squadChallenges)
   const isLoading = useZustandStore((s) => s.isLoading)
 
   // Actions
@@ -49,6 +51,8 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const completeNode = useZustandStore((s) => s.completeNode)
   const resetCampaignProgress = useZustandStore((s) => s.resetCampaignProgress)
   const provisionCampaignScripture = useZustandStore((s) => s.provisionCampaignScripture)
+  const loadSquadData = useZustandStore((s) => s.loadSquadData)
+  const updateChallengeProgress = useZustandStore((s) => s.updateChallengeProgress)
 
   return {
     // Theme
@@ -68,6 +72,8 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     userStats,
     campaigns,
     activeCampaignId,
+    squadMembers,
+    squadChallenges,
     isLoading,
 
     // Actions
@@ -91,5 +97,7 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     completeNode,
     resetCampaignProgress,
     provisionCampaignScripture,
+    loadSquadData,
+    updateChallengeProgress,
   }
 })

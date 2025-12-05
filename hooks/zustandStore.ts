@@ -16,6 +16,7 @@ import {
   UserSettings,
   UserStats,
 } from '@/types/scripture'
+import { SquadMember, SquadChallenge } from '@/types/squad'
 import { BOOKS } from '@/mocks/books'
 import { COLLECTIONS } from '@/mocks/collections'
 import { SCRIPTURES } from '@/mocks/scriptures'
@@ -67,6 +68,8 @@ type AppState = {
   userStats: UserStats
   campaigns: Campaign[]
   activeCampaignId: string | null
+  squadMembers: SquadMember[]
+  squadChallenges: SquadChallenge[]
   isLoading: boolean
 
   // Actions
@@ -94,6 +97,8 @@ type AppState = {
   completeNode: (campaignId: string, nodeId: string, accuracy: number) => Promise<boolean>
   resetCampaignProgress: (campaignId: string) => void
   provisionCampaignScripture: (node: CampaignNode) => Promise<Scripture | null>
+  loadSquadData: () => Promise<void>
+  updateChallengeProgress: () => void
 }
 
 export const useZustandStore = create<AppState>((set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void, get: () => AppState) => ({
@@ -107,6 +112,8 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
   userStats: DEFAULT_USER_STATS,
   campaigns: [],
   activeCampaignId: null,
+  squadMembers: [],
+  squadChallenges: [],
   isLoading: true,
 
   // Mutations
@@ -834,10 +841,37 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
   loadCampaigns: async () => {
     try {
       const stored = await AsyncStorage.getItem('user_campaigns')
-      if (stored) {
-        set({ campaigns: JSON.parse(stored) })
+      let currentCampaigns: Campaign[] = stored ? JSON.parse(stored) : []
+
+      // Smart Merge: Add new campaigns from INITIAL_CAMPAIGNS if they don't exist
+      let hasChanges = false
+      INITIAL_CAMPAIGNS.forEach(initCamp => {
+        const exists = currentCampaigns.find(c => c.id === initCamp.id)
+        if (!exists) {
+          currentCampaigns.push(initCamp)
+          hasChanges = true
+        }
+      })
+
+      // If we started with nothing, OR if we added new stuff, save it back
+      if (!stored || hasChanges) {
+        // Preserve order based on INITIAL_CAMPAIGNS for consistency
+        const sortedCampaigns = INITIAL_CAMPAIGNS.map(init =>
+          currentCampaigns.find(c => c.id === init.id) || init
+        )
+        // Append any extra/custom campaigns that might exist
+        currentCampaigns.forEach(c => {
+          if (!sortedCampaigns.find(sc => sc.id === c.id)) {
+            sortedCampaigns.push(c)
+          }
+        })
+
+        currentCampaigns = sortedCampaigns
+
+        set({ campaigns: currentCampaigns })
+        await AsyncStorage.setItem('user_campaigns', JSON.stringify(currentCampaigns))
       } else {
-        set({ campaigns: INITIAL_CAMPAIGNS })
+        set({ campaigns: currentCampaigns })
       }
     } catch (error) {
       console.error('Failed to load campaigns:', error)
@@ -986,6 +1020,48 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
     }
   },
 
+  loadSquadData: async () => {
+    // Real Data Load - would fetch from database/API
+    // For now, we start with an empty squad. The current user is added in the UI.
+    const SQUAD_MEMBERS: SquadMember[] = []
+
+    const SQUAD_CHALLENGES: SquadChallenge[] = [
+      // Keep one global challenge active for all users
+      {
+        id: 'chal_global_1',
+        type: 'ROUNDS',
+        title: 'GLOBAL OPERATION: THUNDER',
+        description: 'Community goal: Fire 10,000 rounds collectively.',
+        targetValue: 10000,
+        currentValue: 3420, // Mock community progress
+        reward: 'Thunder Badge',
+        participants: 128
+      }
+    ]
+
+    set({ squadMembers: SQUAD_MEMBERS, squadChallenges: SQUAD_CHALLENGES })
+    // Trigger update to sync with real stats immediately
+    get().updateChallengeProgress()
+  },
+
+  updateChallengeProgress: () => {
+    const { userStats, squadChallenges } = get()
+
+    const updatedChallenges = squadChallenges.map(c => {
+      if (c.type === 'ROUNDS') {
+        return { ...c, currentValue: userStats.totalPracticed }
+      }
+      if (c.type === 'ACCURACY') {
+        return { ...c, currentValue: userStats.averageAccuracy }
+      }
+      if (c.type === 'STREAK') {
+        return { ...c, currentValue: userStats.streak }
+      }
+      return c
+    })
+
+    set({ squadChallenges: updatedChallenges })
+  },
 
   updateCollection: async (updatedCollection) => {
     try {

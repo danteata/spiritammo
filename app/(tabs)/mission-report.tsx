@@ -134,7 +134,7 @@ export default function MissionReportScreen() {
               ]}
             >
               <MaterialCommunityIcons name="target" size={28} color={TACTICAL_THEME.accent} style={{ marginBottom: 8 }} />
-              <ThemedText variant="heading" style={styles.statValue}>
+              <ThemedText variant="heading" style={[styles.statValue, { fontSize: 24 }]}>
                 {userStats.totalPracticed}
               </ThemedText>
               <ThemedText variant="caption" style={styles.statLabel}>

@@ -6,6 +6,9 @@ import { useAppStore } from '@/hooks/useAppStore'
 import { FontAwesome, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenHeader from '@/components/ScreenHeader'
 
+import { useAuth } from '@clerk/clerk-expo'
+import { useRouter } from 'expo-router'
+
 export default function SettingsScreen() {
   const { isDark, setTheme, userSettings, saveUserSettings } = useAppStore()
 
@@ -132,8 +135,47 @@ export default function SettingsScreen() {
             © 2025 SpiritAmmo Defense Systems
           </ThemedText>
         </ThemedCard>
+
+        {/* Account / Sign Out */}
+        <SignOutSection />
+
       </ScrollView>
     </ThemedContainer>
+  )
+}
+
+function SignOutSection() {
+  const { signOut, isSignedIn } = useAuth()
+  const router = useRouter()
+
+  if (!isSignedIn) return null
+
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      // Router will auto-update or we can push
+      router.replace('/')
+    } catch (err) {
+      console.error('Sign out error', err)
+    }
+  }
+
+  return (
+    <ThemedCard style={[styles.card, { borderColor: TACTICAL_THEME.warning, borderWidth: 1 }]} variant="default">
+      <View style={styles.cardHeader}>
+        <MaterialCommunityIcons name="account-alert" size={20} color={TACTICAL_THEME.warning} />
+        <ThemedText variant="subheading" style={[styles.cardTitle, { color: TACTICAL_THEME.warning }]}>
+          PERSONNEL FILE
+        </ThemedText>
+      </View>
+
+      <TouchableOpacity
+        style={styles.signOutButton}
+        onPress={handleSignOut}
+      >
+        <ThemedText variant="body" style={styles.signOutText}>SIGN OUT</ThemedText>
+      </TouchableOpacity>
+    </ThemedCard>
   )
 }
 
@@ -239,5 +281,18 @@ const styles = StyleSheet.create({
     marginTop: 20,
     textAlign: 'center',
     opacity: 0.5,
+  },
+  signOutButton: {
+    backgroundColor: 'rgba(255, 0, 0, 0.1)',
+    borderWidth: 1,
+    borderColor: 'red',
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  signOutText: {
+    color: 'red',
+    fontWeight: 'bold',
+    letterSpacing: 1,
   },
 })

@@ -285,10 +285,10 @@ const styles = StyleSheet.create({
     minHeight: 24,
   },
   ratingText: {
-    fontWeight: '900',
+    fontWeight: '800', // Slightly reduced from 900 for cleaner render
     textTransform: 'uppercase',
-    letterSpacing: 2,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    letterSpacing: 3, // Increased spacing for more tactical look
+    textShadowColor: 'rgba(0, 0, 0, 0.3)', // Softer shadow
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },

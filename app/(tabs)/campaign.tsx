@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
     StyleSheet,
     View,
@@ -7,19 +7,18 @@ import {
     Alert,
     ActivityIndicator,
 } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome5 } from '@expo/vector-icons'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import CampaignMap from '@/components/CampaignMap'
 import TargetPractice from '@/components/TargetPractice'
+import MissionBriefingModal from '@/components/MissionBriefingModal'
 import StealthDrill from '@/components/StealthDrill'
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Campaign, CampaignNode } from '@/types/campaign'
 import { Scripture } from '@/types/scripture'
-import useZustandStore from '@/hooks/zustandStore' // Import direct store for actionscripture'
-import { router } from 'expo-router'
+import useZustandStore from '@/hooks/zustandStore'
 
 export default function CampaignScreen() {
     const {
@@ -36,6 +35,7 @@ export default function CampaignScreen() {
     const [selectedNode, setSelectedNode] = useState<CampaignNode | null>(null)
     const [targetScripture, setTargetScripture] = useState<Scripture | null>(null)
     const [practiceMode, setPracticeMode] = useState<'VOICE' | 'STEALTH' | null>(null)
+    const [showBriefing, setShowBriefing] = useState(false)
 
     // Constants
     const [isLoadingScripture, setIsLoadingScripture] = useState(false)
@@ -44,6 +44,8 @@ export default function CampaignScreen() {
         if (activeCampaignId) {
             const campaign = campaigns.find(c => c.id === activeCampaignId)
             setActiveCampaign(campaign || null)
+        } else {
+            setActiveCampaign(null)
         }
     }, [activeCampaignId, campaigns])
 
@@ -60,20 +62,18 @@ export default function CampaignScreen() {
         if (scripture) {
             setTargetScripture(scripture)
             setSelectedNode(node)
-
-            // Ask for mode
-            Alert.alert(
-                'MISSION BRIEFING',
-                `Target: ${node.title}\nPass Requirement: ${node.requiredAccuracy}% Accuracy`,
-                [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Stealth Op (Silent)', onPress: () => setPracticeMode('STEALTH') },
-                    { text: 'Live Fire (Voice)', onPress: () => setPracticeMode('VOICE') }
-                ]
-            )
+            setShowBriefing(true) // Show custom briefing instead of Alert
         } else {
             Alert.alert('Intel Missing', 'Could not retrieve data for this mission. Please check connection and try again.')
         }
+    }
+
+    const handleStartMission = (mode: 'VOICE' | 'STEALTH') => {
+        setShowBriefing(false)
+        // Small delay to allow modal to close smoothly
+        setTimeout(() => {
+            setPracticeMode(mode)
+        }, 200)
     }
 
     const handleMissionComplete = async (accuracy: number) => {
@@ -175,6 +175,14 @@ export default function CampaignScreen() {
             </View>
 
             {/* Mission Modals */}
+            <MissionBriefingModal
+                isVisible={showBriefing}
+                onClose={() => setShowBriefing(false)}
+                onStartMission={handleStartMission}
+                node={selectedNode}
+                scripture={targetScripture}
+            />
+
             {targetScripture && (
                 <>
                     <TargetPractice

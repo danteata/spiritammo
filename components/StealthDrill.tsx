@@ -43,7 +43,7 @@ export default function StealthDrill({
     onComplete,
     targetVerse,
     reference,
-}: StealthDrillProps) {
+}: StealthDrillProps): React.ReactElement {
     type DifficultyLevel = 'RECRUIT' | 'SOLDIER' | 'SNIPER' | 'GHOST'
 
     const DIFFICULTIES: Record<DifficultyLevel, { label: string, percent: number, icon: keyof typeof MaterialCommunityIcons.glyphMap, color: string }> = {
@@ -583,3 +583,4 @@ const styles = StyleSheet.create({
         shadowRadius: 3.84,
     }
 })
+

@@ -22,10 +22,36 @@ export const createCampaignSlice: StateCreator<CampaignSlice> = (set, get) => ({
     loadCampaigns: async () => {
         try {
             const stored = await AsyncStorage.getItem('user_campaigns')
-            if (stored) {
-                set({ campaigns: JSON.parse(stored) })
+            let currentCampaigns: Campaign[] = stored ? JSON.parse(stored) : []
+
+            // Smart Merge: Add new campaigns from INITIAL_CAMPAIGNS if they don't exist
+            let hasChanges = false
+            INITIAL_CAMPAIGNS.forEach(initCamp => {
+                const exists = currentCampaigns.find(c => c.id === initCamp.id)
+                if (!exists) {
+                    currentCampaigns.push(initCamp)
+                    hasChanges = true
+                }
+            })
+
+            // If we started with nothing, OR if we added new stuff, save it back
+            if (!stored || hasChanges) {
+                // Preserve order based on INITIAL_CAMPAIGNS for consistency
+                // (Optional sort, but keeps generic "Foundation" first)
+                const sortedCampaigns = INITIAL_CAMPAIGNS.map(init =>
+                    currentCampaigns.find(c => c.id === init.id) || init
+                )
+
+                // If there were any extra stored campaigns (deprecated ones?), keep them at the end
+                // or just stick to the strict list if we want to force conformity. 
+                // Let's stick to the mapped list to ensure clean ordering.
+
+                currentCampaigns = sortedCampaigns
+
+                set({ campaigns: currentCampaigns })
+                await AsyncStorage.setItem('user_campaigns', JSON.stringify(currentCampaigns))
             } else {
-                set({ campaigns: INITIAL_CAMPAIGNS })
+                set({ campaigns: currentCampaigns })
             }
         } catch (error) {
             console.error('Failed to load campaigns:', error)

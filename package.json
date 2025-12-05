@@ -12,6 +12,7 @@
     "ios": "expo run:ios"
   },
   "dependencies": {
+    "@clerk/clerk-expo": "^2.19.9",
     "@expo-google-fonts/nunito": "^0.4.2",
     "@expo/ui": "~0.2.0-beta.7",
     "@expo/vector-icons": "^15.0.2",
@@ -41,6 +42,7 @@
     "expo-linking": "~8.0.8",
     "expo-location": "~18.1.6",
     "expo-router": "~6.0.11",
+    "expo-secure-store": "^15.0.8",
     "expo-speech": "~13.1.7",
     "expo-speech-recognition": "^2.1.5",
     "expo-splash-screen": "~31.0.10",
