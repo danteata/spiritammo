@@ -1,7 +1,12 @@
 import { Tabs } from 'expo-router'
+import * as React from 'react';
+import { Platform } from 'react-native';
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
+
 import { COLORS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
+import TabBar from '@/components/TabBar';
 
 export default function TabLayout() {
   const { isDark } = useAppStore()
@@ -11,23 +16,10 @@ export default function TabLayout() {
 
   return (
     <Tabs
+      tabBar={(props: BottomTabBarProps) => <TabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: activeColor,
-        tabBarInactiveTintColor: inactiveColor,
-        tabBarStyle: {
-          backgroundColor: isDark ? COLORS.surface.dark : COLORS.surface.light,
-          borderTopColor: isDark
-            ? 'rgba(255, 255, 255, 0.1)'
-            : 'rgba(0, 0, 0, 0.1)',
-        },
-        headerStyle: {
-          backgroundColor: isDark ? COLORS.primary.dark : COLORS.primary.main,
-        },
-        headerTintColor: 'white',
-        headerTitleStyle: {
-          fontWeight: 'bold',
-        },
         headerShown: false,
+        // Remove default styles as we are using custom tab bar
       }}
     >
       <Tabs.Screen

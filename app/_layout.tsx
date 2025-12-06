@@ -24,11 +24,26 @@ if (!publishableKey) {
   )
 }
 
+import { TACTICAL_THEME } from '@/constants/colors';
+
 function RootLayoutNav() {
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: TACTICAL_THEME.background },
+        animation: 'fade', // Smooth fading for native feel
+      }}
+    >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="auth" options={{ presentation: 'modal' }} />
+      <Stack.Screen
+        name="auth"
+        options={{
+          presentation: 'transparentModal',
+          animation: 'fade',
+          headerShown: false
+        }}
+      />
     </Stack>
   );
 }

@@ -1,4 +1,4 @@
-import React from 'react'
+import * as React from 'react'
 import { StyleSheet, View, TouchableOpacity, ViewStyle } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ThemedText } from '@/components/Themed'
@@ -61,28 +61,33 @@ export default function ScreenHeader({
 
 const styles = StyleSheet.create({
     container: {
-        paddingHorizontal: 20,
-        paddingBottom: 12,
-        marginBottom: 0,
+        paddingHorizontal: 24, // Wider padding
+        paddingBottom: 16,
+        marginBottom: 8,
+        // Optional: Add bottom border for separation if not glass
+        borderBottomWidth: 1,
+        borderBottomColor: 'rgba(255,255,255,0.05)',
     },
     content: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center',
+        alignItems: 'flex-end', // Align text baseline
     },
     textContainer: {
         flex: 1,
     },
     title: {
-        marginBottom: 4,
+        marginBottom: 2,
         textAlign: 'left',
+        fontSize: 32, // Larger
+        letterSpacing: 0.5,
     },
     subtitle: {
-        opacity: 0.9,
-        letterSpacing: 0.5,
-        fontWeight: '600',
+        opacity: 0.7,
+        letterSpacing: 2, // Wider spacing for "technical" feel
+        fontWeight: '500',
         textTransform: 'uppercase',
-        textAlign: 'left',
+        fontSize: 12,
     },
     subtitleContainer: {
         flexDirection: 'row',
@@ -91,9 +96,11 @@ const styles = StyleSheet.create({
     },
     dash: {
         fontWeight: '900',
-        fontSize: 16,
+        fontSize: 12,
+        opacity: 0.5,
     },
     rightAction: {
         marginLeft: 16,
+        marginBottom: 4,
     },
 })

@@ -11,6 +11,7 @@ import {
     Platform
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
+import { BlurView } from 'expo-blur'
 import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import {
@@ -100,7 +101,11 @@ export default function MissionBriefingModal({
                     activeOpacity={1}
                     onPress={onClose}
                 >
-                    <Animated.View style={[styles.backdrop, { opacity: fadeAnim }]} />
+                    <BlurView
+                        intensity={20}
+                        tint="dark"
+                        style={StyleSheet.absoluteFill}
+                    />
                 </TouchableOpacity>
 
                 <Animated.View
@@ -108,93 +113,95 @@ export default function MissionBriefingModal({
                         styles.modalContainer,
                         {
                             transform: [{ translateY: slideAnim }],
-                            backgroundColor: isDark ? '#1A1A1A' : '#F0F0F0',
+                            backgroundColor: isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
                             borderColor: theme.border
                         }
                     ]}
                 >
-                    <LinearGradient
-                        colors={isDark ? ['#2A2A2A', '#1A1A1A'] : ['#FFFFFF', '#F5F5F5']}
-                        style={styles.gradient}
+                    <ScrollView
+                        contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? 40 : 24, padding: 24 }}
+                        showsVerticalScrollIndicator={false}
+                        bounces={false}
                     >
-                        <ScrollView
-                            contentContainerStyle={{ paddingBottom: Platform.OS === 'ios' ? 40 : 24 }}
-                            showsVerticalScrollIndicator={false}
-                            bounces={false}
-                        >
-                            {/* Header */}
-                            <View style={styles.header}>
-                                <View style={styles.headerTitleContainer}>
-                                    <MaterialCommunityIcons name="file-document-outline" size={24} color={theme.accent} />
-                                    <ThemedText variant="heading" style={styles.headerTitle}>MISSION BRIEFING</ThemedText>
-                                </View>
-                                <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                                    <Ionicons name="close" size={24} color={theme.textSecondary} />
-                                </TouchableOpacity>
+                        {/* Header */}
+                        <View style={styles.header}>
+                            <View style={styles.headerTitleContainer}>
+                                <View style={{ width: 4, height: 24, backgroundColor: theme.accent, borderRadius: 2 }} />
+                                <ThemedText variant="heading" style={styles.headerTitle}>MISSION BRIEFING</ThemedText>
                             </View>
+                            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                                <Ionicons name="close" size={24} color={theme.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
 
-                            {/* Intel Card */}
-                            <View style={[styles.intelCard, { borderColor: theme.border, backgroundColor: theme.surface }]}>
-                                <View style={styles.intelRow}>
-                                    <ThemedText variant="caption" style={styles.intelLabel}>TARGET SECTOR</ThemedText>
-                                    <ThemedText variant="subheading" style={{ color: theme.primary }}>{scripture.reference.toUpperCase()}</ThemedText>
+                        {/* Intel Card */}
+                        <View style={[styles.intelCard, {
+                            borderColor: theme.border,
+                            backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'
+                        }]}>
+                            <View style={styles.intelRow}>
+                                <ThemedText variant="code" style={styles.intelLabel}>TARGET SECTOR</ThemedText>
+                                <ThemedText variant="subheading" style={{ color: theme.primary, letterSpacing: 1 }}>{scripture.reference.toUpperCase()}</ThemedText>
+                            </View>
+                            <View style={styles.divider} />
+                            <View style={styles.intelRow}>
+                                <ThemedText variant="code" style={styles.intelLabel}>PASS REQUIREMENT</ThemedText>
+                                <View style={[styles.requirementBadge, { backgroundColor: theme.surfaceHighlight }]}>
+                                    <FontAwesome5 name="crosshairs" size={12} color={theme.accent} style={{ marginRight: 6 }} />
+                                    <ThemedText variant="body" style={{ fontWeight: 'bold' }}>{node.requiredAccuracy}% ACCURACY</ThemedText>
                                 </View>
-                                <View style={styles.divider} />
-                                <View style={styles.intelRow}>
-                                    <ThemedText variant="caption" style={styles.intelLabel}>PASS REQUIREMENT</ThemedText>
-                                    <View style={styles.requirementBadge}>
-                                        <FontAwesome5 name="crosshairs" size={12} color={theme.text} style={{ marginRight: 6 }} />
-                                        <ThemedText variant="body" style={{ fontWeight: 'bold' }}>{node.requiredAccuracy}% ACCURACY</ThemedText>
+                            </View>
+                        </View>
+
+                        <ThemedText variant="code" style={styles.sectionTitle}>SELECT ENGAGEMENT PROTOCOL</ThemedText>
+
+                        {/* Action Buttons */}
+                        <View style={styles.actionsContainer}>
+                            <TouchableOpacity
+                                style={[styles.protocolCard, { borderColor: theme.border }]}
+                                onPress={() => handleStart('STEALTH')}
+                                activeOpacity={0.8}
+                            >
+                                <LinearGradient
+                                    colors={isDark ? ['#1e293b', '#0f172a'] : ['#f8fafc', '#e2e8f0']}
+                                    style={styles.protocolGradient}
+                                >
+                                    <View style={[styles.iconBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+                                        <MaterialCommunityIcons name="incognito" size={28} color={theme.text} />
                                     </View>
-                                </View>
-                            </View>
+                                    <View style={{ flex: 1 }}>
+                                        <ThemedText variant="button" style={{ fontSize: 18 }}>STEALTH OP</ThemedText>
+                                        <ThemedText variant="caption" style={{ opacity: 0.6 }}>SILENT DRILL</ThemedText>
+                                    </View>
+                                    <MaterialCommunityIcons name="chevron-right" size={24} color={theme.textSecondary} />
+                                </LinearGradient>
+                            </TouchableOpacity>
 
-                            <ThemedText variant="caption" style={styles.sectionTitle}>SELECT ENGAGEMENT PROTOCOL</ThemedText>
-
-                            {/* Action Buttons */}
-                            <View style={styles.actionsContainer}>
-                                <TouchableOpacity
-                                    style={[styles.missionButton, styles.stealthButton]}
-                                    onPress={() => handleStart('STEALTH')}
-                                    activeOpacity={0.9}
+                            <TouchableOpacity
+                                style={[styles.protocolCard, { borderColor: theme.accent, borderWidth: 1 }]}
+                                onPress={() => handleStart('VOICE')}
+                                activeOpacity={0.8}
+                            >
+                                <LinearGradient
+                                    colors={isDark ? ['#7c2d12', '#431407'] : ['#ffedd5', '#fed7aa']} // Darker orange for dark mode
+                                    style={styles.protocolGradient}
                                 >
-                                    <LinearGradient
-                                        colors={['#4E5D6C', '#37474F']}
-                                        style={styles.buttonGradient}
-                                    >
-                                        <MaterialCommunityIcons name="incognito" size={32} color="#FFF" style={styles.buttonIcon} />
-                                        <View>
-                                            <Text style={[MILITARY_TYPOGRAPHY.heading, styles.buttonTitle]}>STEALTH OP</Text>
-                                            <Text style={[MILITARY_TYPOGRAPHY.caption, styles.buttonSubtitle]}>SILENT DRILL</Text>
-                                        </View>
-                                        <MaterialCommunityIcons name="chevron-right" size={24} color="rgba(255,255,255,0.5)" style={styles.chevron} />
-                                    </LinearGradient>
-                                </TouchableOpacity>
+                                    <View style={[styles.iconBox, { backgroundColor: theme.accent }]}>
+                                        <Ionicons name="mic" size={28} color="#FFF" />
+                                    </View>
+                                    <View style={{ flex: 1 }}>
+                                        <ThemedText variant="button" style={{ fontSize: 18, color: isDark ? 'white' : '#7c2d12' }}>LIVE FIRE</ThemedText>
+                                        <ThemedText variant="caption" style={{ opacity: 0.8, color: isDark ? 'rgba(255,255,255,0.7)' : '#7c2d12' }}>VOICE RECOGNITION</ThemedText>
+                                    </View>
+                                    <MaterialCommunityIcons name="chevron-right" size={24} color={isDark ? 'white' : '#7c2d12'} />
+                                </LinearGradient>
+                            </TouchableOpacity>
+                        </View>
 
-                                <TouchableOpacity
-                                    style={[styles.missionButton, styles.voiceButton, { borderColor: theme.accent }]}
-                                    onPress={() => handleStart('VOICE')}
-                                    activeOpacity={0.9}
-                                >
-                                    <LinearGradient
-                                        colors={[theme.accent, '#D84315']} // Orange gradient
-                                        style={styles.buttonGradient}
-                                    >
-                                        <Ionicons name="mic" size={32} color="#FFF" style={styles.buttonIcon} />
-                                        <View>
-                                            <Text style={[MILITARY_TYPOGRAPHY.heading, styles.buttonTitle]}>LIVE FIRE</Text>
-                                            <Text style={[MILITARY_TYPOGRAPHY.caption, styles.buttonSubtitle]}>VOICE RECOGNITION</Text>
-                                        </View>
-                                        <MaterialCommunityIcons name="chevron-right" size={24} color="rgba(255,255,255,0.5)" style={styles.chevron} />
-                                    </LinearGradient>
-                                </TouchableOpacity>
-                            </View>
-
-                            <Text style={[styles.footerText, { color: theme.textSecondary }]}>
-                                CONFIRM PROTOCOL TO BEGIN OPERATION
-                            </Text>
-                        </ScrollView>
-                    </LinearGradient>
+                        <Text style={[styles.footerText, { color: theme.textSecondary }]}>
+                            CONFIRM PROTOCOL TO BEGIN OPERATION
+                        </Text>
+                    </ScrollView>
                 </Animated.View>
             </View>
         </Modal>
@@ -206,35 +213,24 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'flex-end',
     },
-    backdrop: {
-        ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-    },
     modalContainer: {
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
+        borderTopLeftRadius: 32,
+        borderTopRightRadius: 32,
         overflow: 'hidden',
         borderTopWidth: 1,
-        borderLeftWidth: 1,
-        borderRightWidth: 1,
-        minHeight: 450,
+        minHeight: 500,
         maxHeight: '90%',
-        elevation: 10,
+        elevation: 20,
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-    },
-    gradient: {
-        flex: 1,
-        padding: 24,
-        paddingBottom: 0, // Handled by ScrollView
+        shadowOffset: { width: 0, height: -10 },
+        shadowOpacity: 0.5,
+        shadowRadius: 20,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: 24,
+        marginBottom: 32,
     },
     headerTitleContainer: {
         flexDirection: 'row',
@@ -242,15 +238,17 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     headerTitle: {
-        fontSize: 20,
+        fontSize: 24, // Larger title
         letterSpacing: 1,
     },
     closeButton: {
         padding: 8,
+        backgroundColor: 'rgba(128,128,128,0.1)',
+        borderRadius: 20,
     },
     intelCard: {
-        padding: 16,
-        borderRadius: 12,
+        padding: 20,
+        borderRadius: 16,
         borderWidth: 1,
         marginBottom: 32,
     },
@@ -258,77 +256,59 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingVertical: 8,
+        paddingVertical: 4,
     },
     divider: {
         height: 1,
-        backgroundColor: 'rgba(128,128,128,0.2)',
-        marginVertical: 4,
+        backgroundColor: 'rgba(128,128,128,0.1)',
+        marginVertical: 12,
     },
     intelLabel: {
-        opacity: 0.7,
-        letterSpacing: 1,
+        opacity: 0.5,
+        fontSize: 12,
     },
     requirementBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 10,
-        paddingVertical: 4,
-        backgroundColor: 'rgba(128,128,128,0.1)',
-        borderRadius: 12,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 8,
     },
     sectionTitle: {
         marginBottom: 16,
         textAlign: 'center',
-        opacity: 0.6,
-        letterSpacing: 2,
+        opacity: 0.4,
+        letterSpacing: 3,
+        fontSize: 10,
     },
     actionsContainer: {
         gap: 16,
-        marginBottom: 24,
+        marginBottom: 32,
     },
-    missionButton: {
-        borderRadius: 16,
+    protocolCard: {
+        borderRadius: 20,
         overflow: 'hidden',
-        elevation: 4,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 4,
+        borderWidth: 1,
+        borderBottomWidth: 4, // Tactile feel
     },
-    stealthButton: {
-        // base
-    },
-    voiceButton: {
-        // base
-    },
-    buttonGradient: {
+    protocolGradient: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 20,
+        gap: 16,
     },
-    buttonIcon: {
-        marginRight: 16,
-        opacity: 0.9,
-    },
-    buttonTitle: {
-        color: '#FFF',
-        fontSize: 18,
-        letterSpacing: 1,
-        marginBottom: 2,
-    },
-    buttonSubtitle: {
-        color: 'rgba(255,255,255,0.7)',
-        fontSize: 12,
-    },
-    chevron: {
-        marginLeft: 'auto',
+    iconBox: {
+        width: 48,
+        height: 48,
+        borderRadius: 14,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     footerText: {
         textAlign: 'center',
         fontSize: 10,
         letterSpacing: 1,
-        opacity: 0.5,
+        opacity: 0.3,
         marginTop: 'auto',
     }
 })

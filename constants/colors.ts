@@ -1,51 +1,54 @@
 // Military-Themed Color Palettes for SpiritAmmo
 
 export const TACTICAL_THEME = {
-  primary: '#2D5016', // Military Green
-  secondary: '#8B4513', // Brown
-  accent: '#FF6B35', // Orange (target/fire)
-  background: '#050505', // Deepest Black/Dark
-  surface: '#0D0D0D', // Deep Dark Surface (was #2C2C2C)
-  text: '#FFFFFF', // White Text
-  textSecondary: '#B0B0B0', // Gray Text
-  success: '#32CD32', // Lime Green (hit)
-  warning: '#FFD700', // Gold (caution)
-  error: '#FF4500', // Red Orange (miss)
-  border: '#333333', // Darker Border
-  shadow: 'rgba(0, 0, 0, 0.8)',
-  surfaceHighlight: '#1A1A1A', // Lighter surface for interaction
+  primary: '#323232', // Deep Charcoal
+  secondary: '#1A1A1A', // Darker Charcoal
+  accent: '#F97316', // Vibrant Orange (Action)
+  background: '#0F172A', // Slate 900 (Deep Blue/Black)
+  surface: '#1E293B', // Slate 800 (Lighter Blue/Black)
+  text: '#F8FAFC', // Slate 50 (Off-white)
+  textSecondary: '#94A3B8', // Slate 400 (Muted Blue/Gray)
+  success: '#10B981', // Emerald 500
+  warning: '#F59E0B', // Amber 500
+  error: '#EF4444', // Red 500
+  border: '#334155', // Slate 700
+  shadow: 'rgba(0, 0, 0, 0.5)',
+  surfaceHighlight: '#334155', // Slate 700
+  glass: 'rgba(30, 41, 59, 0.7)', // Translucent Surface
 }
 
 export const STEALTH_THEME = {
-  primary: '#1C1C1E', // Almost Black
-  secondary: '#48484A', // Dark Gray
-  accent: '#0A84FF', // Blue Accent
-  background: '#000000', // Pure Black
-  surface: '#1C1C1E', // Dark Surface
-  text: '#FFFFFF', // White Text
-  textSecondary: '#8E8E93', // System Gray
-  success: '#30D158', // Green
-  warning: '#FF9F0A', // Orange
-  error: '#FF453A', // Red
-  border: '#38383A', // Dark Border
-  shadow: 'rgba(0, 0, 0, 0.7)',
-  surfaceHighlight: '#2C2C2E',
+  primary: '#171717', // Neutral 900
+  secondary: '#262626', // Neutral 800
+  accent: '#38BDF8', // Sky 400 (Cyan/Blue for stealth)
+  background: '#0A0A0A', // Neutral 950
+  surface: '#171717', // Neutral 900
+  text: '#FAFAFA', // Neutral 50
+  textSecondary: '#A3A3A3', // Neutral 400
+  success: '#22C55E', // Green 500
+  warning: '#EAB308', // Yellow 500
+  error: '#F43F5E', // Rose 500
+  border: '#262626', // Neutral 800
+  shadow: 'rgba(0, 0, 0, 0.8)',
+  surfaceHighlight: '#262626',
+  glass: 'rgba(23, 23, 23, 0.8)',
 }
 
 export const GARRISON_THEME = {
-  primary: '#4A6B2A', // Olive Green
-  secondary: '#8B4513', // Brown
-  accent: '#FF6B35', // Orange
-  background: '#F5F5F0', // Bone/Off-White
-  surface: '#FFFFFF', // White
-  surfaceHighlight: '#F0F0E8', // Slightly darker white for interaction
-  text: '#1C1C1E', // Dark Gunmetal
-  textSecondary: '#666666', // Gray
-  success: '#32CD32', // Lime Green
-  warning: '#FFD700', // Gold
-  error: '#FF4500', // Red Orange
-  border: '#E0E0E0', // Light Border
-  shadow: 'rgba(0, 0, 0, 0.08)', // Softer shadow for light mode
+  primary: '#F1F5F9', // Slate 100
+  secondary: '#FFFFFF',
+  accent: '#F97316', // Orange
+  background: '#F8FAFC', // Slate 50
+  surface: '#FFFFFF',
+  surfaceHighlight: '#F1F5F9',
+  text: '#0F172A', // Slate 900
+  textSecondary: '#64748B', // Slate 500
+  success: '#10B981',
+  warning: '#F59E0B',
+  error: '#EF4444',
+  border: '#E2E8F0', // Slate 200
+  shadow: 'rgba(15, 23, 42, 0.05)',
+  glass: 'rgba(255, 255, 255, 0.8)',
 }
 
 // Legacy colors for backward compatibility
@@ -91,14 +94,14 @@ export const GRADIENTS = {
     light: [GARRISON_THEME.surface, '#F0F0E8'] as const,
   },
   tactical: {
-    background: [TACTICAL_THEME.background, '#0D0D0D'] as const,
+    background: [TACTICAL_THEME.background, '#020617'] as const, // Slate 900 -> Slate 950
     surface: [TACTICAL_THEME.surface, TACTICAL_THEME.background] as const,
-    accent: [TACTICAL_THEME.accent, '#CC5529'] as const,
+    accent: [TACTICAL_THEME.accent, '#EA580C'] as const, // Orange 500 -> Orange 600
   },
   stealth: {
     background: [STEALTH_THEME.background, '#0A0A0A'] as const,
     surface: [STEALTH_THEME.surface, STEALTH_THEME.background] as const,
-    accent: [STEALTH_THEME.accent, '#0066CC'] as const,
+    accent: [STEALTH_THEME.accent, '#0284C7'] as const, // Sky 400 -> Sky 600
   },
 }
 

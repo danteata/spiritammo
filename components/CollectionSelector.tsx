@@ -9,6 +9,7 @@ import {
   TextInput,
 } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { Collection } from '@/types/scripture'
 import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
@@ -173,13 +174,18 @@ export default function CollectionSelector({
       </TouchableOpacity>
 
       <Modal
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         visible={modalVisible}
         onRequestClose={() => setModalVisible(false)}
       >
         <View style={styles.modalContainer}>
-          <View style={[styles.modalContent, { backgroundColor }]}>
+          <BlurView
+            intensity={20}
+            tint={isDark ? "dark" : "light"}
+            style={styles.blurOverlay}
+          />
+          <View style={[styles.modalContent, { backgroundColor: isDark ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)' }]}>
             <View style={styles.modalHeader}>
               <Text
                 style={[
@@ -317,13 +323,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    alignItems: 'center',
+  },
+  blurOverlay: {
+    ...StyleSheet.absoluteFillObject,
   },
   modalContent: {
     width: '90%',
     maxHeight: '80%',
-    borderRadius: 12,
-    padding: 20,
+    borderRadius: 24,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
   },
   modalHeader: {
     alignItems: 'center',

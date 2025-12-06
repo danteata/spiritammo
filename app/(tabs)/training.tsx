@@ -394,7 +394,7 @@ export default function TrainingScreen() {
               <View style={[styles.statusItem, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.05)' }]}>
                 <MaterialCommunityIcons name="target" size={24} color={TACTICAL_THEME.accent} style={{ marginBottom: 8 }} />
                 <ThemedText variant="heading" style={styles.statusValue}>
-                  {militaryProfile.totalVersesMemorized}
+                  {militaryProfile?.totalVersesMemorized || 0}
                 </ThemedText>
                 <ThemedText variant="caption" style={styles.statusLabel}>
                   ROUNDS FIRED
@@ -404,7 +404,7 @@ export default function TrainingScreen() {
               <View style={[styles.statusItem, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.1)' }]}>
                 <MaterialCommunityIcons name="target" size={24} color={TACTICAL_THEME.accent} style={{ marginBottom: 8 }} />
                 <ThemedText variant="heading" style={styles.statusValue}>
-                  {militaryProfile.totalVersesMemorized}
+                  {militaryProfile?.totalVersesMemorized || 0}
                 </ThemedText>
                 <ThemedText variant="caption" style={styles.statusLabel}>
                   ROUNDS FIRED
@@ -417,7 +417,7 @@ export default function TrainingScreen() {
               <View style={[styles.statusItem, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.05)' }]}>
                 <MaterialCommunityIcons name="crosshairs-gps" size={24} color={TACTICAL_THEME.success} style={{ marginBottom: 8 }} />
                 <ThemedText variant="heading" style={styles.statusValue}>
-                  {fmt(militaryProfile.averageAccuracy)}%
+                  {fmt(militaryProfile?.averageAccuracy)}%
                 </ThemedText>
                 <ThemedText variant="caption" style={styles.statusLabel}>
                   AVG ACCURACY
@@ -427,7 +427,7 @@ export default function TrainingScreen() {
               <View style={[styles.statusItem, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.1)' }]}>
                 <MaterialCommunityIcons name="crosshairs-gps" size={24} color={TACTICAL_THEME.success} style={{ marginBottom: 8 }} />
                 <ThemedText variant="heading" style={styles.statusValue}>
-                  {fmt(militaryProfile.averageAccuracy)}%
+                  {fmt(militaryProfile?.averageAccuracy)}%
                 </ThemedText>
                 <ThemedText variant="caption" style={styles.statusLabel}>
                   AVG ACCURACY
@@ -440,7 +440,7 @@ export default function TrainingScreen() {
               <View style={[styles.statusItem, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.05)' }]}>
                 <MaterialCommunityIcons name="fire" size={24} color={TACTICAL_THEME.warning} style={{ marginBottom: 8 }} />
                 <ThemedText variant="heading" style={styles.statusValue}>
-                  {militaryProfile.consecutiveDays}
+                  {militaryProfile?.consecutiveDays || 0}
                 </ThemedText>
                 <ThemedText variant="caption" style={styles.statusLabel}>
                   DAY STREAK
@@ -450,7 +450,7 @@ export default function TrainingScreen() {
               <View style={[styles.statusItem, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.1)' }]}>
                 <MaterialCommunityIcons name="fire" size={24} color={TACTICAL_THEME.warning} style={{ marginBottom: 8 }} />
                 <ThemedText variant="heading" style={styles.statusValue}>
-                  {militaryProfile.consecutiveDays}
+                  {militaryProfile?.consecutiveDays || 0}
                 </ThemedText>
                 <ThemedText variant="caption" style={styles.statusLabel}>
                   DAY STREAK
@@ -459,7 +459,7 @@ export default function TrainingScreen() {
             )}
           </View>
         </ThemedCard>
-        )}
+
       </ScrollView>
 
       {/* Target Practice Modal */}

@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import * as React from 'react'
+import { useState } from 'react'
 import {
   StyleSheet,
   Text,
@@ -15,6 +16,7 @@ import {
   TACTICAL_THEME,
   GARRISON_THEME,
 } from '@/constants/colors'
+import { ThemedCard } from './Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 import ScriptureText from './ScriptureText'
 
@@ -49,11 +51,9 @@ export default function ScriptureCard({
   const textColor = isDark ? TACTICAL_THEME.text : GARRISON_THEME.text
 
   return (
-    <LinearGradient
-      colors={gradientColors}
+    <ThemedCard
+      variant="glass"
       style={styles.container}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
     >
       <Text style={[styles.reference, { color: textColor }]}>
         {scripture.reference}
@@ -73,10 +73,9 @@ export default function ScriptureCard({
             style={[styles.text, styles.hiddenText, { color: textColor }]}
           />
           <BlurView
-            intensity={Platform.OS === 'ios' ? 25 : 20}
-            experimentalBlurMethod="dimezisBlurView"
+            intensity={Platform.OS === 'ios' ? 20 : 20}
             style={styles.blurOverlay}
-            tint="light"
+            tint={isDark ? "dark" : "light"}
           />
         </View>
       )}
@@ -94,32 +93,17 @@ export default function ScriptureCard({
           )}
         </TouchableOpacity>
       </View>
-    </LinearGradient>
+    </ThemedCard>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 16,
-    padding: 20,
+    padding: 24,
     marginVertical: 10,
-    marginHorizontal: 16,
-    minHeight: 200,
+    marginHorizontal: 0, // Handled by parent
+    minHeight: 220,
     justifyContent: 'space-between',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 5,
-      },
-      web: {
-        boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.3)',
-      },
-    }),
   },
   reference: {
     fontSize: 20,

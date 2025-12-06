@@ -80,7 +80,7 @@ export default function AuthScreen() {
     return (
         <ThemedContainer style={styles.container}>
             <LinearGradient
-                colors={isDark ? ['transparent', 'rgba(0,0,0,0.8)'] : ['transparent', 'rgba(0,0,0,0.05)']}
+                colors={isDark ? ['transparent', 'rgba(0,0,0,0.8)'] : ['transparent', 'rgba(255,255,255,0.8)']}
                 style={StyleSheet.absoluteFill}
             />
 
@@ -89,14 +89,13 @@ export default function AuthScreen() {
                 <View style={styles.header}>
                     <View style={styles.iconContainer}>
                         <MaterialCommunityIcons name="shield-account" size={64} color={TACTICAL_THEME.accent} />
+                        <View style={styles.iconGlow} />
                     </View>
                     <ThemedText variant="heading" style={[styles.title, { color: TACTICAL_THEME.accent }]}>
                         SECURE YOUR LEGACY
                     </ThemedText>
                     <ThemedText variant="body" style={[styles.subtitle, { color: subTextColor }]}>
-                        Sync valid combat records.
-                        Authorize device transfer.
-                        Preserve operation streaks.
+                        Sync combat records. Authorize device transfer. Preserve operation streaks.
                     </ThemedText>
                 </View>
 
@@ -107,24 +106,21 @@ export default function AuthScreen() {
                         text="CLOUD SYNC PROTOCOL"
                         desc="Backup combat statistics"
                         color={TACTICAL_THEME.success}
-                        textColor={textColor}
-                        subTextColor={subTextColor}
+                        theme={theme}
                     />
                     <BenefitItem
                         icon="phone-portrait"
                         text="MULTI-DEVICE ACCESS"
                         desc="Deploy on any terminal"
                         color={TACTICAL_THEME.warning}
-                        textColor={textColor}
-                        subTextColor={subTextColor}
+                        theme={theme}
                     />
                     <BenefitItem
                         icon="trophy"
                         text="RANK PRESERVATION"
                         desc="Maintain global standing"
                         color={TACTICAL_THEME.accent}
-                        textColor={textColor}
-                        subTextColor={subTextColor}
+                        theme={theme}
                     />
                 </View>
 
@@ -132,24 +128,26 @@ export default function AuthScreen() {
                 <View style={styles.actionsContainer}>
                     {Platform.OS === 'ios' && (
                         <TouchableOpacity
-                            style={[styles.authButton, { backgroundColor: '#000000', marginBottom: 12, borderColor: '#333', borderWidth: 1 }]}
+                            style={styles.appleButton}
                             onPress={handleSignInWithApple}
+                            activeOpacity={0.8}
                         >
-                            <AntDesign name="apple1" size={20} color="#FFF" style={styles.authIcon} />
-                            <Text style={styles.authButtonText}>AUTHENTICATE WITH APPLE</Text>
+                            <AntDesign name="apple1" size={24} color="#FFF" style={styles.authIcon} />
+                            <Text style={styles.appleButtonText}>CONTINUE WITH APPLE</Text>
                         </TouchableOpacity>
                     )}
 
                     <TouchableOpacity
-                        style={[styles.authButton, { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#DDD' }]}
+                        style={styles.googleButton}
                         onPress={handleSignInWithGoogle}
+                        activeOpacity={0.8}
                     >
-                        <AntDesign name="google" size={20} color="#DB4437" style={styles.authIcon} />
-                        <Text style={[styles.authButtonText, { color: '#000' }]}>AUTHENTICATE WITH GOOGLE</Text>
+                        <AntDesign name="google" size={24} color="#DB4437" style={styles.authIcon} />
+                        <Text style={styles.googleButtonText}>CONTINUE WITH GOOGLE</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-                        <Text style={[styles.skipText, { color: subTextColor }]}>PROCEED AS GUEST (OFFLINE)</Text>
+                        <ThemedText variant="caption" style={{ letterSpacing: 2, opacity: 0.5 }}>PROCEED AS GUEST (OFFLINE)</ThemedText>
                     </TouchableOpacity>
                 </View>
             </View>
@@ -157,14 +155,14 @@ export default function AuthScreen() {
     )
 }
 
-const BenefitItem = ({ icon, text, desc, color, textColor, subTextColor }: any) => (
-    <View style={styles.benefitItem}>
-        <View style={[styles.benefitIconBox, { borderColor: color }]}>
-            <Ionicons name={icon} size={24} color={color} />
+const BenefitItem = ({ icon, text, desc, color, theme }: any) => (
+    <View style={[styles.benefitItem, { borderLeftColor: color }]}>
+        <View style={[styles.benefitIconBox, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+            <Ionicons name={icon} size={20} color={color} />
         </View>
         <View>
-            <Text style={[styles.benefitText, { color: textColor }]}>{text}</Text>
-            <Text style={[styles.benefitDesc, { color: subTextColor }]}>{desc}</Text>
+            <ThemedText variant="body" style={{ fontSize: 13, color: theme.text, fontWeight: 'bold' }}>{text}</ThemedText>
+            <ThemedText variant="caption" style={{ opacity: 0.6 }}>{desc}</ThemedText>
         </View>
     </View>
 )
@@ -175,96 +173,108 @@ const styles = StyleSheet.create({
     },
     content: {
         flex: 1,
-        padding: 24,
+        padding: 32,
         justifyContent: 'space-between',
-        paddingTop: 60,
+        paddingTop: 80,
     },
     header: {
         alignItems: 'center',
-        marginBottom: 20,
     },
     iconContainer: {
-        marginBottom: 20,
-        padding: 20,
-        borderRadius: 50,
-        backgroundColor: 'rgba(255, 215, 0, 0.1)',
+        marginBottom: 24,
+        padding: 24,
+        borderRadius: 60,
+        backgroundColor: 'rgba(30, 41, 59, 0.5)', // Slate 800ish
         borderWidth: 1,
-        borderColor: 'rgba(255, 215, 0, 0.3)',
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        position: 'relative',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    iconGlow: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        borderRadius: 60,
+        backgroundColor: TACTICAL_THEME.accent,
+        opacity: 0.15,
+        transform: [{ scale: 1.2 }],
     },
     title: {
-        fontSize: 24,
-        fontWeight: 'bold',
+        fontSize: 28,
+        letterSpacing: 2,
         marginBottom: 12,
         textAlign: 'center',
-        letterSpacing: 1,
-        textTransform: 'uppercase',
     },
     subtitle: {
         textAlign: 'center',
         fontSize: 14,
         lineHeight: 22,
-        paddingHorizontal: 20,
-        fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+        maxWidth: 280,
+        opacity: 0.7,
     },
     benefitsContainer: {
-        marginBottom: 40,
-        paddingHorizontal: 10,
+        gap: 16,
     },
     benefitItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 20,
+        padding: 16,
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderRadius: 12,
+        borderLeftWidth: 3,
+        borderWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.05)',
+        borderRightColor: 'rgba(255,255,255,0.05)',
+        borderBottomColor: 'rgba(255,255,255,0.05)',
         gap: 16,
     },
     benefitIconBox: {
-        width: 48,
-        height: 48,
-        borderRadius: 12,
-        borderWidth: 1,
+        width: 36,
+        height: 36,
+        borderRadius: 10,
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: 'rgba(0,0,0,0.2)',
-    },
-    benefitText: {
-        fontSize: 16,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
-    },
-    benefitDesc: {
-        fontSize: 12,
     },
     actionsContainer: {
-        width: '100%',
+        gap: 16,
+        marginBottom: 20,
     },
-    authButton: {
+    appleButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 16,
-        borderRadius: 8, // More tactical boxy look
-        elevation: 2,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
+        paddingVertical: 18,
+        borderRadius: 16,
+        backgroundColor: '#000000',
+        borderWidth: 1,
+        borderColor: '#333',
+    },
+    appleButtonText: {
+        color: '#FFF',
+        fontSize: 15,
+        fontWeight: '600',
+        letterSpacing: 0.5,
+    },
+    googleButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 18,
+        borderRadius: 16,
+        backgroundColor: '#FFFFFF',
+        elevation: 1,
+    },
+    googleButtonText: {
+        color: '#000',
+        fontSize: 15,
+        fontWeight: '600',
+        letterSpacing: 0.5,
     },
     authIcon: {
-        marginRight: 10,
-    },
-    authButtonText: {
-        color: '#FFF',
-        fontSize: 14,
-        fontWeight: 'bold',
-        letterSpacing: 1,
+        marginRight: 12,
     },
     skipButton: {
         alignItems: 'center',
-        paddingVertical: 16,
-        marginTop: 8,
-    },
-    skipText: {
-        fontSize: 12,
-        fontWeight: '600',
-        letterSpacing: 1,
+        padding: 12,
     },
 })
