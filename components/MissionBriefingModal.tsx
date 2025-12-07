@@ -41,8 +41,7 @@ export default function MissionBriefingModal({
     node,
     scripture
 }: MissionBriefingModalProps) {
-    const { isDark } = useAppStore()
-    const theme = isDark ? TACTICAL_THEME : GARRISON_THEME
+    const { isDark, theme } = useAppStore()
 
     // Animations
     const slideAnim = useRef(new Animated.Value(Dimensions.get('window').height)).current

@@ -57,9 +57,11 @@ export interface CollectionChapter {
 }
 
 export type ThemeMode = 'light' | 'dark' | 'auto'
+export type ThemeColor = 'slate' | 'jungle'
 
 export interface UserSettings {
   themeMode: ThemeMode
+  themeColor?: ThemeColor
   voiceRate: number
   voicePitch: number
   language: string

@@ -19,7 +19,7 @@ export default function ScreenHeader({
     style,
 }: ScreenHeaderProps) {
     const insets = useSafeAreaInsets()
-    const { isDark } = useAppStore()
+    const { isDark, theme } = useAppStore()
 
     return (
         <View
@@ -40,13 +40,13 @@ export default function ScreenHeader({
                         <View style={styles.subtitleContainer}>
                             <ThemedText
                                 variant="caption"
-                                style={[styles.dash, { color: TACTICAL_THEME.accent }]}
+                                style={[styles.dash, { color: theme.accent }]}
                             >
                                 —
                             </ThemedText>
                             <ThemedText
                                 variant="caption"
-                                style={[styles.subtitle, { color: TACTICAL_THEME.accent }]}
+                                style={[styles.subtitle, { color: theme.accent }]}
                             >
                                 {subtitle}
                             </ThemedText>

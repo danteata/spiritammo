@@ -58,8 +58,7 @@ function useThemeColor(
     props: { light?: string; dark?: string },
     colorName: keyof typeof TACTICAL_THEME
 ) {
-    const { isDark } = useAppStore();
-    const theme = isDark ? TACTICAL_THEME : GARRISON_THEME;
+    const { isDark, theme } = useAppStore(); // Use dynamic theme
     const colorFromProps = isDark ? props.dark : props.light;
 
     if (colorFromProps) {
@@ -78,16 +77,15 @@ export function ThemedContainer({
     darkColor,
     useGradient = true,
 }: ThemedContainerProps) {
-    const { isDark } = useAppStore();
+    const { isDark, gradients } = useAppStore();
     const backgroundColor = useThemeColor(
         { light: lightColor, dark: darkColor },
         'background'
     );
 
     if (useGradient) {
-        const gradientColors = isDark
-            ? GRADIENTS.primary.dark
-            : (GRADIENTS.primary.light as readonly [string, string, ...string[]]);
+        const primaryGradient = gradients?.primary || ['#333', '#000'];
+        const gradientColors = primaryGradient as readonly [string, string, ...string[]];
 
         return (
             <LinearGradient
@@ -151,8 +149,7 @@ export function ThemedCard({
     accessibilityRole,
     accessibilityLabel,
 }: ThemedCardProps) {
-    const { isDark } = useAppStore();
-    const theme = isDark ? TACTICAL_THEME : GARRISON_THEME;
+    const { isDark, theme } = useAppStore();
 
     const backgroundColor = useThemeColor(
         { light: lightColor, dark: darkColor },
@@ -231,8 +228,7 @@ export function ThemedButton({
     disabled,
     ...props
 }: ThemedButtonProps) {
-    const { isDark } = useAppStore();
-    const theme = isDark ? TACTICAL_THEME : GARRISON_THEME;
+    const { isDark, theme, gradients } = useAppStore();
 
     // Default styles
     let backgroundColor = 'transparent';
@@ -243,7 +239,14 @@ export function ThemedButton({
 
     switch (variant) {
         case 'primary':
-            gradientColors = isDark ? GRADIENTS.tactical.accent : [theme.accent, '#EA580C'];
+            if (isDark) {
+                const tactical = gradients?.tactical;
+                gradientColors = tactical
+                    ? ((tactical as any).accent || tactical)
+                    : (gradients?.primary || ['#333', '#000']);
+            } else {
+                gradientColors = [theme.accent, '#EA580C'];
+            }
             textColor = '#FFFFFF';
             break;
         case 'secondary':

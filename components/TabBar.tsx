@@ -8,8 +8,7 @@ import { TACTICAL_THEME, GARRISON_THEME } from '@/constants/colors';
 import { ThemedText } from './Themed';
 
 export default function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
-  const { isDark } = useAppStore();
-  const theme = isDark ? TACTICAL_THEME : GARRISON_THEME;
+  const { isDark, theme } = useAppStore();
 
   const backgroundColor = isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.85)';
   const borderColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)';

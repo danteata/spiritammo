@@ -10,7 +10,7 @@ import { useAuth } from '@clerk/clerk-expo'
 import { useRouter } from 'expo-router'
 
 export default function SettingsScreen() {
-  const { isDark, setTheme, userSettings, saveUserSettings } = useAppStore()
+  const { isDark, setTheme, setThemeColor, themeColor, userSettings, saveUserSettings } = useAppStore()
 
   const handleThemeChange = (value: boolean) => {
     setTheme(value ? 'dark' : 'light')
@@ -56,6 +56,52 @@ export default function SettingsScreen() {
               thumbColor={isDark ? TACTICAL_THEME.accent : '#f4f3f4'}
             />
           </View>
+
+          <View style={styles.separator} />
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <ThemedText variant="body" style={styles.settingLabel}>
+                Operational Theme
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.settingDescription}>
+                Select interface camouflage pattern
+              </ThemedText>
+            </View>
+          </View>
+
+          <View style={styles.themeSelector}>
+            <TouchableOpacity
+              style={[
+                styles.themeOption,
+                themeColor !== 'jungle' && styles.activeThemeOption,
+                { borderColor: themeColor !== 'jungle' ? TACTICAL_THEME.accent : 'transparent' }
+              ]}
+              onPress={() => setThemeColor('slate')}
+              disabled={!isDark}
+            >
+              <View style={[styles.colorPreview, { backgroundColor: '#0F172A' }]} />
+              <ThemedText style={{ opacity: isDark ? 1 : 0.5 }}>Tactical Slate</ThemedText>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.themeOption,
+                themeColor === 'jungle' && styles.activeThemeOption,
+                { borderColor: themeColor === 'jungle' ? TACTICAL_THEME.accent : 'transparent' }
+              ]}
+              onPress={() => setThemeColor('jungle')}
+              disabled={!isDark}
+            >
+              <View style={[styles.colorPreview, { backgroundColor: '#13180D' }]} />
+              <ThemedText style={{ opacity: isDark ? 1 : 0.5 }}>Jungle Green</ThemedText>
+            </TouchableOpacity>
+          </View>
+          {!isDark && (
+            <ThemedText variant="caption" style={{ marginTop: 8, fontStyle: 'italic', opacity: 0.6 }}>
+              * Camouflage patterns are only available in Night Vision mode.
+            </ThemedText>
+          )}
         </ThemedCard>
 
         {/* Audio Intelligence */}
@@ -294,5 +340,35 @@ const styles = StyleSheet.create({
     color: 'red',
     fontWeight: 'bold',
     letterSpacing: 1,
+  },
+  themeSelector: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  themeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    gap: 8,
+  },
+  activeThemeOption: {
+    backgroundColor: 'rgba(249, 115, 22, 0.1)',
+  },
+  colorPreview: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  separator: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginVertical: 16,
   },
 })

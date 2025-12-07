@@ -7,7 +7,7 @@ import useZustandStore from './zustandStore'
 // current imports (`AppStoreProvider`, `useAppStore`) while moving state into
 // zustand. The provider will call initializeAppData once on mount.
 export const [AppStoreProvider, useAppStore] = createContextHook(() => {
-  const { themeMode, isDark, setTheme, toggleTheme } = useTheme()
+  const { themeMode, themeColor, isDark, theme, gradients, setTheme, setThemeColor, toggleTheme } = useTheme()
 
   // Call initialize on mount
   const initializeAppData = useZustandStore((s) => s.initializeAppData)
@@ -59,8 +59,12 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   return {
     // Theme
     themeMode,
+    themeColor,
     isDark,
+    theme,
+    gradients,
     setTheme,
+    setThemeColor,
     toggleTheme,
 
     // Data

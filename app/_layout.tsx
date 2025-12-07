@@ -5,7 +5,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { AppStoreProvider } from "@/hooks/useAppStore";
+import { AppStoreProvider, useAppStore } from "@/hooks/useAppStore";
 import { ClerkProvider, ClerkLoaded } from '@clerk/clerk-expo'
 import { tokenCache } from '@/utils/cache'
 import * as Linking from 'expo-linking'
@@ -24,14 +24,16 @@ if (!publishableKey) {
   )
 }
 
-import { TACTICAL_THEME } from '@/constants/colors';
+// TACTICAL_THEME import removed
+import { useZustandStore } from '@/hooks/zustandStore'
 
 function RootLayoutNav() {
+  const { theme } = useAppStore();
   return (
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: TACTICAL_THEME.background },
+        contentStyle: { backgroundColor: theme.background },
         animation: 'fade', // Smooth fading for native feel
       }}
     >
@@ -48,7 +50,7 @@ function RootLayoutNav() {
   );
 }
 
-import { useZustandStore } from '@/hooks/zustandStore'
+
 
 // ... existing code ...
 

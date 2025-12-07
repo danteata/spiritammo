@@ -51,6 +51,23 @@ export const GARRISON_THEME = {
   glass: 'rgba(255, 255, 255, 0.8)',
 }
 
+export const JUNGLE_THEME = {
+  primary: '#1E3A1E', // Classic Military Green (Base)
+  secondary: '#0F1C0F', // Darker shades
+  accent: '#4ADE80', // Bright Green (HUD/Terminal style)
+  background: '#1A2F1C', // Deep Hunter Green (Top of gradient)
+  surface: '#050805', // Almost Black (Card background)
+  text: '#F0F5F0', // Off-white
+  textSecondary: '#869D86', // Muted Green Gray
+  success: '#32CD32', // Lime Green (Classic)
+  warning: '#FFD700', // Gold
+  error: '#EF4444', // Red
+  border: '#2A402A', // Subtle Green Border
+  shadow: 'rgba(0, 0, 0, 0.9)',
+  surfaceHighlight: '#111F11',
+  glass: 'rgba(5, 8, 5, 0.8)', // Very dark glass
+}
+
 // Legacy colors for backward compatibility
 export const COLORS = {
   primary: {
@@ -102,6 +119,11 @@ export const GRADIENTS = {
     background: [STEALTH_THEME.background, '#0A0A0A'] as const,
     surface: [STEALTH_THEME.surface, STEALTH_THEME.background] as const,
     accent: [STEALTH_THEME.accent, '#0284C7'] as const, // Sky 400 -> Sky 600
+  },
+  jungle: {
+    background: ['#1A2F1C', '#000000'] as const, // Hunter Green -> Pure Black
+    surface: ['#0A0F0A', '#000000'] as const,
+    accent: ['#4ADE80', '#22C55E'] as const, // Bright Green Gradient
   },
 }
 
