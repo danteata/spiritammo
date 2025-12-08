@@ -8,7 +8,7 @@ import {
   Alert,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router'
 import {
   COLORS,
@@ -25,7 +25,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import AmmunitionCard from '@/components/AmmunitionCard'
 import TargetPractice from '@/components/TargetPractice'
 import StealthDrill from '@/components/StealthDrill'
-import { RankBadge } from '@/components/RankBadge'
 import AccuracyMeter from '@/components/AccuracyMeter'
 import ActionButton from '@/components/ActionButton'
 import CollectionSelector from '@/components/CollectionSelector'
@@ -418,12 +417,12 @@ export default function TrainingScreen() {
                   colors={[theme.surface, '#1a1a1a']}
                   style={styles.statusItem}
                 >
-                  <FontAwesome name="bullseye" size={20} color={theme.accent} />
-                  <ThemedText variant="body" style={{ textAlign: 'center', marginBottom: 24, color: theme.text }}>
-                    ROUNDS FIRED
-                  </ThemedText>
-                  <ThemedText variant="body" style={styles.statusValue}>
+                  <MaterialCommunityIcons name="target" size={28} color={theme.accent} style={{ marginBottom: 8 }} />
+                  <ThemedText variant="heading" style={styles.statusValue}>
                     {militaryProfile.totalVersesMemorized}
+                  </ThemedText>
+                  <ThemedText variant="caption" style={styles.statusLabel}>
+                    ROUNDS FIRED
                   </ThemedText>
                 </LinearGradient>
               ) : (
@@ -435,7 +434,7 @@ export default function TrainingScreen() {
                   }
                 ]}>
                   <FontAwesome name="bullseye" size={20} color={theme.accent} />
-                  <ThemedText variant="body" style={{ textAlign: 'center', marginBottom: 24 }}>
+                  <ThemedText variant="caption" style={styles.statusLabel}>
                     ROUNDS FIRED
                   </ThemedText>
                   <ThemedText variant="body" style={styles.statusValue}>
@@ -449,12 +448,12 @@ export default function TrainingScreen() {
                   colors={[theme.surface, '#1a1a1a']}
                   style={styles.statusItem}
                 >
-                  <FontAwesome name="trophy" size={20} color={theme.success} />
-                  <ThemedText variant="caption" style={styles.statusLabel}>
-                    AVG ACCURACY
-                  </ThemedText>
-                  <ThemedText variant="body" style={styles.statusValue}>
+                  <MaterialCommunityIcons name="crosshairs-gps" size={28} color={theme.success} style={{ marginBottom: 8 }} />
+                  <ThemedText variant="heading" style={styles.statusValue}>
                     {fmt(militaryProfile.averageAccuracy)}%
+                  </ThemedText>
+                  <ThemedText variant="caption" style={styles.statusLabel}>
+                    ACCURACY
                   </ThemedText>
                 </LinearGradient>
               ) : (
@@ -480,12 +479,12 @@ export default function TrainingScreen() {
                   colors={[theme.surface, '#1a1a1a']}
                   style={styles.statusItem}
                 >
-                  <FontAwesome name="long-arrow-up" size={20} color={theme.warning} />
-                  <ThemedText variant="caption" style={styles.statusLabel}>
-                    STREAK
+                  <MaterialCommunityIcons name="fire" size={28} color={theme.warning} style={{ marginBottom: 8 }} />
+                  <ThemedText variant="heading" style={styles.statusValue}>
+                    {militaryProfile.consecutiveDays}
                   </ThemedText>
-                  <ThemedText variant="body" style={styles.statusValue}>
-                    {militaryProfile.consecutiveDays} DAYS
+                  <ThemedText variant="caption" style={styles.statusLabel}>
+                    DAY STREAK
                   </ThemedText>
                 </LinearGradient>
               ) : (
