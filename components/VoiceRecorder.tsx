@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
+import { StyleSheet, Text, View, Platform, ActivityIndicator } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { COLORS } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
@@ -8,6 +9,10 @@ import whisperService from '@/services/whisper';
 import Constants from 'expo-constants';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useAudioRecording, AudioRecordingResult } from '@/services/audioRecording';
+import { StatusIndicator } from './ui/StatusIndicator';
+import { RecordingControls } from './ui/RecordingControls';
+import { AccuracyBadge } from './ui/AccuracyBadge';
+import { calculateTextAccuracy } from '@/utils/accuracyCalculator';
 
 interface VoiceRecorderProps {
   scriptureText: string;
@@ -243,7 +248,7 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
 
         if (result && result.text) {
           setLocalTranscript(result.text);
-          const calculatedAccuracy = calculateAccuracy(scriptureText, result.text);
+          const calculatedAccuracy = calculateTextAccuracy(scriptureText, result.text);
           console.log('🎙️ VoiceRecorder: Calculated accuracy from Whisper:', calculatedAccuracy);
           setAccuracy(calculatedAccuracy);
           setShowAccuracy(true);
@@ -272,7 +277,7 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
         // If we have a final transcript from native dictation, use it.
         // Otherwise, if we were doing audio recording, we handled it in processAudioRecording.
         if (finalTranscript) {
-          const calculatedAccuracy = calculateAccuracy(scriptureText, finalTranscript);
+          const calculatedAccuracy = calculateTextAccuracy(scriptureText, finalTranscript);
           console.log('🎙️ VoiceRecorder: Calculated accuracy:', calculatedAccuracy);
           setAccuracy(calculatedAccuracy);
           setShowAccuracy(true);
@@ -283,7 +288,7 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
       }
 
       // Calculate accuracy for web speech or fallback
-      const calculatedAccuracy = calculateAccuracy(scriptureText, finalTranscript);
+      const calculatedAccuracy = calculateTextAccuracy(scriptureText, finalTranscript);
       console.log('🎙️ VoiceRecorder: Calculated accuracy (fallback):', calculatedAccuracy);
       setAccuracy(calculatedAccuracy);
       setShowAccuracy(true);
@@ -295,55 +300,6 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
     }
   };
 
-  // Calculate accuracy using Levenshtein distance
-  const calculateAccuracy = (original: string, spoken: string): number => {
-    if (!original || !spoken) return 0;
-
-    // Normalize texts for comparison
-    const normalizeText = (text: string) => {
-      return text
-        .toLowerCase()
-        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
-    };
-
-    const s1 = normalizeText(original);
-    const s2 = normalizeText(spoken);
-
-    if (s1 === s2) return 100;
-    if (s1.length === 0) return 0;
-    if (s2.length === 0) return 0;
-
-    // Levenshtein distance algorithm
-    const track = Array(s2.length + 1).fill(null).map(() =>
-      Array(s1.length + 1).fill(null));
-
-    for (let i = 0; i <= s1.length; i += 1) {
-      track[0][i] = i;
-    }
-    for (let j = 0; j <= s2.length; j += 1) {
-      track[j][0] = j;
-    }
-
-    for (let j = 1; j <= s2.length; j += 1) {
-      for (let i = 1; i <= s1.length; i += 1) {
-        const indicator = s1[i - 1] === s2[j - 1] ? 0 : 1;
-        track[j][i] = Math.min(
-          track[j][i - 1] + 1, // deletion
-          track[j - 1][i] + 1, // insertion
-          track[j - 1][i - 1] + indicator, // substitution
-        );
-      }
-    }
-
-    const distance = track[s2.length][s1.length];
-    const maxLength = Math.max(s1.length, s2.length);
-
-    // Calculate similarity percentage
-    const similarity = 1 - (distance / maxLength);
-    return Math.round(similarity * 100);
-  };
 
   const textColor = isDark ? COLORS.text.dark : COLORS.text.light;
   const isRecording = isRecognizing || audioIsRecording;
@@ -357,7 +313,7 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
         {isInitializing || statusMessage.includes('Transcribing') || statusMessage.includes('Initializing') ? (
           <ActivityIndicator size="small" color={textColor} style={{ marginRight: 8 }} />
         ) : (
-          <View style={[styles.statusIndicator, isRecording ? styles.statusActive : styles.statusStandby]} />
+          <StatusIndicator isActive={isRecording} isLoading={false} isError={false} />
         )}
         <Text style={[styles.statusText, { color: textColor }]}>
           {statusMessage.toUpperCase()}
@@ -383,43 +339,18 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
         )}
 
         {/* Accuracy Badge */}
-        {showAccuracy && (
-          <View style={[
-            styles.accuracyBadge,
-            { backgroundColor: accuracy >= 80 ? COLORS.success : accuracy >= 60 ? COLORS.warning : COLORS.error }
-          ]}>
-            <Text style={styles.accuracyText}>{accuracy}% ACCURACY</Text>
-          </View>
-        )}
+        {showAccuracy && <AccuracyBadge accuracy={accuracy} />}
       </View>
 
       {/* Controls */}
-      <View style={styles.controlsContainer}>
-        <TouchableOpacity
-          style={[styles.secondaryButton, { borderColor: textColor }]}
-          onPress={speakIntel}
-          testID="speak-intel-button"
-        >
-          <FontAwesome name="volume-up" size={16} color={textColor} />
-          <Text style={[styles.secondaryButtonText, { color: textColor }]}>PLAY INTEL</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.recordButton,
-            audioIsRecording && styles.stopButton,
-            isRecognizing && styles.listeningButton
-          ]}
-          onPress={audioIsRecording || isRecognizing ? stopRecording : startRecording}
-          testID={audioIsRecording ? "stop-recording-button" : "start-recording-button"}
-        >
-          <FontAwesome
-            name={audioIsRecording || isRecognizing ? "stop" : "microphone"}
-            size={24}
-            color="white"
-          />
-        </TouchableOpacity>
-      </View>
+      <RecordingControls
+        isRecording={audioIsRecording}
+        isRecognizing={isRecognizing}
+        isLoading={isInitializing}
+        onSpeakIntel={speakIntel}
+        onToggleRecording={audioIsRecording || isRecognizing ? stopRecording : startRecording}
+        textColor={textColor}
+      />
     </View>
   );
 }

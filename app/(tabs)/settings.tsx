@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { StyleSheet, Text, View, ScrollView, Switch, TouchableOpacity } from 'react-native'
-import { TACTICAL_THEME, GARRISON_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
+import { GARRISON_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 import { FontAwesome, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -10,7 +10,8 @@ import { useAuth } from '@clerk/clerk-expo'
 import { useRouter } from 'expo-router'
 
 export default function SettingsScreen() {
-  const { isDark, setTheme, setThemeColor, themeColor, userSettings, saveUserSettings } = useAppStore()
+  const { isDark, setTheme, setThemeColor, themeColor, userSettings, saveUserSettings, theme } = useAppStore()
+  const styles = getStyles(theme)
 
   const handleThemeChange = (value: boolean) => {
     setTheme(value ? 'dark' : 'light')
@@ -29,12 +30,12 @@ export default function SettingsScreen() {
         title="COMMAND CENTER"
         subtitle="SYSTEM CONFIGURATION"
       />
-      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 104 }}>
 
         {/* Display Settings */}
         <ThemedCard style={styles.card} variant="default">
           <View style={styles.cardHeader}>
-            <Feather name="monitor" size={18} color={TACTICAL_THEME.accent} />
+            <Feather name="monitor" size={18} color={theme.accent} />
             <ThemedText variant="subheading" style={styles.cardTitle}>
               VISUAL INTERFACE
             </ThemedText>
@@ -53,7 +54,7 @@ export default function SettingsScreen() {
               value={isDark}
               onValueChange={handleThemeChange}
               trackColor={{ false: '#767577', true: 'rgba(255, 165, 0, 0.5)' }}
-              thumbColor={isDark ? TACTICAL_THEME.accent : '#f4f3f4'}
+              thumbColor={isDark ? theme.accent : '#f4f3f4'}
             />
           </View>
 
@@ -75,7 +76,7 @@ export default function SettingsScreen() {
               style={[
                 styles.themeOption,
                 themeColor !== 'jungle' && styles.activeThemeOption,
-                { borderColor: themeColor !== 'jungle' ? TACTICAL_THEME.accent : 'transparent' }
+                { borderColor: themeColor !== 'jungle' ? theme.accent : 'transparent' }
               ]}
               onPress={() => setThemeColor('slate')}
               disabled={!isDark}
@@ -88,7 +89,7 @@ export default function SettingsScreen() {
               style={[
                 styles.themeOption,
                 themeColor === 'jungle' && styles.activeThemeOption,
-                { borderColor: themeColor === 'jungle' ? TACTICAL_THEME.accent : 'transparent' }
+                { borderColor: themeColor === 'jungle' ? theme.accent : 'transparent' }
               ]}
               onPress={() => setThemeColor('jungle')}
               disabled={!isDark}
@@ -107,7 +108,7 @@ export default function SettingsScreen() {
         {/* Audio Intelligence */}
         <ThemedCard style={styles.card} variant="default">
           <View style={styles.cardHeader}>
-            <MaterialCommunityIcons name="waveform" size={20} color={TACTICAL_THEME.accent} />
+            <MaterialCommunityIcons name="waveform" size={20} color={theme.accent} />
             <ThemedText variant="subheading" style={styles.cardTitle}>
               AUDIO INTELLIGENCE
             </ThemedText>
@@ -121,13 +122,13 @@ export default function SettingsScreen() {
             style={[
               styles.optionButton,
               userSettings.voiceEngine === 'whisper' && styles.selectedOption,
-              { borderColor: userSettings.voiceEngine === 'whisper' ? TACTICAL_THEME.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'), backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)' }
+              { borderColor: userSettings.voiceEngine === 'whisper' ? theme.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'), backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)' }
             ]}
             onPress={() => handleVoiceEngineChange('whisper')}
           >
             <View style={styles.optionHeader}>
               <View style={styles.optionTitleRow}>
-                <MaterialCommunityIcons name="brain" size={18} color={userSettings.voiceEngine === 'whisper' ? TACTICAL_THEME.accent : (isDark ? '#888' : '#666')} />
+                <MaterialCommunityIcons name="brain" size={18} color={userSettings.voiceEngine === 'whisper' ? theme.accent : (isDark ? '#888' : '#666')} />
                 <ThemedText variant="body" style={styles.optionTitle}>Neural Core (Whisper AI)</ThemedText>
               </View>
               {userSettings.voiceEngine === 'whisper' && <View style={styles.activeDot} />}
@@ -141,13 +142,13 @@ export default function SettingsScreen() {
             style={[
               styles.optionButton,
               userSettings.voiceEngine === 'native' && styles.selectedOption,
-              { borderColor: userSettings.voiceEngine === 'native' ? TACTICAL_THEME.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'), backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)' }
+              { borderColor: userSettings.voiceEngine === 'native' ? theme.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'), backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)' }
             ]}
             onPress={() => handleVoiceEngineChange('native')}
           >
             <View style={styles.optionHeader}>
               <View style={styles.optionTitleRow}>
-                <Feather name="mic" size={18} color={userSettings.voiceEngine === 'native' ? TACTICAL_THEME.accent : (isDark ? '#888' : '#666')} />
+                <Feather name="mic" size={18} color={userSettings.voiceEngine === 'native' ? theme.accent : (isDark ? '#888' : '#666')} />
                 <ThemedText variant="body" style={styles.optionTitle}>Standard Comms (Native)</ThemedText>
               </View>
               {userSettings.voiceEngine === 'native' && <View style={styles.activeDot} />}
@@ -161,17 +162,17 @@ export default function SettingsScreen() {
         {/* About */}
         <ThemedCard style={styles.card} variant="default">
           <View style={styles.cardHeader}>
-            <FontAwesome name="info-circle" size={18} color={TACTICAL_THEME.accent} />
+            <FontAwesome name="info-circle" size={18} color={theme.accent} />
             <ThemedText variant="subheading" style={styles.cardTitle}>
               MISSION BRIEF
             </ThemedText>
           </View>
 
           <View style={styles.aboutContent}>
-            <Text style={[styles.aboutLabel, { color: TACTICAL_THEME.accent }]}>VERSION</Text>
+            <Text style={[styles.aboutLabel, { color: theme.accent }]}>VERSION</Text>
             <ThemedText variant="body" style={styles.aboutValue}>1.0.0 (Alpha)</ThemedText>
 
-            <Text style={[styles.aboutLabel, { color: TACTICAL_THEME.accent, marginTop: 12 }]}>OBJECTIVE</Text>
+            <Text style={[styles.aboutLabel, { color: theme.accent, marginTop: 12 }]}>OBJECTIVE</Text>
             <ThemedText variant="body" style={styles.aboutValue}>
               To equip the saints with the Sword of the Spirit through tactical memorization and rigorous training.
             </ThemedText>
@@ -183,14 +184,14 @@ export default function SettingsScreen() {
         </ThemedCard>
 
         {/* Account / Sign Out */}
-        <SignOutSection />
+        <SignOutSection styles={styles} theme={theme} />
 
       </ScrollView>
     </ThemedContainer>
   )
 }
 
-function SignOutSection() {
+function SignOutSection({ styles, theme }: { styles: any, theme: any }) {
   const { signOut, isSignedIn } = useAuth()
   const router = useRouter()
 
@@ -207,10 +208,10 @@ function SignOutSection() {
   }
 
   return (
-    <ThemedCard style={[styles.card, { borderColor: TACTICAL_THEME.warning, borderWidth: 1 }]} variant="default">
+    <ThemedCard style={[styles.card, { borderColor: theme.warning, borderWidth: 1 }]} variant="default">
       <View style={styles.cardHeader}>
-        <MaterialCommunityIcons name="account-alert" size={20} color={TACTICAL_THEME.warning} />
-        <ThemedText variant="subheading" style={[styles.cardTitle, { color: TACTICAL_THEME.warning }]}>
+        <MaterialCommunityIcons name="account-alert" size={20} color={theme.warning} />
+        <ThemedText variant="subheading" style={[styles.cardTitle, { color: theme.warning }]}>
           PERSONNEL FILE
         </ThemedText>
       </View>
@@ -225,7 +226,7 @@ function SignOutSection() {
   )
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -301,7 +302,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
   },
   optionDescription: {
     fontSize: 12,

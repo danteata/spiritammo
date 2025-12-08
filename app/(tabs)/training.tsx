@@ -5,15 +5,16 @@ import {
   View,
   ScrollView,
   TouchableOpacity,
+  Alert,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { FontAwesome, MaterialCommunityIcons } from '@expo/vector-icons';
+import { FontAwesome } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router'
 import {
   COLORS,
   GRADIENTS,
   MILITARY_TYPOGRAPHY,
-  TACTICAL_THEME,
+
   GARRISON_THEME,
 } from '@/constants/colors'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
@@ -24,7 +25,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import AmmunitionCard from '@/components/AmmunitionCard'
 import TargetPractice from '@/components/TargetPractice'
 import StealthDrill from '@/components/StealthDrill'
-import RankBadge from '@/components/RankBadge'
+import { RankBadge } from '@/components/RankBadge'
 import AccuracyMeter from '@/components/AccuracyMeter'
 import ActionButton from '@/components/ActionButton'
 import CollectionSelector from '@/components/CollectionSelector'
@@ -51,13 +52,14 @@ export default function TrainingScreen() {
     collections,
     getScripturesByCollection,
     setCurrentScripture,
+    theme,
+    gradients,
   } = useAppStore()
 
   const [selectedCollection, setSelectedCollection] =
     useState<Collection | null>(null)
 
   const [showTargetPractice, setShowTargetPractice] = useState(false)
-  const [showStealthDrill, setShowStealthDrill] = useState(false)
   const [trainingMode, setTrainingMode] = useState<
     'single' | 'burst' | 'automatic'
   >('single')
@@ -68,6 +70,7 @@ export default function TrainingScreen() {
   const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
   const [generatedIntel, setGeneratedIntel] = useState<StoredIntel | null>(null)
   const [isLoadingIntel, setIsLoadingIntel] = useState(false)
+  const [showStealthDrill, setShowStealthDrill] = useState(false)
 
   // Safe formatter for numeric percentages that might be null/undefined
   const fmt = (v?: number | null, digits = 1) =>
@@ -133,6 +136,43 @@ export default function TrainingScreen() {
 
   const handleStealthDrill = () => {
     setShowStealthDrill(true)
+  }
+
+  const handleStealthDrillComplete = async (accuracy: number, text?: string) => {
+    console.log('🎯 Training: Stealth drill completed with accuracy:', accuracy)
+    if (currentScripture) {
+      console.log('🎯 Training: Updating scripture accuracy for:', currentScripture.id)
+      setPreviousAccuracy(currentScripture.accuracy || 0)
+      await updateScriptureAccuracy(currentScripture.id, accuracy)
+
+      await militaryRankingService.updateProfile({
+        versesMemorized: userStats.totalPracticed + 1,
+        averageAccuracy: userStats.averageAccuracy,
+        consecutiveDays: userStats.streak,
+        lastSessionAccuracy: accuracy,
+        lastSessionWordCount: currentScripture.text.split(' ').length,
+      })
+
+      // Show different completion message for stealth mode
+      if (accuracy >= 90) {
+        Alert.alert(
+          'SHADOW ASSISTANCE COMPLETE',
+          `Silent reconnaissance successful! Accuracy: ${accuracy.toFixed(1)}%`,
+          [{ text: 'Hooah!' }]
+        )
+      } else {
+        Alert.alert(
+          'TACTICAL WITHDRAWAL',
+          `Reconnaissance compromised. Accuracy: ${accuracy.toFixed(1)}%. Minimizing exposure.`,
+          [{ text: 'Roger that', style: 'cancel' }]
+        )
+      }
+
+      await loadMilitaryProfile()
+      console.log('🎯 Training: Stealth drill completed successfully')
+    } else {
+      console.warn('🎯 Training: No current scripture to update')
+    }
   }
 
   const handleReloadAmmunition = () => {
@@ -220,31 +260,6 @@ export default function TrainingScreen() {
     // shot result. The modal is closed by the user via the CEASE FIRE button.
   }
 
-  const handleStealthDrillComplete = async (accuracy: number) => {
-    console.log('🕵️‍♀️ Training: handleStealthDrillComplete called with accuracy:', accuracy)
-    if (currentScripture) {
-      setPreviousAccuracy(currentScripture.accuracy || 0)
-      await updateScriptureAccuracy(currentScripture.id, accuracy)
-
-      // Log stats (could add a flag for 'stealth' mode later in service)
-      await militaryRankingService.updateProfile({
-        versesMemorized: userStats.totalPracticed + 1,
-        averageAccuracy: userStats.averageAccuracy,
-        consecutiveDays: userStats.streak,
-        lastSessionAccuracy: accuracy,
-        lastSessionWordCount: currentScripture.text.split(' ').length,
-      })
-
-      await loadMilitaryProfile()
-    }
-    // Modal closes automatically via component prop, or we can force it here if needed
-    // setShowStealthDrill(false) is called by the component via onStealthDrillClose if we passed one,
-    // but the component calls internal onClose -> onComplete -> which calls this.
-    // Wait, the component calls onComplete and THEN onClose?
-    // StealthDrill calls: onComplete(accuracy); onClose();
-    // So we don't need to manually close it here if onClose prop handles it.
-  }
-
   const handleMultiChapterSelection = (chapterIds: string[]) => {
     setSelectedChapterIds(chapterIds)
 
@@ -273,7 +288,7 @@ export default function TrainingScreen() {
   return (
     <ThemedContainer style={styles.container}>
 
-      <ScrollView style={styles.scrollView}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 104 }}>
         <ScreenHeader
           title="TRAINING"
           subtitle="TARGET PRACTICE"
@@ -281,11 +296,16 @@ export default function TrainingScreen() {
             <View style={styles.headerActions}>
               <TouchableOpacity
                 onPress={handleReloadAmmunition}
-                style={styles.randomButton}
+                style={[
+                  styles.randomButton,
+                  {
+                    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'
+                  }
+                ]}
                 accessibilityRole="button"
                 accessibilityLabel="Reload Ammunition"
               >
-                <FontAwesome name="random" size={16} color={TACTICAL_THEME.text} />
+                <FontAwesome name="random" size={16} color={theme.text} />
               </TouchableOpacity>
               {selectedCollection && selectedCollection.isChapterBased && (
                 <ActionButton
@@ -316,26 +336,28 @@ export default function TrainingScreen() {
                 key={mode}
                 style={[
                   styles.modeButton,
-                  trainingMode === mode && styles.activeModeButton,
+                  trainingMode === mode && [styles.activeModeButton, {
+                    backgroundColor: theme.accent,
+                    shadowColor: theme.accent
+                  }],
                 ]}
                 onPress={() => setTrainingMode(mode)}
                 accessibilityRole="button"
                 accessibilityLabel={`Select ${mode} mode`}
               >
-                <ThemedText
-                  variant="caption"
+                <Text
                   style={[
                     styles.modeText,
                     {
                       color:
                         trainingMode === mode
-                          ? TACTICAL_THEME.text
-                          : (isDark ? TACTICAL_THEME.textSecondary : GARRISON_THEME.textSecondary),
+                          ? theme.accentContrastText
+                          : theme.textSecondary,
                     },
                   ]}
                 >
                   {mode === 'automatic' ? 'AUTO' : mode.toUpperCase()}
-                </ThemedText>
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -383,83 +405,109 @@ export default function TrainingScreen() {
           />
         )}
 
-        <ThemedCard style={styles.missionStatus} variant="default">
-          <ThemedText variant="subheading" style={styles.statusTitle}>
-            MISSION STATUS
-          </ThemedText>
+        {/* Mission Status */}
+        {militaryProfile && (
+          <ThemedCard style={styles.missionStatus} variant="default">
+            <ThemedText variant="subheading" style={styles.statusTitle}>
+              MISSION STATUS
+            </ThemedText>
 
-          <View style={styles.statusGrid}>
-            {/* Rounds Fired */}
-            {isDark ? (
-              <View style={[styles.statusItem, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.05)' }]}>
-                <MaterialCommunityIcons name="target" size={24} color={TACTICAL_THEME.accent} style={{ marginBottom: 8 }} />
-                <ThemedText variant="heading" style={styles.statusValue}>
-                  {militaryProfile?.totalVersesMemorized || 0}
-                </ThemedText>
-                <ThemedText variant="caption" style={styles.statusLabel}>
-                  ROUNDS FIRED
-                </ThemedText>
-              </View>
-            ) : (
-              <View style={[styles.statusItem, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.1)' }]}>
-                <MaterialCommunityIcons name="target" size={24} color={TACTICAL_THEME.accent} style={{ marginBottom: 8 }} />
-                <ThemedText variant="heading" style={styles.statusValue}>
-                  {militaryProfile?.totalVersesMemorized || 0}
-                </ThemedText>
-                <ThemedText variant="caption" style={styles.statusLabel}>
-                  ROUNDS FIRED
-                </ThemedText>
-              </View>
-            )}
+            <View style={styles.statusGrid}>
+              {isDark ? (
+                <LinearGradient
+                  colors={[theme.surface, '#1a1a1a']}
+                  style={styles.statusItem}
+                >
+                  <FontAwesome name="bullseye" size={20} color={theme.accent} />
+                  <ThemedText variant="body" style={{ textAlign: 'center', marginBottom: 24, color: theme.text }}>
+                    ROUNDS FIRED
+                  </ThemedText>
+                  <ThemedText variant="body" style={styles.statusValue}>
+                    {militaryProfile.totalVersesMemorized}
+                  </ThemedText>
+                </LinearGradient>
+              ) : (
+                <View style={[
+                  styles.statusItem,
+                  {
+                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                    borderColor: 'rgba(0, 0, 0, 0.1)'
+                  }
+                ]}>
+                  <FontAwesome name="bullseye" size={20} color={theme.accent} />
+                  <ThemedText variant="body" style={{ textAlign: 'center', marginBottom: 24 }}>
+                    ROUNDS FIRED
+                  </ThemedText>
+                  <ThemedText variant="body" style={styles.statusValue}>
+                    {militaryProfile.totalVersesMemorized}
+                  </ThemedText>
+                </View>
+              )}
 
-            {/* Accuracy */}
-            {isDark ? (
-              <View style={[styles.statusItem, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.05)' }]}>
-                <MaterialCommunityIcons name="crosshairs-gps" size={24} color={TACTICAL_THEME.success} style={{ marginBottom: 8 }} />
-                <ThemedText variant="heading" style={styles.statusValue}>
-                  {fmt(militaryProfile?.averageAccuracy)}%
-                </ThemedText>
-                <ThemedText variant="caption" style={styles.statusLabel}>
-                  AVG ACCURACY
-                </ThemedText>
-              </View>
-            ) : (
-              <View style={[styles.statusItem, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.1)' }]}>
-                <MaterialCommunityIcons name="crosshairs-gps" size={24} color={TACTICAL_THEME.success} style={{ marginBottom: 8 }} />
-                <ThemedText variant="heading" style={styles.statusValue}>
-                  {fmt(militaryProfile?.averageAccuracy)}%
-                </ThemedText>
-                <ThemedText variant="caption" style={styles.statusLabel}>
-                  AVG ACCURACY
-                </ThemedText>
-              </View>
-            )}
+              {isDark ? (
+                <LinearGradient
+                  colors={[theme.surface, '#1a1a1a']}
+                  style={styles.statusItem}
+                >
+                  <FontAwesome name="trophy" size={20} color={theme.success} />
+                  <ThemedText variant="caption" style={styles.statusLabel}>
+                    AVG ACCURACY
+                  </ThemedText>
+                  <ThemedText variant="body" style={styles.statusValue}>
+                    {fmt(militaryProfile.averageAccuracy)}%
+                  </ThemedText>
+                </LinearGradient>
+              ) : (
+                <View style={[
+                  styles.statusItem,
+                  {
+                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                    borderColor: 'rgba(0, 0, 0, 0.1)'
+                  }
+                ]}>
+                  <FontAwesome name="trophy" size={20} color={theme.success} />
+                  <ThemedText variant="caption" style={styles.statusLabel}>
+                    AVG ACCURACY
+                  </ThemedText>
+                  <ThemedText variant="body" style={styles.statusValue}>
+                    {fmt(militaryProfile.averageAccuracy)}%
+                  </ThemedText>
+                </View>
+              )}
 
-            {/* Streak */}
-            {isDark ? (
-              <View style={[styles.statusItem, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: 'rgba(255,255,255,0.05)' }]}>
-                <MaterialCommunityIcons name="fire" size={24} color={TACTICAL_THEME.warning} style={{ marginBottom: 8 }} />
-                <ThemedText variant="heading" style={styles.statusValue}>
-                  {militaryProfile?.consecutiveDays || 0}
-                </ThemedText>
-                <ThemedText variant="caption" style={styles.statusLabel}>
-                  DAY STREAK
-                </ThemedText>
-              </View>
-            ) : (
-              <View style={[styles.statusItem, { backgroundColor: 'rgba(0,0,0,0.05)', borderColor: 'rgba(0,0,0,0.1)' }]}>
-                <MaterialCommunityIcons name="fire" size={24} color={TACTICAL_THEME.warning} style={{ marginBottom: 8 }} />
-                <ThemedText variant="heading" style={styles.statusValue}>
-                  {militaryProfile?.consecutiveDays || 0}
-                </ThemedText>
-                <ThemedText variant="caption" style={styles.statusLabel}>
-                  DAY STREAK
-                </ThemedText>
-              </View>
-            )}
-          </View>
-        </ThemedCard>
-
+              {isDark ? (
+                <LinearGradient
+                  colors={[theme.surface, '#1a1a1a']}
+                  style={styles.statusItem}
+                >
+                  <FontAwesome name="long-arrow-up" size={20} color={theme.warning} />
+                  <ThemedText variant="caption" style={styles.statusLabel}>
+                    STREAK
+                  </ThemedText>
+                  <ThemedText variant="body" style={styles.statusValue}>
+                    {militaryProfile.consecutiveDays} DAYS
+                  </ThemedText>
+                </LinearGradient>
+              ) : (
+                <View style={[
+                  styles.statusItem,
+                  {
+                    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+                    borderColor: 'rgba(0, 0, 0, 0.1)'
+                  }
+                ]}>
+                  <FontAwesome name="long-arrow-up" size={20} color={theme.warning} />
+                  <ThemedText variant="caption" style={styles.statusLabel}>
+                    STREAK
+                  </ThemedText>
+                  <ThemedText variant="body" style={styles.statusValue}>
+                    {militaryProfile.consecutiveDays} DAYS
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+          </ThemedCard>
+        )}
       </ScrollView>
 
       {/* Target Practice Modal */}
@@ -483,10 +531,6 @@ export default function TrainingScreen() {
           isVisible={showStealthDrill}
           targetVerse={currentScripture.text}
           reference={currentScripture.reference}
-          /* Wait, StealthDrill expects onComplete: (accuracy) => void. 
-             handleTargetPracticeComplete expects (transcript, accuracy).
-             I need to use handleStealthDrillComplete created above.
-          */
           onComplete={handleStealthDrillComplete}
           onClose={() => setShowStealthDrill(false)}
         />
@@ -515,7 +559,6 @@ const styles = StyleSheet.create({
   },
   randomButton: {
     padding: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
@@ -529,21 +572,17 @@ const styles = StyleSheet.create({
   modeSelector: {
     flex: 1,
     flexDirection: 'row',
-    backgroundColor: 'rgba(0, 0, 0, 0.4)', // Slightly darker for better contrast
     borderRadius: 16, // Increased radius
     padding: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   randomButtonCompact: {
     width: 48,
     height: 48,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   modeButton: {
     flex: 1,
@@ -553,8 +592,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeModeButton: {
-    backgroundColor: TACTICAL_THEME.accent,
-    shadowColor: TACTICAL_THEME.accent,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
@@ -597,11 +634,9 @@ const styles = StyleSheet.create({
   statusItem: {
     alignItems: 'center',
     flex: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   statusLabel: {
     marginTop: 8,

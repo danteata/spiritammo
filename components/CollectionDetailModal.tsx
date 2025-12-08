@@ -18,7 +18,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router'
-import { TACTICAL_THEME, GARRISON_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
+import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection, Scripture } from '@/types/scripture'
 import { useAppStore } from '@/hooks/useAppStore'
 import AddVersesModal from './AddVersesModal'
@@ -46,9 +46,9 @@ const CollectionDetailModal = React.memo(({
     bulkRemoveScripturesFromCollection,
     deleteCollection,
     isDark,
+    theme,
+    gradients,
   } = useAppStore()
-
-  const theme = isDark ? TACTICAL_THEME : GARRISON_THEME
 
   const [isBulkSelecting, setIsBulkSelecting] = useState(false)
   const [selectedScriptureIds, setSelectedScriptureIds] = useState<Set<string>>(new Set())
@@ -92,20 +92,16 @@ const CollectionDetailModal = React.memo(({
     const masteryPercentage = item.masteryLevel || 0
 
     // Card background - match ThemedCard surface
-    const cardBackground = isDark
-      ? 'rgba(20, 20, 20, 0.8)'
-      : '#FFFFFF'
+    const cardBackground = theme.surface
 
     // Border color - professional
-    const borderColor = isDark
-      ? 'rgba(60, 60, 60, 0.4)'
-      : 'rgba(0, 0, 0, 0.08)'
+    const borderColor = theme.border
 
     // Mastery badge color only
     const getMasteryBadgeColor = () => {
-      if (masteryPercentage >= 80) return isDark ? 'rgba(34, 197, 94, 0.3)' : 'rgba(34, 197, 94, 0.5)'
-      if (masteryPercentage >= 50) return isDark ? 'rgba(234, 179, 8, 0.3)' : 'rgba(234, 179, 8, 0.5)'
-      return isDark ? 'rgba(239, 68, 68, 0.3)' : 'rgba(239, 68, 68, 0.5)'
+      if (masteryPercentage >= 80) return theme.success
+      if (masteryPercentage >= 50) return theme.warning
+      return theme.error
     }
 
     // Check if text needs expand hint (more than 2 lines worth of text)
@@ -471,16 +467,16 @@ const CollectionDetailModal = React.memo(({
       onRequestClose={onClose}
     >
       <LinearGradient
-        colors={isDark ? ['#0a1505', '#1a2f0a', '#0f1a05'] : ['#f5f5f5', '#e8e8e8', '#f0f0f0']}
+        colors={gradients.tactical.background}
         style={styles.container}
       >
         {/* Header */}
-        <View style={[styles.header, { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.95)', borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.1)' }]}>
+        <View style={[styles.header, { backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.95)', borderBottomColor: theme.border }]}>
           <View style={styles.headerContent}>
             <View style={styles.titleSection}>
               {!isBulkSelecting && !isEditingInfo && (
-                <View style={styles.iconBadge}>
-                  <MaterialCommunityIcons name="briefcase-variant" size={24} color={TACTICAL_THEME.accent} />
+                <View style={[styles.iconBadge, { backgroundColor: isDark ? 'rgba(255, 107, 53, 0.15)' : 'rgba(255, 107, 53, 0.1)', borderColor: isDark ? 'rgba(255, 107, 53, 0.3)' : 'rgba(255, 107, 53, 0.2)' }]}>
+                  <MaterialCommunityIcons name="briefcase-variant" size={24} color={theme.accent} />
                 </View>
               )}
               {isEditingInfo ? (
@@ -518,8 +514,7 @@ const CollectionDetailModal = React.memo(({
                 <>
                   <TouchableOpacity
                     style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}
-                    onPress={handleSelectAll}
-                    accessibilityRole="button"
+                    onPress={handleSelectAll} accessibilityRole="button"
                     accessibilityLabel={selectedScriptureIds.size === localScriptures.length ? "Deselect all" : "Select all"}
                   >
                     <MaterialCommunityIcons
@@ -530,15 +525,14 @@ const CollectionDetailModal = React.memo(({
                   </TouchableOpacity>
 
                   <TouchableOpacity
-                    style={[styles.iconButton, { backgroundColor: TACTICAL_THEME.error, borderColor: TACTICAL_THEME.error }]}
+                    style={[styles.iconButton, { backgroundColor: theme.error, borderColor: theme.error }]}
                     onPress={handleBulkDelete}
                     disabled={selectedScriptureIds.size === 0}
                     accessibilityRole="button"
                     accessibilityLabel="Delete selected rounds"
                   >
-                    <Feather name="trash-2" size={22} color={TACTICAL_THEME.text} />
+                    <Feather name="trash-2" size={22} color={theme.text} />
                   </TouchableOpacity>
-
                   <TouchableOpacity
                     style={[styles.closeButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}
                     onPress={() => {
@@ -559,7 +553,7 @@ const CollectionDetailModal = React.memo(({
                     accessibilityRole="button"
                     accessibilityLabel="Add verses"
                   >
-                    <Feather name="plus" size={22} color={TACTICAL_THEME.accent} />
+                    <Feather name="plus" size={22} color={theme.accent} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}
@@ -580,11 +574,11 @@ const CollectionDetailModal = React.memo(({
           {!isEditingInfo && !isBulkSelecting && (
             <View style={styles.descriptionContainer}>
               {collection.description ? (
-                <Text style={[styles.description, MILITARY_TYPOGRAPHY.body]} numberOfLines={3}>
+                <Text style={[styles.description, MILITARY_TYPOGRAPHY.body, { color: theme.textSecondary }]} numberOfLines={3}>
                   {collection.description}
                 </Text>
               ) : (
-                <Text style={[styles.description, MILITARY_TYPOGRAPHY.body, { opacity: 0.6 }]}>
+                <Text style={[styles.description, MILITARY_TYPOGRAPHY.body, { color: theme.textSecondary, opacity: 0.6 }]}>
                   No description provided.
                 </Text>
               )}
@@ -718,7 +712,7 @@ const CollectionDetailModal = React.memo(({
               <View
                 style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
               >
-                <MaterialCommunityIcons name="calendar-month" size={24} color={isDark ? '#AAA' : '#666'} />
+                <MaterialCommunityIcons name="calendar-month" size={24} color={theme.textSecondary} />
                 <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]}>
                   {new Date(
                     collection.createdAt || Date.now()
@@ -746,7 +740,7 @@ const CollectionDetailModal = React.memo(({
                 {collection.tags.map((tag, index) => (
                   <LinearGradient
                     key={index}
-                    colors={[TACTICAL_THEME.accent, '#CC5529']}
+                    colors={[theme.accent, isDark ? '#CC5529' : '#FF9966']}
                     start={{ x: 0, y: 0 }}
                     end={{ x: 1, y: 1 }}
                     style={styles.tag}
@@ -774,12 +768,12 @@ const CollectionDetailModal = React.memo(({
                 {collection.chapters.slice(0, 5).map((chapter) => (
                   <LinearGradient
                     key={chapter.id}
-                    colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.02)']}
+                    colors={[isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)']}
                     style={styles.chapterItem}
                   >
                     <View style={styles.chapterInfo}>
                       <Text
-                        style={[styles.chapterName, MILITARY_TYPOGRAPHY.body]}
+                        style={[styles.chapterName, MILITARY_TYPOGRAPHY.body, { color: theme.text }]}
                       >
                         {chapter.name}
                       </Text>
@@ -787,6 +781,7 @@ const CollectionDetailModal = React.memo(({
                         style={[
                           styles.chapterStats,
                           MILITARY_TYPOGRAPHY.caption,
+                          { color: theme.textSecondary },
                         ]}
                       >
                         {chapter.scriptures.length} verses
@@ -799,7 +794,7 @@ const CollectionDetailModal = React.memo(({
                         styles.chapterStatus,
                         {
                           backgroundColor: chapter.isCompleted
-                            ? TACTICAL_THEME.success
+                            ? theme.success
                             : 'rgba(255,255,255,0.1)',
                           borderWidth: chapter.isCompleted ? 0 : 1,
                           borderColor: chapter.isCompleted ? 'transparent' : 'rgba(255,255,255,0.2)'
@@ -811,7 +806,7 @@ const CollectionDetailModal = React.memo(({
 
                 {collection.chapters.length > 5 && (
                   <Text
-                    style={[styles.moreChapters, MILITARY_TYPOGRAPHY.caption]}
+                    style={[styles.moreChapters, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}
                   >
                     +{collection.chapters.length - 5} more chapters
                   </Text>
@@ -825,7 +820,7 @@ const CollectionDetailModal = React.memo(({
         {!isEditingInfo && !isBulkSelecting && (
           <View style={styles.footer}>
             <TouchableOpacity
-              style={[styles.trainingButton, { backgroundColor: TACTICAL_THEME.primary }]} // Keep button always military green
+              style={[styles.trainingButton, { backgroundColor: theme.primary }]} // Keep button always military green
               onPress={() => {
                 onClose()
                 router.push('/(tabs)/training')
@@ -911,7 +906,6 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   descriptionInput: {
-    color: TACTICAL_THEME.textSecondary,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.1)',
     paddingVertical: 4,
@@ -929,7 +923,6 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
   },
   editButtonText: {
-    color: TACTICAL_THEME.text,
     fontSize: 12,
     fontWeight: 'bold',
     letterSpacing: 1,
@@ -968,7 +961,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   description: {
-    color: TACTICAL_THEME.textSecondary,
     lineHeight: 22,
     fontSize: 14,
   },
@@ -993,14 +985,13 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   selectButtonText: {
-    color: TACTICAL_THEME.textSecondary,
     fontSize: 12,
     fontWeight: 'bold',
+    letterSpacing: 1,
   },
   deleteSelectedButton: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: TACTICAL_THEME.error || '#FF4444',
     borderRadius: 6,
   },
   deleteSelectedButtonDisabled: {
@@ -1076,7 +1067,7 @@ const styles = StyleSheet.create({
   },
   scriptureItemSelected: {
     backgroundColor: 'rgba(255, 107, 53, 0.1)',
-    borderColor: TACTICAL_THEME.accent,
+    borderColor: '#F97316', // Default accent color as fallback
   },
   scriptureIcon: {
     marginRight: 12,
@@ -1087,27 +1078,25 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.textSecondary,
+    borderColor: '#94A3B8', // Default textSecondary color as fallback
     marginRight: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
   checkboxSelected: {
-    backgroundColor: TACTICAL_THEME.accent,
-    borderColor: TACTICAL_THEME.accent,
+    backgroundColor: '#F97316', // Default accent color as fallback
+    borderColor: '#F97316', // Default accent color as fallback
   },
   scriptureInfo: {
     flex: 1,
   },
   scriptureRef: {
-    color: TACTICAL_THEME.accent,
     fontWeight: 'bold',
     fontSize: 15,
     letterSpacing: 0.5,
     flex: 1,
   },
   scriptureText: {
-    color: TACTICAL_THEME.textSecondary,
     fontSize: 14,
     lineHeight: 22,
     letterSpacing: 0.2,
@@ -1138,13 +1127,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
   },
   emptyVersesText: {
-    color: 'rgba(255,255,255,0.5)',
     fontSize: 14,
     marginTop: 12,
     fontStyle: 'italic',
   },
   sectionTitle: {
-    color: TACTICAL_THEME.text,
     marginBottom: 16,
     fontSize: 14,
     letterSpacing: 1.5,
@@ -1166,13 +1153,11 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.05)',
   },
   statValue: {
-    color: TACTICAL_THEME.text,
     marginTop: 8,
     marginBottom: 4,
     fontSize: 24,
   },
   statLabel: {
-    color: TACTICAL_THEME.textSecondary,
     textAlign: 'center',
     fontSize: 10,
     letterSpacing: 1,
@@ -1216,13 +1201,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chapterName: {
-    color: TACTICAL_THEME.text,
+    color: [0, 0, 0], // Will be overridden by inline styles
     marginBottom: 4,
     fontWeight: '600',
     fontSize: 15,
   },
   chapterStats: {
-    color: TACTICAL_THEME.textSecondary,
+    color: [0, 0, 0], // Will be overridden by inline styles
     fontSize: 12,
   },
   chapterStatus: {
@@ -1231,7 +1216,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   moreChapters: {
-    color: TACTICAL_THEME.textSecondary,
+    color: 'transparent', // Will be overridden by inline styles
     textAlign: 'center',
     fontStyle: 'italic',
     marginTop: 8,
@@ -1243,7 +1228,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 20,
     borderRadius: 30,
-    backgroundColor: TACTICAL_THEME.primary, // Military Green
+    backgroundColor: 'transparent', // Will be overridden by inline styles
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -1273,7 +1258,7 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: 'transparent', // Will be overridden by inline styles
     justifyContent: 'center',
     alignItems: 'center',
   },

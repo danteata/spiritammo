@@ -11,7 +11,7 @@ import {
 import { FontAwesome } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Collection } from '@/types/scripture'
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
+import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 
 interface CollectionSelectorProps {
@@ -25,7 +25,8 @@ export default function CollectionSelector({
   selectedCollection,
   selectedChapterIds = [],
 }: CollectionSelectorProps) {
-  const { collections, isDark, addCollection } = useAppStore()
+  const { collections, isDark, addCollection, theme } = useAppStore()
+  const styles = getStyles(theme)
   const [modalVisible, setModalVisible] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [newArsenalName, setNewArsenalName] = useState('')
@@ -83,7 +84,7 @@ export default function CollectionSelector({
     >
       <View style={styles.collectionInfo}>
         <View style={styles.collectionHeader}>
-          <FontAwesome name="book" size={16} color={TACTICAL_THEME.accent} />
+          <FontAwesome name="book" size={16} color={theme.accent} />
           <Text style={[styles.collectionName, MILITARY_TYPOGRAPHY.body]}>
             {item.abbreviation
               ? `${item.abbreviation} - ${item.name}`
@@ -130,9 +131,9 @@ export default function CollectionSelector({
     </TouchableOpacity>
   )
 
-  const backgroundColor = TACTICAL_THEME.surface
-  const textColor = TACTICAL_THEME.text
-  const borderColor = TACTICAL_THEME.border
+  const backgroundColor = theme.surface
+  const textColor = theme.text
+  const borderColor = theme.border
 
   return (
     <View style={styles.container}>
@@ -142,7 +143,7 @@ export default function CollectionSelector({
         testID="collection-selector-button"
       >
         <View style={styles.selectorContent}>
-          <FontAwesome name="bullseye" size={20} color={TACTICAL_THEME.accent} />
+          <FontAwesome name="bullseye" size={20} color={theme.accent} />
           <View style={styles.selectorTextContainer}>
             <Text
               style={[
@@ -162,7 +163,7 @@ export default function CollectionSelector({
                 style={[
                   styles.selectorSubtext,
                   MILITARY_TYPOGRAPHY.caption,
-                  { color: TACTICAL_THEME.textSecondary },
+                  { color: theme.textSecondary },
                 ]}
               >
                 {getDisplayRoundCount(selectedCollection)} rounds loaded
@@ -200,7 +201,7 @@ export default function CollectionSelector({
                 style={[
                   styles.modalSubtitle,
                   MILITARY_TYPOGRAPHY.caption,
-                  { color: TACTICAL_THEME.textSecondary },
+                  { color: theme.textSecondary },
                 ]}
               >
                 Choose your ammunition supply
@@ -210,25 +211,25 @@ export default function CollectionSelector({
             {isCreating ? (
               <View style={styles.createContainer}>
                 <TextInput
-                  style={[styles.input, { color: textColor, borderColor: TACTICAL_THEME.border }]}
+                  style={[styles.input, { color: textColor, borderColor: theme.border }]}
                   placeholder="ENTER ARSENAL NAME"
-                  placeholderTextColor={TACTICAL_THEME.textSecondary}
+                  placeholderTextColor={theme.textSecondary}
                   value={newArsenalName}
                   onChangeText={setNewArsenalName}
                   autoFocus
                 />
                 <View style={styles.createActions}>
                   <TouchableOpacity
-                    style={[styles.actionButton, { borderColor: TACTICAL_THEME.border }]}
+                    style={[styles.actionButton, { borderColor: theme.border }]}
                     onPress={() => setIsCreating(false)}
                   >
-                    <Text style={[styles.actionButtonText, { color: TACTICAL_THEME.textSecondary }]}>CANCEL</Text>
+                    <Text style={[styles.actionButtonText, { color: theme.textSecondary }]}>CANCEL</Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    style={[styles.actionButton, { backgroundColor: TACTICAL_THEME.accent, borderColor: TACTICAL_THEME.accent }]}
+                    style={[styles.actionButton, { backgroundColor: theme.accent, borderColor: theme.accent }]}
                     onPress={handleCreateArsenal}
                   >
-                    <Text style={[styles.actionButtonText, { color: TACTICAL_THEME.text }]}>CREATE</Text>
+                    <Text style={[styles.actionButtonText, { color: theme.text }]}>CREATE</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -238,7 +239,7 @@ export default function CollectionSelector({
                   style={styles.createButton}
                   onPress={() => setIsCreating(true)}
                 >
-                  <FontAwesome name="plus" size={16} color={TACTICAL_THEME.text} />
+                  <FontAwesome name="plus" size={16} color={theme.text} />
                   <Text style={[styles.createButtonText, MILITARY_TYPOGRAPHY.button]}>
                     ESTABLISH NEW ARSENAL
                   </Text>
@@ -246,12 +247,12 @@ export default function CollectionSelector({
 
                 {collections.length === 0 ? (
                   <View style={styles.emptyState}>
-                    <FontAwesome name="book" size={48} color={TACTICAL_THEME.textSecondary} />
+                    <FontAwesome name="book" size={48} color={theme.textSecondary} />
                     <Text
                       style={[
                         styles.emptyStateText,
                         MILITARY_TYPOGRAPHY.body,
-                        { color: TACTICAL_THEME.textSecondary },
+                        { color: theme.textSecondary },
                       ]}
                     >
                       No arsenals available
@@ -272,7 +273,7 @@ export default function CollectionSelector({
             <TouchableOpacity
               style={[
                 styles.closeButton,
-                { backgroundColor: TACTICAL_THEME.secondary },
+                { backgroundColor: theme.secondary },
               ]}
               onPress={() => setModalVisible(false)}
             >
@@ -289,7 +290,7 @@ export default function CollectionSelector({
   )
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     marginVertical: 12,
     paddingHorizontal: 16,
@@ -323,7 +324,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    alignItems: 'center',
   },
   blurOverlay: {
     ...StyleSheet.absoluteFillObject,
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: TACTICAL_THEME.border,
+    borderBottomColor: theme.border,
   },
   collectionInfo: {
     flex: 1,
@@ -369,22 +369,22 @@ const styles = StyleSheet.create({
   },
   collectionName: {
     flex: 1,
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: '600',
   },
   chapterBadge: {
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
   chapterBadgeText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontSize: 10,
     fontWeight: 'bold',
   },
   collectionDescription: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     marginBottom: 6,
     lineHeight: 18,
   },
@@ -394,7 +394,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   roundsCount: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     fontWeight: '500',
   },
   tags: {
@@ -402,13 +402,13 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   tag: {
-    backgroundColor: TACTICAL_THEME.border,
+    backgroundColor: theme.border,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
   },
   tagText: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     fontSize: 10,
     fontWeight: 'bold',
   },
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closeButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   createButton: {
@@ -443,11 +443,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.border,
+    borderColor: theme.border,
     gap: 8,
   },
   createButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   createContainer: {

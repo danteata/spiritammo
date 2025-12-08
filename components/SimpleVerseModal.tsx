@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors';
+import { MILITARY_TYPOGRAPHY } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
 import { Collection, Scripture, Book } from '@/types/scripture';
 import { bibleApiService } from '@/services/bibleApi';
@@ -34,10 +34,11 @@ export default function SimpleVerseModal({
     scriptures,
     addCollection,
     addScripturesToCollection,
-    isDark
+    theme
   } = useAppStore();
 
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
+  const styles = getStyles(theme);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [selectedChapter, setSelectedChapter] = useState<number>(1);
   const [selectedVerses, setSelectedVerses] = useState<Scripture[]>([]);
@@ -153,7 +154,7 @@ export default function SimpleVerseModal({
       await errorHandler.handleError(
         error,
         'Add Verses',
-        { 
+        {
           customMessage: 'Failed to add rounds to arsenal. Please retry operation.',
           retry: () => handleAddVerses()
         }
@@ -175,16 +176,16 @@ export default function SimpleVerseModal({
               Collection Name:
             </Text>
             <TextInput
-              style={[styles.textInput, { color: TACTICAL_THEME.text, borderColor: TACTICAL_THEME.border }]}
+              style={[styles.textInput, { color: theme.text, borderColor: theme.border }]}
               placeholder="Enter collection name"
-              placeholderTextColor={TACTICAL_THEME.textSecondary}
+              placeholderTextColor={theme.textSecondary}
               value={newCollectionName}
               onChangeText={setNewCollectionName}
               autoFocus={true}
             />
             <View style={styles.inputButtons}>
               <TouchableOpacity
-                style={[styles.cancelButton, { backgroundColor: TACTICAL_THEME.surface }]}
+                style={[styles.cancelButton, { backgroundColor: theme.surface }]}
                 onPress={handleCreateCollectionCancel}
               >
                 <Text style={[styles.cancelButtonText, MILITARY_TYPOGRAPHY.button]}>
@@ -194,7 +195,7 @@ export default function SimpleVerseModal({
               <TouchableOpacity
                 style={[
                   styles.confirmButton,
-                  newCollectionName.trim() && { backgroundColor: TACTICAL_THEME.accent }
+                  newCollectionName.trim() && { backgroundColor: theme.accent }
                 ]}
                 onPress={newCollectionName.trim() ? handleCreateCollectionConfirm : undefined}
                 disabled={!newCollectionName.trim()}
@@ -218,27 +219,27 @@ export default function SimpleVerseModal({
           {collections.map((collection) => (
             <TouchableOpacity
               key={collection.id}
-              style={[styles.listItem, { backgroundColor: TACTICAL_THEME.surface }]}
+              style={[styles.listItem, { backgroundColor: theme.surface }]}
               onPress={() => handleCollectionSelect(collection)}
             >
-              <FontAwesome name="book" size={20} color={TACTICAL_THEME.accent} />
+              <FontAwesome name="book" size={20} color={theme.accent} />
               <View style={styles.itemInfo}>
-                <Text style={[styles.itemTitle, { color: TACTICAL_THEME.text }]}>
+                <Text style={[styles.itemTitle, { color: theme.text }]}>
                   {collection.abbreviation ? `${collection.abbreviation} - ${collection.name}` : collection.name}
                 </Text>
-                <Text style={[styles.itemSubtitle, { color: TACTICAL_THEME.textSecondary }]}>
+                <Text style={[styles.itemSubtitle, { color: theme.textSecondary }]}>
                   {collection.scriptures.length} verses
                 </Text>
               </View>
-              <FontAwesome name="chevron-right" size={16} color={TACTICAL_THEME.textSecondary} />
+              <FontAwesome name="chevron-right" size={16} color={theme.textSecondary} />
             </TouchableOpacity>
           ))}
         </ScrollView>
         <TouchableOpacity
-          style={[styles.createButton, { backgroundColor: TACTICAL_THEME.accent }]}
+          style={[styles.createButton, { backgroundColor: theme.accent }]}
           onPress={handleCreateCollection}
         >
-          <FontAwesome name="plus" size={16} color={TACTICAL_THEME.text} />
+          <FontAwesome name="plus" size={16} color={theme.text} />
           <Text style={[styles.createButtonText, MILITARY_TYPOGRAPHY.button]}>
             CREATE NEW COLLECTION
           </Text>
@@ -260,19 +261,19 @@ export default function SimpleVerseModal({
           {books.map((book) => (
             <TouchableOpacity
               key={book.id}
-              style={[styles.listItem, { backgroundColor: TACTICAL_THEME.surface }]}
+              style={[styles.listItem, { backgroundColor: theme.surface }]}
               onPress={() => handleBookSelect(book)}
             >
-              <FontAwesome name="book" size={20} color={TACTICAL_THEME.accent} />
+              <FontAwesome name="book" size={20} color={theme.accent} />
               <View style={styles.itemInfo}>
-                <Text style={[styles.itemTitle, { color: TACTICAL_THEME.text }]}>
+                <Text style={[styles.itemTitle, { color: theme.text }]}>
                   {book.name}
                 </Text>
-                <Text style={[styles.itemSubtitle, { color: TACTICAL_THEME.textSecondary }]}>
+                <Text style={[styles.itemSubtitle, { color: theme.textSecondary }]}>
                   {book.chapters} chapters
                 </Text>
               </View>
-              <FontAwesome name="chevron-right" size={16} color={TACTICAL_THEME.textSecondary} />
+              <FontAwesome name="chevron-right" size={16} color={theme.textSecondary} />
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -290,7 +291,7 @@ export default function SimpleVerseModal({
             SELECT CHAPTER
           </Text>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={TACTICAL_THEME.accent} />
+            <ActivityIndicator size="large" color={theme.accent} />
             <Text style={[styles.loadingText, MILITARY_TYPOGRAPHY.caption]}>
               Loading chapters for {selectedBook.name}...
             </Text>
@@ -311,10 +312,10 @@ export default function SimpleVerseModal({
           {availableChapters.map((chapter) => (
             <TouchableOpacity
               key={chapter}
-              style={[styles.chapterButton, { backgroundColor: TACTICAL_THEME.surface }]}
+              style={[styles.chapterButton, { backgroundColor: theme.surface }]}
               onPress={() => handleChapterSelect(chapter)}
             >
-              <Text style={[styles.chapterNumber, { color: TACTICAL_THEME.text }]}>
+              <Text style={[styles.chapterNumber, { color: theme.text }]}>
                 {chapter}
               </Text>
             </TouchableOpacity>
@@ -414,7 +415,7 @@ export default function SimpleVerseModal({
       onRequestClose={handleClose}
     >
       <View style={styles.modalContainer}>
-        <View style={[styles.modalContent, { backgroundColor: TACTICAL_THEME.surface }]}>
+        <View style={[styles.modalContent, { backgroundColor: theme.surface }]}>
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity
@@ -424,7 +425,7 @@ export default function SimpleVerseModal({
               <FontAwesome
                 name={step !== 'collection' ? "arrow-left" : "times"}
                 size={20}
-                color={TACTICAL_THEME.text}
+                color={theme.text}
               />
             </TouchableOpacity>
 
@@ -446,7 +447,7 @@ export default function SimpleVerseModal({
               <TouchableOpacity
                 style={[
                   styles.actionButton,
-                  canProceed() && { backgroundColor: TACTICAL_THEME.accent }
+                  canProceed() && { backgroundColor: theme.accent }
                 ]}
                 onPress={canProceed() ? handleNext : undefined}
                 disabled={!canProceed()}
@@ -465,19 +466,19 @@ export default function SimpleVerseModal({
       </View>
 
       {/* Loading Overlays */}
-      <LoadingOverlay 
-        visible={isLoadingChapters} 
+      <LoadingOverlay
+        visible={isLoadingChapters}
         message="Loading chapter data..."
       />
-      <LoadingOverlay 
-        visible={isAddingVerses} 
+      <LoadingOverlay
+        visible={isAddingVerses}
         message="Deploying rounds to arsenal..."
       />
     </Modal>
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -497,13 +498,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: TACTICAL_THEME.border,
+    borderBottomColor: theme.border,
   },
   backButton: {
     padding: 8,
   },
   headerTitle: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     textAlign: 'center',
   },
   headerSpacer: {
@@ -517,12 +518,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   stepTitle: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     textAlign: 'center',
     marginBottom: 8,
   },
   stepSubtitle: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -559,7 +560,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   createButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   chapterGrid: {
@@ -580,25 +581,25 @@ const styles = StyleSheet.create({
   footer: {
     padding: 20,
     borderTopWidth: 1,
-    borderTopColor: TACTICAL_THEME.border,
+    borderTopColor: theme.border,
   },
   actionButton: {
     paddingVertical: 14,
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
   },
   actionButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   inputContainer: {
     padding: 20,
-    backgroundColor: TACTICAL_THEME.background,
+    backgroundColor: theme.background,
     borderRadius: 8,
   },
   inputLabel: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     marginBottom: 8,
     fontWeight: '500',
   },
@@ -622,7 +623,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   confirmButton: {
@@ -630,10 +631,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 6,
     alignItems: 'center',
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
   },
   confirmButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   loadingContainer: {
@@ -643,7 +644,7 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   loadingText: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     marginTop: 16,
     textAlign: 'center',
   },

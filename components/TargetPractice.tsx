@@ -14,8 +14,6 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Feather, Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import {
-  TACTICAL_THEME,
-  GARRISON_THEME,
   MILITARY_TYPOGRAPHY,
   ACCURACY_COLORS,
 } from '@/constants/colors'
@@ -51,8 +49,7 @@ export default function TargetPractice({
   isVisible,
   onClose,
 }: TargetPracticeProps) {
-  const { isDark } = useAppStore()
-  const theme = isDark ? TACTICAL_THEME : GARRISON_THEME
+  const { theme, isDark } = useAppStore()
 
   const [shotResults, setShotResults] = useState<ShotResult[]>([])
   const [currentAccuracy, setCurrentAccuracy] = useState(0)
@@ -174,9 +171,9 @@ export default function TargetPractice({
       case 'calm':
         return null
       case 'light':
-        return <Feather name="wind" size={16} color={TACTICAL_THEME.warning} />
+        return <Feather name="wind" size={16} color={theme.warning} />
       case 'strong':
-        return <Feather name="wind" size={16} color={TACTICAL_THEME.error} />
+        return <Feather name="wind" size={16} color={theme.error} />
     }
   }
 
@@ -264,7 +261,7 @@ export default function TargetPractice({
             {/* Target rings */}
             <View style={[styles.targetRing, styles.outerRing, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' }]} />
             <View style={[styles.targetRing, styles.middleRing, { borderColor: isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)' }]} />
-            <View style={[styles.targetRing, styles.innerRing, { borderColor: TACTICAL_THEME.warning }]} />
+            <View style={[styles.targetRing, styles.innerRing, { borderColor: theme.warning }]} />
             <View style={[styles.targetRing, styles.bullseye, { borderColor: theme.accent, backgroundColor: 'rgba(255, 107, 53, 0.2)' }]} />
 
             {/* Bullet Holes */}
@@ -276,7 +273,7 @@ export default function TargetPractice({
                   {
                     left: shot.x - 4, // Center the 8px hole
                     top: shot.y - 4,
-                    backgroundColor: shot.isHit ? (isDark ? '#1a1a1a' : '#000') : TACTICAL_THEME.error,
+                    backgroundColor: shot.isHit ? (isDark ? '#1a1a1a' : '#000') : theme.error,
                     borderColor: shot.isHit ? 'rgba(255,255,255,0.5)' : 'rgba(255,0,0,0.3)',
                   }
                 ]}
@@ -394,7 +391,7 @@ export default function TargetPractice({
     >
       {isDark ? (
         <LinearGradient
-          colors={[TACTICAL_THEME.background, '#0D0D0D']}
+          colors={[theme.background, '#0D0D0D']}
           style={styles.container}
         >
           {renderContent()}

@@ -11,7 +11,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { TACTICAL_THEME, GARRISON_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors';
+import { MILITARY_TYPOGRAPHY } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
 import {
   Book,
@@ -50,7 +50,7 @@ export default function AddVersesModal({
     isDark
   } = useAppStore();
 
-  const theme = isDark ? TACTICAL_THEME : GARRISON_THEME;
+  const { theme } = useAppStore();
 
   const [currentStep, setCurrentStep] = useState<Step>('collection');
   const [activeTab, setActiveTab] = useState<TabType>('BOOK');

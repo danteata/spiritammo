@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors';
+import { MILITARY_TYPOGRAPHY } from '@/constants/colors';
 import { Scripture } from '@/types/scripture';
 import { bibleApiService } from '@/services/bibleApi';
+import { useAppStore } from '@/hooks/useAppStore';
 
 interface VerseSelectorProps {
   bookName: string;
@@ -18,6 +19,8 @@ export default function VerseSelector({
   onVersesSelected,
   selectedVerses = []
 }: VerseSelectorProps) {
+  const { theme } = useAppStore();
+  const styles = getStyles(theme);
   const [verses, setVerses] = useState<Scripture[]>([]);
   const [selectedVerseIds, setSelectedVerseIds] = useState<Set<string>>(new Set());
   const [isLoadingVerses, setIsLoadingVerses] = useState(false);
@@ -29,9 +32,9 @@ export default function VerseSelector({
         console.log(`📖 Loading verses for ${bookName} ${chapter}...`);
         // Wait for Bible service to initialize and load verses
         const chapterData = await bibleApiService.getChapter(bookName, chapter);
-        
+
         console.log(`📖 Chapter data:`, chapterData);
-        
+
         if (chapterData && chapterData.verses.length > 0) {
           const scriptures = chapterData.verses.map((verse: any) =>
             bibleApiService.bibleVerseToScripture(verse)
@@ -76,12 +79,12 @@ export default function VerseSelector({
       selectAll();
       return;
     }
-    
+
     const selectedArray = Array.from(selectedVerseIds);
     const lastSelectedVerse = verses.find(v => v.id === selectedArray[selectedArray.length - 1]);
-    
+
     if (!lastSelectedVerse) return;
-    
+
     const rangeVerses = verses.filter(v => v.verse >= lastSelectedVerse.verse);
     const newSelected = new Set(selectedVerseIds);
 
@@ -113,7 +116,7 @@ export default function VerseSelector({
           style={styles.actionButton}
           onPress={selectAll}
         >
-          <FontAwesome name="check-circle" size={16} color={TACTICAL_THEME.text} />
+          <FontAwesome name="check-circle" size={16} color={theme.text} />
           <Text style={styles.actionButtonText}>ALL ROUNDS</Text>
         </TouchableOpacity>
 
@@ -121,7 +124,7 @@ export default function VerseSelector({
           style={styles.actionButton}
           onPress={clearAll}
         >
-          <FontAwesome name="times-circle" size={16} color={TACTICAL_THEME.text} />
+          <FontAwesome name="times-circle" size={16} color={theme.text} />
           <Text style={styles.actionButtonText}>CLEAR</Text>
         </TouchableOpacity>
       </View>
@@ -130,14 +133,14 @@ export default function VerseSelector({
       <Text style={styles.selectedCount}>
         {selectedVerseIds.size} ROUND{selectedVerseIds.size !== 1 ? 'S' : ''} SELECTED
       </Text>
-      
+
       {/* Separator Line */}
       <View style={styles.separatorLine} />
 
       {/* Verses Grid */}
       {isLoadingVerses ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={TACTICAL_THEME.accent} />
+          <ActivityIndicator size="large" color={theme.accent} />
           <Text style={styles.loadingText}>Loading ammunition...</Text>
         </View>
       ) : (
@@ -170,7 +173,7 @@ export default function VerseSelector({
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <FontAwesome name="exclamation-triangle" size={48} color={TACTICAL_THEME.textSecondary} />
+              <FontAwesome name="exclamation-triangle" size={48} color={theme.textSecondary} />
               <Text style={styles.emptyText}>
                 No ammunition found for {bookName} Chapter {chapter}
               </Text>
@@ -182,7 +185,7 @@ export default function VerseSelector({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -199,17 +202,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 12,
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: 8,
     gap: 8,
   },
   actionButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontSize: 12,
     fontWeight: 'bold',
   },
   selectedCount: {
-    color: TACTICAL_THEME.accent,
+    color: theme.accent,
     fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
@@ -217,7 +220,7 @@ const styles = StyleSheet.create({
   },
   separatorLine: {
     height: 1,
-    backgroundColor: TACTICAL_THEME.border,
+    backgroundColor: theme.border,
     marginHorizontal: 16,
     marginBottom: 16,
   },
@@ -228,7 +231,7 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   loadingText: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     marginTop: 16,
     fontSize: 14,
   },
@@ -248,21 +251,21 @@ const styles = StyleSheet.create({
     width: '18%',
     aspectRatio: 1,
     marginBottom: 12,
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
   },
   verseButtonSelected: {
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
   },
   verseNumber: {
     fontSize: 14,
     fontWeight: '600',
-    color: TACTICAL_THEME.text,
+    color: theme.text,
   },
   verseNumberSelected: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   emptyState: {
@@ -272,7 +275,7 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     textAlign: 'center',
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     marginTop: 16,
   },
 });

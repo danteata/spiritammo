@@ -1,9 +1,8 @@
-import * as React from 'react'
+import React from 'react'
 import { StyleSheet, Text, ScrollView, View } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { Feather } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import Animated, { FadeInDown, FadeInUp, FadeIn } from 'react-native-reanimated'
 import { useAppStore } from '@/hooks/useAppStore'
 import { Collection } from '@/types/scripture'
 import ScriptureCard from '@/components/ScriptureCard'
@@ -11,7 +10,6 @@ import CollectionSelector from '@/components/CollectionSelector'
 import VoiceRecorder from '@/components/VoiceRecorder'
 import ActionButton from '@/components/ActionButton'
 import { ThemedContainer, ThemedText } from '@/components/Themed'
-import { TACTICAL_THEME, GARRISON_THEME } from '@/constants/colors'
 import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { errorHandler } from '@/services/errorHandler'
@@ -115,72 +113,63 @@ export default function HomeScreen() {
 
   return (
     <ThemedContainer style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, { paddingBottom: 104 }]}>
         <ScreenHeader
           title="WARFARE"
           subtitle="BATTLE READY"
         />
 
-        <View style={styles.dashboardGrid}>
-          <Animated.View entering={FadeInDown.delay(100).springify()}>
-            <CollectionSelector
-              onSelectCollection={handleSelectCollection}
-              selectedCollection={selectedCollection}
+
+        <CollectionSelector
+          onSelectCollection={handleSelectCollection}
+          selectedCollection={selectedCollection}
+        />
+
+        {currentScripture ? (
+          <>
+            <ScriptureCard
+              scripture={currentScripture}
+              onNext={handleNextScripture}
             />
-          </Animated.View>
 
-          {currentScripture ? (
-            <>
-              <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.activeCardContainer}>
-                <ScriptureCard
-                  scripture={currentScripture}
-                  onNext={handleNextScripture}
-                />
-              </Animated.View>
-
-              <Animated.View entering={FadeInDown.delay(300).springify()}>
-                <VoiceRecorder
-                  scriptureText={currentScripture.text}
-                  onRecordingComplete={handleRecordingComplete}
-                />
-              </Animated.View>
-            </>
-          ) : !isLoading ? (
-            <Animated.View entering={FadeIn.delay(200).duration(500)} style={styles.emptyState}>
-              <View style={[styles.emptyIconCircle, {
-                borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
-                backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
-              }]}>
-                <Feather name="shield" size={48} color={TACTICAL_THEME.textSecondary} style={{ opacity: 0.5 }} />
-              </View>
-              <ThemedText variant="heading" style={styles.emptyTitle}>NO AMMUNITION</ThemedText>
-              <ThemedText variant="body" style={styles.emptySubtitle}>
-                Select an arsenal or import verses to begin your training.
-              </ThemedText>
-              <ActionButton
-                title="GO TO ARMORY"
-                onPress={() => router.push('/armory')}
-                style={{ marginTop: 32, width: '100%' }}
-              />
-            </Animated.View>
-          ) : null}
-        </View>
+            <VoiceRecorder
+              scriptureText={currentScripture.text}
+              onRecordingComplete={handleRecordingComplete}
+            />
+          </>
+        ) : !isLoading ? (
+          <View style={styles.emptyState}>
+            <View
+              style={[styles.emptyIconCircle, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}
+              accessible={true}
+              accessibilityRole="image"
+              accessibilityLabel="Shield icon indicating no ammunition loaded"
+            >
+              <Feather name="shield" size={48} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
+            </View>
+            <ThemedText variant="heading" style={styles.emptyTitle}>NO AMMUNITION LOADED</ThemedText>
+            <ThemedText variant="body" style={styles.emptySubtitle}>
+              Select an arsenal or import verses to begin your training.
+            </ThemedText>
+            <ActionButton
+              title="GO TO ARMORY"
+              onPress={() => router.push('/armory')}
+              style={{ marginTop: 24, width: '100%' }}
+            />
+          </View>
+        ) : null}
       </ScrollView>
 
       {currentScripture && (
-        <Animated.View entering={FadeInUp.delay(400).springify()} style={styles.footer}>
+        <View style={styles.footer}>
           <ActionButton
-            title="NEXT ROUND"
+            title="Ready! Aim! Fire!"
             onPress={handleNextScripture}
             testID="load-next-round-button"
             animated={true}
-            style={{ paddingVertical: 18, width: '100%', backgroundColor: TACTICAL_THEME.accent }}
+            style={{ paddingVertical: 16, marginVertical: 0, marginBottom: 104, minWidth: 200, backgroundColor: '#CC5529' }}
           />
-        </Animated.View>
+        </View>
       )}
 
       {/* Loading Overlays */}
@@ -195,7 +184,6 @@ export default function HomeScreen() {
     </ThemedContainer>
   )
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -204,58 +192,51 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 120, // Space for footer
-    paddingHorizontal: 16,
+    // Bottom padding handled by SafeAreaView
   },
-  dashboardGrid: {
-    gap: 24,
-  },
-  activeCardContainer: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 10,
+  sectionTitle: {
+    fontSize: 24,
+    fontWeight: '900',
+    marginTop: 24,
+    marginBottom: 16,
+    textAlign: 'center',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
   },
   footer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    padding: 24,
-    paddingBottom: 40, // standard tab bar height compensation if needed, or stick to safe area
-    // backdropFilter: 'blur(20px)', // Web only, use BlurView for native if needed
+    padding: 20,
+    paddingBottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emptyState: {
-    padding: 32,
+    padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 40,
-    backgroundColor: 'rgba(255,255,255,0.02)',
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
   },
   emptyIconCircle: {
     width: 100,
     height: 100,
-    borderRadius: 30, // Squircle
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.05)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
     borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   emptyTitle: {
-    fontSize: 20,
-    letterSpacing: 2,
-    marginBottom: 12,
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 1.5,
+    marginBottom: 8,
     textAlign: 'center',
   },
   emptySubtitle: {
     fontSize: 14,
     textAlign: 'center',
-    lineHeight: 24,
-    opacity: 0.6,
-    maxWidth: 240,
+    lineHeight: 20,
+    maxWidth: '80%',
   },
 })

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors';
+import { MILITARY_TYPOGRAPHY } from '@/constants/colors';
 import { Book } from '@/types/scripture';
+import { useAppStore } from '@/hooks/useAppStore';
 
 interface ChapterSelectorProps {
   book: Book;
@@ -10,6 +11,7 @@ interface ChapterSelectorProps {
 }
 
 export default function ChapterSelector({ book, onSelectChapter, selectedChapter }: ChapterSelectorProps) {
+  const { theme } = useAppStore();
   const renderChapterButtons = () => {
     const chapters = [];
     for (let i = 1; i <= book.chapters; i++) {
@@ -18,7 +20,8 @@ export default function ChapterSelector({ book, onSelectChapter, selectedChapter
           key={i}
           style={[
             styles.chapterButton,
-            selectedChapter === i && styles.chapterButtonSelected,
+            { backgroundColor: theme.surface },
+            selectedChapter === i && { backgroundColor: theme.accent },
           ]}
           onPress={() => onSelectChapter(i)}
           testID={`chapter-button-${i}`}
@@ -26,7 +29,8 @@ export default function ChapterSelector({ book, onSelectChapter, selectedChapter
           <Text
             style={[
               styles.chapterButtonText,
-              selectedChapter === i && styles.chapterButtonTextSelected,
+              { color: theme.text },
+              selectedChapter === i && { color: theme.accentContrastText, fontWeight: 'bold' },
             ]}
           >
             {i}
@@ -60,20 +64,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  bookTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: TACTICAL_THEME.text,
-    textAlign: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 16,
-  },
-  separatorLine: {
-    height: 1,
-    backgroundColor: TACTICAL_THEME.border,
-    marginHorizontal: 16,
-    marginBottom: 16,
-  },
   scrollView: {
     flex: 1,
   },
@@ -90,21 +80,12 @@ const styles = StyleSheet.create({
     width: '18%',
     aspectRatio: 1,
     marginBottom: 12,
-    backgroundColor: TACTICAL_THEME.surface,
     borderRadius: 50,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  chapterButtonSelected: {
-    backgroundColor: TACTICAL_THEME.accent,
-  },
   chapterButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: TACTICAL_THEME.text,
-  },
-  chapterButtonTextSelected: {
-    color: TACTICAL_THEME.text,
-    fontWeight: 'bold',
   },
 });

@@ -1,11 +1,8 @@
-import * as React from 'react';
 import { View, StyleSheet, TouchableOpacity, LayoutAnimation, Platform } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
-import { Ionicons, FontAwesome } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '@/hooks/useAppStore';
-import { TACTICAL_THEME, GARRISON_THEME } from '@/constants/colors';
-import { ThemedText } from './Themed';
 
 export default function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { isDark, theme } = useAppStore();

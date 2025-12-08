@@ -3,8 +3,6 @@ import { StyleSheet, Text, View, Animated } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome } from '@expo/vector-icons';
 import {
-  TACTICAL_THEME,
-  GARRISON_THEME,
   MILITARY_TYPOGRAPHY,
   ACCURACY_COLORS,
 } from '@/constants/colors'
@@ -31,8 +29,7 @@ export default function AccuracyMeter({
 }: AccuracyMeterProps) {
   const animatedValue = useRef(new Animated.Value(0)).current
   const pulseAnimation = useRef(new Animated.Value(1)).current
-  const { isDark } = useAppStore()
-  const theme = isDark ? TACTICAL_THEME : GARRISON_THEME
+  const { theme, isDark } = useAppStore()
 
   useEffect(() => {
     if (animated) {
@@ -130,6 +127,7 @@ export default function AccuracyMeter({
   const sizeStyles = getSizeStyles()
   const accuracyColor = getAccuracyColor(accuracy)
   const rating = getAccuracyRating(accuracy)
+  const styles = getStyles(theme)
 
   return (
     <Animated.View
@@ -230,13 +228,13 @@ export default function AccuracyMeter({
   )
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme) => StyleSheet.create({
   container: {
     padding: 16,
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.border,
+    borderColor: theme.border,
     marginBottom: 12,
     elevation: 4,
     shadowColor: '#000',

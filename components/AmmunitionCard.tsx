@@ -12,12 +12,12 @@ import { FontAwesome, Ionicons, FontAwesome5, MaterialCommunityIcons } from '@ex
 import {
   COLORS,
   MILITARY_TYPOGRAPHY,
-  TACTICAL_THEME,
   GARRISON_THEME,
   ACCURACY_COLORS,
 } from '@/constants/colors'
 import { Scripture } from '@/types/scripture'
 import ScriptureText from './ScriptureText'
+import { useAppStore } from '@/hooks/useAppStore'
 
 interface AmmunitionCardProps {
   scripture: Scripture
@@ -38,6 +38,8 @@ const AmmunitionCard = React.memo(({
   isLoading = false,
   isDark = false,
 }: AmmunitionCardProps) => {
+  const { theme } = useAppStore()
+  const styles = getStyles(theme)
   const [fireAnimation] = useState(new Animated.Value(1))
   const [pulseAnimation] = useState(new Animated.Value(1))
 
@@ -142,7 +144,7 @@ const AmmunitionCard = React.memo(({
               style={[
                 MILITARY_TYPOGRAPHY.heading,
                 {
-                  color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text,
+                  color: isDark ? theme.text : GARRISON_THEME.text,
                   marginBottom: 4,
                 },
               ]}
@@ -161,8 +163,8 @@ const AmmunitionCard = React.memo(({
                 {
                   backgroundColor:
                     roundsCount > 0
-                      ? TACTICAL_THEME.success
-                      : TACTICAL_THEME.error,
+                      ? theme.success
+                      : theme.error,
                 },
               ]}
             />
@@ -183,7 +185,7 @@ const AmmunitionCard = React.memo(({
             style={[
               styles.scriptureText,
               MILITARY_TYPOGRAPHY.body,
-              { color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text }
+              { color: isDark ? theme.text : GARRISON_THEME.text }
             ]}
           />
         </View>
@@ -193,7 +195,7 @@ const AmmunitionCard = React.memo(({
           <View style={styles.mnemonicContainer}>
             <View style={styles.mnemonicHeader}>
               <View style={styles.mnemonicTitle}>
-                <FontAwesome5 name="brain" size={16} color={TACTICAL_THEME.accent} />
+                <FontAwesome5 name="brain" size={16} color={theme.accent} />
                 <Text style={[styles.mnemonicLabel, MILITARY_TYPOGRAPHY.caption]}>
                   BATTLE INTEL
                 </Text>
@@ -203,7 +205,7 @@ const AmmunitionCard = React.memo(({
                 disabled={isLoading}
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
-                <FontAwesome name="refresh" size={14} color={TACTICAL_THEME.accent} />
+                <FontAwesome name="refresh" size={14} color={theme.accent} />
               </TouchableOpacity>
             </View>
             <View style={styles.mnemonicContent}>
@@ -214,7 +216,7 @@ const AmmunitionCard = React.memo(({
                     <Text style={[
                       styles.planText,
                       MILITARY_TYPOGRAPHY.body,
-                      { color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text }
+                      { color: isDark ? theme.text : GARRISON_THEME.text }
                     ]}>
                       {scripture.mnemonic.split('\n---\n')[0]}
                     </Text>
@@ -230,7 +232,7 @@ const AmmunitionCard = React.memo(({
                 <Text style={[
                   styles.mnemonicText,
                   MILITARY_TYPOGRAPHY.caption,
-                  { color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text }
+                  { color: isDark ? theme.text : GARRISON_THEME.text }
                 ]}>
                   {scripture.mnemonic}
                 </Text>
@@ -246,7 +248,7 @@ const AmmunitionCard = React.memo(({
             <Text style={[
               styles.accuracyLabel,
               MILITARY_TYPOGRAPHY.caption,
-              { color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text }
+              { color: isDark ? theme.text : GARRISON_THEME.text }
             ]}>
               ACCURACY: {accuracy.toFixed(1)}%
             </Text>
@@ -286,8 +288,8 @@ const AmmunitionCard = React.memo(({
                 disabled={isLoading}
                 testID="fire-button"
               >
-                <Ionicons name="flash" size={20} color={TACTICAL_THEME.text} />
-                <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
+                <Ionicons name="flash" size={20} color={theme.accentContrastText} />
+                <Text style={[styles.fireButtonText, MILITARY_TYPOGRAPHY.button]}>
                   FIRE!
                 </Text>
               </TouchableOpacity>
@@ -299,7 +301,7 @@ const AmmunitionCard = React.memo(({
               disabled={isLoading}
               testID="reload-button"
             >
-              <FontAwesome name="undo" size={20} color={TACTICAL_THEME.text} />
+              <FontAwesome name="undo" size={20} color={theme.text} />
               <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
                 RELOAD
               </Text>
@@ -315,7 +317,7 @@ const AmmunitionCard = React.memo(({
                 disabled={isLoading}
                 testID="stealth-button"
               >
-                <MaterialCommunityIcons name="incognito" size={20} color={TACTICAL_THEME.text} />
+                <MaterialCommunityIcons name="incognito" size={20} color={theme.text} />
                 <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
                   STEALTH
                 </Text>
@@ -329,10 +331,10 @@ const AmmunitionCard = React.memo(({
               testID="intel-button"
             >
               {isLoading ? (
-                <ActivityIndicator size="small" color={TACTICAL_THEME.text} />
+                <ActivityIndicator size="small" color={theme.text} />
               ) : (
                 <>
-                  <FontAwesome5 name="brain" size={20} color={TACTICAL_THEME.text} />
+                  <FontAwesome5 name="brain" size={20} color={theme.text} />
                   <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
                     INTEL
                   </Text>
@@ -358,7 +360,7 @@ const AmmunitionCard = React.memo(({
 export default AmmunitionCard;
 
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     marginVertical: 8,
     marginHorizontal: 16,
@@ -367,7 +369,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.border,
+    borderColor: theme.border,
   },
   header: {
     flexDirection: 'row',
@@ -379,11 +381,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   reference: {
-    color: TACTICAL_THEME.accent,
+    color: theme.accent,
     marginBottom: 4,
   },
   roundsCount: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
   },
   statusIndicators: {
     flexDirection: 'row',
@@ -396,7 +398,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   statusText: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
   },
   textContainer: {
     marginBottom: 16,
@@ -404,7 +406,7 @@ const styles = StyleSheet.create({
     // Use theme-aware background logic in component
     borderRadius: 8,
     borderLeftWidth: 3,
-    borderLeftColor: TACTICAL_THEME.accent,
+    borderLeftColor: theme.accent,
   },
   scriptureText: {
     lineHeight: 24,
@@ -415,7 +417,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 107, 53, 0.1)',
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.accent,
+    borderColor: theme.accent,
   },
   mnemonicHeader: {
     flexDirection: 'row',
@@ -428,7 +430,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   mnemonicLabel: {
-    color: TACTICAL_THEME.accent,
+    color: theme.accent,
     marginLeft: 8,
   },
   mnemonicContent: {
@@ -438,7 +440,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   planLabel: {
-    color: TACTICAL_THEME.accent,
+    color: theme.accent,
     fontSize: 10,
     marginBottom: 2,
     opacity: 0.8,
@@ -453,12 +455,12 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   notesLabel: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     fontSize: 10,
     marginBottom: 2,
   },
   notesText: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     fontStyle: 'italic',
     fontSize: 12,
   },
@@ -482,7 +484,7 @@ const styles = StyleSheet.create({
   },
   accuracyBar: {
     height: 4,
-    backgroundColor: TACTICAL_THEME.border,
+    backgroundColor: theme.border,
     borderRadius: 2,
     overflow: 'hidden',
   },
@@ -508,19 +510,31 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   fireButton: {
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
   },
   reloadButton: {
-    backgroundColor: TACTICAL_THEME.secondary,
+    backgroundColor: theme.secondary,
   },
   stealthButton: {
     backgroundColor: '#4E5D6C', // Slate gray for stealth
   },
   intelButton: {
-    backgroundColor: TACTICAL_THEME.primary,
+    backgroundColor: theme.primary,
   },
   buttonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
+  },
+  fireButtonText: {
+    color: theme.accentContrastText,
+  },
+  reloadButtonText: {
+    color: theme.text,
+  },
+  stealthButtonText: {
+    color: theme.text,
+  },
+  intelButtonText: {
+    color: theme.text,
   },
   wearIndicator: {
     marginTop: 12,
@@ -528,10 +542,10 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 212, 0, 0.1)',
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.warning,
+    borderColor: theme.warning,
   },
   wearText: {
-    color: TACTICAL_THEME.warning,
+    color: theme.warning,
     textAlign: 'center',
   },
 })

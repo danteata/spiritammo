@@ -10,8 +10,9 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Feather } from '@expo/vector-icons';
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
+import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection, CollectionChapter } from '@/types/scripture'
+import { useAppStore } from '@/hooks/useAppStore'
 
 interface CollectionChapterSelectorProps {
   collection: Collection
@@ -26,6 +27,8 @@ export default function CollectionChapterSelector({
   onClose,
   onStartPractice,
 }: CollectionChapterSelectorProps) {
+  const { theme } = useAppStore()
+  const styles = getStyles(theme)
   const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
 
   const chapters = collection.chapters || []
@@ -69,7 +72,7 @@ export default function CollectionChapterSelector({
         <View style={styles.chapterContent}>
           <View style={styles.chapterHeader}>
             <View style={styles.chapterInfo}>
-              <Feather name="layers" size={16} color={TACTICAL_THEME.accent} />
+              <Feather name="layers" size={16} color={theme.accent} />
               <Text style={[styles.chapterName, MILITARY_TYPOGRAPHY.body]}>
                 {item.name}
               </Text>
@@ -77,9 +80,9 @@ export default function CollectionChapterSelector({
 
             <View style={styles.selectionIndicator}>
               {isSelected ? (
-                <FontAwesome name="check-square-o" size={20} color={TACTICAL_THEME.accent} />
+                <FontAwesome name="check-square-o" size={20} color={theme.accent} />
               ) : (
-                <FontAwesome name="square-o" size={20} color={TACTICAL_THEME.textSecondary} />
+                <FontAwesome name="square-o" size={20} color={theme.textSecondary} />
               )}
             </View>
           </View>
@@ -102,8 +105,8 @@ export default function CollectionChapterSelector({
                 styles.completionStatus,
                 {
                   backgroundColor: item.isCompleted
-                    ? TACTICAL_THEME.success
-                    : TACTICAL_THEME.border,
+                    ? theme.success
+                    : theme.border,
                 },
               ]}
             />
@@ -141,14 +144,14 @@ export default function CollectionChapterSelector({
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.titleSection}>
-              <FontAwesome name="bullseye" size={24} color={TACTICAL_THEME.accent} />
+              <FontAwesome name="bullseye" size={24} color={theme.accent} />
               <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
                 SELECT CHAPTERS
               </Text>
             </View>
 
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <FontAwesome name="close" size={24} color={TACTICAL_THEME.text} />
+              <FontAwesome name="close" size={24} color={theme.text} />
             </TouchableOpacity>
           </View>
 
@@ -207,7 +210,7 @@ export default function CollectionChapterSelector({
             onPress={handleStartPractice}
             disabled={selectedCount === 0}
           >
-            <FontAwesome name="play" size={20} color={TACTICAL_THEME.text} />
+            <FontAwesome name="play" size={20} color={theme.text} />
             <Text style={[styles.startButtonText, MILITARY_TYPOGRAPHY.button]}>
               START PRACTICE
             </Text>
@@ -218,7 +221,7 @@ export default function CollectionChapterSelector({
   )
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -227,7 +230,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: TACTICAL_THEME.border,
+    borderBottomColor: theme.border,
   },
   headerContent: {
     flexDirection: 'row',
@@ -242,15 +245,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   title: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     flex: 1,
   },
   subtitle: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
   },
   closeButton: {
     padding: 8,
-    backgroundColor: TACTICAL_THEME.border,
+    backgroundColor: theme.border,
     borderRadius: 6,
   },
   controls: {
@@ -261,16 +264,16 @@ const styles = StyleSheet.create({
   },
   controlButton: {
     flex: 1,
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.border,
+    borderColor: theme.border,
     alignItems: 'center',
   },
   controlButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   chapterList: {
@@ -280,14 +283,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   chapterItem: {
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: 8,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.border,
+    borderColor: theme.border,
   },
   selectedChapterItem: {
-    borderColor: TACTICAL_THEME.accent,
+    borderColor: theme.accent,
     backgroundColor: 'rgba(255, 165, 0, 0.1)',
   },
   chapterContent: {
@@ -306,7 +309,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chapterName: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: '600',
   },
   selectionIndicator: {
@@ -319,10 +322,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   chapterStats: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
   },
   chapterAccuracy: {
-    color: TACTICAL_THEME.accent,
+    color: theme.accent,
   },
   completionStatus: {
     width: 8,
@@ -331,41 +334,41 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   chapterDescription: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     lineHeight: 18,
   },
   footer: {
     paddingHorizontal: 20,
     paddingVertical: 20,
     borderTopWidth: 1,
-    borderTopColor: TACTICAL_THEME.border,
+    borderTopColor: theme.border,
   },
   selectionSummary: {
     alignItems: 'center',
     marginBottom: 16,
   },
   summaryText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     marginBottom: 4,
   },
   roundsText: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
   },
   startButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
     paddingVertical: 16,
     borderRadius: 8,
     gap: 8,
   },
   disabledButton: {
-    backgroundColor: TACTICAL_THEME.border,
+    backgroundColor: theme.border,
     opacity: 0.5,
   },
   startButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
 })

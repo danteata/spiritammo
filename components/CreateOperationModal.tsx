@@ -5,7 +5,7 @@ import { BlurView } from 'expo-blur'
 import * as Linking from 'expo-linking'
 import { useUser } from '@clerk/clerk-expo'
 
-import { TACTICAL_THEME, GARRISON_THEME } from '@/constants/colors'
+import { } from '@/constants/colors'
 import { ThemedText, ThemedCard } from '@/components/Themed'
 import ActionButton from '@/components/ActionButton'
 import { useAppStore } from '@/hooks/useAppStore'
@@ -18,7 +18,7 @@ interface CreateOperationModalProps {
 type OperationType = 'ROUNDS' | 'ACCURACY' | 'STREAK'
 
 export default function CreateOperationModal({ visible, onClose }: CreateOperationModalProps) {
-    const { isDark, addSquadChallenge } = useAppStore()
+    const { isDark, addSquadChallenge, theme } = useAppStore()
     const { user } = useUser()
 
     const [title, setTitle] = useState('')
@@ -75,8 +75,6 @@ export default function CreateOperationModal({ visible, onClose }: CreateOperati
         onClose()
     }
 
-    const theme = isDark ? TACTICAL_THEME : GARRISON_THEME
-
     return (
         <Modal
             animationType="slide"
@@ -85,11 +83,11 @@ export default function CreateOperationModal({ visible, onClose }: CreateOperati
             onRequestClose={onClose}
         >
             <BlurView intensity={20} style={styles.centeredView}>
-                <View style={[styles.modalView, { backgroundColor: isDark ? '#1A1A1A' : '#FFF', borderColor: TACTICAL_THEME.accent }]}>
+                <View style={[styles.modalView, { backgroundColor: isDark ? '#1A1A1A' : '#FFF', borderColor: theme.accent }]}>
 
                     {/* Header */}
                     <View style={styles.header}>
-                        <ThemedText variant="heading" style={{ color: TACTICAL_THEME.accent }}>NEW OPERATION</ThemedText>
+                        <ThemedText variant="heading" style={{ color: theme.accent }}>NEW OPERATION</ThemedText>
                         <TouchableOpacity onPress={onClose}>
                             <Ionicons name="close" size={24} color={isDark ? '#FFF' : '#000'} />
                         </TouchableOpacity>
@@ -104,7 +102,7 @@ export default function CreateOperationModal({ visible, onClose }: CreateOperati
                                     key={t}
                                     style={[
                                         styles.typeButton,
-                                        type === t && { backgroundColor: TACTICAL_THEME.accent, borderColor: TACTICAL_THEME.accent },
+                                        type === t && { backgroundColor: theme.accent, borderColor: theme.accent },
                                         { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)' }
                                     ]}
                                     onPress={() => setType(t)}
@@ -144,7 +142,7 @@ export default function CreateOperationModal({ visible, onClose }: CreateOperati
                                 <ThemedText variant="caption" style={{ opacity: 0.7 }}>Immediately share mission orders.</ThemedText>
                             </View>
                             <Switch
-                                trackColor={{ false: "#767577", true: TACTICAL_THEME.success }}
+                                trackColor={{ false: "#767577", true: theme.success }}
                                 thumbColor={deployImmediately ? "#f4f3f4" : "#f4f3f4"}
                                 onValueChange={setDeployImmediately}
                                 value={deployImmediately}

@@ -12,10 +12,10 @@ import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import CampaignMap from '@/components/CampaignMap'
+import CampaignCard from '@/components/CampaignCard'
 import TargetPractice from '@/components/TargetPractice'
 import MissionBriefingModal from '@/components/MissionBriefingModal'
 import StealthDrill from '@/components/StealthDrill'
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Campaign, CampaignNode } from '@/types/campaign'
 import { Scripture } from '@/types/scripture'
 import useZustandStore from '@/hooks/zustandStore'
@@ -28,7 +28,8 @@ export default function CampaignScreen() {
         completeNode,
         scriptures,
         updateScriptureAccuracy,
-        isDark
+        isDark,
+        theme
     } = useAppStore()
 
     const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(null)
@@ -124,39 +125,16 @@ export default function CampaignScreen() {
                 {!activeCampaign ? (
                     <ScrollView contentContainerStyle={styles.campaignList} showsVerticalScrollIndicator={false}>
                         <View style={styles.sectionHeader}>
-                            <FontAwesome5 name="globe" size={12} color={TACTICAL_THEME.accent} style={{ opacity: 0.7 }} />
+                            <FontAwesome5 name="globe" size={12} color={theme.accent} style={{ opacity: 0.7 }} />
                             <ThemedText variant="caption" style={{ letterSpacing: 2, marginLeft: 8, opacity: 0.7 }}>AVAILABLE THEATERS</ThemedText>
                         </View>
 
                         {campaigns.map(campaign => (
-                            <TouchableOpacity
+                            <CampaignCard
                                 key={campaign.id}
-                                style={styles.campaignCardWrapper}
-                                onPress={() => handleStartCampaign(campaign.id)}
-                                activeOpacity={0.9}
-                            >
-                                <ThemedCard variant="glass" style={styles.campaignCard}>
-                                    <View style={styles.campaignIcon}>
-                                        <View style={[styles.iconBox, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
-                                            <FontAwesome5 name="globe-americas" size={24} color={TACTICAL_THEME.accent} />
-                                        </View>
-                                    </View>
-                                    <View style={styles.campaignInfo}>
-                                        <ThemedText variant="heading" style={{ fontSize: 18, marginBottom: 4 }}>{campaign.title}</ThemedText>
-                                        <ThemedText variant="body" numberOfLines={2} style={{ fontSize: 13, opacity: 0.6, lineHeight: 18 }}>{campaign.description}</ThemedText>
-
-                                        <View style={styles.campaignStats}>
-                                            <View style={styles.statBadge}>
-                                                <FontAwesome5 name="check-circle" size={10} color={TACTICAL_THEME.success} style={{ marginRight: 6 }} />
-                                                <ThemedText variant="code" style={{ color: TACTICAL_THEME.success, fontSize: 10 }}>
-                                                    {campaign.completedNodes}/{campaign.totalNodes} SECURED
-                                                </ThemedText>
-                                            </View>
-                                        </View>
-                                    </View>
-                                    <FontAwesome5 name="chevron-right" size={14} color={TACTICAL_THEME.textSecondary} style={{ opacity: 0.5 }} />
-                                </ThemedCard>
-                            </TouchableOpacity>
+                                campaign={campaign}
+                                onPress={handleStartCampaign}
+                            />
                         ))}
                     </ScrollView>
                 ) : (
@@ -167,7 +145,7 @@ export default function CampaignScreen() {
                             activeOpacity={0.7}
                         >
                             <View style={styles.backButtonIcon}>
-                                <FontAwesome5 name="arrow-left" size={12} color={TACTICAL_THEME.text} />
+                                <FontAwesome5 name="arrow-left" size={12} color={theme.text} />
                             </View>
                             <ThemedText variant="button" style={{ fontSize: 14, letterSpacing: 1 }}>RETURN TO BASE</ThemedText>
                         </TouchableOpacity>
@@ -184,7 +162,7 @@ export default function CampaignScreen() {
                         {/* Loading Overlay */}
                         {isLoadingScripture && (
                             <View style={styles.loadingOverlay}>
-                                <ActivityIndicator size="large" color={TACTICAL_THEME.accent} />
+                                <ActivityIndicator size="large" color={theme.accent} />
                                 <ThemedText style={{ marginTop: 16, letterSpacing: 2 }}>DECRYPTING DATA...</ThemedText>
                             </View>
                         )}
@@ -241,43 +219,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         paddingHorizontal: 4,
     },
-    campaignCardWrapper: {
-        marginBottom: 16,
-    },
-    campaignCard: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 16,
-        borderRadius: 20,
-    },
-    campaignIcon: {
-        marginRight: 16,
-    },
-    iconBox: {
-        width: 48,
-        height: 48,
-        borderRadius: 16,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.05)',
-    },
-    campaignInfo: {
-        flex: 1,
-        marginRight: 8,
-    },
-    campaignStats: {
-        marginTop: 10,
-        flexDirection: 'row',
-    },
-    statBadge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)', // Success/10
-        paddingHorizontal: 8,
-        paddingVertical: 2,
-        borderRadius: 4,
-    },
+
     activeCampaignContainer: {
         flex: 1,
     },

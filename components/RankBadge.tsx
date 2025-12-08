@@ -1,8 +1,8 @@
-import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY, RANK_COLORS } from '@/constants/colors';
+import { MILITARY_TYPOGRAPHY, RANK_COLORS } from '@/constants/colors';
 import { UserStats } from '@/types/scripture';
+import { useAppStore } from '@/hooks/useAppStore';
 
 interface RankBadgeProps {
   rank: UserStats['rank'];
@@ -17,6 +17,9 @@ export default function RankBadge({
   showLabel = true,
   animated = false
 }: RankBadgeProps) {
+
+  const { theme } = useAppStore()
+  const styles = getStyles(theme)
 
   const getRankInfo = (rank: UserStats['rank']) => {
     switch (rank) {
@@ -126,7 +129,7 @@ export default function RankBadge({
   return (
     <View style={styles.container}>
       <LinearGradient
-        colors={[rankColor, TACTICAL_THEME.background]}
+        colors={[rankColor, theme.background]}
         style={[styles.badge, sizeStyles.container]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -159,7 +162,7 @@ export default function RankBadge({
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     alignItems: 'center',
   },
@@ -168,7 +171,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
-    shadowColor: TACTICAL_THEME.shadow,
+    shadowColor: theme.shadow,
     shadowOffset: {
       width: 0,
       height: 2,
@@ -198,17 +201,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rankLabel: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   description: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     marginTop: 2,
   },
   requirements: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     marginTop: 4,
     fontStyle: 'italic',

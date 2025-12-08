@@ -14,11 +14,6 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { BlurView } from 'expo-blur'
 import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import {
-    TACTICAL_THEME,
-    GARRISON_THEME,
-    MILITARY_TYPOGRAPHY,
-} from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedText } from '@/components/Themed'
 import { CampaignNode } from '@/types/campaign'

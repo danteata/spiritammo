@@ -8,13 +8,12 @@ import {
     Dimensions,
 } from 'react-native'
 import { useRouter } from 'expo-router'
-import { AntDesign, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { AntDesign, FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import * as WebBrowser from 'expo-web-browser'
 import { useOAuth } from '@clerk/clerk-expo'
 import * as Linking from 'expo-linking'
 import { LinearGradient } from 'expo-linear-gradient'
 
-import { TACTICAL_THEME, GARRISON_THEME, GRADIENTS } from '@/constants/colors'
 import { ThemedContainer, ThemedText } from '@/components/Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 
@@ -33,15 +32,27 @@ WebBrowser.maybeCompleteAuthSession()
 
 export default function AuthScreen() {
     const router = useRouter()
-    const { isDark } = useAppStore()
+    const { theme, isDark } = useAppStore()
+    const styles = getStyles(theme)
     useWarmUpBrowser()
 
     const { startOAuthFlow: startGoogleFlow } = useOAuth({ strategy: 'oauth_google' })
     const { startOAuthFlow: startAppleFlow } = useOAuth({ strategy: 'oauth_apple' })
 
-    const theme = isDark ? TACTICAL_THEME : GARRISON_THEME
-    const textColor = isDark ? theme.text : theme.text
-    const subTextColor = isDark ? theme.textSecondary : theme.textSecondary
+    const textColor = theme.text
+    const subTextColor = theme.textSecondary
+
+    const BenefitItem = ({ icon, text, desc, color, theme }: any) => (
+        <View style={[styles.benefitItem, { borderLeftColor: color }]}>
+            <View style={[styles.benefitIconBox, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
+                <Ionicons name={icon} size={20} color={color} />
+            </View>
+            <View>
+                <ThemedText variant="body" style={{ fontSize: 13, color: theme.text, fontWeight: 'bold' }}>{text}</ThemedText>
+                <ThemedText variant="caption" style={{ opacity: 0.6 }}>{desc}</ThemedText>
+            </View>
+        </View>
+    )
 
     const handleSignInWithGoogle = async () => {
         try {
@@ -88,10 +99,10 @@ export default function AuthScreen() {
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.iconContainer}>
-                        <MaterialCommunityIcons name="shield-account" size={64} color={TACTICAL_THEME.accent} />
+                        <MaterialCommunityIcons name="shield-account" size={64} color={theme.accent} />
                         <View style={styles.iconGlow} />
                     </View>
-                    <ThemedText variant="heading" style={[styles.title, { color: TACTICAL_THEME.accent }]}>
+                    <ThemedText variant="heading" style={[styles.title, { color: theme.accent }]}>
                         SECURE YOUR LEGACY
                     </ThemedText>
                     <ThemedText variant="body" style={[styles.subtitle, { color: subTextColor }]}>
@@ -105,21 +116,21 @@ export default function AuthScreen() {
                         icon="cloud-upload"
                         text="CLOUD SYNC PROTOCOL"
                         desc="Backup combat statistics"
-                        color={TACTICAL_THEME.success}
+                        color={theme.success}
                         theme={theme}
                     />
                     <BenefitItem
                         icon="phone-portrait"
                         text="MULTI-DEVICE ACCESS"
                         desc="Deploy on any terminal"
-                        color={TACTICAL_THEME.warning}
+                        color={theme.warning}
                         theme={theme}
                     />
                     <BenefitItem
                         icon="trophy"
                         text="RANK PRESERVATION"
                         desc="Maintain global standing"
-                        color={TACTICAL_THEME.accent}
+                        color={theme.accent}
                         theme={theme}
                     />
                 </View>
@@ -132,7 +143,7 @@ export default function AuthScreen() {
                             onPress={handleSignInWithApple}
                             activeOpacity={0.8}
                         >
-                            <AntDesign name="apple1" size={24} color="#FFF" style={styles.authIcon} />
+                            <FontAwesome name="apple" size={24} color="#FFF" style={styles.authIcon} />
                             <Text style={styles.appleButtonText}>CONTINUE WITH APPLE</Text>
                         </TouchableOpacity>
                     )}
@@ -155,19 +166,7 @@ export default function AuthScreen() {
     )
 }
 
-const BenefitItem = ({ icon, text, desc, color, theme }: any) => (
-    <View style={[styles.benefitItem, { borderLeftColor: color }]}>
-        <View style={[styles.benefitIconBox, { backgroundColor: 'rgba(255,255,255,0.05)' }]}>
-            <Ionicons name={icon} size={20} color={color} />
-        </View>
-        <View>
-            <ThemedText variant="body" style={{ fontSize: 13, color: theme.text, fontWeight: 'bold' }}>{text}</ThemedText>
-            <ThemedText variant="caption" style={{ opacity: 0.6 }}>{desc}</ThemedText>
-        </View>
-    </View>
-)
-
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flex: 1,
     },
@@ -195,7 +194,7 @@ const styles = StyleSheet.create({
         position: 'absolute',
         top: 0, left: 0, right: 0, bottom: 0,
         borderRadius: 60,
-        backgroundColor: TACTICAL_THEME.accent,
+        backgroundColor: theme.accent,
         opacity: 0.15,
         transform: [{ scale: 1.2 }],
     },

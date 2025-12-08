@@ -5,10 +5,12 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AppStoreProvider, useAppStore } from "@/hooks/useAppStore";
 import { ClerkProvider, ClerkLoaded } from '@clerk/clerk-expo'
 import { tokenCache } from '@/utils/cache'
 import * as Linking from 'expo-linking'
+import { useZustandStore } from '@/hooks/zustandStore'
 import "../global.css";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -24,8 +26,6 @@ if (!publishableKey) {
   )
 }
 
-// TACTICAL_THEME import removed
-import { useZustandStore } from '@/hooks/zustandStore'
 
 function RootLayoutNav() {
   const { theme } = useAppStore();
@@ -109,16 +109,18 @@ export default function RootLayout() {
   }, [])
 
   return (
-    <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
-      <ClerkLoaded>
-        <QueryClientProvider client={queryClient}>
-          <AppStoreProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <BundleInspector><RorkErrorBoundary><RootLayoutNav /></RorkErrorBoundary></BundleInspector>
-            </GestureHandlerRootView>
-          </AppStoreProvider>
-        </QueryClientProvider>
-      </ClerkLoaded>
-    </ClerkProvider>
+    <SafeAreaProvider>
+      <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
+        <ClerkLoaded>
+          <QueryClientProvider client={queryClient}>
+            <AppStoreProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <BundleInspector><RorkErrorBoundary><RootLayoutNav /></RorkErrorBoundary></BundleInspector>
+              </GestureHandlerRootView>
+            </AppStoreProvider>
+          </QueryClientProvider>
+        </ClerkLoaded>
+      </ClerkProvider>
+    </SafeAreaProvider>
   );
 }

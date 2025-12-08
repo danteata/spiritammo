@@ -10,8 +10,6 @@ import {
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
-  TACTICAL_THEME,
-  GARRISON_THEME,
   MILITARY_TYPOGRAPHY,
 } from '@/constants/colors'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
@@ -27,7 +25,7 @@ import ScreenHeader from '@/components/ScreenHeader'
 const { width } = Dimensions.get('window')
 
 export default function MissionReportScreen() {
-  const { isDark, userStats, scriptures } = useAppStore()
+  const { isDark, userStats, scriptures, theme } = useAppStore()
   const [militaryProfile, setMilitaryProfile] = useState<any>(null)
   const [selectedTab, setSelectedTab] = useState<
     'overview' | 'achievements' | 'history'
@@ -74,6 +72,9 @@ export default function MissionReportScreen() {
     : 'rgba(0, 0, 0, 0.03)'
 
   const borderColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+  const styles = getStyles(theme, isDark)
+
+  const sectionTextStyle = [MILITARY_TYPOGRAPHY.subheading, { color: theme.text }]
 
   const renderOverview = () => (
     <View style={styles.tabContent}>
@@ -84,7 +85,7 @@ export default function MissionReportScreen() {
         </ThemedText>
 
         <View style={styles.rankContainer}>
-          <View style={styles.rankGlow} />
+          {/* <View style={styles.rankGlow} /> */}
           {militaryProfile && (
             <RankBadge
               rank={militaryProfile.currentRank}
@@ -101,7 +102,7 @@ export default function MissionReportScreen() {
               <ThemedText variant="caption" style={styles.progressLabel}>
                 PROMOTION PROGRESS
               </ThemedText>
-              <Text style={[styles.progressValue, { color: TACTICAL_THEME.accent }]}>
+              <Text style={[styles.progressValue, { color: theme.accent }]}>
                 {militaryProfile.nextRankProgress.toFixed(0)}%
               </Text>
             </View>
@@ -133,8 +134,8 @@ export default function MissionReportScreen() {
                 { backgroundColor: '#0D0D0D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }
               ]}
             >
-              <MaterialCommunityIcons name="target" size={28} color={TACTICAL_THEME.accent} style={{ marginBottom: 8 }} />
-              <ThemedText variant="heading" style={[styles.statValue, { fontSize: 24 }]}>
+              <MaterialCommunityIcons name="target" size={28} color={theme.accent} style={{ marginBottom: 8 }} />
+              <ThemedText variant="heading" style={styles.statValue}>
                 {userStats.totalPracticed}
               </ThemedText>
               <ThemedText variant="caption" style={styles.statLabel}>
@@ -143,7 +144,7 @@ export default function MissionReportScreen() {
             </View>
           ) : (
             <ThemedCard style={styles.statCard} variant="default">
-              <MaterialCommunityIcons name="target" size={28} color={TACTICAL_THEME.accent} style={{ marginBottom: 8 }} />
+              <MaterialCommunityIcons name="target" size={28} color={theme.accent} style={{ marginBottom: 8 }} />
               <ThemedText variant="heading" style={styles.statValue}>
                 {userStats.totalPracticed}
               </ThemedText>
@@ -160,7 +161,7 @@ export default function MissionReportScreen() {
                 { backgroundColor: '#0D0D0D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }
               ]}
             >
-              <MaterialCommunityIcons name="crosshairs-gps" size={28} color={TACTICAL_THEME.success} style={{ marginBottom: 8 }} />
+              <MaterialCommunityIcons name="crosshairs-gps" size={28} color={theme.success} style={{ marginBottom: 8 }} />
               <ThemedText variant="heading" style={styles.statValue}>
                 {userStats.averageAccuracy.toFixed(1)}%
               </ThemedText>
@@ -170,7 +171,7 @@ export default function MissionReportScreen() {
             </View>
           ) : (
             <ThemedCard style={styles.statCard} variant="default">
-              <MaterialCommunityIcons name="crosshairs-gps" size={28} color={TACTICAL_THEME.success} style={{ marginBottom: 8 }} />
+              <MaterialCommunityIcons name="crosshairs-gps" size={28} color={theme.success} style={{ marginBottom: 8 }} />
               <ThemedText variant="heading" style={styles.statValue}>
                 {userStats.averageAccuracy.toFixed(1)}%
               </ThemedText>
@@ -187,7 +188,7 @@ export default function MissionReportScreen() {
                 { backgroundColor: '#0D0D0D', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' }
               ]}
             >
-              <MaterialCommunityIcons name="fire" size={28} color={TACTICAL_THEME.warning} style={{ marginBottom: 8 }} />
+              <MaterialCommunityIcons name="fire" size={28} color={theme.warning} style={{ marginBottom: 8 }} />
               <ThemedText variant="heading" style={styles.statValue}>
                 {userStats.streak}
               </ThemedText>
@@ -197,7 +198,7 @@ export default function MissionReportScreen() {
             </View>
           ) : (
             <ThemedCard style={styles.statCard} variant="default">
-              <MaterialCommunityIcons name="fire" size={28} color={TACTICAL_THEME.warning} style={{ marginBottom: 8 }} />
+              <MaterialCommunityIcons name="fire" size={28} color={theme.warning} style={{ marginBottom: 8 }} />
               <ThemedText variant="heading" style={styles.statValue}>
                 {userStats.streak}
               </ThemedText>
@@ -262,7 +263,7 @@ export default function MissionReportScreen() {
     <View style={styles.tabContent}>
       {/* Specializations */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
+        <Text style={[styles.sectionTitle, sectionTextStyle]}>
           SPECIALIZATIONS
         </Text>
         <View style={styles.achievementGrid}>
@@ -358,7 +359,7 @@ export default function MissionReportScreen() {
                 <Text style={[
                   styles.achievementName,
                   {
-                    color: spec.unlocked ? (isDark ? 'white' : 'black') : (isDark ? '#777' : '#999'),
+                    color: theme.text,
                     marginTop: 8
                   }
                 ]}>
@@ -374,11 +375,11 @@ export default function MissionReportScreen() {
 
                 {spec.unlocked ? (
                   <View style={styles.unlockedIndicator}>
-                    <Ionicons name="checkmark-circle" size={16} color={TACTICAL_THEME.success} />
+                    <Ionicons name="checkmark-circle" size={16} color={theme.success} />
                   </View>
                 ) : (
                   <View style={[styles.unlockedIndicator, { backgroundColor: 'transparent' }]}>
-                    <MaterialCommunityIcons name="lock" size={14} color={isDark ? '#444' : '#CCC'} />
+                    <MaterialCommunityIcons name="lock" size={14} color={theme.textSecondary} />
                   </View>
                 )}
               </LinearGradient>
@@ -389,7 +390,7 @@ export default function MissionReportScreen() {
 
       {/* Commendations */}
       <View style={styles.section}>
-        <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
+        <Text style={[styles.sectionTitle, sectionTextStyle]}>
           COMMENDATIONS
         </Text>
         <View style={styles.achievementGrid}>
@@ -473,7 +474,7 @@ export default function MissionReportScreen() {
                 <Text style={[
                   styles.achievementName,
                   {
-                    color: comm.unlocked ? (isDark ? 'white' : 'black') : (isDark ? '#666' : '#999'),
+                    color: comm.unlocked ? theme.text : theme.textSecondary,
                     marginTop: 8
                   }
                 ]}>
@@ -489,7 +490,7 @@ export default function MissionReportScreen() {
 
                 {comm.unlocked && (
                   <View style={styles.unlockedIndicator}>
-                    <Ionicons name="checkmark-circle" size={16} color={TACTICAL_THEME.success} />
+                    <Ionicons name="checkmark-circle" size={16} color={theme.success} />
                   </View>
                 )}
               </LinearGradient>
@@ -506,17 +507,17 @@ export default function MissionReportScreen() {
     }
 
     const getAccuracyColor = (accuracy: number) => {
-      if (accuracy >= 90) return TACTICAL_THEME.success
-      if (accuracy >= 75) return TACTICAL_THEME.warning
-      return TACTICAL_THEME.error
+      if (accuracy >= 90) return theme.success
+      if (accuracy >= 75) return theme.warning
+      return theme.error
     }
 
     return (
       <View style={styles.tabContent}>
         <View style={[styles.card, { backgroundColor: cardBackground, borderColor, borderWidth: 1 }]}>
           <View style={styles.cardHeader}>
-            <MaterialCommunityIcons name="history" size={18} color={TACTICAL_THEME.accent} />
-            <Text style={[styles.cardTitle, { color: isDark ? 'white' : 'black' }]}>
+            <MaterialCommunityIcons name="history" size={18} color={theme.accent} />
+            <Text style={[styles.cardTitle, { color: theme.text }]}>
               MISSION LOGS
             </Text>
           </View>
@@ -575,11 +576,11 @@ export default function MissionReportScreen() {
 
                     {scripture && (
                       <View style={styles.logContent}>
-                        <Text style={[styles.logReference, { color: TACTICAL_THEME.accent }]}>
+                        <Text style={[styles.logReference, { color: theme.accent }]}>
                           {scripture.reference}
                         </Text>
                         <Text
-                          style={[styles.logText, { color: isDark ? '#ccc' : '#444' }]}
+                          style={[styles.logText, { color: theme.textSecondary }]}
                           numberOfLines={2}
                         >
                           {scripture.text}
@@ -598,30 +599,38 @@ export default function MissionReportScreen() {
 
   return (
     <ThemedContainer style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 104 }}>
         <ScreenHeader
           title="MISSION REPORT"
           subtitle="PERFORMANCE ANALYSIS"
         />
         {/* Tab Navigation */}
         <View style={styles.tabContainer}>
-          {[
+          {([
             { key: 'overview', label: 'OVERVIEW' },
             { key: 'achievements', label: 'MEDALS' },
             { key: 'history', label: 'LOGS' },
-          ].map(({ key, label }) => (
+          ] as const).map(({ key, label }) => (
             <TouchableOpacity
               key={key}
               style={[
                 styles.tabButton,
-                selectedTab === key && styles.activeTabButton,
+                selectedTab === key && [styles.activeTabButton, {
+                  backgroundColor: theme.accent,
+                  shadowColor: theme.accent
+                }],
               ]}
               onPress={() => setSelectedTab(key as any)}
             >
               <Text
                 style={[
                   styles.tabLabel,
-                  { color: selectedTab === key ? (isDark ? 'white' : 'black') : (isDark ? '#888' : '#666') }
+                  {
+                    color:
+                      selectedTab === key
+                        ? theme.accentContrastText
+                        : theme.textSecondary,
+                  },
                 ]}
               >
                 {label}
@@ -638,7 +647,7 @@ export default function MissionReportScreen() {
   )
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -656,13 +665,13 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: 'center',
     borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
+    backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.15)',
   },
   activeTabButton: {
-    backgroundColor: TACTICAL_THEME.accent,
-    borderColor: TACTICAL_THEME.accent,
+    backgroundColor: isDark ? theme.accent : 'rgba(0, 0, 0, 0.1)',
+    borderColor: isDark ? theme.accent : 'rgba(0, 0, 0, 0.2)',
   },
   tabLabel: {
     fontSize: 12,
@@ -712,7 +721,7 @@ const styles = StyleSheet.create({
     height: 100,
     marginLeft: -50,
     marginTop: -50,
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
     opacity: 0.15,
     borderRadius: 50,
     zIndex: -1,
@@ -743,7 +752,7 @@ const styles = StyleSheet.create({
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
     borderRadius: 3,
   },
   nextRankText: {

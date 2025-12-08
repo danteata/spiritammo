@@ -13,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import {
     GRADIENTS,
-    TACTICAL_THEME,
+
     GARRISON_THEME,
     MILITARY_TYPOGRAPHY,
 } from '@/constants/colors'
@@ -31,7 +31,8 @@ import * as Linking from 'expo-linking'
 const { width } = Dimensions.get('window')
 
 export default function SquadScreen() {
-    const { isDark, squadMembers = [], squadChallenges = [], loadSquadData, userStats } = useAppStore()
+    const { isDark, squadMembers = [], squadChallenges = [], loadSquadData, userStats, theme } = useAppStore()
+    const styles = getStyles(theme)
     const { isSignedIn, isLoaded } = useAuth()
     const { user } = useUser()
     const router = useRouter()
@@ -57,7 +58,7 @@ export default function SquadScreen() {
                     subtitle="AUTHENTICATION REQUIRED"
                 />
                 <View style={[styles.content, { justifyContent: 'center', alignItems: 'center' }]}>
-                    <Ionicons name="lock-closed" size={64} color={TACTICAL_THEME.warning} style={{ marginBottom: 20 }} />
+                    <Ionicons name="lock-closed" size={64} color={theme.warning} style={{ marginBottom: 20 }} />
                     <ThemedText variant="heading" style={{ textAlign: 'center', marginBottom: 12 }}>
                         IDENTIFICATION REQUIRED
                     </ThemedText>
@@ -143,11 +144,11 @@ export default function SquadScreen() {
             <ThemedCard key={challenge.id} style={styles.challengeCard} variant="default">
                 <View style={styles.challengeHeader}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Ionicons name="flag" size={20} color={TACTICAL_THEME.warning} />
+                        <Ionicons name="flag" size={20} color={theme.warning} />
                         <ThemedText variant="heading" style={styles.challengeTitle}>{challenge.title}</ThemedText>
                     </View>
                     <TouchableOpacity onPress={() => handleShareOperation(challenge)} style={{ padding: 4 }}>
-                        <Ionicons name="share-outline" size={20} color={TACTICAL_THEME.accent} />
+                        <Ionicons name="share-outline" size={20} color={theme.accent} />
                     </TouchableOpacity>
                 </View>
                 <ThemedText variant="body" style={styles.challengeDesc}>
@@ -181,7 +182,7 @@ export default function SquadScreen() {
                 onClose={() => setShowCreateOp(false)}
             />
 
-            <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 40 }}>
+            <ScrollView style={styles.content} contentContainerStyle={{ paddingBottom: 120 }}>
 
                 {/* Tab Switcher */}
                 <View style={styles.tabContainer}>
@@ -200,7 +201,7 @@ export default function SquadScreen() {
                             variant="caption"
                             style={[
                                 styles.tabText,
-                                activeTab === 'squad' && { color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text },
+                                activeTab === 'squad' && { color: isDark ? theme.text : GARRISON_THEME.text },
                             ]}
                         >
                             MY SQUAD
@@ -221,7 +222,7 @@ export default function SquadScreen() {
                             variant="caption"
                             style={[
                                 styles.tabText,
-                                activeTab === 'leaderboard' && { color: isDark ? TACTICAL_THEME.text : GARRISON_THEME.text },
+                                activeTab === 'leaderboard' && { color: isDark ? theme.text : GARRISON_THEME.text },
                             ]}
                         >
                             LEADERBOARD
@@ -239,8 +240,8 @@ export default function SquadScreen() {
                                 </ThemedText>
                                 <TouchableOpacity onPress={() => setShowCreateOp(true)}>
                                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                                        <Ionicons name="add-circle" size={18} color={TACTICAL_THEME.accent} />
-                                        <ThemedText variant="caption" style={{ color: TACTICAL_THEME.accent, fontWeight: 'bold' }}>NEW ORDER</ThemedText>
+                                        <Ionicons name="add-circle" size={18} color={theme.accent} />
+                                        <ThemedText variant="caption" style={{ color: theme.accent, fontWeight: 'bold' }}>NEW ORDER</ThemedText>
                                     </View>
                                 </TouchableOpacity>
                             </View>
@@ -269,7 +270,7 @@ export default function SquadScreen() {
                                     <ThemedText variant="caption" style={styles.memberRank}>{userStats.rank.toUpperCase()}</ThemedText>
                                 </View>
                                 <View style={styles.statusContainer}>
-                                    <View style={[styles.statusDot, { backgroundColor: TACTICAL_THEME.success }]} />
+                                    <View style={[styles.statusDot, { backgroundColor: theme.success }]} />
                                     <ThemedText variant="caption" style={styles.statusText}>Online</ThemedText>
                                 </View>
                             </ThemedCard>
@@ -288,10 +289,10 @@ export default function SquadScreen() {
                                                 {
                                                     backgroundColor:
                                                         member.status === 'Online'
-                                                            ? TACTICAL_THEME.success
+                                                            ? theme.success
                                                             : member.status === 'Training'
-                                                                ? TACTICAL_THEME.warning
-                                                                : (isDark ? TACTICAL_THEME.textSecondary : GARRISON_THEME.textSecondary),
+                                                                ? theme.warning
+                                                                : (isDark ? theme.textSecondary : GARRISON_THEME.textSecondary),
                                                 },
                                             ]}
                                         />
@@ -302,7 +303,7 @@ export default function SquadScreen() {
 
                             {squadMembers.length === 0 && (
                                 <View style={{ padding: 20, backgroundColor: 'rgba(255,165,0,0.05)', borderRadius: 8, marginBottom: 12, alignItems: 'center' }}>
-                                    <Ionicons name="people-outline" size={32} color={TACTICAL_THEME.warning} style={{ opacity: 0.5 }} />
+                                    <Ionicons name="people-outline" size={32} color={theme.warning} style={{ opacity: 0.5 }} />
                                     <ThemedText variant="body" style={{ textAlign: 'center', marginTop: 8, opacity: 0.8 }}>Unit Strength: 1 (You)</ThemedText>
                                     <ThemedText variant="caption" style={{ textAlign: 'center', marginTop: 4, opacity: 0.6 }}>Recruit soldiers to build your fireteam.</ThemedText>
                                 </View>
@@ -345,7 +346,7 @@ export default function SquadScreen() {
     )
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
     container: {
         flex: 1,
     },
@@ -365,8 +366,8 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255, 255, 255, 0.1)',
     },
     activeTab: {
-        backgroundColor: TACTICAL_THEME.accent,
-        borderColor: TACTICAL_THEME.accent,
+        backgroundColor: theme.accent,
+        borderColor: theme.accent,
     },
     tabText: {
         fontWeight: 'bold',
@@ -387,7 +388,7 @@ const styles = StyleSheet.create({
     challengeCard: {
         padding: 16,
         borderWidth: 1,
-        borderColor: TACTICAL_THEME.warning,
+        borderColor: theme.warning,
         marginBottom: 12,
     },
     challengeHeader: {
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
         marginBottom: 8,
     },
     challengeTitle: {
-        color: TACTICAL_THEME.warning,
+        color: theme.warning,
         fontWeight: 'bold',
         fontSize: 14,
     },
@@ -414,7 +415,7 @@ const styles = StyleSheet.create({
     },
     progressFill: {
         height: '100%',
-        backgroundColor: TACTICAL_THEME.warning,
+        backgroundColor: theme.warning,
         borderRadius: 3,
     },
     challengeStats: {
@@ -429,7 +430,7 @@ const styles = StyleSheet.create({
     rewardText: {
         fontSize: 10,
         fontWeight: 'bold',
-        color: TACTICAL_THEME.accent,
+        color: theme.accent,
     },
     memberCard: {
         flexDirection: 'row',
@@ -494,5 +495,5 @@ const styles = StyleSheet.create({
     },
     rankText: { width: 40, fontWeight: 'bold' },
     nameText: { flex: 1 },
-    scoreText: { width: 60, color: TACTICAL_THEME.accent, fontWeight: 'bold', textAlign: 'right' },
+    scoreText: { width: 60, color: theme.accent, fontWeight: 'bold', textAlign: 'right' },
 })

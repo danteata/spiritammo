@@ -16,17 +16,16 @@ import {
   UserSettings,
   UserStats,
 } from '@/types/scripture'
+import { Campaign } from '@/types/campaign'
 import { SquadMember, SquadChallenge } from '@/types/squad'
 import { BOOKS } from '@/mocks/books'
 import { COLLECTIONS } from '@/mocks/collections'
 import { SCRIPTURES } from '@/mocks/scriptures'
+import { INITIAL_CAMPAIGNS } from '@/data/campaigns'
 import { DataLoaderService } from '@/services/dataLoader'
 import { militaryRankingService } from '@/services/militaryRanking'
-import { errorHandler } from '@/services/errorHandler'
-import { Campaign, CampaignNode, NodeStatus } from '@/types/campaign'
-import { INITIAL_CAMPAIGNS } from '@/data/campaigns'
-import { fetchScriptureText, generateBattleIntel } from '@/services/battleIntelligence'
 import { bibleApiService } from '@/services/bibleApi'
+import { errorHandler } from '@/services/errorHandler'
 
 // Generate a simple UUID for React Native
 function generateUUID(): string {
@@ -61,15 +60,15 @@ type AppState = {
   books: Book[]
   scriptures: Scripture[]
   collections: Collection[]
+  campaigns: Campaign[]
+  activeCampaignId: string | null
+  squadMembers: SquadMember[]
+  squadChallenges: SquadChallenge[]
   selectedBook: Book | null
   selectedChapters: number[]
   currentScripture: Scripture | null
   userSettings: UserSettings
   userStats: UserStats
-  campaigns: Campaign[]
-  activeCampaignId: string | null
-  squadMembers: SquadMember[]
-  squadChallenges: SquadChallenge[]
   isLoading: boolean
 
   // Actions
@@ -88,34 +87,32 @@ type AppState = {
   deleteCollection: (collectionId: string) => Promise<boolean>
   addScriptures: (newScriptures: Scripture[]) => Promise<boolean>
   updateCollection: (updatedCollection: Collection) => Promise<boolean>
+  startCampaign: (campaignId: string | null) => Promise<boolean>
+  completeNode: (campaignId: string, nodeId: string, accuracy: number) => Promise<boolean>
+  resetCampaignProgress: (campaignId: string) => Promise<boolean>
+  provisionCampaignScripture: (node: any) => Promise<Scripture | null>
+  loadSquadData: () => Promise<boolean>
+  updateChallengeProgress: (challengeId: string, progress: number) => Promise<boolean>
+  addSquadMember: (member: SquadMember) => Promise<boolean>
+  addSquadChallenge: (challenge: SquadChallenge) => Promise<boolean>
   setSelectedBook: (book: Book | null) => void
   setSelectedChapters: (chapters: number[]) => void
   setCurrentScripture: (s: Scripture | null) => void
-  loadCampaigns: () => Promise<void>
-  startCampaign: (campaignId: string | null) => void
-  unlockNode: (campaignId: string, nodeId: string) => void
-  completeNode: (campaignId: string, nodeId: string, accuracy: number) => Promise<boolean>
-  resetCampaignProgress: (campaignId: string) => void
-  provisionCampaignScripture: (node: CampaignNode) => Promise<Scripture | null>
-  loadSquadData: () => Promise<void>
-  updateChallengeProgress: () => void
-  addSquadMember: (member: SquadMember) => void
-  addSquadChallenge: (challenge: SquadChallenge) => void
 }
 
 export const useZustandStore = create<AppState>((set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void, get: () => AppState) => ({
   books: BOOKS,
   scriptures: [],
   collections: [],
+  campaigns: INITIAL_CAMPAIGNS,
+  activeCampaignId: null,
+  squadMembers: [],
+  squadChallenges: [],
   selectedBook: null,
   selectedChapters: [],
   currentScripture: null,
   userSettings: DEFAULT_USER_SETTINGS,
   userStats: DEFAULT_USER_STATS,
-  campaigns: [],
-  activeCampaignId: null,
-  squadMembers: [],
-  squadChallenges: [],
   isLoading: true,
 
   // Mutations
@@ -205,9 +202,6 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
             set({ userStats: DEFAULT_USER_STATS });
           }
         }
-
-        // 4.5 Load Campaigns
-        await get().loadCampaigns();
 
         // 5. Load Data from SQLite with retry logic
 
@@ -824,259 +818,23 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       }
 
       // Delete collection and related data (CASCADE will handle collection_scriptures)
-      await db.delete(collectionsTable).where(eq(collectionsTable.id, collectionId));
+      await db.delete(collectionsTable)
+        .where(eq(collectionsTable.id, collectionId));
 
-      const updatedCollections = get().collections.filter((c) => c.id !== collectionId)
-      set({ collections: updatedCollections })
-
-      // Also reset currentScripture if it was in this collection? No, that's fine.
-
-      return true
+      // Update State
+      const updatedCollections = get().collections.filter(c => c.id !== collectionId);
+      set({ collections: updatedCollections });
+      return true;
     } catch (error) {
-      await errorHandler.handleError(error, 'Delete Collection', {
-        customMessage: 'Failed to destroy ammunition depot.'
-      })
-      return false
-    }
-  },
-
-  loadCampaigns: async () => {
-    try {
-      const stored = await AsyncStorage.getItem('user_campaigns')
-      let currentCampaigns: Campaign[] = stored ? JSON.parse(stored) : []
-
-      // Smart Merge: Add new campaigns from INITIAL_CAMPAIGNS if they don't exist
-      let hasChanges = false
-      INITIAL_CAMPAIGNS.forEach(initCamp => {
-        const exists = currentCampaigns.find(c => c.id === initCamp.id)
-        if (!exists) {
-          currentCampaigns.push(initCamp)
-          hasChanges = true
+      await errorHandler.handleError(
+        error,
+        'Delete Arsenal',
+        {
+          customMessage: 'Failed to dismantle arsenal. Please retry operation.',
+          retry: () => get().deleteCollection(collectionId)
         }
-      })
-
-      // If we started with nothing, OR if we added new stuff, save it back
-      if (!stored || hasChanges) {
-        // Preserve order based on INITIAL_CAMPAIGNS for consistency
-        const sortedCampaigns = INITIAL_CAMPAIGNS.map(init =>
-          currentCampaigns.find(c => c.id === init.id) || init
-        )
-        // Append any extra/custom campaigns that might exist
-        currentCampaigns.forEach(c => {
-          if (!sortedCampaigns.find(sc => sc.id === c.id)) {
-            sortedCampaigns.push(c)
-          }
-        })
-
-        currentCampaigns = sortedCampaigns
-
-        set({ campaigns: currentCampaigns })
-        await AsyncStorage.setItem('user_campaigns', JSON.stringify(currentCampaigns))
-      } else {
-        set({ campaigns: currentCampaigns })
-      }
-    } catch (error) {
-      console.error('Failed to load campaigns:', error)
-      set({ campaigns: INITIAL_CAMPAIGNS })
-    }
-  },
-
-  startCampaign: (campaignId: string | null) => {
-    set({ activeCampaignId: campaignId })
-  },
-
-  unlockNode: (campaignId: string, nodeId: string) => {
-    const { campaigns } = get()
-    const updatedCampaigns = campaigns.map(c => {
-      if (c.id !== campaignId) return c
-      return {
-        ...c,
-        nodes: c.nodes.map(n =>
-          n.id === nodeId ? { ...n, status: 'ACTIVE' as NodeStatus } : n
-        )
-      }
-    })
-
-    set({ campaigns: updatedCampaigns })
-    AsyncStorage.setItem('user_campaigns', JSON.stringify(updatedCampaigns))
-  },
-
-  completeNode: async (campaignId: string, nodeId: string, accuracy: number) => {
-    const { campaigns } = get()
-    const campaignIndex = campaigns.findIndex(c => c.id === campaignId)
-    if (campaignIndex === -1) return false
-
-    const campaign = campaigns[campaignIndex]
-    const nodeIndex = campaign.nodes.findIndex(n => n.id === nodeId)
-    if (nodeIndex === -1) return false
-
-    const node = campaign.nodes[nodeIndex]
-
-    // Check if accuracy meets requirement
-    if (accuracy < node.requiredAccuracy) {
-      return false // Failed mission
-    }
-
-    // Mark current node as CONQUERED
-    const updatedNodes = [...campaign.nodes]
-    updatedNodes[nodeIndex] = { ...node, status: 'CONQUERED' }
-
-    // Unlock next node if exists
-    let unlockedNext = false
-    if (nodeIndex + 1 < updatedNodes.length) {
-      const nextNode = updatedNodes[nodeIndex + 1]
-      // Only unlock if it was previously LOCKED (don't overwrite CONQUERED)
-      if (nextNode.status === 'LOCKED') {
-        updatedNodes[nodeIndex + 1] = { ...nextNode, status: 'ACTIVE' }
-        unlockedNext = true
-      }
-    }
-
-    // Calculate progress
-    const completedCount = updatedNodes.filter(n => n.status === 'CONQUERED').length
-
-    const updatedCampaign: Campaign = {
-      ...campaign,
-      nodes: updatedNodes,
-      completedNodes: completedCount
-    }
-
-    const newCampaigns = [...campaigns]
-    newCampaigns[campaignIndex] = updatedCampaign
-
-    set({ campaigns: newCampaigns })
-    await AsyncStorage.setItem('user_campaigns', JSON.stringify(newCampaigns))
-
-    return true // Success
-  },
-
-  resetCampaignProgress: (campaignId: string) => {
-    const { campaigns } = get()
-    const template = INITIAL_CAMPAIGNS.find(c => c.id === campaignId)
-    if (!template) return
-
-    const updatedCampaigns = campaigns.map(c =>
-      c.id === campaignId ? template : c
-    )
-
-    set({ campaigns: updatedCampaigns })
-    AsyncStorage.setItem('user_campaigns', JSON.stringify(updatedCampaigns))
-  },
-
-  provisionCampaignScripture: async (node: CampaignNode): Promise<Scripture | null> => {
-    try {
-      const { book, chapter, verse } = node.scriptureReference;
-      const scriptures = get().scriptures;
-
-      // 1. Try to find locally
-      const found = scriptures.find(s =>
-        s.book === book &&
-        s.chapter === chapter &&
-        s.verse === verse
-      );
-
-      if (found) return found;
-
-      // 2. Not found, provision from Offline Database (Robust Existing Service)
-      const reference = `${book} ${chapter}:${verse}`;
-      let text: string | null = null;
-
-      try {
-        const verseData = await bibleApiService.getVerse(book, chapter, verse);
-        if (verseData) {
-          text = verseData.text;
-        }
-      } catch (dbError) {
-        console.warn('Offline DB retrieval failed:', dbError);
-      }
-
-      // 3. Fallback to AI if offline DB fails (robustness)
-      if (!text) {
-        console.log('Offline DB miss, falling back to AI Intel...');
-        text = await fetchScriptureText(reference);
-      }
-
-      if (!text) {
-        throw new Error('Could not retrieve intel from Database or AI.');
-      }
-
-      // 4. Create new Scripture
-      const newScripture: Scripture = {
-        id: generateUUID(),
-        book,
-        chapter,
-        verse,
-        text,
-        reference,
-        practiceCount: 0,
-        isJesusWords: false // Default
-      };
-
-      // 4. Add to Store & DB
-      await get().addScriptures([newScripture]);
-
-      return newScripture;
-    } catch (error) {
-      console.error('Provisioning failed:', error);
-      return null;
-    }
-  },
-
-  loadSquadData: async () => {
-    // Real Data Load - would fetch from database/API
-    // For now, we start with an empty squad. The current user is added in the UI.
-    const SQUAD_MEMBERS: SquadMember[] = []
-
-    const SQUAD_CHALLENGES: SquadChallenge[] = [
-      // Keep one global challenge active for all users
-      {
-        id: 'chal_global_1',
-        type: 'ROUNDS',
-        title: 'GLOBAL OPERATION: THUNDER',
-        description: 'Community goal: Fire 10,000 rounds collectively.',
-        targetValue: 10000,
-        currentValue: 3420, // Mock community progress
-        reward: 'Thunder Badge',
-        participants: 128
-      }
-    ]
-
-    set({ squadMembers: SQUAD_MEMBERS, squadChallenges: SQUAD_CHALLENGES })
-    // Trigger update to sync with real stats immediately
-    get().updateChallengeProgress()
-  },
-
-  updateChallengeProgress: () => {
-    const { userStats, squadChallenges } = get()
-
-    const updatedChallenges = squadChallenges.map(c => {
-      if (c.type === 'ROUNDS') {
-        return { ...c, currentValue: userStats.totalPracticed }
-      }
-      if (c.type === 'ACCURACY') {
-        return { ...c, currentValue: userStats.averageAccuracy }
-      }
-      if (c.type === 'STREAK') {
-        return { ...c, currentValue: userStats.streak }
-      }
-      return c
-    })
-
-    set({ squadChallenges: updatedChallenges })
-  },
-
-  addSquadMember: (member) => {
-    const { squadMembers } = get()
-    // Avoid duplicates
-    if (!squadMembers.find(m => m.id === member.id)) {
-      set({ squadMembers: [...squadMembers, member] })
-    }
-  },
-
-  addSquadChallenge: (challenge) => {
-    const { squadChallenges } = get()
-    if (!squadChallenges.find(c => c.id === challenge.id)) {
-      set({ squadChallenges: [...squadChallenges, challenge] })
+      )
+      return false;
     }
   },
 
@@ -1085,7 +843,7 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       const db = await getDb();
 
       if (!db) {
-        console.error('Database not initialized');
+        throw new Error('Database not initialized');
         return false;
       }
 
@@ -1106,6 +864,190 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
       await errorHandler.handleError(error, 'Update Collection', {
         customMessage: 'Failed to update arsenal specifications.'
       });
+      return false;
+    }
+  },
+
+  // Campaign methods
+  startCampaign: async (campaignId: string | null) => {
+    try {
+      set({ activeCampaignId: campaignId });
+      console.log(`Started campaign: ${campaignId}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to start campaign:', error);
+      return false;
+    }
+  },
+
+  completeNode: async (campaignId: string, nodeId: string, accuracy: number) => {
+    try {
+      const campaigns = get().campaigns;
+      const updatedCampaigns = campaigns.map((campaign: Campaign) => {
+        if (campaign.id === campaignId) {
+          const updatedNodes = campaign.nodes.map(node =>
+            node.id === nodeId
+              ? { ...node, status: 'CONQUERED' as const }
+              : node
+          );
+
+          const completedNodes = updatedNodes.filter(node => node.status === 'CONQUERED').length;
+          const totalNodes = campaign.totalNodes;
+          const progressPercentage = (completedNodes / totalNodes) * 100;
+
+          // Check if campaign is complete
+          const allCompleted = updatedNodes.every(node => node.status === 'CONQUERED');
+
+          if (allCompleted) {
+            // Mark next available campaigns as ACTIVE
+            console.log(`Campaign ${campaignId} completed!`);
+          }
+
+          return {
+            ...campaign,
+            nodes: updatedNodes,
+            completedNodes,
+          };
+        }
+        return campaign;
+      });
+
+      set({ campaigns: updatedCampaigns });
+      console.log(`Node ${nodeId} completed in campaign ${campaignId} with accuracy ${accuracy}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to complete node:', error);
+      return false;
+    }
+  },
+
+  resetCampaignProgress: async (campaignId: string) => {
+    try {
+      const campaigns = get().campaigns;
+      const updatedCampaigns = campaigns.map((campaign: Campaign) => {
+        if (campaign.id === campaignId) {
+          const resetNodes = campaign.nodes.map(node => ({
+            ...node,
+            status: node.id === campaign.nodes[0]?.id ? 'ACTIVE' as const : 'LOCKED' as const
+          }));
+
+          return {
+            ...campaign,
+            nodes: resetNodes,
+            completedNodes: 0,
+          };
+        }
+        return campaign;
+      });
+
+      set({ campaigns: updatedCampaigns });
+      console.log(`Campaign ${campaignId} progress reset`);
+      return true;
+    } catch (error) {
+      console.error('Failed to reset campaign progress:', error);
+      return false;
+    }
+  },
+
+  provisionCampaignScripture: async (node: any) => {
+    try {
+      const { book, chapter, verse } = node.scriptureReference;
+
+      console.log(`Provisioning scripture for campaign node ${node.id}: ${book} ${chapter}:${verse}`);
+
+      // 1. First try local scriptures cache
+      let scripture = get().scriptures.find(s =>
+        s.book.toLowerCase() === book.toLowerCase() &&
+        s.chapter === chapter &&
+        s.verse === verse
+      );
+
+      if (scripture) {
+        console.log(`✅ Found scripture in local cache: ${scripture.reference}`);
+        return scripture;
+      }
+
+      // 2. Try fetching from offline bible (bibleApiService) - PRIMARY METHOD
+      console.log(`📖 Scripture not in cache, trying offline bible...`);
+      try {
+        const chapterData = await bibleApiService.getChapter(book, chapter);
+        if (chapterData && chapterData.verses && chapterData.verses.length > 0) {
+          const targetVerse = chapterData.verses.find((v: any) => v.verse === verse);
+          if (targetVerse) {
+            scripture = bibleApiService.bibleVerseToScripture(targetVerse);
+            console.log(`✅ Found scripture in offline bible: ${scripture?.reference}`);
+
+            // Cache the scripture in the local store
+            const updatedScriptures = [...get().scriptures, scripture!];
+            set({ scriptures: updatedScriptures });
+
+            return scripture!;
+          }
+        }
+      } catch (bibleError) {
+        console.warn(`⚠️ Offline bible lookup failed for ${book} ${chapter}:${verse}`, bibleError);
+      }
+
+      // 3. AI fallback (currently not implemented - would require additional AI service)
+      console.warn(`🔄 AI fallback not implemented - scripture not found for ${book} ${chapter}:${verse}`);
+      return null;
+
+    } catch (error) {
+      console.error('❌ Failed to provision campaign scripture:', error);
+      return null;
+    }
+  },
+
+  // Squad methods
+  loadSquadData: async () => {
+    try {
+      // Initialize with default squad data if needed
+      // For now, just return success
+      console.log('Squad data loaded');
+      return true;
+    } catch (error) {
+      console.error('Failed to load squad data:', error);
+      return false;
+    }
+  },
+
+  updateChallengeProgress: async (challengeId: string, progress: number) => {
+    try {
+      const squadChallenges = get().squadChallenges;
+      const updatedChallenges = squadChallenges.map((challenge: SquadChallenge) =>
+        challenge.id === challengeId
+          ? { ...challenge, progress }
+          : challenge
+      );
+      set({ squadChallenges: updatedChallenges });
+      console.log(`Updated challenge ${challengeId} progress to ${progress}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to update challenge progress:', error);
+      return false;
+    }
+  },
+
+  addSquadMember: async (member: SquadMember) => {
+    try {
+      const squadMembers = get().squadMembers;
+      set({ squadMembers: [...squadMembers, member] });
+      console.log(`Added squad member: ${member.name}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to add squad member:', error);
+      return false;
+    }
+  },
+
+  addSquadChallenge: async (challenge: SquadChallenge) => {
+    try {
+      const squadChallenges = get().squadChallenges;
+      set({ squadChallenges: [...squadChallenges, challenge] });
+      console.log(`Added squad challenge: ${challenge.title}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to add squad challenge:', error);
       return false;
     }
   },

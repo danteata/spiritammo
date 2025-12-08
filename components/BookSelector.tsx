@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Book } from '@/types/scripture';
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
 
 interface BookSelectorProps {
@@ -10,8 +9,8 @@ interface BookSelectorProps {
 }
 
 export default function BookSelector({ onSelectBook }: BookSelectorProps) {
-  const { books, isDark } = useAppStore();
-  
+  const { books, isDark, theme } = useAppStore();
+
   // Define book groups with color coding (inspired by your screenshot)
   const bookGroups = [
     { name: 'Law (Torah)', books: ['Genesis', 'Exodus', 'Leviticus', 'Numbers', 'Deuteronomy'], color: '#FF6B6B' },
@@ -25,7 +24,7 @@ export default function BookSelector({ onSelectBook }: BookSelectorProps) {
     { name: 'General Letters', books: ['Hebrews', 'James', '1 Peter', '2 Peter', '1 John', '2 John', '3 John', 'Jude'], color: '#FDCB6E' },
     { name: 'Prophecy', books: ['Revelation'], color: '#FF6B6B' },
   ];
-  
+
   // Get color for a book based on its group
   const getBookGroupColor = (bookName: string): string => {
     for (const group of bookGroups) {
@@ -33,13 +32,13 @@ export default function BookSelector({ onSelectBook }: BookSelectorProps) {
         return group.color;
       }
     }
-    return TACTICAL_THEME.textSecondary; // Fallback color
+    return theme.textSecondary; // Fallback color
   };
-  
+
   const handleSelect = (book: Book) => {
     onSelectBook(book);
   };
-  
+
   const getBookAbbreviation = (book: Book): string => {
     // Common book abbreviations
     const abbreviations: { [key: string]: string } = {
@@ -112,12 +111,12 @@ export default function BookSelector({ onSelectBook }: BookSelectorProps) {
     };
     return abbreviations[book.name] || book.name.substring(0, 3).toUpperCase();
   };
-  
+
   return (
     <View style={styles.container}>
       {/* Testament Separator Line */}
-      <View style={styles.separatorLine} />
-      
+      <View style={[styles.separatorLine, { backgroundColor: theme.border }]} />
+
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
@@ -127,7 +126,7 @@ export default function BookSelector({ onSelectBook }: BookSelectorProps) {
           {books.map((book, index) => (
             <TouchableOpacity
               key={book.id}
-              style={styles.bookButton}
+              style={[styles.bookButton, { backgroundColor: theme.surface }]}
               onPress={() => handleSelect(book)}
               testID={`book-item-${book.id}`}
             >
@@ -148,7 +147,7 @@ const styles = StyleSheet.create({
   },
   separatorLine: {
     height: 1,
-    backgroundColor: TACTICAL_THEME.border,
+    backgroundColor: '#E2E8F0', // Light theme border color - will be overridden by theme
     marginHorizontal: 16,
     marginBottom: 16,
   },
@@ -169,7 +168,7 @@ const styles = StyleSheet.create({
     aspectRatio: 2,
     marginHorizontal: '1.5%',
     marginBottom: 12,
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)', // Light theme surface color - will be overridden by theme
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',

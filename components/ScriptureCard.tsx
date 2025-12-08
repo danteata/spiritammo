@@ -1,5 +1,4 @@
-import * as React from 'react'
-import { useState } from 'react'
+import React, { useState } from 'react'
 import {
   StyleSheet,
   Text,
@@ -11,12 +10,6 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { BlurView } from 'expo-blur'
 import { FontAwesome } from '@expo/vector-icons';
 import { Scripture } from '@/types/scripture'
-import {
-  GRADIENTS,
-  TACTICAL_THEME,
-  GARRISON_THEME,
-} from '@/constants/colors'
-import { ThemedCard } from './Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 import ScriptureText from './ScriptureText'
 
@@ -31,7 +24,7 @@ export default function ScriptureCard({
   onReveal,
   onNext,
 }: ScriptureCardProps) {
-  const { isDark } = useAppStore()
+  const { theme } = useAppStore()
   const [revealed, setRevealed] = useState(false)
 
   const handleReveal = () => {
@@ -44,17 +37,10 @@ export default function ScriptureCard({
     if (onNext) onNext()
   }
 
-  const gradientColors = isDark
-    ? (GRADIENTS.primary.dark as [string, string])
-    : (GRADIENTS.primary.light as [string, string])
-
-  const textColor = isDark ? TACTICAL_THEME.text : GARRISON_THEME.text
+  const textColor = theme.text
 
   return (
-    <ThemedCard
-      variant="glass"
-      style={styles.container}
-    >
+    <View style={[styles.container, { backgroundColor: theme.surface }]}>
       <Text style={[styles.reference, { color: textColor }]}>
         {scripture.reference}
       </Text>
@@ -73,9 +59,10 @@ export default function ScriptureCard({
             style={[styles.text, styles.hiddenText, { color: textColor }]}
           />
           <BlurView
-            intensity={Platform.OS === 'ios' ? 20 : 20}
+            intensity={Platform.OS === 'ios' ? 25 : 20}
+            experimentalBlurMethod="dimezisBlurView"
             style={styles.blurOverlay}
-            tint={isDark ? "dark" : "light"}
+            tint="light"
           />
         </View>
       )}
@@ -93,17 +80,32 @@ export default function ScriptureCard({
           )}
         </TouchableOpacity>
       </View>
-    </ThemedCard>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 24,
+    borderRadius: 16,
+    padding: 20,
     marginVertical: 10,
-    marginHorizontal: 0, // Handled by parent
-    minHeight: 220,
+    marginHorizontal: 16,
+    minHeight: 200,
     justifyContent: 'space-between',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 5,
+      },
+      web: {
+        boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.3)',
+      },
+    }),
   },
   reference: {
     fontSize: 20,

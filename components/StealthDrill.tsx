@@ -14,8 +14,6 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import {
-    TACTICAL_THEME,
-    GARRISON_THEME,
     MILITARY_TYPOGRAPHY,
     ACCURACY_COLORS,
 } from '@/constants/colors'
@@ -53,8 +51,7 @@ export default function StealthDrill({
         'GHOST': { label: 'GHOST', percent: 1.00, icon: 'ghost', color: '#9C27B0' }
     }
 
-    const { isDark } = useAppStore()
-    const theme = isDark ? TACTICAL_THEME : GARRISON_THEME
+    const { isDark, theme } = useAppStore()
 
     const [difficulty, setDifficulty] = useState<DifficultyLevel | null>(null)
     const [tokens, setTokens] = useState<WordToken[]>([])
@@ -335,7 +332,7 @@ export default function StealthDrill({
                             <Text style={[styles.resultTitle, MILITARY_TYPOGRAPHY.heading, { color: getAccuracyColor(accuracy) }]}>
                                 MISSION {accuracy === 100 ? 'ACCOMPLISHED' : 'REPORT'}
                             </Text>
-                            <Text style={[styles.accuracyText, MILITARY_TYPOGRAPHY.display, { color: getAccuracyColor(accuracy) }]}>
+                            <Text style={[styles.accuracyText, MILITARY_TYPOGRAPHY.heading, { color: getAccuracyColor(accuracy) }]}>
                                 {accuracy.toFixed(0)}%
                             </Text>
 
@@ -583,4 +580,3 @@ const styles = StyleSheet.create({
         shadowRadius: 3.84,
     }
 })
-

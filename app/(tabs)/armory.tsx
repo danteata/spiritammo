@@ -14,7 +14,6 @@ import {
   COLORS,
   GRADIENTS,
   MILITARY_TYPOGRAPHY,
-  TACTICAL_THEME,
   GARRISON_THEME,
 } from '@/constants/colors'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
@@ -40,7 +39,9 @@ export default function ArmoryScreen() {
     addCollection,
     addScriptures,
     addScripturesToCollection,
+    theme,
   } = useAppStore()
+  const styles = getStyles(theme)
   const [selectedCollection, setSelectedCollection] =
     useState<Collection | null>(null)
   const [showFileUploader, setShowFileUploader] = useState(false)
@@ -204,7 +205,7 @@ export default function ArmoryScreen() {
       await errorHandler.handleError(
         error,
         'Import Verses',
-        { 
+        {
           customMessage: 'Failed to import ammunition from file. Please retry operation.',
           retry: () => handleVersesExtracted(extractedVerses, targetCollectionId)
         }
@@ -222,15 +223,15 @@ export default function ArmoryScreen() {
         {
           backgroundColor: selectedCollection?.id === item.id
             ? 'transparent'
-            : (isDark ? TACTICAL_THEME.surface : GARRISON_THEME.surface),
+            : (isDark ? theme.surface : GARRISON_THEME.surface),
           borderColor: selectedCollection?.id === item.id
-            ? TACTICAL_THEME.accent
+            ? theme.accent
             : 'transparent',
           borderWidth: 1,
         }
       ]}
       lightColor={GARRISON_THEME.surface}
-      darkColor={TACTICAL_THEME.surface}
+      darkColor={theme.surface}
       variant="outlined"
     >
       <TouchableOpacity
@@ -246,8 +247,8 @@ export default function ArmoryScreen() {
             </ThemedText>
             {item.isChapterBased && (
               <View style={styles.chapterBadgeContainer}>
-                <Feather name="layers" size={10} color={TACTICAL_THEME.accent} />
-                <Text style={[styles.chapterBadgeText, { color: TACTICAL_THEME.accent }]}>
+                <Feather name="layers" size={10} color={theme.accent} />
+                <Text style={[styles.chapterBadgeText, { color: theme.accent }]}>
                   CHAPTERS
                 </Text>
               </View>
@@ -327,19 +328,19 @@ export default function ArmoryScreen() {
       onPress={() => handleBookDistributionTap(item.book)}
       variant="flat"
     >
-      <FontAwesome name="book" size={16} color={TACTICAL_THEME.accent} />
+      <FontAwesome name="book" size={16} color={theme.accent} />
       <ThemedText style={styles.distributionBook}>
         {item.book}
       </ThemedText>
       <View style={styles.distributionCount}>
-        <Text style={[styles.countText, { color: TACTICAL_THEME.accent }]}>
+        <Text style={[styles.countText, { color: theme.accent }]}>
           {item.count}
         </Text>
         <ThemedText variant="caption" style={styles.countLabel}>
           rounds
         </ThemedText>
       </View>
-      <FontAwesome name="chevron-right" size={12} color={TACTICAL_THEME.textSecondary} style={{ marginLeft: 12, opacity: 0.5 }} />
+      <FontAwesome name="chevron-right" size={12} color={theme.textSecondary} style={{ marginLeft: 12, opacity: 0.5 }} />
     </ThemedCard>
   )
 
@@ -353,19 +354,19 @@ export default function ArmoryScreen() {
       onPress={() => handleChapterDistributionTap(item.chapter)}
       variant="flat"
     >
-      <Feather name="layers" size={16} color={TACTICAL_THEME.accent} />
+      <Feather name="layers" size={16} color={theme.accent} />
       <ThemedText style={styles.distributionBook}>
         {item.chapter}
       </ThemedText>
       <View style={styles.distributionCount}>
-        <Text style={[styles.countText, { color: TACTICAL_THEME.accent }]}>
+        <Text style={[styles.countText, { color: theme.accent }]}>
           {item.count}
         </Text>
         <ThemedText variant="caption" style={styles.countLabel}>
           rounds
         </ThemedText>
       </View>
-      <FontAwesome name="chevron-right" size={12} color={TACTICAL_THEME.textSecondary} style={{ marginLeft: 12, opacity: 0.5 }} />
+      <FontAwesome name="chevron-right" size={12} color={theme.textSecondary} style={{ marginLeft: 12, opacity: 0.5 }} />
     </ThemedCard>
   )
 
@@ -385,7 +386,7 @@ export default function ArmoryScreen() {
         accessibilityLabel={`View scriptures in ${item.name}`}
       >
         <View style={styles.bookIconContainer}>
-          <FontAwesome name="book" size={18} color={TACTICAL_THEME.accent} />
+          <FontAwesome name="book" size={18} color={theme.accent} />
         </View>
 
         <View style={styles.bookInfo}>
@@ -393,19 +394,19 @@ export default function ArmoryScreen() {
             {item.name}
           </ThemedText>
           <View style={styles.progressBarContainer}>
-            <View style={[styles.progressBar, { width: `${Math.min(bookScriptureCount * 2, 100)}%`, backgroundColor: TACTICAL_THEME.accent }]} />
+            <View style={[styles.progressBar, { width: `${Math.min(bookScriptureCount * 2, 100)}%`, backgroundColor: theme.accent }]} />
           </View>
         </View>
 
         <View style={styles.bookStat}>
-          <Text style={[styles.bookCount, { color: TACTICAL_THEME.accent }]}>
+          <Text style={[styles.bookCount, { color: theme.accent }]}>
             {bookScriptureCount}
           </Text>
           <ThemedText variant="caption" style={styles.bookLabel}>
             RNDS
           </ThemedText>
         </View>
-        <FontAwesome name="chevron-right" size={12} color={TACTICAL_THEME.textSecondary} style={{ marginLeft: 12, opacity: 0.5 }} />
+        <FontAwesome name="chevron-right" size={12} color={theme.textSecondary} style={{ marginLeft: 12, opacity: 0.5 }} />
       </ThemedCard>
     )
   }
@@ -462,7 +463,6 @@ export default function ArmoryScreen() {
             extraData={selectedCollection}
             renderItem={renderCollectionItem}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={{ paddingBottom: 20 }}
             ListEmptyComponent={
               <View style={styles.emptyState}>
                 <View style={styles.emptyIconCircle}>
@@ -482,13 +482,13 @@ export default function ArmoryScreen() {
           <View style={[styles.headerLine, { marginTop: 10, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} />
           {selectedCollection && (
             <TouchableOpacity onPress={() => setSelectedCollection(null)} style={{ marginTop: 10 }}>
-              <Text style={{ color: TACTICAL_THEME.accent, fontSize: 12, fontWeight: 'bold' }}>CLEAR FILTER</Text>
+              <Text style={{ color: theme.accent, fontSize: 12, fontWeight: 'bold' }}>CLEAR FILTER</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {selectedCollection ? (
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, paddingBottom: 104 }}>
             {/* Filter Tabs */}
             <View style={styles.filterTabs}>
               <TouchableOpacity
@@ -503,8 +503,8 @@ export default function ArmoryScreen() {
                   size={16}
                   color={
                     filterTab === 'books'
-                      ? TACTICAL_THEME.text
-                      : TACTICAL_THEME.textSecondary
+                      ? theme.accentContrastText
+                      : theme.textSecondary
                   }
                 />
                 <Text
@@ -513,8 +513,8 @@ export default function ArmoryScreen() {
                     {
                       color:
                         filterTab === 'books'
-                          ? TACTICAL_THEME.text
-                          : TACTICAL_THEME.textSecondary,
+                          ? theme.accentContrastText
+                          : theme.textSecondary,
                     },
                   ]}
                 >
@@ -537,8 +537,8 @@ export default function ArmoryScreen() {
                       size={16}
                       color={
                         filterTab === 'chapters'
-                          ? TACTICAL_THEME.text
-                          : TACTICAL_THEME.textSecondary
+                          ? theme.accentContrastText
+                          : theme.textSecondary
                       }
                     />
                     <Text
@@ -547,8 +547,8 @@ export default function ArmoryScreen() {
                         {
                           color:
                             filterTab === 'chapters'
-                              ? TACTICAL_THEME.text
-                              : TACTICAL_THEME.textSecondary,
+                              ? theme.accentContrastText
+                              : theme.textSecondary,
                         },
                       ]}
                     >
@@ -565,6 +565,7 @@ export default function ArmoryScreen() {
                 renderItem={renderBookDistribution}
                 keyExtractor={(item) => item.book}
                 style={styles.list}
+                contentContainerStyle={{ paddingBottom: 0 }}
                 ListEmptyComponent={
                   <ThemedText variant="caption" style={styles.emptyText}>
                     No books found in this arsenal
@@ -579,6 +580,7 @@ export default function ArmoryScreen() {
                 renderItem={renderChapterDistribution}
                 keyExtractor={(item) => item.chapter}
                 style={styles.list}
+                contentContainerStyle={{ paddingBottom: 0 }}
                 ListEmptyComponent={
                   <ThemedText variant="caption" style={styles.emptyText}>
                     No chapters found in this arsenal
@@ -599,14 +601,14 @@ export default function ArmoryScreen() {
         ) : (
           <ThemedContainer
             useGradient={true}
-            style={styles.listGradient}
+            style={[styles.listGradient, { paddingBottom: 104 }]}
           >
             <FlatList
               data={books}
               renderItem={renderBookItem}
               keyExtractor={(item) => item.id}
               style={styles.list}
-              contentContainerStyle={{ paddingBottom: 100 }}
+              contentContainerStyle={{ paddingBottom: 16 }}
             />
           </ThemedContainer>
 
@@ -644,15 +646,15 @@ export default function ArmoryScreen() {
       />
 
       {/* Loading Overlay */}
-      <LoadingOverlay 
-        visible={isImporting} 
+      <LoadingOverlay
+        visible={isImporting}
         message="Deploying ammunition to arsenal..."
       />
     </ThemedContainer >
   )
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -695,7 +697,7 @@ const styles = StyleSheet.create({
   subtitleLine: {
     width: 20,
     height: 2,
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
     marginRight: 8,
   },
   headerButtons: {
@@ -713,8 +715,8 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
   },
   primaryAction: {
-    backgroundColor: TACTICAL_THEME.accent,
-    borderColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
+    borderColor: theme.accent,
   },
   actionButtonText: {
     color: 'white',
@@ -750,7 +752,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 12,
-    marginBottom: 8, // Reduced from 12
+    marginBottom: 2, // Reduced from 8 to 2
     // overflow: 'hidden', // Removed to prevent clipping issues with shadows/content
     padding: 0, // Remove default card padding
     minHeight: 80, // Ensure minimum height to prevent blank rendering
@@ -914,7 +916,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   activeFilterTab: {
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
   },
   filterTabText: {
     fontSize: 12,

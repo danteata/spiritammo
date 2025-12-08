@@ -15,6 +15,10 @@ export const TACTICAL_THEME = {
   shadow: 'rgba(0, 0, 0, 0.5)',
   surfaceHighlight: '#334155', // Slate 700
   glass: 'rgba(30, 41, 59, 0.7)', // Translucent Surface
+  // Contrast colors for readability
+  accentContrastText: '#000000', // Black text on orange backgrounds
+  surfaceContrastText: '#F8FAFC', // Existing text for surface backgrounds
+  primaryContrastText: '#F8FAFC', // Existing text for primary backgrounds
 }
 
 export const STEALTH_THEME = {
@@ -32,6 +36,10 @@ export const STEALTH_THEME = {
   shadow: 'rgba(0, 0, 0, 0.8)',
   surfaceHighlight: '#262626',
   glass: 'rgba(23, 23, 23, 0.8)',
+  // Contrast colors for readability
+  accentContrastText: '#000000', // Black text on cyan backgrounds
+  surfaceContrastText: '#FAFAFA', // Existing text for surface backgrounds
+  primaryContrastText: '#FAFAFA', // Existing text for primary backgrounds
 }
 
 export const GARRISON_THEME = {
@@ -49,6 +57,10 @@ export const GARRISON_THEME = {
   border: '#E2E8F0', // Slate 200
   shadow: 'rgba(15, 23, 42, 0.05)',
   glass: 'rgba(255, 255, 255, 0.8)',
+  // Contrast colors for readability
+  accentContrastText: '#000000', // Black text on orange backgrounds
+  surfaceContrastText: '#0F172A', // Dark text for surface backgrounds
+  primaryContrastText: '#0F172A', // Dark text for primary backgrounds
 }
 
 export const JUNGLE_THEME = {
@@ -66,6 +78,31 @@ export const JUNGLE_THEME = {
   shadow: 'rgba(0, 0, 0, 0.9)',
   surfaceHighlight: '#111F11',
   glass: 'rgba(5, 8, 5, 0.8)', // Very dark glass
+  // Contrast colors for readability
+  accentContrastText: '#000000', // Black text on green backgrounds
+  surfaceContrastText: '#F0F5F0', // Existing text for surface backgrounds
+  primaryContrastText: '#F0F5F0', // Existing text for primary backgrounds
+}
+
+export const SLATE_THEME = {
+  primary: '#64748B', // Slate 500 (Muted Blue)
+  secondary: '#475569', // Slate 600
+  accent: '#F1F5F9', // Slate 100 (Bright accent on dark)
+  background: '#0F172A', // Slate 900 (Deep Dark)
+  surface: '#1E293B', // Slate 800 (Card background)
+  text: '#F8FAFC', // Slate 50 (Off-white)
+  textSecondary: '#94A3B8', // Slate 400 (Muted)
+  success: '#10B981', // Emerald 500
+  warning: '#F59E0B', // Amber 500
+  error: '#EF4444', // Red 500
+  border: '#334155', // Slate 700
+  shadow: 'rgba(0, 0, 0, 0.5)',
+  surfaceHighlight: '#334155',
+  glass: 'rgba(30, 41, 59, 0.7)', // Translucent Surface
+  // Contrast colors for readability (slate has light accent on dark)
+  accentContrastText: '#000000', // Black text on light accent backgrounds
+  surfaceContrastText: '#F8FAFC', // Existing text for surface backgrounds
+  primaryContrastText: '#000000', // Dark text for muted blue primary backgrounds
 }
 
 // Legacy colors for backward compatibility
@@ -124,6 +161,11 @@ export const GRADIENTS = {
     background: ['#1A2F1C', '#000000'] as const, // Hunter Green -> Pure Black
     surface: ['#0A0F0A', '#000000'] as const,
     accent: ['#4ADE80', '#22C55E'] as const, // Bright Green Gradient
+  },
+  slate: {
+    background: [SLATE_THEME.background, '#020617'] as const, // Slate 900 -> Slate 950
+    surface: [SLATE_THEME.surface, SLATE_THEME.background] as const,
+    accent: [SLATE_THEME.accent, '#E2E8F0'] as const, // Slate 100 -> Slate 200
   },
 }
 

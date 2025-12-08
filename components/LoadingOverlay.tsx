@@ -1,6 +1,6 @@
 import React from 'react'
 import { StyleSheet, View, ActivityIndicator, Modal, Text } from 'react-native'
-import { TACTICAL_THEME, GARRISON_THEME } from '@/constants/colors'
+import { } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 
 interface LoadingOverlayProps {
@@ -14,8 +14,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   message = 'Mission in progress...',
   transparent = false,
 }) => {
-  const { isDark } = useAppStore()
-  const theme = isDark ? TACTICAL_THEME : GARRISON_THEME
+  const { isDark, theme } = useAppStore()
 
   if (!visible) return null
 
@@ -32,8 +31,8 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
           backgroundColor: transparent
             ? 'rgba(0, 0, 0, 0.5)'
             : isDark
-            ? 'rgba(0, 0, 0, 0.8)'
-            : 'rgba(255, 255, 255, 0.9)'
+              ? 'rgba(0, 0, 0, 0.8)'
+              : 'rgba(255, 255, 255, 0.9)'
         }
       ]}>
         <View style={[

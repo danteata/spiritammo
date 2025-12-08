@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useColorScheme } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ThemeMode, ThemeColor } from '@/types/scripture';
-import { TACTICAL_THEME, GARRISON_THEME, JUNGLE_THEME, GRADIENTS } from '@/constants/colors';
+import { TACTICAL_THEME, GARRISON_THEME, JUNGLE_THEME, SLATE_THEME, GRADIENTS } from '@/constants/colors';
 
 const THEME_MODE_KEY = '@spiritammo_theme_mode';
 const THEME_COLOR_KEY = '@spiritammo_theme_color';
@@ -19,18 +19,20 @@ export function useTheme() {
 
   // Determine the active theme object
   const activeTheme = isDark
-    ? (themeColor === 'jungle' ? JUNGLE_THEME : TACTICAL_THEME)
-    : GARRISON_THEME; // Jungle light mode falls back to Garrison for now, or we could add JUNGLE_LIGHT later
+    ? (themeColor === 'jungle' ? JUNGLE_THEME : themeColor === 'slate' ? SLATE_THEME : TACTICAL_THEME)
+    : GARRISON_THEME; // Light mode uses Garrison for all themes (slate falls back to light)
 
   // Gradients need to be dynamic too
   const activeGradients = {
     ...GRADIENTS,
     primary: isDark
-      ? (themeColor === 'jungle' ? GRADIENTS.jungle.background : GRADIENTS.primary.dark)
+      ? (themeColor === 'jungle' ? GRADIENTS.jungle.background : themeColor === 'slate' ? GRADIENTS.slate.background : GRADIENTS.primary.dark)
       : GRADIENTS.primary.light,
     tactical: isDark && themeColor === 'jungle'
       ? GRADIENTS.jungle
-      : GRADIENTS.tactical
+      : isDark && themeColor === 'slate'
+        ? GRADIENTS.slate
+        : GRADIENTS.tactical
   };
 
   // Load theme settings from storage

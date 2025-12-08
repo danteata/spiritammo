@@ -9,8 +9,9 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome } from '@expo/vector-icons';
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
+import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Scripture } from '@/types/scripture'
+import { useAppStore } from '@/hooks/useAppStore'
 import ScriptureText from './ScriptureText'
 
 interface BookScripturesModalProps {
@@ -26,6 +27,9 @@ export default function BookScripturesModal({
   scriptures,
   bookName,
 }: BookScripturesModalProps) {
+  const { theme, gradients } = useAppStore()
+  const styles = getStyles(theme)
+
   const ExpandableScriptureItem = ({ item }: { item: Scripture }) => {
     const [expanded, setExpanded] = React.useState(false)
 
@@ -61,21 +65,21 @@ export default function BookScripturesModal({
       onRequestClose={onClose}
     >
       <LinearGradient
-        colors={['#1a2f0a', '#2D5016', '#0f1a05']}
+        colors={gradients.tactical.background}
         style={styles.container}
       >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerContent}>
             <View style={styles.titleSection}>
-              <FontAwesome name="book" size={24} color={TACTICAL_THEME.accent} />
+              <FontAwesome name="book" size={24} color={theme.accent} />
               <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
                 {bookName} References
               </Text>
             </View>
 
             <TouchableOpacity style={styles.closeButton} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close modal">
-              <FontAwesome name="close" size={24} color={TACTICAL_THEME.text} />
+              <FontAwesome name="close" size={24} color={theme.text} />
             </TouchableOpacity>
           </View>
 
@@ -94,7 +98,7 @@ export default function BookScripturesModal({
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <FontAwesome name="book" size={48} color={TACTICAL_THEME.textSecondary} style={{ opacity: 0.5, marginBottom: 16 }} />
+              <FontAwesome name="book" size={48} color={theme.textSecondary} style={{ opacity: 0.5, marginBottom: 16 }} />
               <Text style={[styles.emptyText, MILITARY_TYPOGRAPHY.body]}>
                 No rounds found in this book.
               </Text>
@@ -106,7 +110,7 @@ export default function BookScripturesModal({
   )
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -115,7 +119,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderBottomWidth: 1,
-    borderBottomColor: TACTICAL_THEME.border,
+    borderBottomColor: theme.border,
   },
   headerContent: {
     flexDirection: 'row',
@@ -130,15 +134,15 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   title: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     flex: 1,
   },
   subtitle: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
   },
   closeButton: {
     padding: 8,
-    backgroundColor: TACTICAL_THEME.border,
+    backgroundColor: theme.border,
     borderRadius: 6,
   },
   list: {
@@ -148,20 +152,20 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   scriptureItem: {
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 16,
     marginBottom: 12,
     borderLeftWidth: 4,
-    borderLeftColor: TACTICAL_THEME.accent,
+    borderLeftColor: theme.accent,
   },
   reference: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     marginBottom: 8,
     fontWeight: '600',
   },
   scriptureText: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     lineHeight: 18,
   },
   emptyState: {
@@ -171,7 +175,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   emptyText: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     fontSize: 16,
   },

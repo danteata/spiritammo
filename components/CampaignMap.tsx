@@ -10,11 +10,7 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
-import {
-    TACTICAL_THEME,
-    GARRISON_THEME,
-    MILITARY_TYPOGRAPHY,
-} from '@/constants/colors'
+import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedText, ThemedCard } from '@/components/Themed'
 import { Campaign, CampaignNode } from '@/types/campaign'
@@ -28,8 +24,7 @@ const { width } = Dimensions.get('window')
 const MAP_HEIGHT = 600
 
 export default function CampaignMap({ campaign, onNodeSelect }: CampaignMapProps) {
-    const { isDark } = useAppStore()
-    const theme = isDark ? TACTICAL_THEME : GARRISON_THEME
+    const { theme, isDark } = useAppStore()
 
     const renderNode = (node: CampaignNode, index: number) => {
         // Coordinate system: x is percentage (0-100), y is percentage from top (0-100)

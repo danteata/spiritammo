@@ -2,6 +2,7 @@ import { Tabs } from 'expo-router'
 import * as React from 'react';
 import { Platform } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 
 import { COLORS } from '@/constants/colors'
@@ -15,63 +16,64 @@ export default function TabLayout() {
   const inactiveColor = COLORS.disabled
 
   return (
-    <Tabs
-      tabBar={(props: BottomTabBarProps) => <TabBar {...props} />}
-      screenOptions={{
-        headerShown: false,
-        // Remove default styles as we are using custom tab bar
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'SpiritAmmo',
-          tabBarLabel: 'Home',
-          tabBarIcon: ({ color }) => <FontAwesome name="home" size={24} color={color} />,
+    <SafeAreaView style={{ flex: 1 }} edges={['top', 'left', 'right']} >
+      <Tabs
+        tabBar={(props: BottomTabBarProps) => <TabBar {...props} />}
+        screenOptions={{
+          headerShown: false,
         }}
-      />
-      <Tabs.Screen
-        name="armory"
-        options={{
-          title: 'Armory',
-          tabBarIcon: ({ color }) => <FontAwesome name="book" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="training"
-        options={{
-          title: 'Training',
-          tabBarIcon: ({ color }) => <Ionicons name="fitness" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="squad"
-        options={{
-          title: 'Squad',
-          tabBarIcon: ({ color }) => <Ionicons name="people" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="campaign"
-        options={{
-          title: 'Conquest',
-          tabBarIcon: ({ color }) => <FontAwesome name="map-marker" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="mission-report"
-        options={{
-          title: 'Report',
-          tabBarIcon: ({ color }) => <Ionicons name="document-text" size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color }) => <Ionicons name="settings" size={24} color={color} />,
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: 'SpiritAmmo',
+            tabBarLabel: 'Home',
+            tabBarIcon: ({ color }) => <FontAwesome name="home" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="armory"
+          options={{
+            title: 'Armory',
+            tabBarIcon: ({ color }) => <FontAwesome name="book" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="training"
+          options={{
+            title: 'Training',
+            tabBarIcon: ({ color }) => <Ionicons name="fitness" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="squad"
+          options={{
+            title: 'Squad',
+            tabBarIcon: ({ color }) => <Ionicons name="people" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="campaign"
+          options={{
+            title: 'Conquest',
+            tabBarIcon: ({ color }) => <FontAwesome name="map-marker" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="mission-report"
+          options={{
+            title: 'Report',
+            tabBarIcon: ({ color }) => <Ionicons name="document-text" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: 'Settings',
+            tabBarIcon: ({ color }) => <Ionicons name="settings" size={24} color={color} />,
+          }}
+        />
+      </Tabs>
+    </SafeAreaView>
   )
 }

@@ -10,9 +10,10 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome } from '@expo/vector-icons';
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
+import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection, CollectionChapter } from '@/types/scripture'
 import { CollectionChapterService } from '@/services/collectionChapters'
+import { useAppStore } from '@/hooks/useAppStore'
 
 interface CollectionChapterViewProps {
   collection: Collection
@@ -29,6 +30,8 @@ export default function CollectionChapterView({
   selectedChapterId,
   showProgress = true,
 }: CollectionChapterViewProps) {
+  const { theme } = useAppStore()
+  const styles = getStyles(theme)
   const [showChapterManager, setShowChapterManager] = useState(false)
 
   if (!collection.isChapterBased || !collection.chapters) {
@@ -38,21 +41,21 @@ export default function CollectionChapterView({
   const stats = CollectionChapterService.getChapterStats(collection)
 
   const getChapterStatusColor = (chapter: CollectionChapter) => {
-    if (chapter.isCompleted) return TACTICAL_THEME.success
+    if (chapter.isCompleted) return theme.success
     if (chapter.averageAccuracy && chapter.averageAccuracy >= 80)
-      return TACTICAL_THEME.warning
-    if (chapter.lastPracticed) return TACTICAL_THEME.accent
-    return TACTICAL_THEME.textSecondary
+      return theme.warning
+    if (chapter.lastPracticed) return theme.accent
+    return theme.textSecondary
   }
 
   const getChapterStatusIcon = (chapter: CollectionChapter) => {
     if (chapter.isCompleted) {
-      return <FontAwesome name="check-circle" size={16} color={TACTICAL_THEME.success} />
+      return <FontAwesome name="check-circle" size={16} color={theme.success} />
     }
     if (chapter.averageAccuracy && chapter.averageAccuracy >= 80) {
-      return <FontAwesome name="bullseye" size={16} color={TACTICAL_THEME.warning} />
+      return <FontAwesome name="bullseye" size={16} color={theme.warning} />
     }
-    return <FontAwesome name="circle-o" size={16} color={TACTICAL_THEME.textSecondary} />
+    return <FontAwesome name="circle-o" size={16} color={theme.textSecondary} />
   }
 
   const handleDeleteChapter = (chapterId: string) => {
@@ -133,7 +136,7 @@ export default function CollectionChapterView({
       <View style={styles.chapterFooter}>
         {chapter.lastPracticed && (
           <View style={styles.lastPracticed}>
-            <FontAwesome name="calendar" size={12} color={TACTICAL_THEME.textSecondary} />
+            <FontAwesome name="calendar" size={12} color={theme.textSecondary} />
             <Text
               style={[styles.lastPracticedText, MILITARY_TYPOGRAPHY.caption]}
             >
@@ -172,7 +175,7 @@ export default function CollectionChapterView({
             style={styles.manageButton}
             onPress={() => setShowChapterManager(true)}
           >
-            <FontAwesome name="cog" size={16} color={TACTICAL_THEME.text} />
+            <FontAwesome name="cog" size={16} color={theme.text} />
           </TouchableOpacity>
         </View>
       )}
@@ -211,7 +214,7 @@ export default function CollectionChapterView({
         presentationStyle="pageSheet"
       >
         <LinearGradient
-          colors={[TACTICAL_THEME.background, '#0D0D0D']}
+          colors={[theme.background, '#0D0D0D']}
           style={styles.modalContainer}
         >
           <View style={styles.modalHeader}>
@@ -222,7 +225,7 @@ export default function CollectionChapterView({
               style={styles.closeButton}
               onPress={() => setShowChapterManager(false)}
             >
-              <FontAwesome name="close" size={24} color={TACTICAL_THEME.text} />
+              <FontAwesome name="close" size={24} color={theme.text} />
             </TouchableOpacity>
           </View>
 
@@ -284,7 +287,7 @@ export default function CollectionChapterView({
                   CHAPTERS
                 </Text>
                 <TouchableOpacity style={styles.addButton}>
-                  <FontAwesome name="plus" size={16} color={TACTICAL_THEME.text} />
+                  <FontAwesome name="plus" size={16} color={theme.text} />
                   <Text
                     style={[styles.addButtonText, MILITARY_TYPOGRAPHY.caption]}
                   >
@@ -343,13 +346,13 @@ export default function CollectionChapterView({
 
                       <View style={styles.chapterActionButtons}>
                         <TouchableOpacity style={styles.actionButton}>
-                          <FontAwesome name="edit" size={14} color={TACTICAL_THEME.textSecondary} />
+                          <FontAwesome name="edit" size={14} color={theme.textSecondary} />
                         </TouchableOpacity>
                         <TouchableOpacity
                           style={styles.actionButton}
                           onPress={() => handleDeleteChapter(chapter.id)}
                         >
-                          <FontAwesome name="trash" size={14} color={TACTICAL_THEME.error} />
+                          <FontAwesome name="trash" size={14} color={theme.error} />
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -364,9 +367,9 @@ export default function CollectionChapterView({
   )
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginVertical: 8,
@@ -381,15 +384,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   progressTitle: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     marginBottom: 4,
   },
   progressStats: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
   },
   manageButton: {
     padding: 8,
-    backgroundColor: TACTICAL_THEME.border,
+    backgroundColor: theme.border,
     borderRadius: 6,
   },
   progressBarContainer: {
@@ -401,32 +404,32 @@ const styles = StyleSheet.create({
   progressBar: {
     flex: 1,
     height: 6,
-    backgroundColor: TACTICAL_THEME.border,
+    backgroundColor: theme.border,
     borderRadius: 3,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
     borderRadius: 3,
   },
   progressPercentage: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     minWidth: 35,
   },
   chapterList: {
     maxHeight: 300,
   },
   chapterCard: {
-    backgroundColor: TACTICAL_THEME.background,
+    backgroundColor: theme.background,
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.border,
+    borderColor: theme.border,
   },
   selectedChapter: {
-    borderColor: TACTICAL_THEME.accent,
+    borderColor: theme.accent,
     backgroundColor: 'rgba(255, 107, 53, 0.1)',
   },
   chapterHeader: {
@@ -445,18 +448,18 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   chapterName: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     flex: 1,
   },
   customBadge: {
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
     paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     alignSelf: 'flex-start',
   },
   customBadgeText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontSize: 10,
     fontWeight: 'bold',
   },
@@ -464,14 +467,14 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   verseCount: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     marginBottom: 2,
   },
   accuracy: {
     fontWeight: 'bold',
   },
   chapterDescription: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     marginBottom: 8,
     lineHeight: 18,
   },
@@ -486,10 +489,10 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   lastPracticedText: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
   },
   sectionRange: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     fontStyle: 'italic',
   },
   modalContainer: {
@@ -504,7 +507,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   modalTitle: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     flex: 1,
     textAlign: 'center',
   },
@@ -519,7 +522,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     marginBottom: 12,
   },
   sectionHeader: {
@@ -531,18 +534,18 @@ const styles = StyleSheet.create({
   addButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
     gap: 4,
   },
   addButtonText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   overviewCard: {
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 16,
   },
@@ -553,19 +556,19 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   overviewLabel: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
   },
   overviewValue: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   managerChapterCard: {
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.border,
+    borderColor: theme.border,
   },
   managerChapterHeader: {
     flexDirection: 'row',
@@ -582,11 +585,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   managerChapterName: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     marginBottom: 2,
   },
   managerChapterDesc: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
   },
   managerChapterActions: {
     flexDirection: 'row',
@@ -594,7 +597,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   managerChapterStats: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
   },
   managerChapterAccuracy: {
     fontWeight: 'bold',
@@ -606,6 +609,6 @@ const styles = StyleSheet.create({
   actionButton: {
     padding: 6,
     borderRadius: 4,
-    backgroundColor: TACTICAL_THEME.border,
+    backgroundColor: theme.border,
   },
 })

@@ -12,7 +12,7 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome } from '@expo/vector-icons';
-import { TACTICAL_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
+import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import {
   fileExtractionService,
   ExtractedDocument,
@@ -21,6 +21,7 @@ import {
 import CollectionSelector from './CollectionSelector'
 import { Collection } from '@/types/scripture'
 import { PDFExtractor } from './PDFExtractor';
+import { useAppStore } from '@/hooks/useAppStore';
 
 interface FileUploaderProps {
   isVisible: boolean
@@ -33,6 +34,8 @@ export default function FileUploader({
   onClose,
   onVersesExtracted,
 }: FileUploaderProps) {
+  const { theme } = useAppStore()
+  const styles = getStyles(theme)
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractionProgress, setExtractionProgress] =
     useState<ExtractionProgress | null>(null)
@@ -217,9 +220,9 @@ export default function FileUploader({
   }
 
   const getConfidenceColor = (confidence: number) => {
-    if (confidence >= 80) return TACTICAL_THEME.success
-    if (confidence >= 60) return TACTICAL_THEME.warning
-    return TACTICAL_THEME.error
+    if (confidence >= 80) return theme.success
+    if (confidence >= 60) return theme.warning
+    return theme.error
   }
 
   const getConfidenceLabel = (confidence: number) => {
@@ -234,7 +237,7 @@ export default function FileUploader({
     if (extractionProgress) {
       return (
         <View style={styles.progressContainer}>
-          <ActivityIndicator size="large" color={TACTICAL_THEME.accent} />
+          <ActivityIndicator size="large" color={theme.accent} />
           <Text style={[styles.progressText, MILITARY_TYPOGRAPHY.body]}>
             {extractionProgress.message.toUpperCase()}
           </Text>
@@ -261,7 +264,7 @@ export default function FileUploader({
 
     return (
       <View style={styles.progressContainer}>
-        <ActivityIndicator size="large" color={TACTICAL_THEME.accent} />
+        <ActivityIndicator size="large" color={theme.accent} />
         <Text style={[styles.progressText, MILITARY_TYPOGRAPHY.body]}>
           {militaryStatus}
         </Text>
@@ -277,7 +280,7 @@ export default function FileUploader({
 
       {extractedDocuments.length === 0 ? (
         <View style={styles.emptyState}>
-          <FontAwesome name="file-text-o" size={48} color={TACTICAL_THEME.textSecondary} />
+          <FontAwesome name="file-text-o" size={48} color={theme.textSecondary} />
           <Text style={[styles.emptyText, MILITARY_TYPOGRAPHY.body]}>
             No documents extracted yet
           </Text>
@@ -298,7 +301,7 @@ export default function FileUploader({
             >
               <View style={styles.documentHeader}>
                 <View style={styles.documentInfo}>
-                  <FontAwesome name="book" size={20} color={TACTICAL_THEME.accent} />
+                  <FontAwesome name="book" size={20} color={theme.accent} />
                   <View style={styles.documentDetails}>
                     <Text
                       style={[styles.documentName, MILITARY_TYPOGRAPHY.body]}
@@ -318,7 +321,7 @@ export default function FileUploader({
                   style={styles.deleteButton}
                   onPress={() => handleDeleteDocument(doc.id)}
                 >
-                  <FontAwesome name="trash" size={16} color={TACTICAL_THEME.error} />
+                  <FontAwesome name="trash" size={16} color={theme.error} />
                 </TouchableOpacity>
               </View>
 
@@ -366,7 +369,7 @@ export default function FileUploader({
               onPress={handleImportSelected}
               disabled={selectedVerses.length === 0}
             >
-              <FontAwesome name="download" size={16} color={TACTICAL_THEME.text} />
+              <FontAwesome name="download" size={16} color={theme.text} />
               <Text style={[styles.actionText, MILITARY_TYPOGRAPHY.caption]}>
                 IMPORT ({selectedVerses.length})
               </Text>
@@ -420,7 +423,7 @@ export default function FileUploader({
 
                 <View style={styles.selectionIndicator}>
                   {selectedVerses.includes(verse.id) ? (
-                    <FontAwesome name="check-circle" size={20} color={TACTICAL_THEME.success} />
+                    <FontAwesome name="check-circle" size={20} color={theme.success} />
                   ) : (
                     <View style={styles.unselectedCircle} />
                   )}
@@ -444,14 +447,14 @@ export default function FileUploader({
       presentationStyle="fullScreen"
     >
       <LinearGradient
-        colors={[TACTICAL_THEME.background, '#0D0D0D']}
+        colors={[theme.background, '#0D0D0D']}
         style={styles.container}
       >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTopRow}>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <FontAwesome name="times-circle" size={24} color={TACTICAL_THEME.error} />
+              <FontAwesome name="times-circle" size={24} color={theme.error} />
             </TouchableOpacity>
 
             <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
@@ -468,7 +471,7 @@ export default function FileUploader({
               <Switch
                 value={useInternalBible}
                 onValueChange={setUseInternalBible}
-                trackColor={{ false: TACTICAL_THEME.surface, true: TACTICAL_THEME.accent }}
+                trackColor={{ false: theme.surface, true: theme.accent }}
                 thumbColor={useInternalBible ? '#fff' : '#f4f3f4'}
                 style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
               />
@@ -479,7 +482,7 @@ export default function FileUploader({
               onPress={handleFileUpload}
               disabled={isExtracting}
             >
-              <FontAwesome name="upload" size={20} color={TACTICAL_THEME.text} />
+              <FontAwesome name="upload" size={20} color={theme.text} />
               <Text style={[styles.uploadText, MILITARY_TYPOGRAPHY.caption]}>
                 {isExtracting ? '...' : 'UPLOAD'}
               </Text>
@@ -519,7 +522,7 @@ export default function FileUploader({
   )
 }
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -544,7 +547,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   title: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     flex: 1,
     textAlign: 'center',
   },
@@ -561,20 +564,20 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   toggleLabel: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     fontSize: 10,
   },
   uploadButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     gap: 8,
   },
   uploadText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   content: {
@@ -582,27 +585,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   progressContainer: {
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 20,
     marginBottom: 20,
     alignItems: 'center',
   },
   progressTitle: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     marginBottom: 16,
   },
   progressBar: {
     width: '100%',
     height: 8,
-    backgroundColor: TACTICAL_THEME.border,
+    backgroundColor: theme.border,
     borderRadius: 4,
     overflow: 'hidden',
     marginBottom: 12,
   },
   progressFill: {
     height: '100%',
-    backgroundColor: TACTICAL_THEME.accent,
+    backgroundColor: theme.accent,
     borderRadius: 4,
   },
   progressText: {
@@ -610,18 +613,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   progressPercent: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     textAlign: 'center',
     marginTop: 4,
   },
   progressDetail: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
     marginTop: 4,
     fontStyle: 'italic',
   },
   sectionTitle: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -635,27 +638,27 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyText: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtext: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
     textAlign: 'center',
   },
   documentScroll: {
     flex: 1,
   },
   documentCard: {
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.border,
+    borderColor: theme.border,
   },
   selectedDocument: {
-    borderColor: TACTICAL_THEME.accent,
+    borderColor: theme.accent,
     backgroundColor: 'rgba(255, 107, 53, 0.1)',
   },
   documentHeader: {
@@ -674,17 +677,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   documentName: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     marginBottom: 4,
   },
   documentMeta: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
   },
   deleteButton: {
     padding: 8,
   },
   extractedDate: {
-    color: TACTICAL_THEME.textSecondary,
+    color: theme.textSecondary,
   },
   verseSelection: {
     flex: 1,
@@ -701,35 +704,35 @@ const styles = StyleSheet.create({
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.border,
+    borderColor: theme.border,
     gap: 8,
   },
   importButton: {
-    backgroundColor: TACTICAL_THEME.success,
-    borderColor: TACTICAL_THEME.success,
+    backgroundColor: theme.success,
+    borderColor: theme.success,
   },
   actionText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     fontWeight: 'bold',
   },
   verseScroll: {
     flex: 1,
   },
   verseCard: {
-    backgroundColor: TACTICAL_THEME.surface,
+    backgroundColor: theme.surface,
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: TACTICAL_THEME.border,
+    borderColor: theme.border,
   },
   selectedVerse: {
-    borderColor: TACTICAL_THEME.success,
+    borderColor: theme.success,
     backgroundColor: 'rgba(50, 205, 50, 0.1)',
   },
   verseHeader: {
@@ -744,7 +747,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   verseReference: {
-    color: TACTICAL_THEME.accent,
+    color: theme.accent,
     fontWeight: 'bold',
   },
   confidenceIndicator: {
@@ -772,19 +775,19 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: TACTICAL_THEME.border,
+    borderColor: theme.border,
   },
   verseText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
     lineHeight: 20,
   },
   backButton: {
-    backgroundColor: TACTICAL_THEME.secondary,
+    backgroundColor: theme.secondary,
     paddingVertical: 16,
     paddingHorizontal: 20,
     alignItems: 'center',
   },
   backText: {
-    color: TACTICAL_THEME.text,
+    color: theme.text,
   },
 })

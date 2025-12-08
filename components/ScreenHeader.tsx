@@ -2,7 +2,6 @@ import * as React from 'react'
 import { StyleSheet, View, TouchableOpacity, ViewStyle } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ThemedText } from '@/components/Themed'
-import { TACTICAL_THEME, GARRISON_THEME } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 
 interface ScreenHeaderProps {
