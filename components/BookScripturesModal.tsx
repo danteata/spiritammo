@@ -27,7 +27,7 @@ export default function BookScripturesModal({
   scriptures,
   bookName,
 }: BookScripturesModalProps) {
-  const { theme, gradients } = useAppStore()
+  const { theme, gradients, isDark } = useAppStore()
   const styles = getStyles(theme)
 
   const ExpandableScriptureItem = ({ item }: { item: Scripture }) => {
@@ -65,7 +65,9 @@ export default function BookScripturesModal({
       onRequestClose={onClose}
     >
       <LinearGradient
-        colors={gradients.tactical.background}
+        colors={theme.isDark ? ['#0D0D0D', '#000000'] : ['#FFFFFF', '#F8F8F8']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
         style={styles.container}
       >
         {/* Header */}

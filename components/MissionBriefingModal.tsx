@@ -135,7 +135,7 @@ export default function MissionBriefingModal({
                         }]}>
                             <View style={styles.intelRow}>
                                 <ThemedText variant="code" style={styles.intelLabel}>TARGET SECTOR</ThemedText>
-                                <ThemedText variant="subheading" style={{ color: theme.primary, letterSpacing: 1 }}>{scripture.reference.toUpperCase()}</ThemedText>
+                                <ThemedText variant="subheading" style={{ color: theme.accent, letterSpacing: 1 }}>{scripture.reference.toUpperCase()}</ThemedText>
                             </View>
                             <View style={styles.divider} />
                             <View style={styles.intelRow}>

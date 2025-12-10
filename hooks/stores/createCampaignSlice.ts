@@ -90,28 +90,52 @@ export const createCampaignSlice: StateCreator<CampaignSlice> = (set, get) => ({
 
         const node = campaign.nodes[nodeIndex]
 
+        console.log('completeNode called with:', { campaignId, nodeId, accuracy, required: node.requiredAccuracy });
+        console.log('Current node statuses:', campaign.nodes.map(n => ({ id: n.id, status: n.status })));
+
         // Check if accuracy meets requirement
         if (accuracy < node.requiredAccuracy) {
+            console.log('Mission failed - accuracy too low');
             return false // Failed mission
         }
 
         // Mark current node as CONQUERED
         const updatedNodes = [...campaign.nodes]
         updatedNodes[nodeIndex] = { ...node, status: 'CONQUERED' }
+        console.log('Marked node as CONQUERED:', `${node.id} -> CONQUERED`);
 
-        // Unlock next node if exists
-        let unlockedNext = false
-        if (nodeIndex + 1 < updatedNodes.length) {
-            const nextNode = updatedNodes[nodeIndex + 1]
-            // Only unlock if it was previously LOCKED (don't overwrite CONQUERED)
-            if (nextNode.status === 'LOCKED') {
-                updatedNodes[nodeIndex + 1] = { ...nextNode, status: 'ACTIVE' }
-                unlockedNext = true
+        // Unlock next node if exists - check and unlock sequentially
+        let hasUnlockedNext = false
+        for (let i = nodeIndex + 1; i < updatedNodes.length; i++) {
+            const currentNode = updatedNodes[i]
+            console.log(`Checking node ${currentNode.id} at index ${i}, status: ${currentNode.status}`);
+
+            if (currentNode.status === 'LOCKED') {
+                // Unlock this node
+                updatedNodes[i] = { ...currentNode, status: 'ACTIVE' }
+                console.log(`Unlocked node: ${currentNode.id} -> ACTIVE`);
+                hasUnlockedNext = true
+                break // Only unlock the immediate next LOCKED node
+            } else if (currentNode.status === 'CONQUERED') {
+                // Continue to find the next locked node
+                console.log(`Node ${currentNode.id} already CONQUERED, continuing search`);
+                continue
+            } else if (currentNode.status === 'ACTIVE') {
+                // Already active, no need to unlock more
+                console.log(`Node ${currentNode.id} already ACTIVE, stopping search`);
+                break
             }
+        }
+
+        if (!hasUnlockedNext) {
+            console.log('No next node was unlocked');
         }
 
         // Calculate progress
         const completedCount = updatedNodes.filter(n => n.status === 'CONQUERED').length
+        console.log(`Updated progress: ${completedCount}/${updatedNodes.length} nodes conquered`);
+
+        console.log('Final node statuses:', updatedNodes.map(n => ({ id: n.id, status: n.status })));
 
         const updatedCampaign: Campaign = {
             ...campaign,

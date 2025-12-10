@@ -1,7 +1,7 @@
 import React from 'react'
-import { StyleSheet, Text, ScrollView, View } from 'react-native'
+import { StyleSheet, Text, ScrollView, View, TouchableOpacity } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { Feather } from '@expo/vector-icons'
+import { Feather, MaterialCommunityIcons, FontAwesome5, FontAwesome } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
 import { Collection } from '@/types/scripture'
@@ -13,6 +13,9 @@ import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { errorHandler } from '@/services/errorHandler'
+import StealthDrill from '@/components/StealthDrill'
+import { generateAndStoreIntel } from '@/services/battleIntelligence'
+import { militaryRankingService } from '@/services/militaryRanking'
 
 export default function HomeScreen() {
   const {
@@ -23,13 +26,17 @@ export default function HomeScreen() {
     getScripturesByCollection,
     setCurrentScripture,
     updateScriptureAccuracy,
+    updateScriptureMnemonic,
     isLoading,
+    theme,
   } = useAppStore()
   const router = useRouter()
 
   const [selectedCollection, setSelectedCollection] =
     React.useState<Collection | null>(null)
   const [isLoadingScripture, setIsLoadingScripture] = React.useState(false)
+  const [showStealthDrill, setShowStealthDrill] = React.useState(false)
+  const [isLoadingIntel, setIsLoadingIntel] = React.useState(false)
 
   const handleSelectCollection = (collection: Collection) => {
     try {
@@ -111,6 +118,80 @@ export default function HomeScreen() {
     }
   }
 
+  const handleStealthDrill = () => {
+    setShowStealthDrill(true)
+  }
+
+  const handleStealthDrillComplete = async (accuracy: number) => {
+    console.log('🏠 Home: Stealth drill completed with accuracy:', accuracy)
+    if (currentScripture) {
+      setShowStealthDrill(false)
+      try {
+        setIsLoadingScripture(true)
+        await updateScriptureAccuracy(currentScripture.id, accuracy)
+        errorHandler.showSuccess(
+          `Silent reconnaissance successful! Accuracy: ${accuracy.toFixed(1)}%`,
+          'Shadow Operation Complete'
+        )
+      } catch (error) {
+        await errorHandler.handleError(
+          error,
+          'Record Stealth Drill',
+          {
+            customMessage: 'Failed to record stealth drill results. Please try again.',
+            retry: () => handleStealthDrillComplete(accuracy)
+          }
+        )
+      } finally {
+        setIsLoadingScripture(false)
+      }
+    }
+  }
+
+  const handleReload = () => {
+    if (selectedCollection) {
+      const scriptures = getScripturesByCollection(selectedCollection.id)
+      if (scriptures.length > 0) {
+        const randomIndex = Math.floor(Math.random() * scriptures.length)
+        setCurrentScripture(scriptures[randomIndex])
+      }
+    } else {
+      getRandomScripture()
+    }
+  }
+
+  const handleGenerateIntel = async (force: boolean = false) => {
+    if (currentScripture) {
+      try {
+        setIsLoadingIntel(true)
+        const intel = await generateAndStoreIntel(currentScripture, force)
+        if (intel) {
+          console.log('Generated battle intel:', intel.battlePlan)
+          await militaryRankingService.recordIntelGenerated()
+
+          const mnemonicText = `${intel.battlePlan}\n---\n${intel.tacticalNotes}`
+          await updateScriptureMnemonic(currentScripture.id, mnemonicText)
+
+          errorHandler.showSuccess(
+            'Battle intelligence deployed successfully! Tactical advantage secured.',
+            'Intel Acquired'
+          )
+        }
+      } catch (error) {
+        await errorHandler.handleError(
+          error,
+          'Generate Intel',
+          {
+            customMessage: 'Intel generation failed. Command unable to provide tactical support. Retry?',
+            retry: () => handleGenerateIntel(force)
+          }
+        )
+      } finally {
+        setIsLoadingIntel(false)
+      }
+    }
+  }
+
   return (
     <ThemedContainer style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, { paddingBottom: 104 }]}>
@@ -136,6 +217,54 @@ export default function HomeScreen() {
               scriptureText={currentScripture.text}
               onRecordingComplete={handleRecordingComplete}
             />
+
+            {/* Tactical Action Buttons */}
+            <View style={styles.tacticalActions}>
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={[styles.tacticalButton, { backgroundColor: theme.secondary }]}
+                  onPress={handleReload}
+                  disabled={isLoadingScripture}
+                  testID="reload-button"
+                >
+                  <FontAwesome name="undo" size={20} color={theme.text} />
+                  <Text style={[styles.tacticalButtonText, { color: theme.text }]}>
+                    RELOAD
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.tacticalButton, { backgroundColor: '#4E5D6C' }]}
+                  onPress={handleStealthDrill}
+                  disabled={isLoadingScripture}
+                  testID="stealth-button"
+                >
+                  <MaterialCommunityIcons name="incognito" size={20} color={theme.text} />
+                  <Text style={[styles.tacticalButtonText, { color: theme.text }]}>
+                    STEALTH
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.tacticalButton, { backgroundColor: theme.primary, opacity: isLoadingIntel ? 0.6 : 1 }]}
+                  onPress={() => handleGenerateIntel(false)}
+                  disabled={isLoadingScripture || (currentScripture.mnemonic && !isLoadingIntel)} // Disable if already has intel
+                  testID="intel-button"
+                >
+                  {isLoadingIntel ? (
+                    <View style={[styles.loadingIndicator, { borderColor: theme.text, borderTopColor: 'transparent' }]} />
+                  ) : (
+                    <FontAwesome5 name="brain" size={20} color={theme.text} />
+                  )}
+                  <Text style={[styles.tacticalButtonText, {
+                    color: currentScripture.mnemonic ? theme.textSecondary : theme.text,
+                    textDecorationLine: currentScripture.mnemonic ? 'line-through' : 'none'
+                  }]}>
+                    {isLoadingIntel ? 'PROCESSING...' : 'INTEL'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </>
         ) : !isLoading ? (
           <View style={styles.emptyState}>
@@ -160,16 +289,15 @@ export default function HomeScreen() {
         ) : null}
       </ScrollView>
 
+      {/* Stealth Drill Modal */}
       {currentScripture && (
-        <View style={styles.footer}>
-          <ActionButton
-            title="Ready! Aim! Fire!"
-            onPress={handleNextScripture}
-            testID="load-next-round-button"
-            animated={true}
-            style={{ paddingVertical: 16, marginVertical: 0, marginBottom: 104, minWidth: 200, backgroundColor: '#CC5529' }}
-          />
-        </View>
+        <StealthDrill
+          isVisible={showStealthDrill}
+          targetVerse={currentScripture.text}
+          reference={currentScripture.reference}
+          onComplete={handleStealthDrillComplete}
+          onClose={() => setShowStealthDrill(false)}
+        />
       )}
 
       {/* Loading Overlays */}
@@ -180,6 +308,10 @@ export default function HomeScreen() {
       <LoadingOverlay
         visible={isLoadingScripture}
         message="Loading ammunition..."
+      />
+      <LoadingOverlay
+        visible={isLoadingIntel}
+        message="Requesting tactical intelligence..."
       />
     </ThemedContainer>
   )
@@ -203,12 +335,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
-  footer: {
-    padding: 20,
-    paddingBottom: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+
   emptyState: {
     padding: 40,
     alignItems: 'center',
@@ -238,5 +365,38 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
     maxWidth: '80%',
+  },
+  tacticalActions: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
+  },
+  tacticalButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 8,
+    gap: 8,
+    minWidth: 80,
+  },
+  tacticalButtonText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+  },
+  loadingIndicator: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 })

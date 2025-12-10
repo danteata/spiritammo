@@ -139,7 +139,26 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
           await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(DEFAULT_USER_SETTINGS))
         }
 
-        // 3. Initialize Database and get connection
+        // 3. Load Campaign Data from AsyncStorage
+        const storedCampaigns = await AsyncStorage.getItem('user_campaigns')
+        if (storedCampaigns) {
+          try {
+            const parsedCampaigns: Campaign[] = JSON.parse(storedCampaigns)
+            set({ campaigns: parsedCampaigns })
+            console.log('📊 Loaded campaign progress from AsyncStorage:', parsedCampaigns.map(c => `${c.title}: ${c.completedNodes}/${c.totalNodes}`))
+          } catch (campaignError) {
+            console.error('Failed to parse stored campaigns:', campaignError)
+            // Fall back to defaults
+            await AsyncStorage.removeItem('user_campaigns')
+            set({ campaigns: INITIAL_CAMPAIGNS })
+          }
+        } else {
+          // No stored campaigns - use defaults
+          console.log('📊 No stored campaigns found, using defaults')
+          set({ campaigns: INITIAL_CAMPAIGNS })
+        }
+
+        // 4. Initialize Database and get connection
         const db = await getDb();
 
         if (!db) {
@@ -891,6 +910,19 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
               : node
           );
 
+          // Unlock the next LOCKED node in sequence
+          const completedNodeIndex = campaign.nodes.findIndex(n => n.id === nodeId);
+          if (completedNodeIndex >= 0) {
+            for (let i = completedNodeIndex + 1; i < updatedNodes.length; i++) {
+              const currentNode = updatedNodes[i];
+              if (currentNode.status === 'LOCKED') {
+                updatedNodes[i] = { ...currentNode, status: 'ACTIVE' as const };
+                console.log(`Unlocked next node: ${currentNode.id} -> ACTIVE`);
+                break; // Only unlock the immediate next locked node
+              }
+            }
+          }
+
           const completedNodes = updatedNodes.filter(node => node.status === 'CONQUERED').length;
           const totalNodes = campaign.totalNodes;
           const progressPercentage = (completedNodes / totalNodes) * 100;
@@ -902,6 +934,8 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
             // Mark next available campaigns as ACTIVE
             console.log(`Campaign ${campaignId} completed!`);
           }
+
+          console.log(`Node completion: ${nodeId} completed, next node unlocked, progress: ${completedNodes}/${totalNodes}`);
 
           return {
             ...campaign,

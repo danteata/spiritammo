@@ -482,8 +482,8 @@ export default function FileUploader({
               onPress={handleFileUpload}
               disabled={isExtracting}
             >
-              <FontAwesome name="upload" size={20} color={theme.text} />
-              <Text style={[styles.uploadText, MILITARY_TYPOGRAPHY.caption]}>
+              <FontAwesome name="upload" size={20} color={theme.accentContrastText} />
+              <Text style={[styles.uploadText, MILITARY_TYPOGRAPHY.caption, { color: theme.accentContrastText }]}>
                 {isExtracting ? '...' : 'UPLOAD'}
               </Text>
             </TouchableOpacity>

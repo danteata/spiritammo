@@ -49,6 +49,7 @@ const CollectionDetailModal = React.memo(({
     theme,
     gradients,
   } = useAppStore()
+  const styles = getStyles(theme)
 
   const [isBulkSelecting, setIsBulkSelecting] = useState(false)
   const [selectedScriptureIds, setSelectedScriptureIds] = useState<Set<string>>(new Set())
@@ -467,7 +468,9 @@ const CollectionDetailModal = React.memo(({
       onRequestClose={onClose}
     >
       <LinearGradient
-        colors={gradients.tactical.background}
+        colors={isDark ? ['#0D0D0D', '#000000'] : ['#FFFFFF', '#F8F8F8']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
         style={styles.container}
       >
         {/* Header */}
@@ -504,10 +507,10 @@ const CollectionDetailModal = React.memo(({
               {isEditingInfo ? (
                 <>
                   <TouchableOpacity style={[styles.cancelButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]} onPress={handleCancelEdit} accessibilityRole="button" accessibilityLabel="Cancel editing">
-                    <Text style={[styles.cancelButtonText, { color: theme.text }]}>CANCEL</Text>
+                    <Text style={styles.cancelButtonText}>CANCEL</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={[styles.saveButton, { backgroundColor: theme.accent }]} onPress={handleSaveInfo} accessibilityRole="button" accessibilityLabel="Save changes">
-                    <Text style={styles.saveButtonText}>SAVE</Text>
+                    <Text style={[styles.saveButtonText, Platform.OS === 'web' ? { color: theme.accentContrastText } : {}]}>SAVE</Text>
                   </TouchableOpacity>
                 </>
               ) : isBulkSelecting ? (
@@ -745,8 +748,8 @@ const CollectionDetailModal = React.memo(({
                     end={{ x: 1, y: 1 }}
                     style={styles.tag}
                   >
-                    <MaterialCommunityIcons name="tag-text-outline" size={12} color="#FFFFFF" />
-                    <Text style={[styles.tagText, MILITARY_TYPOGRAPHY.caption, { color: '#FFFFFF' }]}>
+                    <MaterialCommunityIcons name="tag-text-outline" size={12} color={theme.accentContrastText} />
+                    <Text style={[styles.tagText, MILITARY_TYPOGRAPHY.caption, { color: theme.accentContrastText }]}>
                       {tag.toUpperCase()}
                     </Text>
                   </LinearGradient>
@@ -857,7 +860,7 @@ const CollectionDetailModal = React.memo(({
 
 export default CollectionDetailModal;
 
-const styles = StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -933,7 +936,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   saveButtonText: {
-    color: '#000',
+    color: '#FFF',
     fontSize: 12,
     fontWeight: 'bold',
     letterSpacing: 1,
@@ -1275,7 +1278,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   saveInfoText: {
-    color: '#000',
+    color: '#FFF',
     fontSize: 12,
     fontWeight: 'bold',
     letterSpacing: 1,

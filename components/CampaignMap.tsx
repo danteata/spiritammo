@@ -43,7 +43,7 @@ export default function CampaignMap({ campaign, onNodeSelect }: CampaignMapProps
             opacity = 1
             scale = 1.2
         } else if (node.status === 'CONQUERED') {
-            nodeColor = theme.primary // Completed
+            nodeColor = '#FFD700' // Completed - green in light mode
             iconName = 'star'
             opacity = 1
             scale = 1
