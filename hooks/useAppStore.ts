@@ -30,6 +30,10 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const squadChallenges = useZustandStore((s) => s.squadChallenges)
   const isLoading = useZustandStore((s) => s.isLoading)
 
+  // Avatar selectors
+  const avatarInventory = useZustandStore((s) => s.avatarInventory)
+  const isLoadingAvatar = useZustandStore((s) => s.isLoadingAvatar)
+
   // Actions
   const setSelectedBook = useZustandStore((s) => s.setSelectedBook)
   const setSelectedChapters = useZustandStore((s) => s.setSelectedChapters)
@@ -55,6 +59,11 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const updateChallengeProgress = useZustandStore((s) => s.updateChallengeProgress)
   const addSquadMember = useZustandStore((s) => s.addSquadMember)
   const addSquadChallenge = useZustandStore((s) => s.addSquadChallenge)
+
+  // Avatar actions
+  const purchaseItem = useZustandStore((s) => s.purchaseItem)
+  const equipItem = useZustandStore((s) => s.equipItem)
+  const addValorPoints = useZustandStore((s) => s.addValorPoints)
 
   return {
     // Theme
@@ -82,6 +91,10 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     squadChallenges,
     isLoading,
 
+    // Avatar Data
+    avatarInventory,
+    isLoadingAvatar,
+
     // Actions
     setSelectedBook,
     setSelectedChapters,
@@ -107,5 +120,10 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     updateChallengeProgress,
     addSquadMember,
     addSquadChallenge,
+
+    // Avatar Actions
+    purchaseItem,
+    equipItem,
+    addValorPoints,
   }
 })

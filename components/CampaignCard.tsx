@@ -6,6 +6,7 @@ import { Campaign } from '@/types/campaign'
 
 interface CampaignCardProps {
     campaign: Campaign
+    isLocked?: boolean
     onPress: (campaignId: string) => void
 }
 

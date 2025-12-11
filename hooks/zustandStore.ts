@@ -26,6 +26,7 @@ import { DataLoaderService } from '@/services/dataLoader'
 import { militaryRankingService } from '@/services/militaryRanking'
 import { bibleApiService } from '@/services/bibleApi'
 import { errorHandler } from '@/services/errorHandler'
+import { createAvatarSlice, AvatarSlice } from '@/hooks/stores/createAvatarSlice'
 
 // Generate a simple UUID for React Native
 function generateUUID(): string {
@@ -55,7 +56,7 @@ const DEFAULT_USER_STATS: UserStats = {
   rank: 'recruit',
 }
 
-type AppState = {
+type AppState = AvatarSlice & {
   // Data
   books: Book[]
   scriptures: Scripture[]
@@ -100,7 +101,9 @@ type AppState = {
   setCurrentScripture: (s: Scripture | null) => void
 }
 
-export const useZustandStore = create<AppState>((set: (partial: Partial<AppState> | ((state: AppState) => Partial<AppState>)) => void, get: () => AppState) => ({
+export const useZustandStore = create<AppState>((set, get, store) => ({
+  ...createAvatarSlice(set, get, store),
+
   books: BOOKS,
   scriptures: [],
   collections: [],
@@ -130,6 +133,9 @@ export const useZustandStore = create<AppState>((set: (partial: Partial<AppState
 
         // 1. Initialize Database Tables
         await initializeDatabase();
+
+        // 1.5. Load Avatar Data (independent of database)
+        await get().loadAvatarData();
 
         // 2. Load User Settings from AsyncStorage
         const storedSettings = await AsyncStorage.getItem(USER_SETTINGS_KEY)

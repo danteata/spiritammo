@@ -37,6 +37,15 @@ import {
 } from '@/services/battleIntelligence'
 import { militaryRankingService } from '@/services/militaryRanking'
 import { errorHandler } from '@/services/errorHandler'
+import StreakChallenge from '@/components/StreakChallenge'
+import CollectionAssault from '@/components/CollectionAssault'
+
+interface AssaultResult {
+  scriptureId: string
+  accuracy: number
+  timestamp: Date
+  transcript: string
+}
 
 export default function TrainingScreen() {
   const params = useLocalSearchParams()
@@ -70,6 +79,15 @@ export default function TrainingScreen() {
   const [generatedIntel, setGeneratedIntel] = useState<StoredIntel | null>(null)
   const [isLoadingIntel, setIsLoadingIntel] = useState(false)
   const [showStealthDrill, setShowStealthDrill] = useState(false)
+  const [showCollectionAssault, setShowCollectionAssault] = useState(false)
+  const [assaultCollections, setAssaultCollections] = useState<Collection[]>([])
+  const [assaultParameters, setAssaultParameters] = useState({
+    verseCount: 5,
+    timeLimit: 0, // 0 = no limit
+    difficulty: 'standard'
+  })
+
+
 
   // Safe formatter for numeric percentages that might be null/undefined
   const fmt = (v?: number | null, digits = 1) =>
@@ -105,6 +123,8 @@ export default function TrainingScreen() {
       }
     }
   }, [params.collectionId, collections])
+
+
 
   const loadMilitaryProfile = async () => {
     try {
@@ -250,6 +270,10 @@ export default function TrainingScreen() {
         lastSessionWordCount: currentScripture.text.split(' ').length,
       })
 
+      // Record streak progress for practice completion
+      const { streakManager } = await import('@/services/streakManager')
+      await streakManager.recordPractice()
+
       await loadMilitaryProfile()
       console.log('🎯 Training: handleTargetPracticeComplete completed')
     } else {
@@ -282,6 +306,22 @@ export default function TrainingScreen() {
         setCurrentScripture(chapterScriptures[0])
       }
     }
+  }
+
+  const handleAssaultComplete = (results: AssaultResult[]) => {
+    console.log('🫡 Collection assault completed with results:', results)
+    setShowCollectionAssault(false)
+    setTrainingMode('single') // Reset back to single mode
+
+    // Show completion message
+    const totalAccuracies = results.reduce((sum, r) => sum + r.accuracy, 0)
+    const averageAccuracy = totalAccuracies / results.length
+
+    Alert.alert(
+      'COLLECTION ASSAULT COMPLETE',
+      `${results.length} verses conquered\nAverage Accuracy: ${averageAccuracy.toFixed(1)}%`,
+      [{ text: 'HOOAH!' }]
+    )
   }
 
   return (
@@ -321,7 +361,7 @@ export default function TrainingScreen() {
 
         <View style={{ height: 10 }} />
 
-        {/* Mode Selector */}
+        {/* Fire Mode Selector */}
         <View style={[styles.modeSelectorContainer, { paddingHorizontal: 20 }]}>
           <View style={[
             styles.modeSelector,
@@ -361,6 +401,11 @@ export default function TrainingScreen() {
             ))}
           </View>
         </View>
+
+
+
+        {/* Streak Challenge - Daily Goal Tracking */}
+        <StreakChallenge compact={true} />
 
         {/* Collection Selector */}
         <CollectionSelector
@@ -514,6 +559,7 @@ export default function TrainingScreen() {
         <TargetPractice
           isVisible={showTargetPractice}
           targetVerse={currentScripture.text}
+          reference={currentScripture.reference}
           intelText={
             generatedIntel
               ? `Battle Plan: ${generatedIntel.battlePlan}. Tactical Notes: ${generatedIntel.tacticalNotes}`
@@ -540,6 +586,20 @@ export default function TrainingScreen() {
         visible={isLoadingIntel}
         message="Requesting tactical intelligence from command..."
       />
+
+      {/* Collection Assault Modal */}
+      {selectedCollection && showCollectionAssault && (
+        <CollectionAssault
+          isVisible={showCollectionAssault}
+          collections={[selectedCollection]}
+          parameters={assaultParameters}
+          onComplete={handleAssaultComplete}
+          onClose={() => {
+            setShowCollectionAssault(false)
+            setTrainingMode('single')
+          }}
+        />
+      )}
     </ThemedContainer>
   )
 }
@@ -649,5 +709,118 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     fontSize: 16,
+  },
+  modeSelectorHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+    gap: 6,
+  },
+  headerText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  trainingModesSection: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  trainingModeButton: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+    borderWidth: 2,
+    borderColor: 'rgba(0, 123, 255, 0.3)',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  trainingModeActive: {
+    backgroundColor: '#007BFF',
+    borderColor: '#007BFF',
+    shadowColor: '#007BFF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  trainingModeText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginTop: 8,
+    letterSpacing: 0.5,
+  },
+  modeSeparator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 12,
+    gap: 12,
+  },
+  separatorLine: {
+    flex: 1,
+    height: 2,
+  },
+  separatorIcon: {
+    marginTop: 1,
+  },
+  testingModesSection: {
+    marginTop: 8,
+  },
+  testingModeButton: {
+    backgroundColor: 'rgba(220, 53, 69, 0.1)',
+    borderWidth: 2,
+    borderColor: 'rgba(220, 53, 69, 0.3)',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  testingModeActive: {
+    backgroundColor: '#DC3545',
+    borderColor: '#DC3545',
+    shadowColor: '#DC3545',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  testingModeIcon: {
+    marginBottom: 8,
+  },
+  testingModeTextContainer: {
+    alignItems: 'center',
+  },
+  testingModeText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    textAlign: 'center',
+  },
+  testingModeSubtitle: {
+    fontSize: 10,
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginTop: 2,
+    opacity: 0.9,
+  },
+  assessmentNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  assessmentNoticeText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 0.5,
+    flex: 1,
   },
 })

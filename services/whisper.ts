@@ -1,4 +1,8 @@
 import * as FS from 'react-native-fs';
+/*
+// Temporarily commented out expo-file-system until we can properly migrate
+// import * as FS from 'expo-file-system';
+*/
 
 // Define types locally to avoid importing from the library at top level
 // These match the types from whisper.rn

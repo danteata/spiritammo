@@ -3,7 +3,7 @@ import * as React from 'react';
 import { Platform } from 'react-native';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { FontAwesome, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 
 import { COLORS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
@@ -32,10 +32,10 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="armory"
+          name="arsenal"
           options={{
-            title: 'Armory',
-            tabBarIcon: ({ color }) => <FontAwesome name="book" size={24} color={color} />,
+            title: 'Arsenal',
+            tabBarIcon: ({ color }) => <FontAwesome5 name="shield-alt" size={24} color={color} />,
           }}
         />
         <Tabs.Screen
@@ -46,17 +46,17 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="squad"
-          options={{
-            title: 'Squad',
-            tabBarIcon: ({ color }) => <Ionicons name="people" size={24} color={color} />,
-          }}
-        />
-        <Tabs.Screen
           name="campaign"
           options={{
             title: 'Conquest',
             tabBarIcon: ({ color }) => <FontAwesome name="map-marker" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="squad"
+          options={{
+            title: 'Squad',
+            tabBarIcon: ({ color }) => <Ionicons name="people" size={24} color={color} />,
           }}
         />
         <Tabs.Screen
@@ -69,8 +69,8 @@ export default function TabLayout() {
         <Tabs.Screen
           name="settings"
           options={{
-            title: 'Settings',
-            tabBarIcon: ({ color }) => <Ionicons name="settings" size={24} color={color} />,
+            title: 'Command Post',
+            tabBarIcon: ({ color }) => <Ionicons name="shield" size={24} color={color} />,
           }}
         />
       </Tabs>

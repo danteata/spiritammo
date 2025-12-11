@@ -1,318 +1,161 @@
 import React from 'react'
 import { StyleSheet, Text, ScrollView, View, TouchableOpacity } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
-import { Feather, MaterialCommunityIcons, FontAwesome5, FontAwesome } from '@expo/vector-icons'
+import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
-import { Collection } from '@/types/scripture'
-import ScriptureCard from '@/components/ScriptureCard'
-import CollectionSelector from '@/components/CollectionSelector'
-import VoiceRecorder from '@/components/VoiceRecorder'
-import ActionButton from '@/components/ActionButton'
-import { ThemedContainer, ThemedText } from '@/components/Themed'
+import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
-import { errorHandler } from '@/services/errorHandler'
-import StealthDrill from '@/components/StealthDrill'
-import { generateAndStoreIntel } from '@/services/battleIntelligence'
-import { militaryRankingService } from '@/services/militaryRanking'
+import StreakChallenge from '@/components/StreakChallenge'
+import SoldierAvatar from '@/components/SoldierAvatar'
 
 export default function HomeScreen() {
-  const {
-    isDark,
-    currentScripture,
-    getRandomScripture,
-    collections,
-    getScripturesByCollection,
-    setCurrentScripture,
-    updateScriptureAccuracy,
-    updateScriptureMnemonic,
-    isLoading,
-    theme,
-  } = useAppStore()
+  const { isLoading, theme, isDark } = useAppStore()
   const router = useRouter()
-
-  const [selectedCollection, setSelectedCollection] =
-    React.useState<Collection | null>(null)
-  const [isLoadingScripture, setIsLoadingScripture] = React.useState(false)
-  const [showStealthDrill, setShowStealthDrill] = React.useState(false)
-  const [isLoadingIntel, setIsLoadingIntel] = React.useState(false)
-
-  const handleSelectCollection = (collection: Collection) => {
-    try {
-      setIsLoadingScripture(true)
-      setSelectedCollection(collection)
-      const scriptures = getScripturesByCollection(collection.id)
-      if (scriptures.length > 0) {
-        // Reset to first scripture when switching collections
-        setCurrentScripture(scriptures[0])
-      }
-    } catch (error) {
-      errorHandler.handleError(
-        error,
-        'Select Arsenal',
-        {
-          customMessage: 'Failed to load arsenal. Please try again.',
-          silent: true
-        }
-      )
-    } finally {
-      setIsLoadingScripture(false)
-    }
-  }
-
-  // Auto-select first collection on load if no scripture is selected
-  React.useEffect(() => {
-    if (!isLoading && !currentScripture && collections.length > 0 && !selectedCollection) {
-      const firstCollection = collections[0]
-      const scriptures = getScripturesByCollection(firstCollection.id)
-      if (scriptures.length > 0) {
-        setSelectedCollection(firstCollection)
-        setCurrentScripture(scriptures[0])
-      }
-    }
-  }, [isLoading, collections, currentScripture, selectedCollection])
-
-  const handleNextScripture = () => {
-    if (selectedCollection) {
-      // Get next scripture from the selected collection
-      const scriptures = getScripturesByCollection(selectedCollection.id)
-      if (scriptures.length > 0) {
-        const currentIndex = scriptures.findIndex(
-          (s) => s.id === currentScripture?.id
-        )
-        const nextIndex = (currentIndex + 1) % scriptures.length
-        setCurrentScripture(scriptures[nextIndex])
-      }
-    } else {
-      // Get random scripture from all scriptures
-      getRandomScripture()
-    }
-  }
-
-  const handleRecordingComplete = async (accuracy: number) => {
-    console.log('🏠 Home: handleRecordingComplete called with accuracy:', accuracy)
-    if (currentScripture) {
-      console.log('🏠 Home: Updating scripture accuracy for:', currentScripture.id)
-      try {
-        setIsLoadingScripture(true)
-        await updateScriptureAccuracy(currentScripture.id, accuracy)
-        errorHandler.showSuccess(
-          `Target hit with ${accuracy.toFixed(1)}% accuracy! Mission complete.`,
-          'Hit Confirmed'
-        )
-      } catch (error) {
-        await errorHandler.handleError(
-          error,
-          'Record Practice Session',
-          {
-            customMessage: 'Failed to record your practice results. Please try again.',
-            retry: () => handleRecordingComplete(accuracy)
-          }
-        )
-      } finally {
-        setIsLoadingScripture(false)
-      }
-    } else {
-      console.warn('🏠 Home: No current scripture to update')
-    }
-  }
-
-  const handleStealthDrill = () => {
-    setShowStealthDrill(true)
-  }
-
-  const handleStealthDrillComplete = async (accuracy: number) => {
-    console.log('🏠 Home: Stealth drill completed with accuracy:', accuracy)
-    if (currentScripture) {
-      setShowStealthDrill(false)
-      try {
-        setIsLoadingScripture(true)
-        await updateScriptureAccuracy(currentScripture.id, accuracy)
-        errorHandler.showSuccess(
-          `Silent reconnaissance successful! Accuracy: ${accuracy.toFixed(1)}%`,
-          'Shadow Operation Complete'
-        )
-      } catch (error) {
-        await errorHandler.handleError(
-          error,
-          'Record Stealth Drill',
-          {
-            customMessage: 'Failed to record stealth drill results. Please try again.',
-            retry: () => handleStealthDrillComplete(accuracy)
-          }
-        )
-      } finally {
-        setIsLoadingScripture(false)
-      }
-    }
-  }
-
-  const handleReload = () => {
-    if (selectedCollection) {
-      const scriptures = getScripturesByCollection(selectedCollection.id)
-      if (scriptures.length > 0) {
-        const randomIndex = Math.floor(Math.random() * scriptures.length)
-        setCurrentScripture(scriptures[randomIndex])
-      }
-    } else {
-      getRandomScripture()
-    }
-  }
-
-  const handleGenerateIntel = async (force: boolean = false) => {
-    if (currentScripture) {
-      try {
-        setIsLoadingIntel(true)
-        const intel = await generateAndStoreIntel(currentScripture, force)
-        if (intel) {
-          console.log('Generated battle intel:', intel.battlePlan)
-          await militaryRankingService.recordIntelGenerated()
-
-          const mnemonicText = `${intel.battlePlan}\n---\n${intel.tacticalNotes}`
-          await updateScriptureMnemonic(currentScripture.id, mnemonicText)
-
-          errorHandler.showSuccess(
-            'Battle intelligence deployed successfully! Tactical advantage secured.',
-            'Intel Acquired'
-          )
-        }
-      } catch (error) {
-        await errorHandler.handleError(
-          error,
-          'Generate Intel',
-          {
-            customMessage: 'Intel generation failed. Command unable to provide tactical support. Retry?',
-            retry: () => handleGenerateIntel(force)
-          }
-        )
-      } finally {
-        setIsLoadingIntel(false)
-      }
-    }
-  }
 
   return (
     <ThemedContainer style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={[styles.scrollContent, { paddingBottom: 104 }]}>
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Command Center Header */}
         <ScreenHeader
-          title="WARFARE"
-          subtitle="BATTLE READY"
+          title="COMMAND CENTER"
+          subtitle="COORDINATE YOUR MISSION"
         />
 
+        {/* Operations - Mission Flows */}
+        <View style={styles.operationsSection}>
+          <ThemedText variant="heading" style={styles.sectionTitle}>OPERATIONS</ThemedText>
+          <ThemedText variant="caption" style={styles.sectionSubtitle}>
+            Select your mission type and lead your troops to victory
+          </ThemedText>
 
-        <CollectionSelector
-          onSelectCollection={handleSelectCollection}
-          selectedCollection={selectedCollection}
-        />
-
-        {currentScripture ? (
-          <>
-            <ScriptureCard
-              scripture={currentScripture}
-              onNext={handleNextScripture}
-            />
-
-            <VoiceRecorder
-              scriptureText={currentScripture.text}
-              onRecordingComplete={handleRecordingComplete}
-            />
-
-            {/* Tactical Action Buttons */}
-            <View style={styles.tacticalActions}>
-              <View style={styles.actionRow}>
-                <TouchableOpacity
-                  style={[styles.tacticalButton, { backgroundColor: theme.secondary }]}
-                  onPress={handleReload}
-                  disabled={isLoadingScripture}
-                  testID="reload-button"
-                >
-                  <FontAwesome name="undo" size={20} color={theme.text} />
-                  <Text style={[styles.tacticalButtonText, { color: theme.text }]}>
-                    RELOAD
+          {/* Primary Mission Cards */}
+          <TouchableOpacity
+            style={styles.missionCardWrapper}
+            onPress={() => router.push({ pathname: '/(tabs)/campaign', params: { mode: 'campaign' } })}
+            activeOpacity={0.9}
+          >
+            <View style={[styles.missionCard, styles.conquestCard]}>
+              <View style={styles.missionCardLeft}>
+                <Ionicons name="trophy" size={32} color="#FFF" />
+                <View style={styles.missionCardContent}>
+                  <Text style={[styles.missionCardTitle, { color: '#FFF', fontWeight: 'bold' }]}>CONQUEST MODE</Text>
+                  <Text style={[styles.missionCardSubtitle, { color: 'rgba(255,255,255,0.8)' }]}>
+                    Campaign challenges and progressive missions
                   </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.tacticalButton, { backgroundColor: '#4E5D6C' }]}
-                  onPress={handleStealthDrill}
-                  disabled={isLoadingScripture}
-                  testID="stealth-button"
-                >
-                  <MaterialCommunityIcons name="incognito" size={20} color={theme.text} />
-                  <Text style={[styles.tacticalButtonText, { color: theme.text }]}>
-                    STEALTH
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.tacticalButton, { backgroundColor: theme.primary, opacity: isLoadingIntel ? 0.6 : 1 }]}
-                  onPress={() => handleGenerateIntel(false)}
-                  disabled={isLoadingScripture || (currentScripture.mnemonic && !isLoadingIntel)} // Disable if already has intel
-                  testID="intel-button"
-                >
-                  {isLoadingIntel ? (
-                    <View style={[styles.loadingIndicator, { borderColor: theme.text, borderTopColor: 'transparent' }]} />
-                  ) : (
-                    <FontAwesome5 name="brain" size={20} color={theme.text} />
-                  )}
-                  <Text style={[styles.tacticalButtonText, {
-                    color: currentScripture.mnemonic ? theme.textSecondary : theme.text,
-                    textDecorationLine: currentScripture.mnemonic ? 'line-through' : 'none'
-                  }]}>
-                    {isLoadingIntel ? 'PROCESSING...' : 'INTEL'}
-                  </Text>
-                </TouchableOpacity>
+                </View>
               </View>
+              <Ionicons name="chevron-forward" size={24} color="rgba(255,255,255,0.6)" />
             </View>
-          </>
-        ) : !isLoading ? (
-          <View style={styles.emptyState}>
-            <View
-              style={[styles.emptyIconCircle, { borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}
-              accessible={true}
-              accessibilityRole="image"
-              accessibilityLabel="Shield icon indicating no ammunition loaded"
-            >
-              <Feather name="shield" size={48} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.missionCardWrapper}
+            onPress={() => router.push({ pathname: '/(tabs)/campaign', params: { mode: 'collection' } })}
+            activeOpacity={0.9}
+          >
+            <View style={[styles.missionCard, styles.challengeCard]}>
+              <View style={styles.missionCardLeft}>
+                <Ionicons name="book" size={32} color="#FFF" />
+                <View style={styles.missionCardContent}>
+                  <Text style={[styles.missionCardTitle, { color: '#FFF', fontWeight: 'bold' }]}>COLLECTION TESTING</Text>
+                  <Text style={[styles.missionCardSubtitle, { color: 'rgba(255,255,255,0.8)' }]}>
+                    Practice verses from your saved collections
+                  </Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={24} color="rgba(255,255,255,0.6)" />
             </View>
-            <ThemedText variant="heading" style={styles.emptyTitle}>NO AMMUNITION LOADED</ThemedText>
-            <ThemedText variant="body" style={styles.emptySubtitle}>
-              Select an arsenal or import verses to begin your training.
-            </ThemedText>
-            <ActionButton
-              title="GO TO ARMORY"
-              onPress={() => router.push('/armory')}
-              style={{ marginTop: 24, width: '100%' }}
-            />
+          </TouchableOpacity>
+
+          {/* Secondary Mission Cards */}
+          <TouchableOpacity
+            style={styles.missionCardWrapper}
+            onPress={() => router.replace('/(tabs)/squad')}
+            activeOpacity={0.9}
+          >
+            <ThemedCard variant="glass" style={styles.missionCard}>
+              <View style={styles.missionCardLeft}>
+                <View style={[
+                  styles.iconBox,
+                  {
+                    backgroundColor: isDark
+                      ? 'rgba(255,255,255,0.05)'
+                      : 'rgba(0,0,0,0.05)'
+                  }
+                ]}>
+                  <FontAwesome5 name="users" size={28} color={theme.accent} />
+                </View>
+                <View style={styles.missionCardContent}>
+                  <ThemedText variant="heading" style={styles.missionCardTitle}>SQUAD MISSIONS</ThemedText>
+                  <ThemedText variant="body" numberOfLines={2} style={styles.missionCardSubtitle}>
+                    Team-based challenges and multiplayer mode
+                  </ThemedText>
+                </View>
+              </View>
+              <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} style={{ opacity: 0.5 }} />
+            </ThemedCard>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.missionCardWrapper}
+            onPress={() => router.replace('/(tabs)/arsenal')}
+            activeOpacity={0.9}
+          >
+            <ThemedCard variant="glass" style={styles.missionCard}>
+              <View style={styles.missionCardLeft}>
+                <View style={[
+                  styles.iconBox,
+                  {
+                    backgroundColor: isDark
+                      ? 'rgba(255,255,255,0.05)'
+                      : 'rgba(0,0,0,0.05)'
+                  }
+                ]}>
+                  <FontAwesome name="cubes" size={28} color={theme.accent} />
+                </View>
+                <View style={styles.missionCardContent}>
+                  <ThemedText variant="heading" style={styles.missionCardTitle}>EQUIP ARSENAL</ThemedText>
+                  <ThemedText variant="body" numberOfLines={2} style={styles.missionCardSubtitle}>
+                    Armor, weapons, and scripture management
+                  </ThemedText>
+                </View>
+              </View>
+              <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} style={{ opacity: 0.5 }} />
+            </ThemedCard>
+          </TouchableOpacity>
+        </View>
+
+        {/* Daily Goals & Progress - Subordinate Information */}
+        <View style={styles.statusSection}>
+          <View style={styles.miniAvatarContainer}>
+            <SoldierAvatar size="small" showStats={true} />
           </View>
-        ) : null}
+
+          <StreakChallenge compact={true} />
+
+          {/* Quick Actions - Small, inline */}
+          <View style={styles.quickActions}>
+            <TouchableOpacity
+              style={[styles.quickAction, { backgroundColor: theme.surface }]}
+              onPress={() => router.replace('/(tabs)/mission-report')}
+            >
+              <Ionicons name="document-text-outline" size={20} color={theme.accent} />
+              <Text style={[styles.quickActionText, { color: theme.text }]}>Reports</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.quickAction, { backgroundColor: theme.surface }]}
+              onPress={() => router.replace('/(tabs)/settings')}
+            >
+              <Ionicons name="settings-outline" size={20} color={theme.accent} />
+              <Text style={[styles.quickActionText, { color: theme.text }]}>Settings</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </ScrollView>
 
-      {/* Stealth Drill Modal */}
-      {currentScripture && (
-        <StealthDrill
-          isVisible={showStealthDrill}
-          targetVerse={currentScripture.text}
-          reference={currentScripture.reference}
-          onComplete={handleStealthDrillComplete}
-          onClose={() => setShowStealthDrill(false)}
-        />
-      )}
-
-      {/* Loading Overlays */}
-      <LoadingOverlay
-        visible={isLoading}
-        message="Mobilizing forces..."
-      />
-      <LoadingOverlay
-        visible={isLoadingScripture}
-        message="Loading ammunition..."
-      />
-      <LoadingOverlay
-        visible={isLoadingIntel}
-        message="Requesting tactical intelligence..."
-      />
+      <LoadingOverlay visible={isLoading} message="Mobilizing forces..." />
     </ThemedContainer>
   )
 }
@@ -324,7 +167,121 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    // Bottom padding handled by SafeAreaView
+    paddingBottom: 120,
+    paddingHorizontal: 20,
+  },
+  sectionSubtitle: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 16,
+    opacity: 0.7,
+    letterSpacing: 0.5,
+  },
+
+  // Major Operations Section
+  operationsSection: {
+    marginTop: 32,
+  },
+
+  // Mission Section - Primary Focus
+  missionSection: {
+    marginTop: 20,
+  },
+  missionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 24,
+    letterSpacing: 0.5,
+  },
+  missionCardWrapper: {
+    marginBottom: 16,
+  },
+  missionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16,
+    padding: 20,
+    minHeight: 80,
+  },
+  conquestCard: {
+    backgroundColor: '#1a4f82',
+  },
+  challengeCard: {
+    backgroundColor: '#2a69ac',
+  },
+  iconBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+
+  secondaryMissionCard: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'transparent',
+  },
+  missionCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 16,
+  },
+  missionCardContent: {
+    flex: 1,
+  },
+  missionCardTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  missionCardSubtitle: {
+    fontSize: 14,
+    lineHeight: 18,
+  },
+
+  // Status Section - Progress & Quick Actions
+  statusSection: {
+    marginTop: 32,
+    paddingTop: 24,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  miniAvatarContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  quickAction: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // Legacy styles (keep for compatibility)
+  avatarContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginBottom: 8,
   },
   sectionTitle: {
     fontSize: 24,
@@ -335,7 +292,6 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
     textTransform: 'uppercase',
   },
-
   emptyState: {
     padding: 40,
     alignItems: 'center',

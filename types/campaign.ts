@@ -25,6 +25,6 @@ export interface Campaign {
     nodes: CampaignNode[]
     totalNodes: number
     completedNodes: number
-    difficulty: 'RECRUIT' | 'VETERAN' | 'ELITE'
+    difficulty: 'RECRUIT' | 'SOLDIER' | 'VETERAN' | 'SNIPER' | 'ELITE'
     theme: 'jungle' | 'desert' | 'urban' | 'arctic'
 }

@@ -27,7 +27,7 @@ export default function SettingsScreen() {
   return (
     <ThemedContainer style={styles.container}>
       <ScreenHeader
-        title="COMMAND CENTER"
+        title="COMMAND POST"
         subtitle="SYSTEM CONFIGURATION"
       />
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 104 }}>

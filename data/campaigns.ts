@@ -186,8 +186,144 @@ export const WARFARE_CAMPAIGN: Campaign = {
     ]
 }
 
+export const LOVE_CAMPAIGN: Campaign = {
+    id: 'campaign_love',
+    title: 'OPERATION: HEARTBEAT',
+    description: 'Love covers all. Master the ultimate weapon - selfless love.',
+    difficulty: 'VETERAN',
+    theme: 'arctic',
+    totalNodes: 6,
+    completedNodes: 0,
+    nodes: [
+        {
+            id: 'node_l1',
+            title: 'GREATEST',
+            description: 'Love is the greatest commandment.',
+            scriptureReference: { book: 'Matthew', chapter: 22, verse: 37 },
+            status: 'ACTIVE',
+            requiredAccuracy: 88,
+            xpReward: 150,
+            coordinate: { x: 50, y: 85 }
+        },
+        {
+            id: 'node_l2',
+            title: 'SACRIFICE',
+            description: 'Greater love has no one than this.',
+            scriptureReference: { book: 'John', chapter: 15, verse: 13 },
+            status: 'LOCKED',
+            requiredAccuracy: 90,
+            xpReward: 200,
+            coordinate: { x: 75, y: 70 }
+        },
+        {
+            id: 'node_l3',
+            title: 'GOD IS LOVE',
+            description: 'God is love.',
+            scriptureReference: { book: '1 John', chapter: 4, verse: 8 },
+            status: 'LOCKED',
+            requiredAccuracy: 92,
+            xpReward: 250,
+            coordinate: { x: 25, y: 55 }
+        },
+        {
+            id: 'node_l4',
+            title: 'NEIGHBOR',
+            description: 'Love your neighbor as yourself.',
+            scriptureReference: { book: 'Mark', chapter: 12, verse: 31 },
+            status: 'LOCKED',
+            requiredAccuracy: 95,
+            xpReward: 350,
+            coordinate: { x: 80, y: 40 }
+        },
+        {
+            id: 'node_l5',
+            title: 'NEW COMMAND',
+            description: 'Love one another as I have loved you.',
+            scriptureReference: { book: 'John', chapter: 13, verse: 34 },
+            status: 'LOCKED',
+            requiredAccuracy: 97,
+            xpReward: 450,
+            coordinate: { x: 35, y: 25 }
+        },
+        {
+            id: 'node_l6',
+            title: 'FIRSTFRUITS',
+            description: 'Love is the first fruit of the Spirit.',
+            scriptureReference: { book: 'Galatians', chapter: 5, verse: 22 },
+            status: 'LOCKED',
+            requiredAccuracy: 98,
+            xpReward: 700,
+            coordinate: { x: 60, y: 10 }
+        }
+    ]
+}
+
+export const HOPE_CAMPAIGN: Campaign = {
+    id: 'campaign_hope',
+    title: 'OPERATION: ANCHOR',
+    description: 'Hope anchors the soul. Stand firm in eternal promises.',
+    difficulty: 'RECRUIT',
+    theme: 'desert',
+    totalNodes: 5,
+    completedNodes: 0,
+    nodes: [
+        {
+            id: 'node_h1',
+            title: 'ANCHOR',
+            description: 'Hope is the anchor for our soul.',
+            scriptureReference: { book: 'Hebrews', chapter: 6, verse: 19 },
+            status: 'ACTIVE',
+            requiredAccuracy: 85,
+            xpReward: 125,
+            coordinate: { x: 50, y: 80 }
+        },
+        {
+            id: 'node_h2',
+            title: 'TRIUMPHANT',
+            description: 'Hope does not disappoint us.',
+            scriptureReference: { book: 'Romans', chapter: 5, verse: 5 },
+            status: 'LOCKED',
+            requiredAccuracy: 87,
+            xpReward: 150,
+            coordinate: { x: 20, y: 60 }
+        },
+        {
+            id: 'node_h3',
+            title: 'LIVING',
+            description: 'Christ in you, the hope of glory.',
+            scriptureReference: { book: 'Colossians', chapter: 1, verse: 27 },
+            status: 'LOCKED',
+            requiredAccuracy: 90,
+            xpReward: 200,
+            coordinate: { x: 80, y: 60 }
+        },
+        {
+            id: 'node_h4',
+            title: 'GLORIOUS',
+            description: 'Hope of the glorious appearing.',
+            scriptureReference: { book: 'Titus', chapter: 2, verse: 13 },
+            status: 'LOCKED',
+            requiredAccuracy: 95,
+            xpReward: 300,
+            coordinate: { x: 40, y: 35 }
+        },
+        {
+            id: 'node_h5',
+            title: 'ETERNAL',
+            description: 'Rejoicing in hope of the glory of God.',
+            scriptureReference: { book: 'Romans', chapter: 5, verse: 2 },
+            status: 'LOCKED',
+            requiredAccuracy: 97,
+            xpReward: 500,
+            coordinate: { x: 50, y: 15 }
+        }
+    ]
+}
+
 export const INITIAL_CAMPAIGNS = [
     BASIC_TRAINING_CAMPAIGN,
     FAITH_CAMPAIGN,
-    WARFARE_CAMPAIGN
+    WARFARE_CAMPAIGN,
+    LOVE_CAMPAIGN,
+    HOPE_CAMPAIGN
 ]

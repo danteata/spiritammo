@@ -9,24 +9,35 @@ import {
   Alert,
   Platform,
   StatusBar,
+  ActivityIndicator,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
+import { BlurView } from 'expo-blur'
 import { FontAwesome, Feather, Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
 import {
   MILITARY_TYPOGRAPHY,
   ACCURACY_COLORS,
+  COLORS
 } from '@/constants/colors'
-import VoiceRecorder from '@/components/VoiceRecorder'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedText } from '@/components/Themed'
+import { StatusIndicator } from './ui/StatusIndicator'
+import { RecordingControls } from './ui/RecordingControls'
+import { AccuracyBadge } from './ui/AccuracyBadge'
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
+import { useAudioRecording, AudioRecordingResult } from '@/services/audioRecording'
+import { calculateTextAccuracy } from '@/utils/accuracyCalculator'
+import whisperService from '@/services/whisper'
 
 interface TargetPracticeProps {
   onRecordingComplete: (transcript: string, accuracy: number) => void
   targetVerse: string
+  reference?: string
   intelText?: string
   isVisible: boolean
   onClose: () => void
+  isAssaultMode?: boolean
 }
 
 interface ShotResult {
@@ -45,11 +56,14 @@ interface BulletHole {
 export default function TargetPractice({
   onRecordingComplete,
   targetVerse,
+  reference,
   intelText,
   isVisible,
   onClose,
 }: TargetPracticeProps) {
   const { theme, isDark } = useAppStore()
+
+  const { userSettings } = useAppStore()
 
   const [shotResults, setShotResults] = useState<ShotResult[]>([])
   const [currentAccuracy, setCurrentAccuracy] = useState(0)
@@ -57,13 +71,291 @@ export default function TargetPractice({
     'calm' | 'light' | 'strong'
   >('calm')
   const [rangeDistance, setRangeDistance] = useState(100)
-  const [showVoiceRecorder, setShowVoiceRecorder] = useState(false)
+  const [isRecordingMode, setIsRecordingMode] = useState(false)
   const [shots, setShots] = useState<BulletHole[]>([])
   const [isPlaying, setIsPlaying] = useState(false)
+
+  // VoiceRecorder state
+  const [accuracy, setLocalAccuracy] = useState(0)
+  const [showAccuracy, setShowAccuracy] = useState(false)
+  const [statusMessage, setStatusMessage] = useState('')
+  const [audioRecording, setAudioRecording] = useState<AudioRecordingResult | null>(null)
+  const [localTranscript, setLocalTranscript] = useState('')
+  const [whisperReady, setWhisperReady] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
+
+  // Audio recording hook for mobile fallback
+  const {
+    startRecording: startAudioRecording,
+    stopRecording: stopAudioRecording,
+    deleteRecording,
+    isRecording: audioIsRecording,
+    error: audioError,
+    duration: recordingDuration,
+    uri: recordingUri
+  } = useAudioRecording()
+
+  // Speech recognition hook
+  const {
+    isRecognizing,
+    transcript,
+    interimTranscript,
+    error: speechError,
+    isAvailable,
+    hasPermission,
+    start: startSpeechRecognition,
+    stop: stopSpeechRecognition,
+    resetTranscript,
+  } = useSpeechRecognition({
+    lang: userSettings.language || 'en-US',
+    interimResults: true,
+    continuous: false,
+    onResult: (resultTranscript, isFinal) => {
+      if (isFinal) {
+        processTranscript(resultTranscript)
+      }
+    },
+    onError: (errorMessage) => {
+      console.error('Speech recognition error:', errorMessage)
+    },
+  })
 
   // Animations
   const targetAnimation = useRef(new Animated.Value(1)).current
   const shakeAnimation = useRef(new Animated.Value(0)).current
+
+  // Initialize Whisper and check availability
+  useEffect(() => {
+    const init = async () => {
+      try {
+        setIsInitializing(true)
+        setStatusMessage('Initializing Whisper model...')
+        await whisperService.init()
+        console.log('Whisper initialized')
+        setWhisperReady(true)
+      } catch (error) {
+        console.error('Failed to init whisper:', error)
+        // Fallback handled by status effect
+      } finally {
+        setIsInitializing(false)
+      }
+    }
+
+    init()
+  }, [])
+
+  // Clear transcript when scripture changes
+  useEffect(() => {
+    setLocalTranscript('')
+    resetTranscript()
+    setLocalAccuracy(0)
+    setShowAccuracy(false)
+    setAudioRecording(null)
+  }, [targetVerse])
+
+  // Update status message during recording or settings change
+  useEffect(() => {
+    if (isRecognizing) {
+      setStatusMessage('Listening... Speak now')
+    } else if (audioIsRecording) {
+      setStatusMessage(`Recording... ${Math.floor(recordingDuration / 1000)}s`)
+    } else if (showAccuracy) {
+      setStatusMessage(`Accuracy: ${accuracy}%`)
+    } else if (!isInitializing) {
+      // Idle state - check settings
+      if (!hasPermission) {
+        setStatusMessage('Microphone permission needed')
+      } else if (userSettings.voiceEngine === 'whisper' && whisperReady) {
+        setStatusMessage('Ready to record')
+      } else if (isAvailable) {
+        setStatusMessage('Ready to listen')
+      } else {
+        setStatusMessage('Ready to listen')
+      }
+    }
+  }, [isRecognizing, audioIsRecording, recordingDuration, showAccuracy, accuracy, isInitializing, userSettings.voiceEngine, whisperReady, hasPermission, isAvailable])
+
+  // Speak the intel text
+  const speakIntel = async () => {
+    try {
+      // Stop any existing speech
+      await Speech.stop()
+
+      const textToSpeak = intelText || "No tactical intel available for this target."
+
+      // Start new speech with proper settings
+      await Speech.speak(textToSpeak, {
+        rate: userSettings.voiceRate || 0.9,
+        pitch: userSettings.voicePitch || 1.0,
+        language: userSettings.language || 'en-US',
+        onStart: () => {
+          setStatusMessage('Reading intel...')
+        },
+        onDone: () => {
+          setStatusMessage('Ready to record')
+        },
+        onError: (error) => {
+          console.error('Speech error:', error)
+        }
+      })
+    } catch (error) {
+      console.error('Failed to speak intel:', error)
+    }
+  }
+
+  // Start recording
+  const startRecording = async () => {
+    try {
+      // Clear previous results
+      resetTranscript()
+      setLocalTranscript('')
+      setLocalAccuracy(0)
+      setShowAccuracy(false)
+      setAudioRecording(null)
+
+      // Check if we should use Whisper based on settings and availability
+      console.log('🎤 VoiceRecorder: userSettings.voiceEngine:', userSettings.voiceEngine)
+      console.log('🎤 VoiceRecorder: whisperReady:', whisperReady)
+
+      if (whisperReady && userSettings.voiceEngine === 'whisper') {
+        try {
+          console.log('🎤 Starting Whisper recording...')
+          // 1. Prefer Whisper (Audio Recording) if available
+          if (Platform.OS !== 'web') {
+            const audioSuccess = await startAudioRecording()
+            if (audioSuccess) {
+              console.log('Audio recording started (Whisper mode)')
+              setStatusMessage('Recording... (Whisper)')
+              return
+            }
+          }
+        } catch (error) {
+          console.error('Whisper recording failed, falling back to native:', error)
+          // Fallback to native if Whisper fails
+          // 2. Fallback to Native Speech Recognition
+          if (isAvailable) {
+            const success = await startSpeechRecognition()
+            if (success) {
+              setStatusMessage('Speech recognition active')
+              return
+            }
+          }
+        }
+      } else {
+        console.log('🎤 Starting Native recording (Preference: ' + userSettings.voiceEngine + ')')
+        // 2. Fallback to Native Speech Recognition
+        if (isAvailable) {
+          const success = await startSpeechRecognition()
+          if (success) {
+            setStatusMessage('Speech recognition active')
+            return
+          }
+        }
+      }
+
+      // Fallback to audio recording (for platforms without native speech recognition)
+      if (Platform.OS !== 'web') {
+        const audioSuccess = await startAudioRecording()
+        if (audioSuccess) {
+          console.log('Audio recording started as fallback')
+          setStatusMessage('Audio recording active - using transcription')
+          return
+        }
+      }
+
+      // If we get here, no recording method is available
+      console.error('No recording method available on this platform')
+    } catch (error) {
+      console.error('Error starting recording:', error)
+    }
+  }
+
+  // Stop recording
+  const stopRecording = async () => {
+    try {
+      if (isRecognizing) {
+        // Stop speech recognition
+        stopSpeechRecognition()
+        return
+      }
+
+      if (audioIsRecording) {
+        // Stop audio recording
+        const audioResult = await stopAudioRecording()
+        if (audioResult) {
+          setAudioRecording(audioResult)
+          console.log('Audio recording stopped:', audioResult)
+          // Process the audio file with whisper if available
+          await processAudioRecording(audioResult)
+        }
+      }
+    } catch (error) {
+      console.error('Error stopping recording:', error)
+    }
+  }
+
+  // Process audio recording with whisper service
+  const processAudioRecording = async (audioResult: AudioRecordingResult) => {
+    try {
+      setStatusMessage('Transcribing...')
+      console.log('🎙️ VoiceRecorder: Processing audio with Whisper:', audioResult.uri)
+
+      try {
+        const result = await whisperService.transcribeFromFile(audioResult.uri)
+        console.log('🎙️ VoiceRecorder: Whisper result:', result)
+
+        if (result && result.text) {
+          setLocalTranscript(result.text)
+          const calculatedAccuracy = calculateTextAccuracy(targetVerse, result.text)
+          console.log('🎙️ VoiceRecorder: Calculated accuracy from Whisper:', calculatedAccuracy)
+          setLocalAccuracy(calculatedAccuracy)
+          setShowAccuracy(true)
+          console.log('🎙️ VoiceRecorder: Calling onRecordingComplete with accuracy:', calculatedAccuracy)
+          onRecordingComplete(calculatedAccuracy, calculatedAccuracy)
+        } else {
+          console.warn('No transcription received from whisper service')
+          setStatusMessage('Transcription failed')
+        }
+      } catch (err) {
+        console.error('Whisper transcription failed:', err)
+        setStatusMessage('Transcription error')
+      }
+    } catch (error) {
+      console.error('Error processing audio recording:', error)
+      setStatusMessage('Error processing audio')
+    }
+  }
+
+  // Process the final transcript and calculate accuracy
+  const processTranscript = async (finalTranscript: string) => {
+    try {
+      console.log('🎙️ VoiceRecorder: processTranscript called with:', finalTranscript)
+      // Calculate accuracy for web speech or fallback
+      const calculatedAccuracy = calculateTextAccuracy(targetVerse, finalTranscript)
+      console.log('🎙️ VoiceRecorder: Calculated accuracy:', calculatedAccuracy)
+      setLocalAccuracy(calculatedAccuracy)
+      setShowAccuracy(true)
+
+      console.log('🎙️ VoiceRecorder: Calling onRecordingComplete with accuracy:', calculatedAccuracy)
+      onRecordingComplete(finalTranscript, calculatedAccuracy)
+    } catch (error) {
+      console.error('Error processing transcript:', error)
+    }
+  }
+
+  // Toggle recording mode
+  const toggleRecordingMode = () => {
+    if (isRecordingMode) {
+      setIsRecordingMode(false)
+    } else {
+      setIsRecordingMode(true)
+    }
+  }
+
+  const textColor = isDark ? COLORS.text.dark : COLORS.text.light
+  const isRecording = isRecognizing || audioIsRecording
+  const displayError = speechError || audioError
+  const displayTranscript = transcript || localTranscript
 
   const handleVoiceRecorderComplete = (accuracy: number) => {
     console.log('🎤 TargetPractice: handleVoiceRecorderComplete called with accuracy:', accuracy)
@@ -237,17 +529,55 @@ export default function TargetPractice({
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Voice Recorder Modal */}
-      {showVoiceRecorder && (
-        <VoiceRecorder
-          scriptureText={targetVerse}
-          intelText={intelText}
-          onRecordingComplete={handleVoiceRecorderComplete}
-        />
-      )}
+      {/* Recording Mode - Show Voice Recorder UI */}
+      {isRecordingMode ? (
+        <View style={styles.recordingContainer}>
+          {/* Comms Panel Header */}
+          <View style={styles.panelHeader}>
+            {isInitializing || statusMessage.includes('Transcribing') || statusMessage.includes('Initializing') ? (
+              <ActivityIndicator size="small" color={textColor} style={{ marginRight: 8 }} />
+            ) : (
+              <StatusIndicator isActive={isRecording} isLoading={false} isError={false} />
+            )}
+            <Text style={[styles.statusText, { color: textColor }]}>
+              {statusMessage.toUpperCase()}
+            </Text>
+          </View>
 
-      {/* Target area - Hide when recording to prevent clutter */}
-      {!showVoiceRecorder && (
+          {/* Main Comms Display */}
+          <View style={styles.commsDisplay}>
+            {displayError ? (
+              <Text style={[styles.displayText, { color: COLORS.error }]}>{displayError}</Text>
+            ) : displayTranscript ? (
+              <Text style={[styles.displayText, { color: textColor }]}>"{displayTranscript}"</Text>
+            ) : interimTranscript ? (
+              <Text style={[styles.displayText, { color: textColor, opacity: 0.7 }]}>{interimTranscript}...</Text>
+            ) : (
+              <View style={styles.waveformContainer}>
+                <View style={[styles.waveformBar, { height: 10, opacity: 0.3 }]} />
+                <View style={[styles.waveformBar, { height: 16, opacity: 0.5 }]} />
+                <View style={[styles.waveformBar, { height: 24, opacity: 0.7 }]} />
+                <View style={[styles.waveformBar, { height: 16, opacity: 0.5 }]} />
+                <View style={[styles.waveformBar, { height: 10, opacity: 0.3 }]} />
+              </View>
+            )}
+
+            {/* Accuracy Badge */}
+            {showAccuracy && <AccuracyBadge accuracy={accuracy} />}
+          </View>
+
+          {/* Controls */}
+          <RecordingControls
+            isRecording={isRecording}
+            isRecognizing={isRecognizing}
+            isLoading={isInitializing}
+            onSpeakIntel={speakIntel}
+            onToggleRecording={isRecording || isRecognizing ? stopRecording : startRecording}
+            textColor={textColor}
+          />
+        </View>
+      ) : (
+        /* Target area - Hide when recording to prevent clutter */
         <View style={styles.targetArea}>
           <Animated.View
             style={[styles.target, { transform: [{ scale: targetAnimation }] }]}
@@ -283,14 +613,32 @@ export default function TargetPractice({
         </View>
       )}
 
-      {/* Verse Display - Hide when recording */}
-      {!showVoiceRecorder && (
-        <View style={[styles.verseContainer, {
+      {/* Reference Display - Hide when recording */}
+      {!isRecordingMode && (
+        <View style={[styles.referenceContainer, {
           backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.8)',
           borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
         }]}>
-          <Text style={[styles.verseText, MILITARY_TYPOGRAPHY.body, { color: theme.text }]}>
-            "{targetVerse}"
+          {/* Reference (visible - e.g. "John 3:16") */}
+          <Text style={[styles.referenceLabel, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]}>
+            {reference || 'Verse Reference'}
+          </Text>
+
+          {/* Blurred verse text (hidden - e.g. "For God so loved...") */}
+          <View style={styles.verseContent}>
+            <Text style={[styles.verseText, { color: theme.text }]}>
+              {targetVerse}
+            </Text>
+            <BlurView
+              intensity={Platform.OS === 'ios' ? 20 : 15}
+              experimentalBlurMethod="dimezisBlurView"
+              style={styles.referenceBlur}
+              tint={isDark ? "dark" : "light"}
+            />
+          </View>
+
+          <Text style={[styles.hintText, { color: theme.textSecondary }]}>
+            TARGET TEXT (BLURRED)
           </Text>
         </View>
       )}
@@ -340,14 +688,14 @@ export default function TargetPractice({
 
         <TouchableOpacity
           style={[styles.controlButton, styles.recordButton]}
-          onPress={() => setShowVoiceRecorder(true)}
+          onPress={toggleRecordingMode}
           testID="start-recording"
         >
           <View style={styles.recordIconOuter}>
             <View style={styles.recordIconInner} />
           </View>
           <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button, { color: 'white' }]}>
-            ENGAGE TARGET
+            {isRecordingMode ? 'TARGET' : 'ENGAGE TARGET'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -508,18 +856,59 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 1,
   },
-  verseContainer: {
+  referenceContainer: {
     marginHorizontal: 20,
     marginBottom: 20,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
+    alignItems: 'center',
+  },
+  referenceContent: {
+    position: 'relative',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  referenceText: {
+    fontSize: 18,
+    textAlign: 'center',
+    fontWeight: 'bold',
+    letterSpacing: 1,
+  },
+  referenceBlur: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 8,
+  },
+  referenceLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  verseContent: {
+    position: 'relative',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    overflow: 'hidden',
   },
   verseText: {
+    fontSize: 14,
     textAlign: 'center',
-    fontStyle: 'italic',
-    fontSize: 16,
-    lineHeight: 24,
+    lineHeight: 20,
+  },
+  hintText: {
+    marginTop: 12,
+    fontSize: 10,
+    textAlign: 'center',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    opacity: 0.6,
   },
   shotGrouping: {
     paddingHorizontal: 20,
@@ -593,5 +982,50 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
     textTransform: 'uppercase',
+  },
+  recordingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  panelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    marginHorizontal: 16,
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    letterSpacing: 1,
+    opacity: 0.8,
+  },
+  commsDisplay: {
+    minHeight: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    padding: 8,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 8,
+    marginHorizontal: 16,
+  },
+  displayText: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  waveformContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    height: 24,
+  },
+  waveformBar: {
+    width: 3,
+    backgroundColor: 'white',
+    borderRadius: 2,
   },
 })

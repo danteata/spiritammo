@@ -41,9 +41,28 @@ export default function ScriptureCard({
 
   return (
     <View style={[styles.container, { backgroundColor: theme.surface }]}>
-      <Text style={[styles.reference, { color: textColor }]}>
-        {scripture.reference}
-      </Text>
+      <View style={styles.header}>
+        <View style={styles.referenceContainer}>
+          <Text style={[styles.reference, { color: textColor }]}>
+            {scripture.reference}
+          </Text>
+        </View>
+
+        <View style={styles.iconContainer}>
+          <TouchableOpacity
+            style={styles.iconButton}
+            onPress={revealed ? () => setRevealed(false) : handleReveal}
+            testID="toggle-reveal-button"
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            {revealed ? (
+              <FontAwesome name="eye-slash" size={18} color={textColor} />
+            ) : (
+              <FontAwesome name="eye" size={18} color={theme.accent} />
+            )}
+          </TouchableOpacity>
+        </View>
+      </View>
 
       {revealed ? (
         <ScriptureText
@@ -66,20 +85,6 @@ export default function ScriptureCard({
           />
         </View>
       )}
-
-      <View style={styles.buttonContainer}>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={revealed ? () => setRevealed(false) : handleReveal}
-          testID="toggle-reveal-button"
-        >
-          {revealed ? (
-            <FontAwesome name="eye-slash" size={24} color={textColor} />
-          ) : (
-            <FontAwesome name="eye" size={24} color={textColor} />
-          )}
-        </TouchableOpacity>
-      </View>
     </View>
   )
 }
@@ -91,7 +96,6 @@ const styles = StyleSheet.create({
     marginVertical: 10,
     marginHorizontal: 16,
     minHeight: 200,
-    justifyContent: 'space-between',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -106,6 +110,19 @@ const styles = StyleSheet.create({
         boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.3)',
       },
     }),
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  referenceContainer: {
+    flex: 1,
+    marginRight: 12,
+  },
+  iconContainer: {
+    alignItems: 'flex-end',
   },
   reference: {
     fontSize: 20,

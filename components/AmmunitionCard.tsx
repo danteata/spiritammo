@@ -6,8 +6,10 @@ import {
   TouchableOpacity,
   Animated,
   ActivityIndicator,
+  Platform,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
+import { BlurView } from 'expo-blur'
 import { FontAwesome, Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   COLORS,
@@ -27,6 +29,7 @@ interface AmmunitionCardProps {
   onStealth?: () => void // Silent Drill
   isLoading?: boolean
   isDark?: boolean
+  allowBlur?: boolean // Default true for practice, false for assessments
 }
 
 const AmmunitionCard = React.memo(({
@@ -37,11 +40,13 @@ const AmmunitionCard = React.memo(({
   onStealth,
   isLoading = false,
   isDark = false,
+  allowBlur = true, // Default true for practice mode
 }: AmmunitionCardProps) => {
   const { theme } = useAppStore()
   const styles = getStyles(theme)
   const [fireAnimation] = useState(new Animated.Value(1))
   const [pulseAnimation] = useState(new Animated.Value(1))
+  const [revealed, setRevealed] = useState(false)
 
   useEffect(() => {
     // Start pulsing animation for the FIRE button
@@ -157,6 +162,22 @@ const AmmunitionCard = React.memo(({
           </View>
 
           <View style={styles.statusIndicators}>
+            {/* Reveal/Hide Button - Only in practice mode */}
+            {allowBlur && (
+              <TouchableOpacity
+                style={[styles.iconButton, { marginRight: 12 }]}
+                onPress={() => setRevealed(!revealed)}
+                testID="toggle-reveal-button"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                {revealed ? (
+                  <FontAwesome5 name="eye-slash" size={18} color={isDark ? theme.text : GARRISON_THEME.text} />
+                ) : (
+                  <FontAwesome5 name="eye" size={18} color={isDark ? theme.primary : theme.accent} />
+                )}
+              </TouchableOpacity>
+            )}
+
             <View
               style={[
                 styles.statusDot,
@@ -174,20 +195,41 @@ const AmmunitionCard = React.memo(({
           </View>
         </View>
 
-        {/* Scripture text */}
+        {/* Scripture text with conditional blur */}
         <View style={[
           styles.textContainer,
           { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.03)' }
         ]}>
-          <ScriptureText
-            text={scripture.text}
-            isJesusWords={scripture.isJesusWords}
-            style={[
-              styles.scriptureText,
-              MILITARY_TYPOGRAPHY.body,
-              { color: isDark ? theme.text : GARRISON_THEME.text }
-            ]}
-          />
+          {(revealed || !allowBlur) ? (
+            <ScriptureText
+              text={scripture.text}
+              isJesusWords={scripture.isJesusWords}
+              style={[
+                styles.scriptureText,
+                MILITARY_TYPOGRAPHY.body,
+                { color: isDark ? theme.text : GARRISON_THEME.text }
+              ]}
+            />
+          ) : (
+            <View style={styles.hiddenTextContainer}>
+              <ScriptureText
+                text={scripture.text}
+                isJesusWords={scripture.isJesusWords}
+                style={[
+                  styles.scriptureText,
+                  styles.hiddenText,
+                  MILITARY_TYPOGRAPHY.body,
+                  { color: isDark ? theme.text : GARRISON_THEME.text }
+                ]}
+              />
+              <BlurView
+                intensity={Platform.OS === 'ios' ? 25 : 20}
+                experimentalBlurMethod="dimezisBlurView"
+                style={styles.blurOverlay}
+                tint={isDark ? "dark" : "light"}
+              />
+            </View>
+          )}
         </View>
 
         {/* Mnemonic section */}
@@ -400,6 +442,11 @@ const getStyles = (theme: any) => StyleSheet.create({
   statusText: {
     color: theme.textSecondary,
   },
+  iconButton: {
+    padding: 4,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
   textContainer: {
     marginBottom: 16,
     padding: 12,
@@ -407,6 +454,21 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
     borderLeftWidth: 3,
     borderLeftColor: theme.accent,
+  },
+  hiddenTextContainer: {
+    position: 'relative',
+    justifyContent: 'center',
+  },
+  hiddenText: {
+    lineHeight: 24,
+  },
+  blurOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 8,
   },
   scriptureText: {
     lineHeight: 24,

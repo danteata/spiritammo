@@ -51,19 +51,19 @@ export default function TabBar({ state, descriptors, navigation }: BottomTabBarP
             };
 
             // Determine Icon
-            let iconName: any = 'circle';
+            let iconName: any = 'ellipse-outline'; // Valid fallback icon
             let IconComp = Ionicons;
 
             if (route.name === 'index') {
               iconName = isFocused ? 'home' : 'home-outline';
-            } else if (route.name === 'armory') {
-              iconName = isFocused ? 'list' : 'list-outline';
+            } else if (route.name === 'arsenal') {
+              iconName = isFocused ? 'shield' : 'shield-outline';
             } else if (route.name === 'training') {
               iconName = isFocused ? 'scan' : 'scan-outline';
-            } else if (route.name === 'squad') {
-              iconName = isFocused ? 'people' : 'people-outline';
             } else if (route.name === 'campaign') {
               iconName = isFocused ? 'map' : 'map-outline';
+            } else if (route.name === 'squad') {
+              iconName = isFocused ? 'people' : 'people-outline';
             } else if (route.name === 'mission-report') {
               iconName = isFocused ? 'stats-chart' : 'stats-chart-outline';
             } else if (route.name === 'settings') {
