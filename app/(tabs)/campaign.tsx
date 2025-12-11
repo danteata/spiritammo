@@ -130,7 +130,7 @@ export default function CampaignScreen() {
         <ThemedContainer style={styles.container}>
             <ScreenHeader
                 title="CONQUEST"
-                subtitle={campaignMode === 'campaign' ? 'CAMPAIGN MODE' : 'COLLECTION MODE'}
+                subtitle={campaignMode === 'campaign' ? 'CAMPAIGN MODE' : 'COLLECTION DRILLS'}
                 rightAction={
                     !activeCampaign ? (
                         <TouchableOpacity
@@ -207,7 +207,7 @@ export default function CampaignScreen() {
                                 <View style={styles.tacticalActions}>
                                     <View style={styles.actionRow}>
                                         <TouchableOpacity
-                                            style={[styles.tacticalButton, { backgroundColor: theme.accent }]}
+                                            style={[styles.tacticalButton, { backgroundColor: '#374151' }]}
                                             onPress={() => {
                                                 if (selectedCollection) {
                                                     const collectionScriptures = scriptures.filter(s =>

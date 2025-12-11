@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { StyleSheet, Text, ScrollView, View, TouchableOpacity } from 'react-native'
 import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
@@ -8,23 +9,39 @@ import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import StreakChallenge from '@/components/StreakChallenge'
 import SoldierAvatar from '@/components/SoldierAvatar'
+import WelcomeModal from '@/components/WelcomeModal'
 
 export default function HomeScreen() {
   const { isLoading, theme, isDark } = useAppStore()
   const router = useRouter()
+  const [showWelcome, setShowWelcome] = useState(false)
+
+  useEffect(() => {
+    checkFirstLaunch()
+  }, [])
+
+  const checkFirstLaunch = async () => {
+    try {
+      const hasSeenWelcome = await AsyncStorage.getItem('hasSeenWelcome')
+      if (!hasSeenWelcome) {
+        setShowWelcome(true) // Always show for review
+      }
+    } catch (error) {
+      console.error('Failed to check welcome status:', error)
+    }
+  }
 
   return (
     <ThemedContainer style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Command Center Header */}
-        <ScreenHeader
-          title="COMMAND CENTER"
-          subtitle="COORDINATE YOUR MISSION"
-        />
+      {/* Command Center Header */}
+      <ScreenHeader
+        title="COMMAND CENTER"
+        subtitle="COORDINATE YOUR MISSION"
+      />
 
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Operations - Mission Flows */}
         <View style={styles.operationsSection}>
-          <ThemedText variant="heading" style={styles.sectionTitle}>OPERATIONS</ThemedText>
           <ThemedText variant="caption" style={styles.sectionSubtitle}>
             Select your mission type and lead your troops to victory
           </ThemedText>
@@ -35,18 +52,28 @@ export default function HomeScreen() {
             onPress={() => router.push({ pathname: '/(tabs)/campaign', params: { mode: 'campaign' } })}
             activeOpacity={0.9}
           >
-            <View style={[styles.missionCard, styles.conquestCard]}>
+            <ThemedCard variant="glass" style={[styles.missionCard, styles.primaryMissionCard]}>
               <View style={styles.missionCardLeft}>
-                <Ionicons name="trophy" size={32} color="#FFF" />
+                <View style={[
+                  styles.iconBox,
+                  {
+                    backgroundColor: isDark
+                      ? 'rgba(255,215,0,0.15)'
+                      : 'rgba(255,215,0,0.1)',
+                    borderColor: '#FFD700'
+                  }
+                ]}>
+                  <Ionicons name="trophy" size={28} color="#c4a912ff" />
+                </View>
                 <View style={styles.missionCardContent}>
-                  <Text style={[styles.missionCardTitle, { color: '#FFF', fontWeight: 'bold' }]}>CONQUEST MODE</Text>
-                  <Text style={[styles.missionCardSubtitle, { color: 'rgba(255,255,255,0.8)' }]}>
-                    Campaign challenges and progressive missions
-                  </Text>
+                  <ThemedText variant="heading" style={styles.missionCardTitle}>CONQUEST MODE</ThemedText>
+                  <ThemedText variant="body" numberOfLines={2} style={styles.missionCardSubtitle}>
+                    Embark on epic scripture challenges. Complete missions to unlock rewards and advance your spiritual journey.
+                  </ThemedText>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={24} color="rgba(255,255,255,0.6)" />
-            </View>
+              <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} style={{ opacity: 0.5 }} />
+            </ThemedCard>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -54,18 +81,28 @@ export default function HomeScreen() {
             onPress={() => router.push({ pathname: '/(tabs)/campaign', params: { mode: 'collection' } })}
             activeOpacity={0.9}
           >
-            <View style={[styles.missionCard, styles.challengeCard]}>
+            <ThemedCard variant="glass" style={[styles.missionCard, styles.primaryMissionCard]}>
               <View style={styles.missionCardLeft}>
-                <Ionicons name="book" size={32} color="#FFF" />
+                <View style={[
+                  styles.iconBox,
+                  {
+                    backgroundColor: isDark
+                      ? 'rgba(59, 130, 246, 0.15)'
+                      : 'rgba(59, 130, 246, 0.1)',
+                    borderColor: '#545c69ff'
+                  }
+                ]}>
+                  <Ionicons name="book" size={28} color="#4f555eff" />
+                </View>
                 <View style={styles.missionCardContent}>
-                  <Text style={[styles.missionCardTitle, { color: '#FFF', fontWeight: 'bold' }]}>COLLECTION TESTING</Text>
-                  <Text style={[styles.missionCardSubtitle, { color: 'rgba(255,255,255,0.8)' }]}>
-                    Practice verses from your saved collections
-                  </Text>
+                  <ThemedText variant="heading" style={styles.missionCardTitle}>COLLECTION DRILLS</ThemedText>
+                  <ThemedText variant="body" numberOfLines={2} style={styles.missionCardSubtitle}>
+                    Master specific verses from your personal collections. Perfect for focused memorization and review sessions.
+                  </ThemedText>
                 </View>
               </View>
-              <Ionicons name="chevron-forward" size={24} color="rgba(255,255,255,0.6)" />
-            </View>
+              <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} style={{ opacity: 0.5 }} />
+            </ThemedCard>
           </TouchableOpacity>
 
           {/* Secondary Mission Cards */}
@@ -89,7 +126,7 @@ export default function HomeScreen() {
                 <View style={styles.missionCardContent}>
                   <ThemedText variant="heading" style={styles.missionCardTitle}>SQUAD MISSIONS</ThemedText>
                   <ThemedText variant="body" numberOfLines={2} style={styles.missionCardSubtitle}>
-                    Team-based challenges and multiplayer mode
+                    Join forces with other believers in group challenges. Coming soon - collaborative scripture adventures!
                   </ThemedText>
                 </View>
               </View>
@@ -117,7 +154,7 @@ export default function HomeScreen() {
                 <View style={styles.missionCardContent}>
                   <ThemedText variant="heading" style={styles.missionCardTitle}>EQUIP ARSENAL</ThemedText>
                   <ThemedText variant="body" numberOfLines={2} style={styles.missionCardSubtitle}>
-                    Armor, weapons, and scripture management
+                    Customize your soldier avatar with gear earned from missions. Manage your scripture arsenal and unlock powerful items.
                   </ThemedText>
                 </View>
               </View>
@@ -133,32 +170,20 @@ export default function HomeScreen() {
           </View>
 
           <StreakChallenge compact={true} />
-
-          {/* Quick Actions - Small, inline */}
-          <View style={styles.quickActions}>
-            <TouchableOpacity
-              style={[styles.quickAction, { backgroundColor: theme.surface }]}
-              onPress={() => router.replace('/(tabs)/mission-report')}
-            >
-              <Ionicons name="document-text-outline" size={20} color={theme.accent} />
-              <Text style={[styles.quickActionText, { color: theme.text }]}>Reports</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.quickAction, { backgroundColor: theme.surface }]}
-              onPress={() => router.replace('/(tabs)/settings')}
-            >
-              <Ionicons name="settings-outline" size={20} color={theme.accent} />
-              <Text style={[styles.quickActionText, { color: theme.text }]}>Settings</Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
+
+      {/* Welcome Modal */}
+      <WelcomeModal
+        isVisible={showWelcome}
+        onClose={() => setShowWelcome(false)}
+      />
 
       <LoadingOverlay visible={isLoading} message="Mobilizing forces..." />
     </ThemedContainer>
   )
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -180,7 +205,7 @@ const styles = StyleSheet.create({
 
   // Major Operations Section
   operationsSection: {
-    marginTop: 32,
+    marginTop: 16,
   },
 
   // Mission Section - Primary Focus
@@ -194,15 +219,15 @@ const styles = StyleSheet.create({
     marginBottom: 24,
     letterSpacing: 0.5,
   },
-  missionCardWrapper: {
-    marginBottom: 16,
-  },
   missionCard: {
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: 16,
     padding: 20,
     minHeight: 80,
+  },
+  primaryMissionCard: {
+    // Additional styles for primary mission cards that use ThemedCard
   },
   conquestCard: {
     backgroundColor: '#1a4f82',
@@ -218,6 +243,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.05)',
+  },
+  missionCardWrapper: {
+    marginBottom: 12,
   },
 
   secondaryMissionCard: {
