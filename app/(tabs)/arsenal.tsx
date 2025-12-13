@@ -31,8 +31,9 @@ import { ArsenalTabSelector } from '@/components/arsenal/ArsenalTabSelector'
 import { ArsenalEquipment } from '@/components/arsenal/ArsenalEquipment'
 import { ArsenalAmmunition } from '@/components/arsenal/ArsenalAmmunition'
 import { AccessDeniedModal } from '@/components/AccessDeniedModal'
+import { VoiceLibrary } from '@/components/VoiceLibrary'
 
-type ArsenalTab = 'ammunition' | 'equipment'
+type ArsenalTab = 'ammunition' | 'equipment' | 'voice'
 
 export default function ArsenalScreen() {
     const {
@@ -288,7 +289,7 @@ export default function ArsenalScreen() {
             {/* Global Arsenal Header */}
             <ScreenHeader
                 title="ARSENAL"
-                subtitle={activeTab === 'equipment' ? 'EQUIPMENT BAY' : 'AMMUNITION BANK'}
+                subtitle={activeTab === 'equipment' ? 'EQUIPMENT BAY' : activeTab === 'voice' ? 'VOICE LIBRARY' : 'AMMUNITION BANK'}
                 rightAction={
                     activeTab === 'ammunition' ? (
                         <View style={styles.headerButtons}>
@@ -320,7 +321,7 @@ export default function ArsenalScreen() {
                                 <Text style={[styles.actionButtonText, { color: isDark ? "white" : "black" }]}>IMPORT</Text>
                             </TouchableOpacity>
                         </View>
-                    ) : (
+                    ) : activeTab === 'voice' ? null : (
                         <View style={styles.equipmentHeaderActions}>
                             <View style={styles.vpChip}>
                                 <FontAwesome5 name="coins" size={14} color="#FFD700" />
@@ -350,6 +351,8 @@ export default function ArsenalScreen() {
                         isDark={isDark}
                         theme={theme}
                     />
+                ) : activeTab === 'voice' ? (
+                    <VoiceLibrary isDark={isDark} theme={theme} />
                 ) : (
                     <ArsenalAmmunition
                         filterTab={filterTab}

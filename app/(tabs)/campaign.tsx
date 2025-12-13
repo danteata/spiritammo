@@ -207,6 +207,8 @@ export default function CampaignScreen() {
 
                                 <VoiceRecorder
                                     scriptureText={currentCollectionScripture.text}
+                                    scriptureId={currentCollectionScripture.id}
+                                    scriptureRef={currentCollectionScripture.reference}
                                     intelText={`Reference: ${currentCollectionScripture.reference}`}
                                     onRecordingComplete={async (accuracy) => {
                                         console.log('Collection recording complete:', accuracy)
@@ -395,6 +397,8 @@ export default function CampaignScreen() {
                 currentCollectionScripture && showVoiceRecorder && (
                     <VoiceRecorder
                         scriptureText={currentCollectionScripture.text}
+                        scriptureId={currentCollectionScripture.id}
+                        scriptureRef={currentCollectionScripture.reference}
                         intelText={`Reference: ${currentCollectionScripture.reference}`}
                         onRecordingComplete={async (accuracy) => {
                             console.log('Collection recording complete:', accuracy)

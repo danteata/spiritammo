@@ -4,8 +4,8 @@ import { GARRISON_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 import { FontAwesome, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
+import { VoicePlaybackToggle } from '@/components/ui/VoicePlaybackToggle'
 import ScreenHeader from '@/components/ScreenHeader'
-import { VoiceLibrary } from '@/components/VoiceLibrary'
 
 import { useAuth } from '@clerk/clerk-expo'
 import { useRouter } from 'expo-router'
@@ -234,21 +234,22 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         </ThemedCard>
 
-        {/* Voice Library */}
+        {/* Voice Playback Toggle */}
         <ThemedCard style={styles.card} variant="default">
           <View style={styles.cardHeader}>
-            <MaterialCommunityIcons name="microphone" size={20} color={theme.accent} />
+            <MaterialCommunityIcons name="volume-high" size={20} color={theme.accent} />
             <ThemedText variant="subheading" style={styles.cardTitle}>
-              VOICE LIBRARY
+              VOICE PLAYBACK
             </ThemedText>
           </View>
 
           <ThemedText variant="body" style={styles.sectionDescription}>
-            Your personal collection of high-accuracy scripture recordings.
+            Choose between your recorded voice or text-to-speech for scripture playback.
           </ThemedText>
 
-          <VoiceLibrary isDark={isDark} theme={theme} />
+          <VoicePlaybackToggle isDark={isDark} theme={theme} />
         </ThemedCard>
+
 
         {/* About */}
         <ThemedCard style={styles.card} variant="default">

@@ -29,6 +29,7 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
 import { useAudioRecording, AudioRecordingResult } from '@/services/audioRecording'
 import { calculateTextAccuracy } from '@/utils/accuracyCalculator'
 import whisperService from '@/services/whisper'
+import VoicePlaybackService from '@/services/voicePlayback'
 
 interface TargetPracticeProps {
   onRecordingComplete: (transcript: string, accuracy: number) => void
@@ -179,12 +180,12 @@ export default function TargetPractice({
   const speakIntel = async () => {
     try {
       // Stop any existing speech
-      await Speech.stop()
+      await VoicePlaybackService.stopPlayback()
 
       const textToSpeak = intelText || "No tactical intel available for this target."
 
       // Start new speech with proper settings
-      await Speech.speak(textToSpeak, {
+      await VoicePlaybackService.playTextToSpeech(textToSpeak, {
         rate: userSettings.voiceRate || 0.9,
         pitch: userSettings.voicePitch || 1.0,
         language: userSettings.language || 'en-US',
@@ -443,19 +444,33 @@ export default function TargetPractice({
     onRecordingComplete('', finalAccuracy)
   }
 
-  const speakTarget = () => {
+  const speakTarget = async () => {
     if (isPlaying) {
-      Speech.stop()
+      await VoicePlaybackService.stopPlayback()
       setIsPlaying(false)
       return
     }
 
-    Speech.speak(targetVerse, {
-      onStart: () => setIsPlaying(true),
-      onDone: () => setIsPlaying(false),
-      onStopped: () => setIsPlaying(false),
-      rate: 0.9,
-    })
+    // Check if we have a scripture ID (from reference or other source)
+    // For now, we'll create a simple ID from the reference
+    const scriptureId = reference ? `scripture_${reference.replace(/\s+/g, '_').replace(/:/g, '_')}` : 'unknown_scripture'
+
+    try {
+      await VoicePlaybackService.playScripture(scriptureId, targetVerse, {
+        rate: userSettings.voiceRate || 0.9,
+        pitch: userSettings.voicePitch || 1.0,
+        language: userSettings.language || 'en-US',
+        onStart: () => setIsPlaying(true),
+        onDone: () => setIsPlaying(false),
+        onError: (error) => {
+          console.error('Voice playback error:', error)
+          setIsPlaying(false)
+        }
+      })
+    } catch (error) {
+      console.error('Failed to play scripture:', error)
+      setIsPlaying(false)
+    }
   }
 
   const getWindIcon = () => {

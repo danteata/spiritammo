@@ -1,6 +1,6 @@
 module.exports = {
     preset: 'jest-expo',
-    setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+    setupFilesAfterEnv: ['<rootDir>/jest.setup.react-native.js'],
     testPathIgnorePatterns: [
         '<rootDir>/.expo/',
         '<rootDir>/.expo-shared/',
@@ -23,7 +23,7 @@ module.exports = {
     ],
     coverageReporters: ['text', 'lcov', 'html'],
     coverageDirectory: 'coverage',
-    testEnvironment: 'jsdom',
+    testEnvironment: 'node',
     moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
     moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/$1',

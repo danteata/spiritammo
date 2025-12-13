@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
 import { FontAwesome5, FontAwesome } from '@expo/vector-icons'
 import { useAppStore } from '@/hooks/useAppStore'
 
-type ArsenalTab = 'ammunition' | 'equipment'
+type ArsenalTab = 'ammunition' | 'equipment' | 'voice'
 
 type ArsenalTabSelectorProps = {
     activeTab: ArsenalTab
@@ -57,7 +57,24 @@ export const ArsenalTabSelector: React.FC<ArsenalTabSelectorProps> = ({
                     styles.tabButtonText,
                     { color: activeTab === 'ammunition' ? '#000' : isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }
                 ]}>
-                    AMMUNITION
+                    AMMO BANK
+                </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+                style={[
+                    styles.tabButton,
+                    activeTab === 'voice' && styles.activeMainTab,
+                    activeTab === 'voice' && { backgroundColor: '#FFD700', borderColor: '#FFD700' },
+                ]}
+                onPress={() => onTabChange('voice')}
+            >
+                <FontAwesome5 name="microphone-alt" size={20} color={activeTab === 'voice' ? '#000' : isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'} />
+                <Text style={[
+                    styles.tabButtonText,
+                    { color: activeTab === 'voice' ? '#000' : isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }
+                ]}>
+                    VOICE
                 </Text>
             </TouchableOpacity>
         </View >

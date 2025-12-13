@@ -15,14 +15,17 @@ import { RecordingControls } from './ui/RecordingControls';
 import { AccuracyBadge } from './ui/AccuracyBadge';
 import { calculateTextAccuracy } from '@/utils/accuracyCalculator';
 import VoiceRecordingService from '@/services/voiceRecording';
+import VoicePlaybackService from '@/services/voicePlayback';
 
 interface VoiceRecorderProps {
   scriptureText: string;
+  scriptureId?: string;
+  scriptureRef?: string;
   intelText?: string;
   onRecordingComplete: (accuracy: number) => void;
 }
 
-export default function VoiceRecorder({ scriptureText, intelText, onRecordingComplete }: VoiceRecorderProps) {
+export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef, intelText, onRecordingComplete }: VoiceRecorderProps) {
   const { isDark, userSettings } = useAppStore();
 
   // Audio recording hook for mobile fallback
@@ -276,8 +279,8 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
           if (calculatedAccuracy >= 90) {
             try {
               const savedRecording = await VoiceRecordingService.saveRecording(
-                'temp_scripture_id', // Would need to pass actual scripture ID
-                scriptureText.substring(0, 50) + '...', // Scripture reference
+                scriptureId || 'temp_scripture_id', // Use provided scriptureId or fallback
+                scriptureRef || scriptureText.substring(0, 50) + '...', // Use provided scriptureRef or fallback
                 audioResult.uri,
                 calculatedAccuracy,
                 audioResult.duration || 0
