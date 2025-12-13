@@ -2,6 +2,7 @@ import React from 'react'
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
 import { FontAwesome5 } from '@expo/vector-icons'
 import { useAppStore } from '@/hooks/useAppStore'
+import { GARRISON_THEME } from '@/constants/colors'
 
 type SlotButtonProps = {
     slot: { id: string; icon: string; label: string }
@@ -20,6 +21,7 @@ export const SlotButton: React.FC<SlotButtonProps> = ({
     labelPosition,
     theme
 }) => {
+
     return (
         <TouchableOpacity
             style={[
@@ -51,8 +53,8 @@ export const SlotButton: React.FC<SlotButtonProps> = ({
                     elevation: 8,
                 },
                 isSelected && {
-                    backgroundColor: `${theme.accent}40`,
-                    borderColor: theme.accent,
+                    backgroundColor: `${theme.isDark ? theme.accent : theme.surface}`,
+                    borderColor: `${theme.isDark ? theme.accent : theme.surface}`,
                     borderWidth: 3,
                     shadowColor: theme.accent,
                     shadowOffset: { width: 0, height: 0 },
@@ -83,7 +85,7 @@ export const SlotButton: React.FC<SlotButtonProps> = ({
                     borderColor: theme.border || 'rgba(255,255,255,0.1)',
                 },
                 isSelected && {
-                    backgroundColor: `${theme.accent}25`,
+                    backgroundColor: `${theme.isDark ? theme.accent : theme.surface}25`,
                     borderWidth: 1.5,
                     borderColor: `${theme.accent}66`,
                 },

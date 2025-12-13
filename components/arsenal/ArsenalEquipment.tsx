@@ -13,8 +13,9 @@ import SoldierAvatar from '@/components/SoldierAvatar'
 import { SlotButton } from './SlotButton'
 import { useAppStore } from '@/hooks/useAppStore'
 import { getItemsBySlot, getItemById } from '@/constants/avatarItems'
-import { ThemedText } from '@/components/Themed'
+import { ThemedText, ThemedCard } from '@/components/Themed'
 import { FontAwesome5 } from '@expo/vector-icons'
+import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 
 interface ArsenalEquipmentProps {
     selectedSlot: EquipmentSlot | null
@@ -169,9 +170,20 @@ export const ArsenalEquipment: React.FC<ArsenalEquipmentProps> = ({
                     </Svg>
                 </View>
 
-                {/* Central Avatar */}
-                <View style={styles.avatarContainer}>
-                    <SoldierAvatar size="medium" />
+                {/* Central Avatar Background */}
+                <View style={{
+                    position: 'absolute',
+                    width: AVATAR_RADIUS * 2 + 20,
+                    height: AVATAR_RADIUS * 2 + 20,
+                    borderRadius: (AVATAR_RADIUS * 2 + 20) / 2,
+                    backgroundColor: isDark ? 'rgba(0,0,0,0.6)' : 'rgba(241, 178, 156, 0.8)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 5,
+                }}>
+                    <View style={styles.avatarContainer}>
+                        <SoldierAvatar size="medium" />
+                    </View>
                 </View>
 
                 {/* Orbital Buttons */}
@@ -217,11 +229,12 @@ export const ArsenalEquipment: React.FC<ArsenalEquipmentProps> = ({
                             const isEquipped = avatarInventory?.equippedItems?.[selectedSlot] === item.id
 
                             return (
-                                <TouchableOpacity
+                                <ThemedCard
+                                    variant="default"
                                     style={[
                                         styles.itemCard,
                                         isEquipped && styles.equippedItemCard,
-                                        { borderColor: isEquipped ? theme.accent : (theme.border || 'rgba(255,255,255,0.1)') }
+                                        { borderColor: isEquipped ? theme.accent : undefined }
                                     ]}
                                     onPress={() => onItemPress(item.id)}
                                 >
@@ -233,14 +246,18 @@ export const ArsenalEquipment: React.FC<ArsenalEquipmentProps> = ({
                                         />
                                     </View>
 
-                                    <ThemedText numberOfLines={1} style={styles.itemName}>
+                                    <ThemedText
+                                        variant="caption"
+                                        numberOfLines={2}
+                                        style={[styles.itemName, { color: theme.text }]}
+                                    >
                                         {item.name}
                                     </ThemedText>
 
                                     <View style={styles.itemFooter}>
                                         {isEquipped ? (
                                             <View style={[styles.badge, { backgroundColor: theme.accent }]}>
-                                                <ThemedText style={styles.badgeText}>EQUIPPED</ThemedText>
+                                                <ThemedText style={[styles.badgeText, { color: theme.surface }]} >EQUIPPED</ThemedText>
                                             </View>
                                         ) : isOwned ? (
                                             <View style={[styles.badge, { backgroundColor: theme.surfaceHighlight || 'rgba(255,255,255,0.1)' }]}>
@@ -253,7 +270,7 @@ export const ArsenalEquipment: React.FC<ArsenalEquipmentProps> = ({
                                             </View>
                                         )}
                                     </View>
-                                </TouchableOpacity>
+                                </ThemedCard>
                             )
                         }}
                     />
@@ -298,9 +315,7 @@ const styles = StyleSheet.create({
         gap: 12,
     },
     itemsTitle: {
-        fontSize: 12,
-        fontWeight: 'bold',
-        letterSpacing: 1.5,
+        ...MILITARY_TYPOGRAPHY.code,
         opacity: 0.8,
     },
     headerLine: {
@@ -314,17 +329,20 @@ const styles = StyleSheet.create({
         paddingBottom: 100, // Ample space for bottom nav
     },
     itemCard: {
-        width: 100,
-        height: 140, // Fixed taller height
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        borderRadius: 12,
-        padding: 8,
-        borderWidth: 1,
+        width: 120,
+        height: 150, // Increased height for better layout
         alignItems: 'center',
         justifyContent: 'space-between', // Distribute content
+        padding: 12,
+        marginBottom: 0, // ThemedCard handles this
     },
     equippedItemCard: {
-        backgroundColor: 'rgba(6, 182, 212, 0.1)', // Cyan tint
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+        transform: [{ scale: 1.05 }],
+        borderWidth: 2,
     },
     itemIconContainer: {
         width: 48,
@@ -336,9 +354,9 @@ const styles = StyleSheet.create({
         marginVertical: 4,
     },
     itemName: {
-        fontSize: 11,
-        fontWeight: '600',
         textAlign: 'center',
+        lineHeight: 16,
+        minHeight: 32, // Ensure space for 2 lines
     },
     itemFooter: {
         marginTop: 4,

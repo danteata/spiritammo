@@ -5,6 +5,7 @@ import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 import { FontAwesome, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import ScreenHeader from '@/components/ScreenHeader'
+import { VoiceLibrary } from '@/components/VoiceLibrary'
 
 import { useAuth } from '@clerk/clerk-expo'
 import { useRouter } from 'expo-router'
@@ -157,6 +158,22 @@ export default function SettingsScreen() {
               On-device speech recognition. Faster response time, works offline. Good for quick drills.
             </ThemedText>
           </TouchableOpacity>
+        </ThemedCard>
+
+        {/* Voice Library */}
+        <ThemedCard style={styles.card} variant="default">
+          <View style={styles.cardHeader}>
+            <MaterialCommunityIcons name="microphone" size={20} color={theme.accent} />
+            <ThemedText variant="subheading" style={styles.cardTitle}>
+              VOICE LIBRARY
+            </ThemedText>
+          </View>
+
+          <ThemedText variant="body" style={styles.sectionDescription}>
+            Your personal collection of high-accuracy scripture recordings.
+          </ThemedText>
+
+          <VoiceLibrary isDark={isDark} theme={theme} />
         </ThemedCard>
 
         {/* About */}

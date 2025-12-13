@@ -11,6 +11,9 @@ interface RecordingControlsProps {
     onSpeakIntel: () => void;
     onToggleRecording: () => void;
     textColor: string;
+    hasRecording?: boolean;
+    isPlaying?: boolean;
+    onTogglePlayback?: () => void;
 }
 
 export const RecordingControls: React.FC<RecordingControlsProps> = ({
@@ -19,19 +22,38 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
     isLoading,
     onSpeakIntel,
     onToggleRecording,
-    textColor
+    textColor,
+    hasRecording = false,
+    isPlaying = false,
+    onTogglePlayback
 }) => {
     return (
         <View style={styles.controlsContainer}>
-            <TouchableOpacity
-                style={[styles.secondaryButton, { borderColor: textColor }]}
-                onPress={onSpeakIntel}
-                disabled={isLoading}
-                testID="speak-intel-button"
-            >
-                <FontAwesome name="volume-up" size={16} color={textColor} />
-                <Text style={[styles.secondaryButtonText, { color: textColor }]}>PLAY INTEL</Text>
-            </TouchableOpacity>
+            <View style={styles.leftControls}>
+                <TouchableOpacity
+                    style={[styles.secondaryButton, { borderColor: textColor }]}
+                    onPress={onSpeakIntel}
+                    disabled={isLoading}
+                    testID="speak-intel-button"
+                >
+                    <FontAwesome name="volume-up" size={16} color={textColor} />
+                    <Text style={[styles.secondaryButtonText, { color: textColor }]}>PLAY INTEL</Text>
+                </TouchableOpacity>
+
+                {hasRecording && onTogglePlayback && (
+                    <TouchableOpacity
+                        style={[styles.secondaryButton, { borderColor: textColor, marginLeft: 8 }]}
+                        onPress={onTogglePlayback}
+                        disabled={isLoading}
+                        testID="toggle-playback-button"
+                    >
+                        <FontAwesome name={isPlaying ? "pause" : "play"} size={14} color={textColor} />
+                        <Text style={[styles.secondaryButtonText, { color: textColor }]}>
+                            {isPlaying ? "PAUSE" : "REPLAY"}
+                        </Text>
+                    </TouchableOpacity>
+                )}
+            </View>
 
             <TouchableOpacity
                 style={[
@@ -59,6 +81,10 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
         paddingHorizontal: 16,
+    },
+    leftControls: {
+        flexDirection: 'row',
+        alignItems: 'center',
     },
     recordButton: {
         width: 64,

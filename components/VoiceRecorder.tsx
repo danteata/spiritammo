@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Platform, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, Platform, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
+import { Audio } from 'expo-av';
 import { COLORS } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
 import * as Speech from 'expo-speech';
@@ -13,6 +14,7 @@ import { StatusIndicator } from './ui/StatusIndicator';
 import { RecordingControls } from './ui/RecordingControls';
 import { AccuracyBadge } from './ui/AccuracyBadge';
 import { calculateTextAccuracy } from '@/utils/accuracyCalculator';
+import VoiceRecordingService from '@/services/voiceRecording';
 
 interface VoiceRecorderProps {
   scriptureText: string;
@@ -67,6 +69,9 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
   const [localTranscript, setLocalTranscript] = useState('');
   const [whisperReady, setWhisperReady] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [savedRecordingUri, setSavedRecordingUri] = useState<string | null>(null);
 
   // Clear transcript when scripture changes
   useEffect(() => {
@@ -75,19 +80,33 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
     setAccuracy(0);
     setShowAccuracy(false);
     setAudioRecording(null);
+    // Cleanup sound
+    if (sound) {
+      sound.unloadAsync();
+      setSound(null);
+    }
+    setIsPlaying(false);
   }, [scriptureText]);
 
-  // Initialize Whisper and check availability
+  // Initialize Whisper and voice recording service
   useEffect(() => {
     const init = async () => {
       try {
         setIsInitializing(true);
-        setStatusMessage('Initializing Whisper model...');
+        setStatusMessage('Initializing services...');
+
+        // Initialize voice recording service
+        await VoiceRecordingService.initialize();
+
+        // Initialize Whisper
         await whisperService.init();
         console.log('Whisper initialized');
         setWhisperReady(true);
+
+        setStatusMessage('Ready to record');
       } catch (error) {
-        console.error('Failed to init whisper:', error);
+        console.error('Failed to init services:', error);
+        setStatusMessage('Service initialization failed');
         // Fallback handled by status effect
       } finally {
         setIsInitializing(false);
@@ -252,6 +271,28 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
           console.log('🎙️ VoiceRecorder: Calculated accuracy from Whisper:', calculatedAccuracy);
           setAccuracy(calculatedAccuracy);
           setShowAccuracy(true);
+
+          // Auto-save high-accuracy recordings
+          if (calculatedAccuracy >= 90) {
+            try {
+              const savedRecording = await VoiceRecordingService.saveRecording(
+                'temp_scripture_id', // Would need to pass actual scripture ID
+                scriptureText.substring(0, 50) + '...', // Scripture reference
+                audioResult.uri,
+                calculatedAccuracy,
+                audioResult.duration || 0
+              );
+
+              if (savedRecording) {
+                setStatusMessage(`Recording saved! ${calculatedAccuracy}% accuracy`);
+                console.log('🎙️ Voice recording auto-saved:', savedRecording);
+              }
+            } catch (saveError) {
+              console.error('Failed to save voice recording:', saveError);
+              // Don't block the main flow if saving fails
+            }
+          }
+
           console.log('🎙️ VoiceRecorder: Calling onRecordingComplete with accuracy:', calculatedAccuracy);
           onRecordingComplete(calculatedAccuracy);
         } else {
@@ -300,6 +341,46 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
     }
   };
 
+
+  // Play/pause recorded audio
+  const togglePlayback = async () => {
+    try {
+      if (!recordingUri) return;
+
+      if (isPlaying && sound) {
+        // Pause
+        await sound.pauseAsync();
+        setIsPlaying(false);
+        setStatusMessage('Playback paused');
+      } else if (sound) {
+        // Resume
+        await sound.playAsync();
+        setIsPlaying(true);
+        setStatusMessage('Playing recording...');
+      } else {
+        // Start new playback
+        const { sound: newSound } = await Audio.Sound.createAsync(
+          { uri: recordingUri },
+          { shouldPlay: true }
+        );
+
+        setSound(newSound);
+        setIsPlaying(true);
+        setStatusMessage('Playing recording...');
+
+        // Handle playback finished
+        newSound.setOnPlaybackStatusUpdate((status) => {
+          if (status.isLoaded && status.didJustFinish) {
+            setIsPlaying(false);
+            setStatusMessage('Playback finished');
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error toggling playback:', error);
+      setStatusMessage('Playback error');
+    }
+  };
 
   const textColor = isDark ? COLORS.text.dark : COLORS.text.light;
   const isRecording = isRecognizing || audioIsRecording;
@@ -350,6 +431,9 @@ export default function VoiceRecorder({ scriptureText, intelText, onRecordingCom
         onSpeakIntel={speakIntel}
         onToggleRecording={audioIsRecording || isRecognizing ? stopRecording : startRecording}
         textColor={textColor}
+        hasRecording={!!recordingUri && showAccuracy}
+        isPlaying={isPlaying}
+        onTogglePlayback={togglePlayback}
       />
     </View>
   );

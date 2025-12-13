@@ -130,3 +130,40 @@ export interface CombatStats {
   commendations: string[]
   trainingHistory: TrainingSession[]
 }
+
+// Voice Recording System Types
+export interface VoiceRecording {
+  id: string
+  scriptureId: string
+  scriptureRef: string // e.g., "John 3:16"
+  accuracy: number
+  timestamp: number
+  duration: number // in seconds
+  fileUri: string
+  fileSize?: number // in bytes
+  quality: 'standard' | 'high' | 'premium'
+  tags?: string[] // e.g., ['high-accuracy', 'mastered', 'favorite']
+  metadata?: {
+    deviceModel?: string
+    osVersion?: string
+    appVersion?: string
+  }
+}
+
+export interface VoiceRecordingStats {
+  totalRecordings: number
+  totalStorageUsed: number // in bytes
+  averageAccuracy: number
+  recordingsByQuality: Record<VoiceRecording['quality'], number>
+  oldestRecording?: number
+  newestRecording?: number
+}
+
+export interface VoiceLibrarySettings {
+  autoSaveEnabled: boolean
+  minimumAccuracy: number // threshold for auto-saving (e.g., 90)
+  maxStorageDays: number // delete recordings older than X days (0 = never)
+  maxStorageSize: number // max storage in MB (0 = unlimited)
+  preferredQuality: VoiceRecording['quality']
+  useRecordedVoice: boolean // prefer recorded voice over TTS when available
+}
