@@ -1,27 +1,18 @@
-// Combined Arsenal Screen - Equipment & Ammunition Management
-
 import React, { useState } from 'react'
 import {
     StyleSheet,
-    Text,
     View,
-    FlatList,
-    TouchableOpacity,
     Alert,
-    ScrollView,
-    Image,
-    Pressable,
+    Text,
+    TouchableOpacity,
 } from 'react-native'
-import { FontAwesome, Feather, FontAwesome5 } from '@expo/vector-icons'
+import { FontAwesome, FontAwesome5 } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { EquipmentSlot } from '@/types/avatar'
 import {
-    COLORS,
-    GRADIENTS,
-    MILITARY_TYPOGRAPHY,
     GARRISON_THEME,
 } from '@/constants/colors'
-import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
+import { ThemedContainer } from '@/components/Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 import { Collection, Scripture } from '@/types/scripture'
 import FileUploader from '@/components/FileUploader'
@@ -29,85 +20,19 @@ import CollectionDetailModal from '@/components/CollectionDetailModal'
 import BookScripturesModal from '@/components/BookScripturesModal'
 import AddVersesModal from '@/components/AddVersesModal'
 import ScreenHeader from '@/components/ScreenHeader'
-import SoldierAvatar from '@/components/SoldierAvatar'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { errorHandler } from '@/services/errorHandler'
-import { getItemsBySlot, getItemById } from '@/constants/avatarItems'
+import { getItemById } from '@/constants/avatarItems'
 
 import { CollectionChapterService } from '@/services/collectionChapters'
 
 // Sub-section types
+import { ArsenalTabSelector } from '@/components/arsenal/ArsenalTabSelector'
+import { ArsenalEquipment } from '@/components/arsenal/ArsenalEquipment'
+import { ArsenalAmmunition } from '@/components/arsenal/ArsenalAmmunition'
+import { AccessDeniedModal } from '@/components/AccessDeniedModal'
+
 type ArsenalTab = 'ammunition' | 'equipment'
-
-type SlotButtonProps = {
-    slot: { id: string; icon: string; label: string }
-    position: { top: number; left: number }
-    isSelected: boolean
-    onPress: () => void
-    labelPosition: 'above' | 'below'
-}
-
-// Dedicated SlotButton component with configurable label positioning
-const SlotButton: React.FC<SlotButtonProps> = ({
-    slot,
-    position,
-    isSelected,
-    onPress,
-    labelPosition
-}) => {
-    const { theme } = useAppStore()
-    const styles = getStyles(theme)
-
-    return (
-        <TouchableOpacity
-            style={[
-                styles.slotButton,
-                position,
-                isSelected && styles.selectedSlot,
-            ]}
-            onPress={onPress}
-            activeOpacity={0.7}
-        >
-            {/* Outer glow ring for selected state */}
-            {isSelected && <View style={styles.glowRing} />}
-
-            {/* Button content */}
-            <View style={[
-                styles.slotButtonInner,
-                isSelected && {
-                    backgroundColor: 'rgba(255,215,0,0.25)',
-                    borderColor: '#FFD700',
-                    borderWidth: 3,
-                    shadowColor: '#FFD700',
-                    shadowOffset: { width: 0, height: 0 },
-                    shadowOpacity: 0.6,
-                    shadowRadius: 8,
-                    elevation: 10,
-                }
-            ]}>
-                <FontAwesome5
-                    name={slot.icon as any}
-                    size={18}
-                    color={isSelected ? '#FFD700' : 'rgba(255,255,255,0.8)'}
-                />
-            </View>
-
-            {/* Label positioned based on prop */}
-            <View style={[
-                styles.slotLabel,
-                isSelected && styles.selectedSlotLabel,
-                labelPosition === 'above' && styles.headSlotLabel
-            ]}>
-                <Text style={[
-                    styles.slotLabelText,
-                    { color: isSelected ? '#FFD700' : 'rgba(255,255,255,0.6)' }
-                ]}>
-                    {slot.label}
-                </Text>
-            </View>
-        </TouchableOpacity>
-    )
-}
 
 export default function ArsenalScreen() {
     const {
@@ -143,6 +68,15 @@ export default function ArsenalScreen() {
     const [bookScriptures, setBookScriptures] = useState<Scripture[]>([])
     const [selectedBookName, setSelectedBookName] = useState<string>('')
     const [showAddVerses, setShowAddVerses] = useState(false)
+
+    // Access Denied Modal State
+    const [deniedModal, setDeniedModal] = useState({
+        visible: false,
+        type: 'rank' as 'rank' | 'funds',
+        requiredRank: '',
+        cost: 0,
+        itemName: ''
+    })
     const [isImporting, setIsImporting] = useState(false)
 
     // Equipment helpers
@@ -156,56 +90,6 @@ export default function ArsenalScreen() {
     const isItemOwned = (itemId: string) => avatarInventory?.ownedItems.includes(itemId) || false
     const isItemEquipped = (itemId: string) => selectedSlot ? avatarInventory.equippedItems[selectedSlot] === itemId : false
 
-    // Equipment slot positioning
-    const SLOT_DATA = [
-        { id: 'head', icon: 'hard-hat', label: 'HEAD' },
-        { id: 'body', icon: 'shield-alt', label: 'BODY' },
-        { id: 'legs', icon: 'shoe-prints', label: 'LEGS' },
-        { id: 'primary', icon: 'archway', label: 'WEAPON' },
-        { id: 'background', icon: 'map-marked-alt', label: 'SCENE' }
-    ] as const
-
-    const getSlotPosition = (slotId: EquipmentSlot) => {
-        const centerX = 140; // Center relative to container
-        const centerY = 140;
-        const radius = 105; // Distance from center to buttons
-
-        switch (slotId) {
-            case 'head':
-                // Top center (12 o'clock)
-                return {
-                    top: centerY - radius,
-                    left: centerX - 22.5,
-                }
-            case 'body':
-                // Left center (9 o'clock)
-                return {
-                    top: centerY - 22.5,
-                    left: centerX - radius - 22.5,
-                }
-            case 'primary':
-                // Right center (3 o'clock) - labeled as WEAPON GEAR
-                return {
-                    top: centerY - 22.5,
-                    left: centerX + radius - 22.5,
-                }
-            case 'legs':
-                // Bottom center (6 o'clock)
-                return {
-                    top: centerY + radius - 22.5,
-                    left: centerX - 22.5,
-                }
-            case 'background':
-                // Top right (1:30 o'clock position) - labeled as SCENE
-                return {
-                    top: centerY - radius * 0.85,
-                    left: centerX + radius * 0.5 - 22.5,
-                }
-            default:
-                return { top: 10, left: 10 }
-        }
-    }
-
     // Equipment handlers
     const handleItemPress = async (itemId: string) => {
         const item = getItemById(itemId)
@@ -214,14 +98,26 @@ export default function ArsenalScreen() {
         setIsProcessing(true)
         try {
             if (!canUnlockItem(item.reqRank)) {
-                Alert.alert('Rank Required', `Reach ${item.reqRank} rank to unlock this item.`)
+                setDeniedModal({
+                    visible: true,
+                    type: 'rank',
+                    requiredRank: (item.reqRank as any).toString().replace('_', ' '), // Simple format
+                    cost: 0,
+                    itemName: item.name
+                })
                 return
             }
 
             if (!isItemOwned(itemId)) {
                 const purchased = await purchaseItem(itemId)
                 if (!purchased) {
-                    Alert.alert('Insufficient Funds', `Need ${item.cost} VP for ${item.name}`)
+                    setDeniedModal({
+                        visible: true,
+                        type: 'funds',
+                        requiredRank: '',
+                        cost: item.cost,
+                        itemName: item.name
+                    })
                 }
             } else if (selectedSlot && !isItemEquipped(itemId)) {
                 await equipItem(selectedSlot, itemId)
@@ -234,10 +130,12 @@ export default function ArsenalScreen() {
     }
 
     // Ammunition handlers (copied from armory.tsx)
-    const handleSelectCollection = (collection: Collection) => {
-        console.log('Selecting collection:', collection.name, collection.id)
+    const handleSelectCollection = (collection: Collection | null) => {
+        console.log('Selecting collection:', collection?.name || 'back to collections')
         setSelectedCollection(collection)
-        setFilterTab('books')
+        if (collection) {
+            setFilterTab('books')
+        }
     }
 
     const handleShowCollectionDetail = (collection: Collection) => {
@@ -310,10 +208,10 @@ export default function ArsenalScreen() {
             const analysis = CollectionChapterService.analyzeScripturesForChapters(extractedVerses)
 
             let newCollection: Collection = {
-                id: `imported_${Date.now()}`,
+                id: `imported_${Date.now()} `,
                 name: analysis.sourceBook
                     ? `${analysis.sourceBook} Collection`
-                    : `Imported Collection ${new Date().toLocaleDateString()}`,
+                    : `Imported Collection ${new Date().toLocaleDateString()} `,
                 description: `${extractedVerses.length} verses imported from file`,
                 scriptures: extractedVerses.map((v) => v.id),
                 createdAt: new Date().toISOString(),
@@ -323,9 +221,9 @@ export default function ArsenalScreen() {
             if (analysis.canBeChapterBased) {
                 Alert.alert(
                     'Chapter Organization Available',
-                    `This collection can be organized by chapters (${analysis.stats.totalChapters
+                    `This collection can be organized by chapters(${analysis.stats.totalChapters
                     } chapters from ${analysis.stats.totalBooks} book${analysis.stats.totalBooks > 1 ? 's' : ''
-                    }). Would you like to enable chapter-based organization?`,
+                    }).Would you like to enable chapter - based organization ? `,
                     [
                         {
                             text: 'Simple Collection',
@@ -348,7 +246,7 @@ export default function ArsenalScreen() {
                                         )
                                     await addCollection(chapterBasedCollection)
                                     errorHandler.showSuccess(
-                                        `Chapter-based arsenal "${chapterBasedCollection.name}" established with ${analysis.stats.totalChapters} chapters.`,
+                                        `Chapter - based arsenal "${chapterBasedCollection.name}" established with ${analysis.stats.totalChapters} chapters.`,
                                         'Arsenal Created'
                                     )
                                 } catch (error) {
@@ -374,495 +272,16 @@ export default function ArsenalScreen() {
                 )
             }
         } catch (error) {
-            await errorHandler.handleError(
-                error,
-                'Import Verses',
-                {
-                    customMessage: 'Failed to import ammunition from file. Please retry operation.',
-                    retry: () => handleVersesExtracted(extractedVerses, targetCollectionId)
-                }
-            )
+            errorHandler.handleError(error, 'Extraction Failed')
         } finally {
             setIsImporting(false)
+            setShowFileUploader(false)
+            setShowAddVerses(false)
         }
     }
 
-    const renderEquipmentSection = () => {
-        const availableItems = selectedSlot ? getItemsBySlot(selectedSlot) : []
 
-        return (
-            <View style={styles.contentContainer}>
-                {/* Avatar Preview Section */}
-                <View style={styles.avatarSection}>
-                    <View style={styles.avatarContainer}>
-                        {/* Decorative ring behind avatar */}
-                        <View style={styles.avatarRing} />
 
-                        {/* Avatar */}
-                        <SoldierAvatar size="large" showStats={false} />
-
-                        {/* Floating Slot Buttons with improved styling */}
-                        {SLOT_DATA.map((slot) => {
-                            const isSelected = selectedSlot === slot.id
-                            const positionStyle = getSlotPosition(slot.id)
-
-                            return (
-                                <SlotButton
-                                    key={slot.id}
-                                    slot={slot}
-                                    position={positionStyle}
-                                    isSelected={isSelected}
-                                    onPress={() => setSelectedSlot(slot.id)}
-                                    labelPosition={slot.id === 'head' ? 'above' : 'below'}
-                                />
-                            )
-                        })}
-                    </View>
-                </View>
-
-                {/* Items Section */}
-                <View style={styles.itemsSection}>
-                    <ScrollView contentContainerStyle={styles.itemsScrollContent}>
-                        {selectedSlot && (
-                            <>
-                                <Text style={[styles.categoryTitle, { color: theme.text }]}>
-                                    {SLOT_DATA.find(s => s.id === selectedSlot)?.label} GEAR
-                                </Text>
-
-                                <View style={styles.itemsGrid}>
-                                    {availableItems.map((item) => {
-                                        const equipped = isItemEquipped(item.id)
-                                        const owned = isItemOwned(item.id)
-                                        const unlocked = canUnlockItem(item.reqRank)
-
-                                        return (
-                                            <Pressable
-                                                key={item.id}
-                                                style={[
-                                                    styles.itemCard,
-                                                    equipped && [styles.equippedCard, { borderColor: theme.accent }],
-                                                    { backgroundColor: theme.surface }
-                                                ]}
-                                                onPress={() => handleItemPress(item.id)}
-                                                disabled={isProcessing}
-                                            >
-                                                <View style={styles.itemImageContainer}>
-                                                    {item.assetSource?.uri ? (
-                                                        <Image
-                                                            source={
-                                                                typeof item.assetSource.uri === 'string'
-                                                                    ? { uri: item.assetSource.uri }
-                                                                    : item.assetSource.uri
-                                                            }
-                                                            style={styles.itemImage}
-                                                            resizeMode="contain"
-                                                        />
-                                                    ) : (
-                                                        <View style={[styles.placeholderIcon, { backgroundColor: '#666' }]}>
-                                                            <FontAwesome5
-                                                                name={SLOT_DATA.find(s => s.id === selectedSlot)?.icon as any}
-                                                                size={20}
-                                                                color="white"
-                                                            />
-                                                        </View>
-                                                    )}
-                                                </View>
-
-                                                <Text style={[styles.itemName, { color: theme.text }]} numberOfLines={1}>
-                                                    {item.name}
-                                                </Text>
-
-                                                {!unlocked && (
-                                                    <View style={styles.lockBadge}>
-                                                        <Text style={styles.lockText}>{item.reqRank}</Text>
-                                                    </View>
-                                                )}
-
-                                                {owned && equipped && (
-                                                    <View style={[styles.statusBadge, { backgroundColor: '#10B981' }]}>
-                                                        <Text style={styles.statusText}>EQUIPPED</Text>
-                                                    </View>
-                                                )}
-
-                                                {owned && !equipped && (
-                                                    <View style={[styles.statusBadge, { backgroundColor: theme.accent }]}>
-                                                        <Text style={styles.statusText}>OWNED</Text>
-                                                    </View>
-                                                )}
-
-                                                {!owned && (
-                                                    <View style={[styles.priceBadge, { backgroundColor: '#7C3AED' }]}>
-                                                        <FontAwesome5 name="coins" size={10} color="white" />
-                                                        <Text style={styles.priceText}>{item.cost}</Text>
-                                                    </View>
-                                                )}
-                                            </Pressable>
-                                        )
-                                    })}
-                                </View>
-                            </>
-                        )}
-                    </ScrollView>
-                </View>
-            </View>
-        )
-    }
-
-    const renderAmmunitionSection = () => {
-        // Get scripture distribution by book for selected collection
-        const getScriptureDistribution = () => {
-            if (!selectedCollection) return []
-
-            const scriptures = getScripturesByCollection(selectedCollection.id)
-            const distribution = new Map<string, number>()
-
-            scriptures.forEach((scripture) => {
-                const book = scripture.book || 'Unknown'
-                distribution.set(book, (distribution.get(book) || 0) + 1)
-            })
-
-            return Array.from(distribution.entries())
-                .map(([book, count]) => ({ book, count }))
-                .sort((a, b) => b.count - a.count)
-        }
-
-        // Get scripture distribution by chapter for selected collection
-        const getChapterDistribution = () => {
-            if (
-                !selectedCollection ||
-                !selectedCollection.isChapterBased ||
-                !selectedCollection.chapters
-            ) {
-                return []
-            }
-
-            return selectedCollection.chapters
-                .map((chapter) => ({
-                    chapter: chapter.name || `Chapter ${chapter.chapterNumber}`,
-                    count: chapter.scriptures.length,
-                }))
-                .sort((a, b) => a.chapter.localeCompare(b.chapter))
-        }
-
-        const renderCollectionItem = ({ item }: { item: Collection }) => (
-            <ThemedCard
-                style={[
-                    styles.collectionItem,
-                    selectedCollection?.id === item.id
-                        ? { backgroundColor: 'transparent', borderColor: theme.accent, borderWidth: 1 }
-                        : { backgroundColor: isDark ? theme.surface : GARRISON_THEME.surface }
-                ]}
-                lightColor={GARRISON_THEME.surface}
-                darkColor={theme.surface}
-                variant="outlined"
-            >
-                <TouchableOpacity
-                    style={styles.collectionMainArea}
-                    onPress={() => handleSelectCollection(item)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Select collection ${item.name}`}
-                >
-                    <View style={styles.collectionInfo}>
-                        <View style={styles.collectionHeaderRow}>
-                            <ThemedText variant="heading" style={styles.collectionName}>
-                                {item.abbreviation || item.name}
-                            </ThemedText>
-                            {item.isChapterBased && (
-                                <View style={styles.chapterBadgeContainer}>
-                                    <Feather name="layers" size={10} color={theme.accent} />
-                                    <Text style={[styles.chapterBadgeText, { color: theme.accent }]}>
-                                        CHAPTERS
-                                    </Text>
-                                </View>
-                            )}
-                        </View>
-
-                        <ThemedText variant="body" style={styles.collectionDescription} numberOfLines={1}>
-                            {item.name}
-                        </ThemedText>
-
-                        <View style={styles.collectionMeta}>
-                            <View style={styles.statBadge}>
-                                <FontAwesome name="crosshairs" size={10} color={isDark ? '#888' : '#666'} />
-                                <ThemedText variant="caption" style={styles.statText}>
-                                    {item.scriptures.length} ROUNDS
-                                </ThemedText>
-                            </View>
-                        </View>
-                    </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={styles.collectionArrow}
-                    onPress={() => handleShowCollectionDetail(item)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`View details for ${item.name}`}
-                >
-                    <View style={styles.arrowCircle}>
-                        <FontAwesome name="chevron-right" size={12} color={theme.textSecondary} />
-                    </View>
-                </TouchableOpacity>
-            </ThemedCard>
-        )
-
-        const renderBookItem = ({ item }: { item: any }) => {
-            const bookScriptureCount = scriptures.filter(
-                (s) => s.book === item.name
-            ).length
-
-            return (
-                <ThemedCard
-                    style={styles.bookItem}
-                    onPress={() => handleDefaultBookTap(item.name)}
-                    testID={`book-${item.id}`}
-                    variant="flat"
-                    accessibilityRole="button"
-                    accessibilityLabel={`View scriptures in ${item.name}`}
-                >
-                    <View style={styles.bookIconContainer}>
-                        <FontAwesome name="book" size={18} color={theme.accent} />
-                    </View>
-
-                    <View style={styles.bookInfo}>
-                        <ThemedText style={styles.bookName}>
-                            {item.name}
-                        </ThemedText>
-                        <View style={styles.progressBarContainer}>
-                            <View style={[styles.progressBar, { width: `${Math.min(bookScriptureCount * 2, 100)}%`, backgroundColor: theme.accent }]} />
-                        </View>
-                    </View>
-
-                    <View style={styles.bookStat}>
-                        <Text style={[styles.bookCount, { color: theme.accent }]}>
-                            {bookScriptureCount}
-                        </Text>
-                        <ThemedText variant="caption" style={styles.bookLabel}>
-                            RNDS
-                        </ThemedText>
-                    </View>
-                    <FontAwesome name="chevron-right" size={12} color={theme.textSecondary} style={{ marginLeft: 12, opacity: 0.5 }} />
-                </ThemedCard>
-            )
-        }
-
-        const renderBookDistribution = ({
-            item,
-        }: {
-            item: { book: string; count: number }
-        }) => (
-            <ThemedCard
-                style={styles.distributionItem}
-                onPress={() => handleBookDistributionTap(item.book)}
-                variant="flat"
-            >
-                <FontAwesome name="book" size={16} color={theme.accent} />
-                <ThemedText style={styles.distributionBook}>
-                    {item.book}
-                </ThemedText>
-                <View style={styles.distributionCount}>
-                    <Text style={[styles.countText, { color: theme.accent }]}>
-                        {item.count}
-                    </Text>
-                    <ThemedText variant="caption" style={styles.countLabel}>
-                        rounds
-                    </ThemedText>
-                </View>
-                <FontAwesome name="chevron-right" size={12} color={theme.textSecondary} style={{ marginLeft: 12, opacity: 0.5 }} />
-            </ThemedCard>
-        )
-
-        const renderChapterDistribution = ({
-            item,
-        }: {
-            item: { chapter: string; count: number }
-        }) => (
-            <ThemedCard
-                style={styles.distributionItem}
-                onPress={() => handleChapterDistributionTap(item.chapter)}
-                variant="flat"
-            >
-                <Feather name="layers" size={16} color={theme.accent} />
-                <ThemedText style={styles.distributionBook}>
-                    {item.chapter}
-                </ThemedText>
-                <View style={styles.distributionCount}>
-                    <Text style={[styles.countText, { color: theme.accent }]}>
-                        {item.count}
-                    </Text>
-                    <ThemedText variant="caption" style={styles.countLabel}>
-                        rounds
-                    </ThemedText>
-                </View>
-                <FontAwesome name="chevron-right" size={12} color={theme.textSecondary} style={{ marginLeft: 12, opacity: 0.5 }} />
-            </ThemedCard>
-        )
-
-        return (
-            <View style={styles.contentContainer}>
-
-                <View style={styles.sectionHeaderRow}>
-                    <ThemedText variant="caption" style={styles.collectionsTitle}>
-                        AMMUNITION
-                    </ThemedText>
-                    <View style={[styles.headerLine, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} />
-                </View>
-
-                <View style={{ maxHeight: '45%', flexGrow: 0 }}>
-                    <FlatList
-                        data={collections}
-                        extraData={selectedCollection}
-                        renderItem={renderCollectionItem}
-                        keyExtractor={(item) => item.id}
-                        ListEmptyComponent={
-                            <View style={styles.emptyState}>
-                                <View style={styles.emptyIconCircle}>
-                                    <Feather name="box" size={32} color={isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.2)"} />
-                                </View>
-                                <ThemedText style={styles.emptyTitle}>Arsenal Empty</ThemedText>
-                                <ThemedText variant="caption" style={styles.emptySubtitle}>Import a file or add verses to stock your arsenal.</ThemedText>
-                            </View>
-                        }
-                    />
-                </View>
-
-                <View style={styles.sectionHeaderRow}>
-                    <ThemedText variant="caption" style={[styles.collectionsTitle, { marginTop: 10 }]}>
-                        {selectedCollection ? 'CONTENTS' : 'ALL BOOKS'}
-                    </ThemedText>
-                    <View style={[styles.headerLine, { marginTop: 10, backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} />
-                    {selectedCollection && (
-                        <TouchableOpacity onPress={() => setSelectedCollection(null)} style={{ marginTop: 10 }}>
-                            <Text style={{ color: theme.accent, fontSize: 12, fontWeight: 'bold' }}>CLEAR FILTER</Text>
-                        </TouchableOpacity>
-                    )}
-                </View>
-
-                {selectedCollection ? (
-                    <View style={{ flex: 1, paddingBottom: 104 }}>
-                        <View style={styles.filterTabs}>
-                            <TouchableOpacity
-                                style={[
-                                    styles.filterTab,
-                                    filterTab === 'books' && styles.activeFilterTab,
-                                ]}
-                                onPress={() => setFilterTab('books')}
-                            >
-                                <FontAwesome
-                                    name="book"
-                                    size={16}
-                                    color={
-                                        filterTab === 'books'
-                                            ? theme.accentContrastText
-                                            : theme.textSecondary
-                                    }
-                                />
-                                <Text
-                                    style={[
-                                        styles.filterTabText,
-                                        {
-                                            color:
-                                                filterTab === 'books'
-                                                    ? theme.accentContrastText
-                                                    : theme.textSecondary,
-                                        },
-                                    ]}
-                                >
-                                    BOOKS
-                                </Text>
-                            </TouchableOpacity>
-
-                            {selectedCollection.isChapterBased &&
-                                selectedCollection.chapters &&
-                                selectedCollection.chapters.length > 0 && (
-                                    <TouchableOpacity
-                                        style={[
-                                            styles.filterTab,
-                                            filterTab === 'chapters' && styles.activeFilterTab,
-                                        ]}
-                                        onPress={() => setFilterTab('chapters')}
-                                    >
-                                        <Feather
-                                            name="layers"
-                                            size={16}
-                                            color={
-                                                filterTab === 'chapters'
-                                                    ? theme.accentContrastText
-                                                    : theme.textSecondary
-                                            }
-                                        />
-                                        <Text
-                                            style={[
-                                                styles.filterTabText,
-                                                {
-                                                    color:
-                                                        filterTab === 'chapters'
-                                                            ? theme.accentContrastText
-                                                            : theme.textSecondary,
-                                                },
-                                            ]}
-                                        >
-                                            CHAPTERS
-                                        </Text>
-                                    </TouchableOpacity>
-                                )}
-                        </View>
-
-                        {filterTab === 'books' ? (
-                            <FlatList
-                                data={getScriptureDistribution()}
-                                renderItem={renderBookDistribution}
-                                keyExtractor={(item) => item.book}
-                                style={styles.list}
-                                contentContainerStyle={{ paddingBottom: 0 }}
-                                ListEmptyComponent={
-                                    <ThemedText variant="caption" style={styles.emptyText}>
-                                        No books found in this arsenal
-                                    </ThemedText>
-                                }
-                            />
-                        ) : selectedCollection.isChapterBased &&
-                            selectedCollection.chapters &&
-                            selectedCollection.chapters.length > 0 ? (
-                            <FlatList
-                                data={getChapterDistribution()}
-                                renderItem={renderChapterDistribution}
-                                keyExtractor={(item) => item.chapter}
-                                style={styles.list}
-                                contentContainerStyle={{ paddingBottom: 0 }}
-                                ListEmptyComponent={
-                                    <ThemedText variant="caption" style={styles.emptyText}>
-                                        No chapters found in this arsenal
-                                    </ThemedText>
-                                }
-                            />
-                        ) : (
-                            <View style={styles.emptyStateContainer}>
-                                <ThemedText variant="caption" style={styles.emptyText}>
-                                    This arsenal is not organized by chapters
-                                </ThemedText>
-                                <ThemedText variant="caption" style={styles.emptySubtext}>
-                                    Use the Books tab to see scripture distribution
-                                </ThemedText>
-                            </View>
-                        )}
-                    </View>
-                ) : (
-                    <ThemedContainer
-                        useGradient={true}
-                        style={[styles.listGradient, { paddingBottom: 104 }]}
-                    >
-                        <FlatList
-                            data={books}
-                            renderItem={renderBookItem}
-                            keyExtractor={(item) => item.id}
-                            style={styles.list}
-                            contentContainerStyle={{ paddingBottom: 16 }}
-                        />
-                    </ThemedContainer>
-                )}
-            </View>
-        )
-    }
 
     return (
         <ThemedContainer style={styles.container}>
@@ -915,51 +334,56 @@ export default function ArsenalScreen() {
             />
 
             {/* Tab Selector */}
-            <View style={[
-                styles.tabSelector,
-                { marginBottom: activeTab === 'equipment' ? 95 : 20 } // More space for character section, less for ammunition content
-            ]}>
-                <TouchableOpacity
-                    style={[
-                        styles.tabButton,
-                        activeTab === 'equipment' && styles.activeMainTab,
-                        activeTab === 'equipment' && { backgroundColor: '#FFD700', borderColor: '#FFD700' },
-                    ]}
-                    onPress={() => setActiveTab('equipment')}
-                >
-                    <FontAwesome5 name="shield-alt" size={20} color={activeTab === 'equipment' ? '#000' : 'rgba(255,255,255,0.7)'} />
-                    <Text style={[
-                        styles.tabButtonText,
-                        { color: activeTab === 'equipment' ? '#000' : 'rgba(255,255,255,0.7)' }
-                    ]}>
-                        ARMORY
-                    </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                    style={[
-                        styles.tabButton,
-                        activeTab === 'ammunition' && styles.activeMainTab,
-                        activeTab === 'ammunition' && { backgroundColor: '#FFD700', borderColor: '#FFD700' },
-                    ]}
-                    onPress={() => setActiveTab('ammunition')}
-                >
-                    <FontAwesome name="book" size={20} color={activeTab === 'ammunition' ? '#000' : 'rgba(255,255,255,0.7)'} />
-                    <Text style={[
-                        styles.tabButtonText,
-                        { color: activeTab === 'ammunition' ? '#000' : 'rgba(255,255,255,0.7)' }
-                    ]}>
-                        AMMUNITION
-                    </Text>
-                </TouchableOpacity>
-            </View>
+            <ArsenalTabSelector
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+            />
 
             {/* Content based on active tab */}
             <View style={styles.mainContent}>
-                {activeTab === 'equipment' ? renderEquipmentSection() : renderAmmunitionSection()}
+                {activeTab === 'equipment' ? (
+                    <ArsenalEquipment
+                        selectedSlot={selectedSlot}
+                        onSlotPress={setSelectedSlot}
+                        onItemPress={handleItemPress}
+                        avatarInventory={avatarInventory}
+                        isDark={isDark}
+                        theme={theme}
+                    />
+                ) : (
+                    <ArsenalAmmunition
+                        filterTab={filterTab}
+                        setFilterTab={setFilterTab}
+                        collections={collections}
+                        books={books.map(b => b.name)}
+                        scriptures={scriptures}
+                        selectedCollection={selectedCollection}
+                        onSelectCollection={handleSelectCollection}
+                        onShowCollectionDetail={handleShowCollectionDetail}
+                        onBookDistributionTap={handleBookDistributionTap}
+                        onChapterDistributionTap={handleChapterDistributionTap}
+                        onDefaultBookTap={handleDefaultBookTap}
+                        onAddCollection={() => setShowAddVerses(true)}
+                        isDark={isDark}
+                        theme={theme}
+                    />
+                )}
             </View>
 
             {/* Modals */}
+            {/* New Access Denied Modal */}
+            <AccessDeniedModal
+                visible={deniedModal.visible}
+                onClose={() => setDeniedModal(prev => ({ ...prev, visible: false }))}
+                type={deniedModal.type}
+                requiredRank={deniedModal.requiredRank}
+                cost={deniedModal.cost}
+                itemName={deniedModal.itemName}
+                isDark={isDark}
+                theme={theme}
+            />
+
+            {/* Existing File Uploader Modal */}
             <FileUploader
                 isVisible={showFileUploader}
                 onClose={() => setShowFileUploader(false)}
@@ -1002,12 +426,15 @@ const getStyles = (theme: any) => StyleSheet.create({
     },
     tabSelector: {
         flexDirection: 'row',
-        margin: 20,
-        marginBottom: 135,
-        backgroundColor: 'rgba(0,0,0,0.3)',
-        borderRadius: 16,
+        marginHorizontal: 20,
+        marginTop: 10,
+        marginBottom: 20,
+        backgroundColor: 'rgba(0,0,0,0.2)',
+        borderRadius: 8,
         padding: 4,
-        gap: 4,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        gap: 0, // Remove gap for seamless look
     },
     tabButton: {
         flex: 1,
@@ -1016,21 +443,25 @@ const getStyles = (theme: any) => StyleSheet.create({
         justifyContent: 'center',
         paddingVertical: 12,
         paddingHorizontal: 16,
-        borderRadius: 12,
+        borderRadius: 6,
         gap: 8,
         borderWidth: 1,
         borderColor: 'transparent',
     },
     activeMainTab: {
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 6,
-        elevation: 5,
+        backgroundColor: 'rgba(255, 215, 0, 0.15)', // Tinted background instead of solid gold
+        borderColor: '#FFD700',
+        shadowColor: '#FFD700',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+        elevation: 0,
     },
     tabButtonText: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        letterSpacing: 0.5,
+        fontSize: 12, // Slightly smaller, more tech
+        fontWeight: '800',
+        letterSpacing: 1.5,
+        textTransform: 'uppercase',
     },
     mainContent: {
         flex: 1,
@@ -1069,52 +500,42 @@ const getStyles = (theme: any) => StyleSheet.create({
     },
     slotButton: {
         position: 'absolute',
-        width: 45,
-        height: 45,
-        borderRadius: 22.5,
-        backgroundColor: 'rgba(0,0,0,0.5)',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.3)',
-        zIndex: 10, // Ensure buttons are above all other content
-        elevation: 10, // For Android
+        zIndex: 10,
     },
     selectedSlot: {
-        // backgroundColor: 'rgba(255,215,0,0.3)',
-        // borderColor: '#FFD700',
-        // borderWidth: 3,
-        // shadowOffset: { width: 0, height: 0 },
-        // shadowOpacity: 1,
-        // shadowRadius: 10,
-        // elevation: 20, // Higher elevation for selected state
-        // zIndex: 20, // Higher z-index for selected state
+        // Handled by inner elements
     },
     glowRing: {
         position: 'absolute',
-        width: 60,
-        height: 60,
-        borderRadius: 30,
-        backgroundColor: 'rgba(255,215,0,0.1)',
-        borderWidth: 2,
-        borderColor: 'rgba(255,215,0,0.3)',
-        top: -7.5,
-        left: -7.5,
+        width: 54,
+        height: 54,
+        borderRadius: 27,
+        borderWidth: 1,
+        borderColor: '#FFD700',
+        opacity: 0.5,
+        backgroundColor: 'rgba(255, 215, 0, 0.1)',
+        top: -5,
+        left: -5,
     },
     slotButtonInner: {
-        width: 45,
-        height: 45,
-        borderRadius: 22.5,
-        backgroundColor: 'rgba(15,23,42,0.8)',
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        backgroundColor: '#0f172a', // Dark Navy
         alignItems: 'center',
         justifyContent: 'center',
-        borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.15)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.2)',
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 3 },
-        shadowOpacity: 0.4,
-        shadowRadius: 5,
-        elevation: 6,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.5,
+        shadowRadius: 6,
+        elevation: 8,
     },
     slotLabel: {
         position: 'absolute',
@@ -1143,7 +564,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     },
     itemsSection: {
         flex: 0.75,
-        marginTop: 122,
+        marginTop: 22,
     },
     contentContainer: {
         flex: 1,
@@ -1304,31 +725,40 @@ const getStyles = (theme: any) => StyleSheet.create({
     collectionItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        borderRadius: 12,
-        marginBottom: 2,
-        minHeight: 80,
+        borderRadius: 2,
+        marginBottom: 4, // Reduced from 6
+        minHeight: 56,   // Reduced from 72
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        borderLeftWidth: 4,
+        borderLeftColor: '#FFD700',
     },
     collectionMainArea: {
         flex: 1,
-        padding: 10,
+        paddingHorizontal: 12, // Reduced from 16
+        paddingVertical: 6,    // Reduced from 10
     },
     collectionInfo: {
         flex: 1,
+        gap: 0,
     },
     collectionHeaderRow: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        marginBottom: 4,
+        marginBottom: 0, // Removed margin
     },
     collectionName: {
-        fontSize: 18,
-        fontWeight: 'bold',
+        fontSize: 16, // Reduced from 18
+        fontWeight: '900',
         letterSpacing: 0.5,
+        textTransform: 'uppercase',
+        flex: 1,
     },
     collectionDescription: {
-        fontSize: 12,
-        marginBottom: 4,
+        fontSize: 10,
+        marginBottom: 2, // Reduced from 4
+        opacity: 0.7,
     },
     chapterBadgeContainer: {
         flexDirection: 'row',
@@ -1529,12 +959,27 @@ const getStyles = (theme: any) => StyleSheet.create({
     },
     avatarRing: {
         position: 'absolute',
-        width: 210,
-        height: 210,
-        borderRadius: 105,
-        borderWidth: 1.5,
-        borderColor: 'rgba(255,215,0,0.15)',
+        width: 280,
+        height: 280,
+        borderRadius: 140,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
+        top: 20,
+    },
+    avatarRingInner: {
+        position: 'absolute',
+        width: 220,
+        height: 220,
+        borderRadius: 110,
+        borderWidth: 1,
+        borderColor: 'rgba(255,215,0,0.2)',
         borderStyle: 'dashed',
-        top: 55,
+        top: 50,
+    },
+    avatarGrid: {
+        position: 'absolute',
+        width: '100%',
+        height: '100%',
+        opacity: 0.1,
     },
 })

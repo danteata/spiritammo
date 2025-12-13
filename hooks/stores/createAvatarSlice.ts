@@ -37,7 +37,7 @@ const INITIAL_AVATAR_INVENTORY: AvatarInventory = {
 const INITIAL_AVATAR_STATS: AvatarStats = {
     valorPoints: 100,
     totalVPEarned: 100,
-    itemsPurchased: 5, // Default items
+    itemsPurchased: 6, // Default items
     lastVPReward: null
 }
 

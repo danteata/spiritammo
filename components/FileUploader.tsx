@@ -34,7 +34,7 @@ export default function FileUploader({
   onClose,
   onVersesExtracted,
 }: FileUploaderProps) {
-  const { theme } = useAppStore()
+  const { theme, isDark } = useAppStore()
   const styles = getStyles(theme)
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractionProgress, setExtractionProgress] =
@@ -278,18 +278,20 @@ export default function FileUploader({
         EXTRACTED DOCUMENTS
       </Text>
 
-      {extractedDocuments.length === 0 ? (
+      {!isExtracting && extractedDocuments.length === 0 ? (
         <View style={styles.emptyState}>
-          <FontAwesome name="file-text-o" size={48} color={theme.textSecondary} />
-          <Text style={[styles.emptyText, MILITARY_TYPOGRAPHY.body]}>
-            No documents extracted yet
+          <View style={styles.emptyIconContainer}>
+            <FontAwesome name="folder-open-o" size={32} color={theme.textSecondary} />
+          </View>
+          <Text style={[styles.emptyText, MILITARY_TYPOGRAPHY.subheading]}>
+            NO INTELLIGENCE FOUND
           </Text>
           <Text style={[styles.emptySubtext, MILITARY_TYPOGRAPHY.caption]}>
-            Upload a PDF, EPUB, or text file to get started
+            Upload PDF or text documents to generate new verse extraction targets.
           </Text>
         </View>
       ) : (
-        <ScrollView style={styles.documentScroll}>
+        <ScrollView style={styles.documentScroll} contentContainerStyle={{ paddingBottom: 20 }}>
           {extractedDocuments.map((doc) => (
             <TouchableOpacity
               key={doc.id}
@@ -298,20 +300,23 @@ export default function FileUploader({
                 selectedDocument?.id === doc.id && styles.selectedDocument,
               ]}
               onPress={() => handleDocumentSelect(doc)}
+              activeOpacity={0.7}
             >
               <View style={styles.documentHeader}>
                 <View style={styles.documentInfo}>
-                  <FontAwesome name="book" size={20} color={theme.accent} />
+                  <View style={[styles.documentIconBadge, selectedDocument?.id === doc.id && { backgroundColor: theme.accent }]}>
+                    <FontAwesome name="file-text-o" size={18} color={selectedDocument?.id === doc.id ? '#FFF' : theme.textSecondary} />
+                  </View>
                   <View style={styles.documentDetails}>
                     <Text
-                      style={[styles.documentName, MILITARY_TYPOGRAPHY.body]}
+                      style={[styles.documentName, MILITARY_TYPOGRAPHY.body, selectedDocument?.id === doc.id && { color: theme.accent, fontWeight: 'bold' }]}
                     >
                       {doc.name}
                     </Text>
                     <Text
                       style={[styles.documentMeta, MILITARY_TYPOGRAPHY.caption]}
                     >
-                      {doc.totalVerses} verses • {doc.type.toUpperCase()} •{' '}
+                      {doc.totalVerses} VERSES • {doc.type.toUpperCase()} •{' '}
                       {(doc.size / 1024).toFixed(1)}KB
                     </Text>
                   </View>
@@ -321,13 +326,20 @@ export default function FileUploader({
                   style={styles.deleteButton}
                   onPress={() => handleDeleteDocument(doc.id)}
                 >
-                  <FontAwesome name="trash" size={16} color={theme.error} />
+                  <FontAwesome name="trash-o" size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
               </View>
 
-              <Text style={[styles.extractedDate, MILITARY_TYPOGRAPHY.caption]}>
-                Extracted: {new Date(doc.extractedAt).toLocaleDateString()}
-              </Text>
+              <View style={styles.documentFooter}>
+                <Text style={[styles.extractedDate, MILITARY_TYPOGRAPHY.caption]}>
+                  UPLOADED: {new Date(doc.extractedAt).toLocaleDateString()}
+                </Text>
+                {selectedDocument?.id === doc.id && (
+                  <View style={styles.selectedBadge}>
+                    <Text style={[styles.selectedBadgeText, MILITARY_TYPOGRAPHY.caption]}>SELECTED</Text>
+                  </View>
+                )}
+              </View>
             </TouchableOpacity>
           ))}
         </ScrollView>
@@ -354,9 +366,10 @@ export default function FileUploader({
 
           <View style={styles.selectionActions}>
             <TouchableOpacity
-              style={styles.actionButton}
+              style={[styles.actionButton, { backgroundColor: theme.surface }]}
               onPress={handleSelectAll}
             >
+              <FontAwesome name="check-square-o" size={16} color={theme.text} />
               <Text style={[styles.actionText, MILITARY_TYPOGRAPHY.caption]}>
                 {selectedVerses.length === selectedDocument.verses.length
                   ? 'DESELECT ALL'
@@ -447,17 +460,20 @@ export default function FileUploader({
       presentationStyle="fullScreen"
     >
       <LinearGradient
-        colors={[theme.background, '#0D0D0D']}
+        colors={[theme.background, isDark ? '#0D0D0D' : '#F5F5F5']}
         style={styles.container}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <LinearGradient
+          colors={isDark ? ['rgba(0,0,0,0.8)', 'rgba(0,0,0,0.4)'] : ['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.8)']}
+          style={styles.header}
+        >
           <View style={styles.headerTopRow}>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <FontAwesome name="times-circle" size={24} color={theme.error} />
+              <FontAwesome name="times-circle" size={24} color={theme.textSecondary} />
             </TouchableOpacity>
 
-            <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
+            <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]}>
               AMMUNITION SUPPLY
             </Text>
 
@@ -466,29 +482,29 @@ export default function FileUploader({
           </View>
 
           <View style={styles.headerControls}>
-            <View style={styles.toggleContainer}>
-              <Text style={[styles.toggleLabel, MILITARY_TYPOGRAPHY.caption]}>SMART MATCH</Text>
+            <View style={[styles.toggleContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+              <Text style={[styles.toggleLabel, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>SMART MATCH</Text>
               <Switch
                 value={useInternalBible}
                 onValueChange={setUseInternalBible}
-                trackColor={{ false: theme.surface, true: theme.accent }}
-                thumbColor={useInternalBible ? '#fff' : '#f4f3f4'}
+                trackColor={{ false: theme.border, true: theme.accent }}
+                thumbColor={'#fff'}
                 style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
               />
             </View>
 
             <TouchableOpacity
-              style={styles.uploadButton}
+              style={[styles.uploadButton, { backgroundColor: theme.accent, shadowColor: theme.accent, shadowOpacity: 0.3, shadowRadius: 8 }]}
               onPress={handleFileUpload}
               disabled={isExtracting}
             >
-              <FontAwesome name="upload" size={20} color={theme.accentContrastText} />
+              <FontAwesome name="cloud-upload" size={16} color={theme.accentContrastText} />
               <Text style={[styles.uploadText, MILITARY_TYPOGRAPHY.caption, { color: theme.accentContrastText }]}>
-                {isExtracting ? '...' : 'UPLOAD'}
+                {isExtracting ? 'SCANNING...' : 'UPLOAD INTEL'}
               </Text>
             </TouchableOpacity>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Content */}
         <View style={styles.content}>
@@ -635,16 +651,34 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: 80,
+    opacity: 0.7,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: theme.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: theme.border,
+    borderStyle: 'dashed',
   },
   emptyText: {
-    color: theme.textSecondary,
-    marginTop: 16,
+    color: theme.text,
+    fontSize: 16,
+    fontWeight: 'bold',
     marginBottom: 8,
+    letterSpacing: 1,
   },
   emptySubtext: {
     color: theme.textSecondary,
     textAlign: 'center',
+    maxWidth: 240,
+    lineHeight: 20,
+    fontSize: 12,
   },
   documentScroll: {
     flex: 1,
@@ -688,6 +722,38 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   extractedDate: {
     color: theme.textSecondary,
+    fontSize: 10,
+    opacity: 0.7,
+  },
+  documentFooter: {
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: theme.border,
+  },
+  selectedBadge: {
+    backgroundColor: theme.accent,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  selectedBadgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  documentIconBadge: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: theme.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: theme.border,
   },
   verseSelection: {
     flex: 1,

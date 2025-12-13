@@ -111,97 +111,21 @@ export default function SoldierAvatar({
         )
     }
 
-    // Legs layer
-    const renderLegsLayer = () => {
-        if (!legsItem) return null
-
+    // Simplified static soldier render
+    const renderSoldier = () => {
         return (
             <View style={[styles.layerContainer, {
-                width: avatarSize - LAYER_OFFSET * 4,
+                width: avatarSize,
                 height: avatarSize,
-                left: LAYER_OFFSET * 2,
             }]}>
-                <View style={[styles.placeholderGear, {
-                    backgroundColor: legsItem.id.includes('cargo') ? '#654321' : '#2F4F4F', // Saddle brown for cargo pants, dark slate for others
-                    borderColor: '#8B4513',
-                    borderWidth: 2,
-                    borderRadius: 4,
-                }]} />
-            </View>
-        )
-    }
-
-    // Body layer
-    const renderBodyLayer = () => {
-        if (!bodyItem) return null
-
-        return (
-            <View style={[styles.layerContainer, {
-                width: avatarSize - LAYER_OFFSET * 3,
-                height: avatarSize * 0.8,
-                left: LAYER_OFFSET * 1.5,
-                top: LAYER_OFFSET,
-            }]}>
-                <View style={[styles.placeholderGear, {
-                    backgroundColor: bodyItem.id.includes('plate') ? '#2F4F4F' : '#696969', // Dark slate for plates, dim gray for vests
-                    borderColor: '#8B4513',
-                    borderWidth: 2,
-                    borderRadius: 4,
-                }]} />
-            </View>
-        )
-    }
-
-    // Head layer
-    const renderHeadLayer = () => {
-        if (!headItem) return null
-
-        return (
-            <View style={[styles.layerContainer, {
-                width: avatarSize * 0.4,
-                height: avatarSize * 0.35,
-                left: avatarSize * 0.3,
-                top: LAYER_OFFSET * 2,
-            }]}>
-                <View style={[styles.placeholderGear, {
-                    backgroundColor: headItem.id.includes('salvation') ? '#FFD700' : '#708090', // Gold for salvation, slate gray for others
-                    borderColor: '#DAA520',
-                    borderWidth: 2,
-                    borderTopLeftRadius: avatarSize * 0.15,
-                    borderTopRightRadius: avatarSize * 0.15,
-                    borderBottomLeftRadius: avatarSize * 0.1,
-                    borderBottomRightRadius: avatarSize * 0.1,
-                }]} />
-            </View>
-        )
-    }
-
-    // Primary weapon layer
-    const renderPrimaryLayer = () => {
-        if (!primaryItem) return null
-
-        const isSword = primaryItem.id.includes('sword')
-
-        return (
-            <View style={[styles.layerContainer, {
-                width: avatarSize * (isSword ? 0.6 : 0.8),
-                height: avatarSize * (isSword ? 0.4 : 0.15),
-                right: LAYER_OFFSET,
-                top: avatarSize * 0.35,
-                transform: [{ rotate: isSword ? '-15deg' : '-5deg' }],
-            }]}>
-                <View style={[styles.placeholderGear, {
-                    backgroundColor: isSword ? '#FFD700' : '#2F4F4F', // Gold for sword, dark slate for rifle
-                    borderColor: isSword ? '#FFA500' : '#8B4513',
-                    borderWidth: 1,
-                    borderRadius: isSword ? 2 : 4,
-                }]}>
-                    {isSword && (
-                        <View style={styles.swordHilt}>
-                            <View style={[styles.hilt, { width: '30%', height: '100%', backgroundColor: '#8B4513' }]} />
-                        </View>
-                    )}
-                </View>
+                <Image
+                    source={require('@/assets/images/barracks/mannequin.png')}
+                    style={[styles.mannequinImage, {
+                        width: avatarSize * 0.9, // Slightly smaller to fit in ring
+                        height: avatarSize * 0.9,
+                    }]}
+                    resizeMode="contain"
+                />
             </View>
         )
     }
@@ -229,17 +153,9 @@ export default function SoldierAvatar({
                 {/* Background (Bottom layer) */}
                 {renderBackground()}
 
-                {/* Body Base (Soldier silhouette) */}
+                {/* Body Base (Static Soldier) */}
                 <View style={styles.overlayContainer}>
-                    {renderBodyBase()}
-                </View>
-
-                {/* Equipment Layers (in stacking order) */}
-                <View style={styles.overlayContainer}>
-                    {renderLegsLayer()}
-                    {renderBodyLayer()}
-                    {renderHeadLayer()}
-                    {renderPrimaryLayer()}
+                    {renderSoldier()}
                 </View>
 
                 {/* Border frame */}

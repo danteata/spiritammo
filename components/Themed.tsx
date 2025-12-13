@@ -41,6 +41,7 @@ export type ThemedCardProps = ThemeProps & {
     children: React.ReactNode;
     style?: StyleProp<ViewStyle>;
     onPress?: () => void;
+    onLongPress?: () => void;
     variant?: 'default' | 'outlined' | 'flat' | 'glass';
     testID?: string;
     accessibilityRole?: 'button' | 'link' | 'image' | 'text' | 'none';
@@ -144,6 +145,7 @@ export function ThemedCard({
     lightColor,
     darkColor,
     onPress,
+    onLongPress,
     variant = 'default',
     testID,
     accessibilityRole,
@@ -201,11 +203,12 @@ export function ThemedCard({
         </>
     );
 
-    if (onPress) {
+    if (onPress || onLongPress) {
         return (
             <TouchableOpacity
                 style={[cardStyles, { overflow: 'hidden' }]}
                 onPress={onPress}
+                onLongPress={onLongPress}
                 activeOpacity={0.7}
                 testID={testID}
                 accessibilityRole={accessibilityRole as any}

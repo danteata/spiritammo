@@ -117,12 +117,7 @@ export default function CampaignMap({ campaign, onNodeSelect }: CampaignMapProps
                             transform: [{ scale }]
                         }
                     ]}
-                    onPress={() => {
-                        if (node.status !== 'LOCKED') {
-                            onNodeSelect(node)
-                        }
-                    }}
-                    disabled={node.status === 'LOCKED'}
+                    onPress={() => onNodeSelect(node)}
                     activeOpacity={0.8}
                 >
                     {glow && (

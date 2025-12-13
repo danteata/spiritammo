@@ -991,6 +991,12 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
 
   provisionCampaignScripture: async (node: any) => {
     try {
+      // Check if node is locked - return null immediately for locked nodes
+      if (node.status === 'LOCKED') {
+        console.log(`Node ${node.id} is locked - denying access`);
+        return null;
+      }
+
       const { book, chapter, verse } = node.scriptureReference;
 
       console.log(`Provisioning scripture for campaign node ${node.id}: ${book} ${chapter}:${verse}`);

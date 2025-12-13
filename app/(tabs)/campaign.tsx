@@ -25,6 +25,7 @@ import { Campaign, CampaignNode } from '@/types/campaign'
 import { Scripture } from '@/types/scripture'
 import useZustandStore from '@/hooks/zustandStore'
 import { errorHandler } from '@/services/errorHandler'
+import { AccessDeniedModal } from '@/components/AccessDeniedModal'
 
 export default function CampaignScreen() {
     const {
@@ -49,6 +50,11 @@ export default function CampaignScreen() {
     const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
     const [currentCollectionScripture, setCurrentCollectionScripture] = useState<Scripture | null>(null)
     const [showVoiceRecorder, setShowVoiceRecorder] = useState(false)
+    const [deniedModal, setDeniedModal] = useState({
+        visible: false,
+        type: 'operation' as 'rank' | 'funds' | 'operation' | 'security',
+        itemName: ''
+    })
 
     // Constants
     const [isLoadingScripture, setIsLoadingScripture] = useState(false)
@@ -67,6 +73,16 @@ export default function CampaignScreen() {
     }
 
     const handleNodeSelect = async (node: CampaignNode) => {
+        // Check if node is locked first
+        if (node.status === 'LOCKED') {
+            setDeniedModal({
+                visible: true,
+                type: 'operation',
+                itemName: node.title || 'Unknown Sector'
+            })
+            return
+        }
+
         // 1. Try to provision (find or fetch) the scripture
         setIsLoadingScripture(true)
         const scripture = await useZustandStore.getState().provisionCampaignScripture(node)
@@ -77,7 +93,12 @@ export default function CampaignScreen() {
             setSelectedNode(node)
             setShowBriefing(true) // Show custom briefing instead of Alert
         } else {
-            Alert.alert('Intel Missing', 'Could not retrieve data for this mission. Please check connection and try again.')
+            // This shouldn't happen for non-locked nodes, but just in case
+            setDeniedModal({
+                visible: true,
+                type: 'operation',
+                itemName: node.title || 'Unknown Sector'
+            })
         }
     }
 
@@ -176,13 +197,11 @@ export default function CampaignScreen() {
                                 <ScriptureCard
                                     scripture={currentCollectionScripture}
                                     onReveal={() => {
-                                        Alert.alert(
-                                            '⚠️ COMPROMISED INTEL DETECTED',
-                                            'Revealing hidden scripture text in collection mode violates collection testing protocol. This compromises the integrity of your training data.\n\nReturn to cover immediately!',
-                                            [
-                                                { text: 'AFFIRMATIVE', style: 'destructive' }
-                                            ]
-                                        )
+                                        setDeniedModal({
+                                            visible: true,
+                                            type: 'security',
+                                            itemName: 'COLLECTION INTEL'
+                                        })
                                     }}
                                 />
 
@@ -320,6 +339,16 @@ export default function CampaignScreen() {
                         )}
                     </View>
                 )}
+
+                {/* Access Denied Modal for Campaigns */}
+                <AccessDeniedModal
+                    visible={deniedModal.visible}
+                    onClose={() => setDeniedModal(prev => ({ ...prev, visible: false }))}
+                    type={deniedModal.type}
+                    itemName={deniedModal.itemName}
+                    isDark={isDark}
+                    theme={theme}
+                />
             </View>
 
             {/* Mission Modals */}
@@ -331,57 +360,61 @@ export default function CampaignScreen() {
                 scripture={targetScripture}
             />
 
-            {(targetScripture || currentCollectionScripture) && (
-                (() => {
-                    const currentScripture = targetScripture || currentCollectionScripture
-                    return (
-                        <>
-                            {practiceMode === 'VOICE' && currentScripture && (
-                                <TargetPractice
-                                    isVisible={true}
-                                    targetVerse={currentScripture.text}
-                                    reference={currentScripture.reference}
-                                    onRecordingComplete={(_, acc) => handleMissionComplete(acc)}
-                                    onClose={() => setPracticeMode(null)}
-                                />
-                            )}
-                            {practiceMode === 'STEALTH' && currentScripture && (
-                                <StealthDrill
-                                    isVisible={true}
-                                    targetVerse={currentScripture.text}
-                                    reference={currentScripture.reference}
-                                    onComplete={handleMissionComplete}
-                                    onClose={() => setPracticeMode(null)}
-                                />
-                            )}
-                        </>
-                    )
-                })()
-            )}
+            {
+                (targetScripture || currentCollectionScripture) && (
+                    (() => {
+                        const currentScripture = targetScripture || currentCollectionScripture
+                        return (
+                            <>
+                                {practiceMode === 'VOICE' && currentScripture && (
+                                    <TargetPractice
+                                        isVisible={true}
+                                        targetVerse={currentScripture.text}
+                                        reference={currentScripture.reference}
+                                        onRecordingComplete={(_, acc) => handleMissionComplete(acc)}
+                                        onClose={() => setPracticeMode(null)}
+                                    />
+                                )}
+                                {practiceMode === 'STEALTH' && currentScripture && (
+                                    <StealthDrill
+                                        isVisible={true}
+                                        targetVerse={currentScripture.text}
+                                        reference={currentScripture.reference}
+                                        onComplete={handleMissionComplete}
+                                        onClose={() => setPracticeMode(null)}
+                                    />
+                                )}
+                            </>
+                        )
+                    })()
+                )
+            }
 
             {/* Collection Voice Recorder Modal */}
-            {currentCollectionScripture && showVoiceRecorder && (
-                <VoiceRecorder
-                    scriptureText={currentCollectionScripture.text}
-                    intelText={`Reference: ${currentCollectionScripture.reference}`}
-                    onRecordingComplete={async (accuracy) => {
-                        console.log('Collection recording complete:', accuracy)
-                        setShowVoiceRecorder(false)
+            {
+                currentCollectionScripture && showVoiceRecorder && (
+                    <VoiceRecorder
+                        scriptureText={currentCollectionScripture.text}
+                        intelText={`Reference: ${currentCollectionScripture.reference}`}
+                        onRecordingComplete={async (accuracy) => {
+                            console.log('Collection recording complete:', accuracy)
+                            setShowVoiceRecorder(false)
 
-                        // Update scripture accuracy
-                        await updateScriptureAccuracy(currentCollectionScripture.id, accuracy)
+                            // Update scripture accuracy
+                            await updateScriptureAccuracy(currentCollectionScripture.id, accuracy)
 
-                        // Show result
-                        Alert.alert(
-                            'VERSE RECORDED',
-                            `Accuracy: ${accuracy.toFixed(1)}%`,
-                            [{ text: 'CONTINUE' }]
-                        )
-                    }}
-                />
-            )}
+                            // Show result
+                            Alert.alert(
+                                'VERSE RECORDED',
+                                `Accuracy: ${accuracy.toFixed(1)}%`,
+                                [{ text: 'CONTINUE' }]
+                            )
+                        }}
+                    />
+                )
+            }
 
-        </ThemedContainer>
+        </ThemedContainer >
     )
 }
 

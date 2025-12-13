@@ -819,25 +819,22 @@ const CollectionDetailModal = React.memo(({
           )}
         </ScrollView>
 
-        {/* Training Range Button - Only show when not editing or selecting */}
         {!isEditingInfo && !isBulkSelecting && (
-          <View style={styles.footer}>
-            <TouchableOpacity
-              style={[styles.trainingButton, { backgroundColor: theme.primary }]} // Keep button always military green
-              onPress={() => {
-                onClose()
-                router.push('/(tabs)/training')
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Enter Training Range"
-            >
-              <View style={styles.trainingButtonContent}>
-                <MaterialCommunityIcons name="target" size={24} color="#FFFFFF" />
-                <Text style={styles.trainingButtonText}>ENTER TRAINING RANGE</Text>
-              </View>
-              <Feather name="arrow-right" size={20} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[styles.trainingButton, { backgroundColor: theme.primary }]} // Keep button always military green
+            onPress={() => {
+              onClose()
+              router.push('/(tabs)/training')
+            }}
+            accessibilityRole="button"
+            accessibilityLabel="Enter Training Range"
+          >
+            <View style={styles.trainingButtonContent}>
+              <MaterialCommunityIcons name="target" size={24} color={isDark ? '#FFFFFF' : '#000000'} />
+              <Text style={[styles.trainingButtonText, { color: isDark ? '#FFFFFF' : '#000000' }]}>ENTER TRAINING RANGE</Text>
+            </View>
+            <Feather name="arrow-right" size={20} color={isDark ? '#FFFFFF' : '#000000'} />
+          </TouchableOpacity>
         )}
       </LinearGradient>
 
@@ -854,7 +851,7 @@ const CollectionDetailModal = React.memo(({
         visible={isProcessing}
         message="Processing arsenal operation..."
       />
-    </Modal>
+    </Modal >
   )
 });
 

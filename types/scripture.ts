@@ -40,6 +40,12 @@ export interface Collection {
     completedChapters: number
     averageAccuracy?: number
   }
+  // System properties
+  isSystem?: boolean
+  stats?: {
+    totalVerses: number
+    masteredVerses?: number
+  }
 }
 
 export interface CollectionChapter {

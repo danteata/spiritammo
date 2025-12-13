@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { StyleSheet, Text, ScrollView, View, TouchableOpacity } from 'react-native'
 import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -10,15 +10,32 @@ import { LoadingOverlay } from '@/components/LoadingOverlay'
 import StreakChallenge from '@/components/StreakChallenge'
 import SoldierAvatar from '@/components/SoldierAvatar'
 import WelcomeModal from '@/components/WelcomeModal'
+import TutorialOverlay, { TutorialStep } from '@/components/TutorialOverlay'
 
 export default function HomeScreen() {
   const { isLoading, theme, isDark } = useAppStore()
   const router = useRouter()
   const [showWelcome, setShowWelcome] = useState(false)
+  const [showTutorial, setShowTutorial] = useState(false)
+  const [tutorialStep, setTutorialStep] = useState(0)
+  const collectionDrillsRef = useRef(null)
 
   useEffect(() => {
     checkFirstLaunch()
   }, [])
+
+  const tutorialSteps: TutorialStep[] = [
+    {
+      id: 'choose-mission',
+      title: 'Choose Your First Mission',
+      description: 'Start with Collection Drills to learn the basics of scripture memorization.',
+      targetRef: collectionDrillsRef,
+      position: 'bottom',
+      highlightPadding: 8,
+      actionText: 'Tap the blue COLLECTION DRILLS card to continue',
+      canSkip: true,
+    },
+  ]
 
   const checkFirstLaunch = async () => {
     try {
@@ -77,6 +94,7 @@ export default function HomeScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
+            ref={collectionDrillsRef}
             style={styles.missionCardWrapper}
             onPress={() => router.push({ pathname: '/(tabs)/campaign', params: { mode: 'collection' } })}
             activeOpacity={0.9}
@@ -176,7 +194,21 @@ export default function HomeScreen() {
       {/* Welcome Modal */}
       <WelcomeModal
         isVisible={showWelcome}
-        onClose={() => setShowWelcome(false)}
+        onClose={() => {
+          setShowWelcome(false)
+          // Start tutorial after welcome modal closes
+          setTimeout(() => setShowTutorial(true), 500)
+        }}
+      />
+
+      <TutorialOverlay
+        isVisible={showTutorial}
+        steps={tutorialSteps}
+        currentStep={tutorialStep}
+        onStepChange={setTutorialStep}
+        onComplete={() => setShowTutorial(false)}
+        onSkip={() => setShowTutorial(false)}
+        theme="military"
       />
 
       <LoadingOverlay visible={isLoading} message="Mobilizing forces..." />

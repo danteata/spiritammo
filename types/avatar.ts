@@ -1,6 +1,6 @@
 // Avatar system types for The Barracks
 
-export type EquipmentSlot = 'head' | 'body' | 'legs' | 'primary' | 'background'
+export type EquipmentSlot = 'head' | 'body' | 'legs' | 'primary' | 'communications' | 'background'
 
 export interface AvatarItem {
     id: string
@@ -71,6 +71,7 @@ export const SLOT_LABELS: Record<EquipmentSlot, string> = {
     body: 'Breastplate of Righteousness',
     legs: 'Preparation of Peace',
     primary: 'Sword of the Spirit',
+    communications: 'Belt of Truth',
     background: 'Battlefield'
 }
 
@@ -79,6 +80,7 @@ export const SLOT_DESCRIPTIONS: Record<EquipmentSlot, string> = {
     body: 'Guard your heart and righteousness',
     legs: 'Ready your feet for the gospel of peace',
     primary: 'Your Scripture becomes your weapon',
+    communications: 'Stay connected with truth and command',
     background: 'The environment of spiritual warfare'
 }
 

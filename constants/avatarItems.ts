@@ -27,7 +27,7 @@ export const HEAD_ITEMS: AvatarItem[] = [
         reqRank: 'PRIVATE',
         unlockDescription: 'For the soldier ready for battle',
         assetSource: {
-            uri: 'helmet_tactical',
+            uri: require('@/assets/images/barracks/balaclava.png'),
             width: 80,
             height: 80
         }
@@ -87,9 +87,9 @@ export const BODY_ITEMS: AvatarItem[] = [
         reqRank: 'PRIVATE',
         unlockDescription: 'For the tactically proficient',
         assetSource: {
-            uri: 'vest_tactical',
-            width: 60,
-            height: 80
+            uri: require('@/assets/images/barracks/bag.png'), // Using bag as tactical vest placeholder
+            width: 70,
+            height: 70
         }
     },
     {
@@ -147,9 +147,9 @@ export const LEGS_ITEMS: AvatarItem[] = [
         reqRank: 'PRIVATE',
         unlockDescription: 'Enhanced mobility for agile operations',
         assetSource: {
-            uri: 'assets/images/barracks/cargo-pants.png',
-            width: 50,
-            height: 60
+            uri: require('@/assets/images/barracks/cargo-pants.png'),
+            width: 60,
+            height: 80
         }
     },
     {
@@ -193,9 +193,9 @@ export const WEAPON_ITEMS: AvatarItem[] = [
         reqRank: 'RECRUIT',
         unlockDescription: 'Your primary weapon begins here',
         assetSource: {
-            uri: 'rifle_basic',
-            width: 90,
-            height: 30
+            uri: require('@/assets/images/barracks/riffle.png'),
+            width: 100,
+            height: 40
         }
     },
     {
@@ -221,9 +221,9 @@ export const WEAPON_ITEMS: AvatarItem[] = [
         reqRank: 'CORPORAL',
         unlockDescription: 'Maximum accuracy for maximum impact',
         assetSource: {
-            uri: 'rifle_sniper',
-            width: 90,
-            height: 30
+            uri: require('@/assets/images/barracks/snipper-riffle.png'),
+            width: 120,
+            height: 40
         }
     },
     {
@@ -238,6 +238,66 @@ export const WEAPON_ITEMS: AvatarItem[] = [
             uri: 'sword_spirit',
             width: 90,
             height: 30
+        }
+    }
+]
+
+// Communications - Belt of Truth (communication with HQ/command)
+export const COMMUNICATIONS_ITEMS: AvatarItem[] = [
+    {
+        id: 'comm_basic',
+        name: 'Standard Issue Radio',
+        type: 'communications',
+        description: 'Basic field radio for communication',
+        cost: 0, // Free starter item
+        reqRank: 'RECRUIT',
+        unlockDescription: 'Stay connected with command',
+        assetSource: {
+            uri: require('@/assets/images/barracks/walkie-talkie.png'),
+            width: 40,
+            height: 60
+        }
+    },
+    {
+        id: 'comm_tactical',
+        name: 'Tactical Comm Unit',
+        type: 'communications',
+        description: 'Encrypted tactical communications device',
+        cost: 180,
+        reqRank: 'PRIVATE',
+        unlockDescription: 'Secure channel communications',
+        assetSource: {
+            uri: 'comm_tactical',
+            width: 40,
+            height: 60
+        }
+    },
+    {
+        id: 'comm_satellite',
+        name: 'Satellite Uplink',
+        type: 'communications',
+        description: 'Advanced satellite communication system',
+        cost: 450,
+        reqRank: 'CORPORAL',
+        unlockDescription: 'Global command and control',
+        assetSource: {
+            uri: 'comm_satellite',
+            width: 40,
+            height: 60
+        }
+    },
+    {
+        id: 'belt_truth',
+        name: 'Belt of Truth',
+        type: 'communications',
+        description: 'The Belt of Truth - girded with truth, connected to the Word',
+        cost: 1000,
+        reqRank: 'SERGEANT',
+        unlockDescription: 'Truth as your communication protocol',
+        assetSource: {
+            uri: 'belt_truth',
+            width: 40,
+            height: 60
         }
     }
 ]
@@ -308,6 +368,7 @@ export const ITEMS_DB: AvatarItem[] = [
     ...BODY_ITEMS,
     ...LEGS_ITEMS,
     ...WEAPON_ITEMS,
+    ...COMMUNICATIONS_ITEMS,
     ...BACKGROUND_ITEMS
 ]
 
@@ -327,5 +388,6 @@ export const DEFAULT_EQUIPPED_ITEMS = {
     body: 'vest_basic',
     legs: 'pants_basic',
     primary: 'rifle_basic',
+    communications: 'comm_basic',
     background: 'background_basic'
 } as const

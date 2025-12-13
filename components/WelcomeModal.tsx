@@ -1,18 +1,21 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
     StyleSheet,
     View,
+    Text,
     Modal,
     TouchableOpacity,
     ScrollView,
     Dimensions,
     Animated,
+    Platform,
 } from 'react-native'
-import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { FontAwesome5 } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LinearGradient } from 'expo-linear-gradient'
+import * as Haptics from 'expo-haptics'
 import { useAppStore } from '@/hooks/useAppStore'
-import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
+import { ThemedText } from '@/components/Themed'
 
 const { width, height } = Dimensions.get('window')
 
@@ -21,92 +24,93 @@ interface WelcomeModalProps {
     onClose: () => void
 }
 
-interface FeatureCardProps {
-    icon: React.ReactNode
-    title: string
-    description: string
-    delay: number
+
+
+interface TypewriterTextProps {
+    text: string
+    style?: any
+    delay?: number
+    onComplete?: () => void
 }
 
-const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description, delay }) => {
-    const { isDark, theme } = useAppStore()
-    const fadeAnim = React.useRef(new Animated.Value(0)).current
-    const slideAnim = React.useRef(new Animated.Value(30)).current
+const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0, onComplete }) => {
+    const [displayedText, setDisplayedText] = useState('')
+    const [started, setStarted] = useState(false)
 
-    React.useEffect(() => {
-        Animated.parallel([
-            Animated.timing(fadeAnim, {
-                toValue: 1,
-                duration: 600,
-                delay,
-                useNativeDriver: true,
-            }),
-            Animated.timing(slideAnim, {
-                toValue: 0,
-                duration: 600,
-                delay,
-                useNativeDriver: true,
-            }),
-        ]).start()
-    }, [])
+    useEffect(() => {
+        const startTimer = setTimeout(() => {
+            setStarted(true)
+        }, delay)
+        return () => clearTimeout(startTimer)
+    }, [delay])
 
-    return (
-        <Animated.View
-            style={{
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-            }}
-        >
-            <ThemedCard variant="glass" style={styles.featureCard}>
-                <View style={[styles.featureIconContainer, { backgroundColor: 'rgba(255,215,0,0.1)' }]}>
-                    {icon}
-                </View>
-                <View style={styles.featureContent}>
-                    <ThemedText variant="heading" style={styles.featureTitle}>
-                        {title}
-                    </ThemedText>
-                    <ThemedText variant="body" style={styles.featureDescription}>
-                        {description}
-                    </ThemedText>
-                </View>
-            </ThemedCard>
-        </Animated.View>
-    )
+    useEffect(() => {
+        if (!started) return
+
+        let currentIndex = 0
+        const interval = setInterval(() => {
+            if (currentIndex <= text.length) {
+                setDisplayedText(text.slice(0, currentIndex))
+                if (currentIndex > 0 && currentIndex < text.length) {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { })
+                }
+                currentIndex++
+            } else {
+                clearInterval(interval)
+                onComplete?.()
+            }
+        }, 30) // Typing speed
+
+        return () => clearInterval(interval)
+    }, [started, text])
+
+    return <ThemedText style={style}>{displayedText}</ThemedText>
 }
 
 export default function WelcomeModal({ isVisible, onClose }: WelcomeModalProps) {
-    const { isDark, theme } = useAppStore()
-    const scaleAnim = React.useRef(new Animated.Value(0.9)).current
+    const { isDark } = useAppStore()
+    const scaleAnim = React.useRef(new Animated.Value(0.95)).current
     const fadeAnim = React.useRef(new Animated.Value(0)).current
+
+    // Mission Status State
+    const [missionAccepted, setMissionAccepted] = useState(false)
+    const [briefingComplete, setBriefingComplete] = useState(false)
 
     React.useEffect(() => {
         if (isVisible) {
             Animated.parallel([
                 Animated.spring(scaleAnim, {
                     toValue: 1,
-                    tension: 50,
+                    tension: 20,
                     friction: 7,
                     useNativeDriver: true,
                 }),
                 Animated.timing(fadeAnim, {
                     toValue: 1,
-                    duration: 300,
+                    duration: 400,
                     useNativeDriver: true,
                 }),
             ]).start()
         }
     }, [isVisible])
 
-    const handleGetStarted = async () => {
+    const handleAcceptMission = async () => {
+        setMissionAccepted(true)
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => { })
         try {
             await AsyncStorage.setItem('hasSeenWelcome', 'true')
         } catch (error) {
             console.error('Failed to save welcome preference:', error)
         }
-        onClose()
+
+        // Add a small delay for the "Accepted" animation before closing
+        setTimeout(() => {
+            onClose()
+        }, 800)
     }
 
     const handleSkip = async () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { })
         try {
             await AsyncStorage.setItem('hasSeenWelcome', 'true')
         } catch (error) {
@@ -117,31 +121,26 @@ export default function WelcomeModal({ isVisible, onClose }: WelcomeModalProps) 
 
     const features = [
         {
-            icon: <Ionicons name="book" size={28} color="#FFD700" />,
-            title: "Scripture Arsenal",
-            description: "Build your spiritual ammunition bank with verses organized by collections and campaigns."
+            icon: "book",
+            title: "ARMORY ACCESS",
+            description: "Build your scripture ammunition bank. Organize verses into collections and campaigns."
         },
         {
-            icon: <FontAwesome5 name="bullseye" size={28} color="#FFD700" />,
-            title: "Combat Missions",
-            description: "Deploy into campaigns with accuracy-based challenges. Conquer nodes and secure territory."
+            icon: "crosshairs",
+            title: "COMBAT MISSIONS",
+            description: "Deploy into territory battles. Conquer nodes through accuracy-based scripture challenges."
         },
         {
-            icon: <MaterialCommunityIcons name="microphone" size={28} color="#FFD700" />,
-            title: "Voice Combat",
-            description: "Engage enemies by reciting scripture. AI tracks your accuracy in real-time combat scenarios."
+            icon: "microphone",
+            title: "VOICE OPS",
+            description: "Engage targets by reciting scripture. Live AI analysis tracks your recitation accuracy."
         },
-        {
-            icon: <FontAwesome5 name="user-shield" size={28} color="#FFD700" />,
-            title: "Soldier Customization",
-            description: "Earn Valor Points to unlock helmets, armor, and weapons. Equip your spiritual warrior."
-        }
     ]
 
     return (
         <Modal
             visible={isVisible}
-            animationType="fade"
+            animationType="none"
             transparent={true}
             onRequestClose={handleSkip}
         >
@@ -155,104 +154,131 @@ export default function WelcomeModal({ isVisible, onClose }: WelcomeModalProps) 
                         },
                     ]}
                 >
-                    <View
-                        style={[
-                            styles.modalContainer,
-                            { backgroundColor: isDark ? '#1e293b' : '#ffffff' }
-                        ]}
-                    >
-                        {/* Decorative corner accents */}
-                        <View style={[styles.cornerAccent, { borderColor: isDark ? 'rgba(255,215,0,0.3)' : 'rgba(255,215,0,0.5)' }]} />
-                        <View style={[styles.cornerAccent, styles.cornerAccentBottomRight, { borderColor: isDark ? 'rgba(255,215,0,0.3)' : 'rgba(255,215,0,0.5)' }]} />
+                    <View style={[
+                        styles.modalContainer,
+                        {
+                            backgroundColor: isDark ? '#0f172a' : '#f8fafc',
+                            borderColor: isDark ? 'rgba(255,215,0,0.3)' : 'rgba(0,0,0,0.2)',
+                        }
+                    ]}>
+                        {/* Tactical Borders */}
+                        <View style={styles.borderTopLeft} />
+                        <View style={styles.borderTopRight} />
+                        <View style={styles.borderBottomLeft} />
+                        <View style={styles.borderBottomRight} />
 
-                        {/* Header with animated logo */}
-                        <View style={styles.header}>
-                            <LinearGradient
-                                colors={['rgba(255,215,0,0.2)', 'rgba(255,215,0,0.05)']}
-                                style={styles.logoContainer}
-                            >
-                                <View style={styles.logoInner}>
-                                    <FontAwesome5 name="crosshairs" size={36} color="#FFD700" />
-                                </View>
-                            </LinearGradient>
-
-                            <ThemedText variant="heading" style={[styles.title, { color: isDark ? '#ffffff' : '#000000' }]}>
-                                Welcome, Soldier
-                            </ThemedText>
-                            <View style={[styles.divider, { backgroundColor: isDark ? '#FFD700' : '#F59E0B' }]} />
-                            <ThemedText variant="body" style={[styles.subtitle, { color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)' }]}>
-                                Enlist in the most important battle:{'\n'}
-                                <ThemedText style={[styles.subtitleBold, { color: isDark ? '#FFD700' : '#F59E0B' }]}>Memorizing God's Word</ThemedText>
-                            </ThemedText>
+                        {/* Top Secret Stamp */}
+                        <View style={styles.stampContainer}>
+                            <View style={styles.stamp}>
+                                <Text style={styles.stampText}>CLASSIFIED</Text>
+                            </View>
                         </View>
 
-                        {/* Features with staggered animation */}
+                        {/* Header */}
+                        <View style={styles.header}>
+                            <View style={styles.headerIcon}>
+                                <FontAwesome5 name="shield-alt" size={32} color="#FFD700" />
+                            </View>
+                            <View style={styles.headerText}>
+                                <ThemedText style={styles.topLabel}>MISSION DOSSIER // 001</ThemedText>
+                                <ThemedText variant="heading" style={styles.title}>
+                                    MISSION BRIEFING
+                                </ThemedText>
+                            </View>
+                        </View>
+
+                        <View style={styles.separator}>
+                            <View style={[styles.separatorLine, { backgroundColor: isDark ? '#334155' : '#cbd5e1' }]} />
+                            <FontAwesome5 name="star" size={10} color="#FFD700" style={styles.separatorIcon} />
+                            <View style={[styles.separatorLine, { backgroundColor: isDark ? '#334155' : '#cbd5e1' }]} />
+                        </View>
+
+                        {/* Content */}
                         <ScrollView
-                            style={styles.featuresScroll}
-                            contentContainerStyle={styles.featuresContainer}
+                            style={styles.contentScroll}
+                            contentContainerStyle={styles.contentContainer}
                             showsVerticalScrollIndicator={false}
                         >
-                            {features.map((feature, index) => (
-                                <FeatureCard
-                                    key={index}
-                                    icon={feature.icon}
-                                    title={feature.title}
-                                    description={feature.description}
-                                    delay={300 + index * 100}
-                                />
-                            ))}
-
-                            {/* Mission briefing box */}
-                            <View style={[
-                                styles.missionBriefing,
-                                {
-                                    backgroundColor: isDark ? 'rgba(255,215,0,0.05)' : 'rgba(255,215,0,0.08)',
-                                    borderColor: isDark ? 'rgba(255,215,0,0.2)' : 'rgba(255,215,0,0.3)'
-                                }
-                            ]}>
-                                <FontAwesome5 name="info-circle" size={16} color={isDark ? '#FFD700' : '#F59E0B'} />
-                                <ThemedText variant="caption" style={[styles.briefingText, { color: isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.7)' }]}>
-                                    Your mission: Master scripture through voice recognition challenges, unlock gear, and advance through campaigns.
+                            <View style={styles.recruitMessage}>
+                                <ThemedText style={[styles.greeting, { color: isDark ? '#94a3b8' : '#64748b' }]}>
+                                    GREETINGS, SOLDIER.
                                 </ThemedText>
+                                <TypewriterText
+                                    text="You have been selected for elite spiritual warfare training. Your objective is to internalize the Word of God and deploy it in combat scenarios."
+                                    style={[styles.briefingText, { color: isDark ? '#e2e8f0' : '#334155' }]}
+                                    delay={600}
+                                    onComplete={() => setBriefingComplete(true)}
+                                />
+                            </View>
+
+                            <View style={styles.objectivesContainer}>
+                                <ThemedText style={styles.sectionLabel}>MISSION PARAMETERS</ThemedText>
+                                {features.map((feature, index) => (
+                                    <View key={index} style={[
+                                        styles.objectiveRow,
+                                        {
+                                            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.5)' : 'rgba(241, 245, 249, 0.8)',
+                                            borderColor: isDark ? 'rgba(255,215,0,0.1)' : 'rgba(0,0,0,0.05)'
+                                        }
+                                    ]}>
+                                        <View style={styles.objectiveIcon}>
+                                            <FontAwesome5 name={feature.icon} size={16} color="#FFD700" />
+                                        </View>
+                                        <View style={styles.objectiveContent}>
+                                            <ThemedText style={styles.objectiveTitle}>{feature.title}</ThemedText>
+                                            <ThemedText style={[styles.objectiveDesc, { color: isDark ? '#94a3b8' : '#64748b' }]}>
+                                                {feature.description}
+                                            </ThemedText>
+                                        </View>
+                                    </View>
+                                ))}
                             </View>
                         </ScrollView>
 
-                        {/* Enhanced bottom actions */}
+                        {/* Actions */}
                         <View style={styles.actions}>
-                            <TouchableOpacity
-                                style={[
-                                    styles.skipButton,
-                                    {
-                                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.03)',
-                                        borderColor: isDark ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)'
-                                    }
-                                ]}
-                                onPress={handleSkip}
-                                activeOpacity={0.7}
-                            >
-                                <ThemedText variant="button" style={[styles.skipButtonText, { color: isDark ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.6)' }]}>
-                                    Skip Briefing
-                                </ThemedText>
-                            </TouchableOpacity>
+                            {!missionAccepted ? (
+                                <>
+                                    <TouchableOpacity
+                                        style={styles.declineButton}
+                                        onPress={handleSkip}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={styles.declineText}>DECLINE OP</Text>
+                                    </TouchableOpacity>
 
-                            <TouchableOpacity
-                                style={styles.primaryButton}
-                                onPress={handleGetStarted}
-                                activeOpacity={0.85}
-                            >
-                                <LinearGradient
-                                    colors={['#FFD700', '#FFA500']}
-                                    start={{ x: 0, y: 0 }}
-                                    end={{ x: 1, y: 1 }}
-                                    style={styles.primaryButtonGradient}
-                                >
-                                    <FontAwesome5 name="shield-alt" size={16} color="#000" />
-                                    <ThemedText variant="button" style={styles.primaryButtonText}>
-                                        Begin Mission
-                                    </ThemedText>
-                                    <FontAwesome5 name="arrow-right" size={16} color="#000" />
-                                </LinearGradient>
-                            </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={styles.acceptButton}
+                                        onPress={handleAcceptMission}
+                                        activeOpacity={0.8}
+                                    >
+                                        <LinearGradient
+                                            colors={['#FFD700', '#D97706']}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 0 }}
+                                            style={styles.acceptGradient}
+                                        >
+                                            <Text style={styles.acceptText}>ACCEPT MISSION</Text>
+                                            <FontAwesome5 name="chevron-right" size={14} color="#000" />
+                                        </LinearGradient>
+                                    </TouchableOpacity>
+                                </>
+                            ) : (
+                                <View style={styles.acceptedContainer}>
+                                    <FontAwesome5 name="check-circle" size={24} color="#10B981" />
+                                    <Text style={[styles.acceptedText, { color: isDark ? '#10B981' : '#059669' }]}>
+                                        MISSION CONFIRMED
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+
+                        {/* Status Bar */}
+                        <View style={styles.statusBar}>
+                            <Text style={styles.statusText}>
+                                STATUS: {missionAccepted ? 'ACTIVE' : 'PENDING AUTHORIZATION'}
+                            </Text>
+                            <Text style={styles.statusId}>ID: RECRUIT-{(Math.random() * 10000).toFixed(0)}</Text>
                         </View>
                     </View>
                 </Animated.View>
@@ -264,189 +290,261 @@ export default function WelcomeModal({ isVisible, onClose }: WelcomeModalProps) 
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0, 0, 0, 0.85)',
+        backgroundColor: 'rgba(0, 0, 0, 0.9)',
         justifyContent: 'center',
         alignItems: 'center',
-        paddingHorizontal: 20,
+        padding: 16,
     },
     modalWrapper: {
         width: '100%',
-        maxWidth: 420,
-        maxHeight: height * 0.92,
+        maxWidth: 400,
+        height: '85%',
+        maxHeight: 700,
     },
     modalContainer: {
-        width: '100%',
-        height: '100%',
-        borderRadius: 24,
-        padding: 24,
-        alignItems: 'center',
-        position: 'relative',
+        flex: 1,
+        borderRadius: 4,
+        borderWidth: 1,
         overflow: 'hidden',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 20 },
-        shadowOpacity: 0.3,
-        shadowRadius: 30,
-        elevation: 15,
+        position: 'relative',
     },
-    cornerAccent: {
+    // Tactical Corners
+    borderTopLeft: {
         position: 'absolute',
         top: 0,
         left: 0,
-        width: 40,
-        height: 40,
+        width: 20,
+        height: 20,
         borderTopWidth: 3,
         borderLeftWidth: 3,
-        borderTopLeftRadius: 24,
+        borderColor: '#FFD700',
+        zIndex: 10,
     },
-    cornerAccentBottomRight: {
-        top: undefined,
-        left: undefined,
+    borderTopRight: {
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        width: 20,
+        height: 20,
+        borderTopWidth: 3,
+        borderRightWidth: 3,
+        borderColor: '#FFD700',
+        zIndex: 10,
+    },
+    borderBottomLeft: {
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        width: 20,
+        height: 20,
+        borderBottomWidth: 3,
+        borderLeftWidth: 3,
+        borderColor: '#FFD700',
+        zIndex: 10,
+    },
+    borderBottomRight: {
+        position: 'absolute',
         bottom: 0,
         right: 0,
-        borderTopWidth: 0,
-        borderLeftWidth: 0,
+        width: 20,
+        height: 20,
         borderBottomWidth: 3,
         borderRightWidth: 3,
-        borderTopLeftRadius: 0,
-        borderBottomRightRadius: 24,
+        borderColor: '#FFD700',
+        zIndex: 10,
+    },
+    stampContainer: {
+        position: 'absolute',
+        top: 40,
+        right: -10,
+        transform: [{ rotate: '15deg' }],
+        zIndex: 5,
+        opacity: 0.15,
+        pointerEvents: 'none',
+    },
+    stamp: {
+        borderWidth: 4,
+        borderColor: '#FFD700',
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+    },
+    stampText: {
+        color: '#FFD700',
+        fontSize: 24,
+        fontWeight: '900',
+        letterSpacing: 2,
     },
     header: {
+        flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 20,
-        width: '100%',
+        padding: 24,
+        paddingBottom: 16,
+        gap: 16,
     },
-    logoContainer: {
-        width: 90,
-        height: 90,
-        borderRadius: 45,
-        justifyContent: 'center',
-        alignItems: 'center',
-        marginBottom: 16,
-        borderWidth: 2,
-        borderColor: '#FFD700',
-    },
-    logoInner: {
-        width: 70,
-        height: 70,
-        borderRadius: 35,
-        backgroundColor: 'rgba(255,215,0,0.1)',
+    headerIcon: {
+        width: 56,
+        height: 56,
+        borderRadius: 28,
+        backgroundColor: 'rgba(255, 215, 0, 0.1)',
         justifyContent: 'center',
         alignItems: 'center',
         borderWidth: 1,
-        borderColor: 'rgba(255,215,0,0.3)',
+        borderColor: 'rgba(255, 215, 0, 0.3)',
+    },
+    headerText: {
+        flex: 1,
+    },
+    topLabel: {
+        fontSize: 10,
+        color: '#FFD700',
+        letterSpacing: 1.5,
+        fontWeight: '700',
+        marginBottom: 4,
     },
     title: {
-        fontSize: 26,
-        textAlign: 'center',
-        marginBottom: 12,
-        letterSpacing: 1,
+        fontSize: 24,
         fontWeight: '800',
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
     },
-    divider: {
-        width: 60,
-        height: 2,
-        marginBottom: 12,
-        borderRadius: 1,
+    separator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 24,
+        marginBottom: 16,
+        opacity: 0.5,
     },
-    subtitle: {
-        fontSize: 15,
-        textAlign: 'center',
-        lineHeight: 22,
-        maxWidth: 320,
-    },
-    subtitleBold: {
-        fontWeight: '700',
-    },
-    featuresScroll: {
+    separatorLine: {
         flex: 1,
-        width: '100%',
+        height: 1,
     },
-    featuresContainer: {
+    separatorIcon: {
+        marginHorizontal: 8,
+    },
+    contentScroll: {
+        flex: 1,
+    },
+    contentContainer: {
+        padding: 24,
+        paddingTop: 0,
+    },
+    recruitMessage: {
+        marginBottom: 32,
+    },
+    greeting: {
+        fontSize: 14,
+        fontWeight: '700',
+        letterSpacing: 1,
+        marginBottom: 8,
+    },
+    briefingText: {
+        fontSize: 16,
+        lineHeight: 24,
+        fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
+    },
+    objectivesContainer: {
         gap: 12,
-        paddingVertical: 8,
-        paddingBottom: 16,
     },
-    featureCard: {
+    sectionLabel: {
+        fontSize: 11,
+        color: '#FFD700',
+        fontWeight: '700',
+        letterSpacing: 1,
+        marginBottom: 8,
+    },
+    objectiveRow: {
         flexDirection: 'row',
         padding: 16,
-        borderRadius: 12,
-        alignItems: 'center',
-        gap: 14,
-        marginBottom: 0,
+        borderRadius: 8,
+        borderWidth: 1,
+        gap: 16,
     },
-    featureIconContainer: {
-        width: 50,
-        height: 50,
-        borderRadius: 25,
-        justifyContent: 'center',
-        alignItems: 'center',
-        borderWidth: 1.5,
-        borderColor: 'rgba(255,215,0,0.2)',
+    objectiveIcon: {
+        marginTop: 2,
     },
-    featureContent: {
+    objectiveContent: {
         flex: 1,
         gap: 4,
     },
-    featureTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        letterSpacing: 0.3,
+    objectiveTitle: {
+        fontSize: 14,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+        textTransform: 'uppercase',
     },
-    featureDescription: {
+    objectiveDesc: {
         fontSize: 13,
         lineHeight: 18,
     },
-    missionBriefing: {
-        flexDirection: 'row',
-        padding: 14,
-        borderRadius: 12,
-        gap: 10,
-        borderWidth: 1,
-        marginTop: 8,
-    },
-    briefingText: {
-        flex: 1,
-        fontSize: 12,
-        lineHeight: 17,
-    },
     actions: {
-        width: '100%',
-        marginTop: 20,
-        gap: 10,
-    },
-    skipButton: {
-        paddingVertical: 12,
-        paddingHorizontal: 20,
-        borderRadius: 12,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-    },
-    skipButtonText: {
-        fontSize: 14,
-        fontWeight: '600',
-    },
-    primaryButton: {
-        borderRadius: 14,
-        overflow: 'hidden',
-        shadowColor: '#FFD700',
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.4,
-        shadowRadius: 12,
-        elevation: 8,
-    },
-    primaryButtonGradient: {
         flexDirection: 'row',
-        paddingVertical: 16,
-        paddingHorizontal: 24,
+        padding: 24,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255,255,255,0.05)',
+        gap: 12,
+        alignItems: 'center',
+    },
+    declineButton: {
+        paddingVertical: 14,
+        paddingHorizontal: 16,
+    },
+    declineText: {
+        color: '#64748b',
+        fontSize: 12,
+        fontWeight: '700',
+        letterSpacing: 1,
+    },
+    acceptButton: {
+        flex: 1,
+        borderRadius: 4,
+        overflow: 'hidden',
+    },
+    acceptGradient: {
+        flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        gap: 10,
+        paddingVertical: 14,
+        gap: 8,
     },
-    primaryButtonText: {
+    acceptText: {
         color: '#000',
+        fontSize: 14,
+        fontWeight: '800',
+        letterSpacing: 1,
+    },
+    acceptedContainer: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        paddingVertical: 14,
+    },
+    acceptedText: {
         fontSize: 16,
         fontWeight: '800',
-        letterSpacing: 0.5,
+        letterSpacing: 1,
+    },
+    statusBar: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        backgroundColor: '#000',
+        borderTopWidth: 1,
+        borderTopColor: '#334155',
+    },
+    statusText: {
+        color: '#FFD700',
+        fontSize: 9,
+        fontWeight: '700',
+        letterSpacing: 1,
+    },
+    statusId: {
+        color: '#64748b',
+        fontSize: 9,
+        fontFamily: Platform.OS === 'ios' ? 'Courier New' : 'monospace',
     },
 })
