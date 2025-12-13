@@ -28,7 +28,7 @@ export default function SoldierAvatar({
     style
 }: SoldierAvatarProps) {
 
-    const { avatarInventory, isLoadingAvatar } = useAppStore()
+    const { avatarInventory, isLoadingAvatar, userSettings } = useAppStore()
 
     // Size mappings
     const getSize = () => {
@@ -159,10 +159,19 @@ export default function SoldierAvatar({
                 </View>
 
                 {/* Border frame */}
-                <View style={[styles.avatarBorder, { width: avatarSize, height: avatarSize }]}>
+                {/* <View style={[styles.avatarBorder, { width: avatarSize, height: avatarSize }]}>
                     <View style={[styles.avatarBorderInner, { borderRadius: avatarSize / 2 }]} />
-                </View>
+                </View> */}
             </View>
+
+            {/* Soldier Name/Call Sign */}
+            {userSettings?.soldierName && size !== 'small' && (
+                <View style={styles.nameContainer}>
+                    <Text style={[styles.soldierName, { color: '#FFD700' }]}>
+                        {userSettings.soldierName}
+                    </Text>
+                </View>
+            )}
 
             {/* VP Badge */}
             {renderVPBadge()}
@@ -311,5 +320,21 @@ const styles = StyleSheet.create({
     equipmentImage: {
         position: 'absolute',
         borderRadius: 5,
+    },
+    nameContainer: {
+        marginTop: 8,
+        paddingHorizontal: 12,
+        paddingVertical: 4,
+        backgroundColor: 'rgba(0,0,0,0.7)',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,215,0,0.5)',
+    },
+    soldierName: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        textAlign: 'center',
+        letterSpacing: 1,
+        textTransform: 'uppercase',
     }
 })

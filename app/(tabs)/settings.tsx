@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { StyleSheet, Text, View, ScrollView, Switch, TouchableOpacity } from 'react-native'
+import React, { useState, useEffect } from 'react'
+import { StyleSheet, Text, View, ScrollView, Switch, TouchableOpacity, TextInput, Modal, Alert } from 'react-native'
 import { GARRISON_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { useAppStore } from '@/hooks/useAppStore'
@@ -12,6 +12,8 @@ import { useRouter } from 'expo-router'
 
 export default function SettingsScreen() {
   const { isDark, setTheme, setThemeColor, themeColor, userSettings, saveUserSettings, theme } = useAppStore()
+  const [showNameModal, setShowNameModal] = useState(false)
+  const [tempName, setTempName] = useState('')
   const styles = getStyles(theme)
 
   const handleThemeChange = (value: boolean) => {
@@ -24,6 +26,37 @@ export default function SettingsScreen() {
       voiceEngine: engine,
     })
   }
+
+  const handleSaveSoldierName = async () => {
+    const trimmedName = tempName.trim()
+    if (trimmedName.length > 20) {
+      Alert.alert('Call Sign Too Long', 'Please keep your call sign under 20 characters.')
+      return
+    }
+    if (trimmedName.length > 0) {
+      const success = await saveUserSettings({
+        ...userSettings,
+        soldierName: trimmedName,
+      })
+      if (success) {
+        setShowNameModal(false)
+        setTempName('')
+      }
+    } else {
+      Alert.alert('Invalid Call Sign', 'Please enter a valid call sign.')
+    }
+  }
+
+  const handleCancelName = () => {
+    setShowNameModal(false)
+    setTempName('')
+  }
+
+  useEffect(() => {
+    if (showNameModal && userSettings.soldierName) {
+      setTempName(userSettings.soldierName)
+    }
+  }, [showNameModal, userSettings.soldierName])
 
   return (
     <ThemedContainer style={styles.container}>
@@ -104,6 +137,47 @@ export default function SettingsScreen() {
               * Camouflage patterns are only available in Night Vision mode.
             </ThemedText>
           )}
+        </ThemedCard>
+
+        {/* Soldier Identity */}
+        <ThemedCard style={styles.card} variant="default">
+          <View style={styles.cardHeader}>
+            <MaterialCommunityIcons name="account-star" size={20} color={theme.accent} />
+            <ThemedText variant="subheading" style={styles.cardTitle}>
+              SOLDIER IDENTITY
+            </ThemedText>
+          </View>
+
+          <ThemedText variant="body" style={styles.sectionDescription}>
+            Establish your call sign for multiplayer operations and personal recognition.
+          </ThemedText>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <ThemedText variant="body" style={styles.settingLabel}>
+                Call Sign
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.settingDescription}>
+                Your soldier name displayed in battles and leaderboards
+              </ThemedText>
+            </View>
+          </View>
+
+          <TouchableOpacity
+            style={styles.nameInputContainer}
+            onPress={() => setShowNameModal(true)}
+          >
+            <ThemedText
+              variant="body"
+              style={[
+                styles.nameDisplay,
+                { color: userSettings.soldierName ? theme.text : theme.textSecondary }
+              ]}
+            >
+              {userSettings.soldierName || 'SET CALL SIGN'}
+            </ThemedText>
+            <Feather name="edit-2" size={16} color={theme.accent} />
+          </TouchableOpacity>
         </ThemedCard>
 
         {/* Audio Intelligence */}
@@ -204,6 +278,71 @@ export default function SettingsScreen() {
         <SignOutSection styles={styles} theme={theme} />
 
       </ScrollView>
+
+      {/* Soldier Name Modal */}
+      <Modal
+        visible={showNameModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCancelName}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: isDark ? '#1a1a1a' : '#ffffff' }]}>
+            <View style={styles.modalHeader}>
+              <ThemedText variant="heading" style={{ fontSize: 18 }}>
+                SET CALL SIGN
+              </ThemedText>
+              <TouchableOpacity onPress={handleCancelName}>
+                <Feather name="x" size={24} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ThemedText variant="body" style={styles.modalDescription}>
+              Choose a tactical call sign for your soldier. This will be displayed in multiplayer operations and leaderboards.
+            </ThemedText>
+
+            <TextInput
+              style={[
+                styles.nameInput,
+                {
+                  backgroundColor: isDark ? '#2a2a2a' : '#f5f5f5',
+                  color: theme.text,
+                  borderColor: theme.border
+                }
+              ]}
+              value={tempName}
+              onChangeText={setTempName}
+              placeholder="Enter your call sign..."
+              placeholderTextColor={theme.textSecondary}
+              maxLength={20}
+              autoCapitalize="words"
+              autoFocus={true}
+            />
+
+            <View style={styles.characterCount}>
+              <ThemedText variant="caption" style={{ color: theme.textSecondary }}>
+                {tempName.length}/20 characters
+              </ThemedText>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={handleCancelName}
+              >
+                <ThemedText variant="body" style={styles.cancelButtonText}>CANCEL</ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.accent }]}
+                onPress={handleSaveSoldierName}
+              >
+                <ThemedText variant="body" style={styles.saveButtonText}>CONFIRM</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ThemedContainer>
   )
 }
@@ -388,5 +527,80 @@ const getStyles = (theme: any) => StyleSheet.create({
     height: 1,
     backgroundColor: 'rgba(255,255,255,0.1)',
     marginVertical: 16,
+  },
+  nameInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  nameDisplay: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    borderRadius: 16,
+    padding: 24,
+    width: '100%',
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  modalDescription: {
+    marginBottom: 20,
+    lineHeight: 20,
+    opacity: 0.8,
+  },
+  nameInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 16,
+    fontSize: 16,
+    marginBottom: 8,
+  },
+  characterCount: {
+    alignItems: 'flex-end',
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  saveButton: {
+    // backgroundColor set inline
+  },
+  cancelButtonText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontWeight: '600',
+  },
+  saveButtonText: {
+    color: '#000000',
+    fontWeight: '600',
   },
 })

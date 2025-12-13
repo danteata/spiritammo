@@ -73,6 +73,7 @@ export interface UserSettings {
   language: string
   trainingMode: 'single' | 'burst' | 'automatic'
   voiceEngine: 'whisper' | 'native'
+  soldierName?: string
 }
 
 export interface UserStats {
