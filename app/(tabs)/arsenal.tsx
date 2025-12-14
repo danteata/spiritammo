@@ -323,9 +323,13 @@ export default function ArsenalScreen() {
                         </View>
                     ) : activeTab === 'voice' ? null : (
                         <View style={styles.equipmentHeaderActions}>
-                            <View style={styles.vpChip}>
+                            <View style={[styles.vpChip, {
+                                backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(15,23,42,0.1)'
+                            }]}>
                                 <FontAwesome5 name="coins" size={14} color="#FFD700" />
-                                <Text style={[styles.vpText, { color: 'white' }]}>
+                                <Text style={[styles.vpText, {
+                                    color: isDark ? 'white' : theme.text
+                                }]}>
                                     {avatarInventory?.valorPoints || 0} VP
                                 </Text>
                             </View>
