@@ -272,10 +272,21 @@ class VoiceRecordingService {
      */
     static async shouldUseRecordedVoice(scriptureId: string): Promise<boolean> {
         try {
+            console.log(`🎵 VoiceRecording: Checking if should use recorded voice for: ${scriptureId}`)
             const settings = await this.getSettings()
-            if (!settings.useRecordedVoice) return false
+            console.log(`🎵 VoiceRecording: useRecordedVoice setting: ${settings.useRecordedVoice}`)
+
+            if (!settings.useRecordedVoice) {
+                console.log(`🎵 VoiceRecording: useRecordedVoice is disabled`)
+                return false
+            }
 
             const recording = await this.getRecordingForScripture(scriptureId)
+            console.log(`🎵 VoiceRecording: Found recording for ${scriptureId}: ${recording ? 'YES' : 'NO'}`)
+            if (recording) {
+                console.log(`🎵 VoiceRecording: Recording details:`, recording)
+            }
+
             return recording !== null
         } catch (error) {
             console.error('Failed to check recorded voice preference:', error)

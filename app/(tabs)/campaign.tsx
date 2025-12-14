@@ -373,6 +373,7 @@ export default function CampaignScreen() {
                                         isVisible={true}
                                         targetVerse={currentScripture.text}
                                         reference={currentScripture.reference}
+                                        scriptureId={currentScripture.id}
                                         onRecordingComplete={(_, acc) => handleMissionComplete(acc)}
                                         onClose={() => setPracticeMode(null)}
                                     />

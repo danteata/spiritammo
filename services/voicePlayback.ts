@@ -29,14 +29,19 @@ class VoicePlaybackService {
             // Stop any currently playing audio
             await this.stopPlayback()
 
+            console.log(`🎵 VoicePlayback: Attempting to play scripture: ${scriptureId}`)
+
             // Check if we should use recorded voice
             const useRecordedVoice = await VoiceRecordingService.shouldUseRecordedVoice(scriptureId)
+            console.log(`🎵 VoicePlayback: Should use recorded voice for ${scriptureId}: ${useRecordedVoice}`)
 
             if (useRecordedVoice) {
                 // Use recorded voice if available and preferred
+                console.log(`🎵 VoicePlayback: Using recorded voice for ${scriptureId}`)
                 await this.playRecordedVoice(scriptureId, settings)
             } else {
                 // Fall back to TTS
+                console.log(`🎵 VoicePlayback: Using TTS for ${scriptureId}`)
                 await this.playTextToSpeech(scriptureText, settings)
             }
         } catch (error) {

@@ -35,6 +35,7 @@ interface TargetPracticeProps {
   onRecordingComplete: (transcript: string, accuracy: number) => void
   targetVerse: string
   reference?: string
+  scriptureId?: string
   intelText?: string
   isVisible: boolean
   onClose: () => void
@@ -58,6 +59,7 @@ export default function TargetPractice({
   onRecordingComplete,
   targetVerse,
   reference,
+  scriptureId,
   intelText,
   isVisible,
   onClose,
@@ -312,7 +314,7 @@ export default function TargetPractice({
           setLocalAccuracy(calculatedAccuracy)
           setShowAccuracy(true)
           console.log('🎙️ VoiceRecorder: Calling onRecordingComplete with accuracy:', calculatedAccuracy)
-          onRecordingComplete(calculatedAccuracy, calculatedAccuracy)
+          onRecordingComplete(result.text, calculatedAccuracy)
         } else {
           console.warn('No transcription received from whisper service')
           setStatusMessage('Transcription failed')
@@ -437,7 +439,7 @@ export default function TargetPractice({
       windConditions[Math.floor(Math.random() * windConditions.length)]
     )
 
-    setShowVoiceRecorder(false)
+
 
     // **FIX: Call the parent's onRecordingComplete to update stats**
     console.log('🎤 TargetPractice: Calling parent onRecordingComplete with accuracy:', finalAccuracy)
@@ -451,12 +453,11 @@ export default function TargetPractice({
       return
     }
 
-    // Check if we have a scripture ID (from reference or other source)
-    // For now, we'll create a simple ID from the reference
-    const scriptureId = reference ? `scripture_${reference.replace(/\s+/g, '_').replace(/:/g, '_')}` : 'unknown_scripture'
+    // Use the provided scriptureId, or fall back to reference for backward compatibility
+    const playbackScriptureId = scriptureId || reference || 'unknown_scripture'
 
     try {
-      await VoicePlaybackService.playScripture(scriptureId, targetVerse, {
+      await VoicePlaybackService.playScripture(playbackScriptureId, targetVerse, {
         rate: userSettings.voiceRate || 0.9,
         pitch: userSettings.voicePitch || 1.0,
         language: userSettings.language || 'en-US',

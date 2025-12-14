@@ -560,6 +560,7 @@ export default function TrainingScreen() {
           isVisible={showTargetPractice}
           targetVerse={currentScripture.text}
           reference={currentScripture.reference}
+          scriptureId={currentScripture.id}
           intelText={
             generatedIntel
               ? `Battle Plan: ${generatedIntel.battlePlan}. Tactical Notes: ${generatedIntel.tacticalNotes}`
