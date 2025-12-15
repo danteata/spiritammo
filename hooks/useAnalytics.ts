@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react'
-import { useFocusEffect } from 'expo-router'
+import { useFocusEffect } from '@react-navigation/native'
 import { analytics, AnalyticsEvents, AnalyticsEventType } from '@/services/analytics'
 import { useAppStore } from './useAppStore'
 
@@ -128,6 +128,75 @@ export const useAnalytics = () => {
         performanceTimer.end(operationName, additionalProps)
     }, [performanceTimer])
 
+    // Equipment & Arsenal Analytics
+    const trackArsenalOpened = useCallback((properties?: Record<string, any>) => {
+        analytics.track(AnalyticsEvents.arsenalOpened(properties))
+    }, [])
+
+    const trackEquipmentItemViewed = useCallback((properties: { item_id: string; item_name: string; category: string; equipped?: boolean }) => {
+        analytics.track(AnalyticsEvents.equipmentItemViewed(properties))
+    }, [])
+
+    const trackEquipmentSlotChanged = useCallback((properties: { slot: string; old_item_id?: string; new_item_id: string; item_name: string }) => {
+        analytics.track(AnalyticsEvents.equipmentSlotChanged(properties))
+    }, [])
+
+    const trackArsenalTabSwitched = useCallback((fromTab: string, toTab: string, properties?: Record<string, any>) => {
+        analytics.track(AnalyticsEvents.arsenalTabSwitched({ from_tab: fromTab, to_tab: toTab, ...properties }))
+    }, [])
+
+    // Training & Campaign Analytics
+    const trackTrainingModeChanged = useCallback((oldMode: string, newMode: string, properties?: Record<string, any>) => {
+        analytics.track(AnalyticsEvents.trainingModeChanged({ old_mode: oldMode, new_mode: newMode, ...properties }))
+    }, [])
+
+    const trackStealthDrillSelected = useCallback((properties?: Record<string, any>) => {
+        analytics.track(AnalyticsEvents.stealthDrillSelected(properties))
+    }, [])
+
+    const trackTargetPracticeSelected = useCallback((properties?: Record<string, any>) => {
+        analytics.track(AnalyticsEvents.targetPracticeSelected(properties))
+    }, [])
+
+    // Content Management Analytics
+    const trackChapterSelected = useCallback((properties: { chapter_id: string; collection_id: string; verse_count?: number }) => {
+        analytics.track(AnalyticsEvents.chapterSelected(properties))
+    }, [])
+
+    const trackScriptureViewed = useCallback((properties: { scripture_id: string; reference: string; context?: string }) => {
+        analytics.track(AnalyticsEvents.scriptureViewed(properties))
+    }, [])
+
+    const trackIntelGenerated = useCallback((properties: { scripture_id: string; intel_type: string; success: boolean }) => {
+        analytics.track(AnalyticsEvents.intelGenerated(properties))
+    }, [])
+
+    const trackFileUploaded = useCallback((properties: { file_type: string; file_size: number; verse_count?: number }) => {
+        analytics.track(AnalyticsEvents.fileUploaded(properties))
+    }, [])
+
+    // Session & App Lifecycle Analytics
+    const trackSessionStart = useCallback((properties: { session_id: string; platform: string; version: string }) => {
+        analytics.track(AnalyticsEvents.sessionStart(properties))
+    }, [])
+
+    const trackSessionEnd = useCallback((properties: { session_id: string; duration_ms: number }) => {
+        analytics.track(AnalyticsEvents.sessionEnd(properties))
+    }, [])
+
+    // Social & Squad Features Analytics
+    const trackSquadChallengeCreated = useCallback((properties: { challenge_id: string; challenge_type: string; participant_count: number }) => {
+        analytics.track(AnalyticsEvents.squadChallengeCreated(properties))
+    }, [])
+
+    const trackSquadInvitationSent = useCallback((properties: { invitation_type: string; recipient_count: number }) => {
+        analytics.track(AnalyticsEvents.squadInvitationSent(properties))
+    }, [])
+
+    const trackSquadChallengeCompleted = useCallback((properties: { challenge_id: string; success: boolean; participant_count: number }) => {
+        analytics.track(AnalyticsEvents.squadChallengeCompleted(properties))
+    }, [])
+
     return {
         // Event tracking
         trackEvent,
@@ -143,6 +212,32 @@ export const useAnalytics = () => {
         trackTiming,
         trackPurchase,
         trackAchievement,
+
+        // Training & Campaign tracking
+        trainingModeChanged: trackTrainingModeChanged,
+        stealthDrillSelected: trackStealthDrillSelected,
+        targetPracticeSelected: trackTargetPracticeSelected,
+
+        // Content Management tracking
+        chapterSelected: trackChapterSelected,
+        scriptureViewed: trackScriptureViewed,
+        intelGenerated: trackIntelGenerated,
+        fileUploaded: trackFileUploaded,
+
+        // Session & App Lifecycle tracking
+        sessionStart: trackSessionStart,
+        sessionEnd: trackSessionEnd,
+
+        // Social & Squad Features tracking
+        squadChallengeCreated: trackSquadChallengeCreated,
+        squadInvitationSent: trackSquadInvitationSent,
+        squadChallengeCompleted: trackSquadChallengeCompleted,
+
+        // Equipment & Arsenal tracking
+        arsenalOpened: trackArsenalOpened,
+        equipmentItemViewed: trackEquipmentItemViewed,
+        equipmentSlotChanged: trackEquipmentSlotChanged,
+        arsenalTabSwitched: trackArsenalTabSwitched,
 
         // Performance tracking
         startPerformanceTimer,

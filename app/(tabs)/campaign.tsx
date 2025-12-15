@@ -26,7 +26,8 @@ import { Scripture } from '@/types/scripture'
 import useZustandStore from '@/hooks/zustandStore'
 import { errorHandler } from '@/services/errorHandler'
 import { AccessDeniedModal } from '@/components/AccessDeniedModal'
-import { analytics } from '@/services/analytics'
+import { analytics, AnalyticsEvents, AnalyticsEventType } from '@/services/analytics'
+import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import ValorPointsService from '@/services/valorPoints'
 
 export default function CampaignScreen() {
@@ -38,10 +39,15 @@ export default function CampaignScreen() {
         scriptures,
         updateScriptureAccuracy,
         isDark,
-        theme
+        theme,
+        userStats
     } = useAppStore()
 
     const params = useLocalSearchParams()
+    const { trackEvent, trackCampaignStart, trackCampaignComplete, trackPracticeStart, trackPracticeComplete, trainingModeChanged, stealthDrillSelected, targetPracticeSelected } = useAnalytics()
+
+    // Track screen view
+    useScreenTracking('campaign')
 
     const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(null)
     const [selectedNode, setSelectedNode] = useState<CampaignNode | null>(null)
@@ -73,12 +79,15 @@ export default function CampaignScreen() {
     const handleStartCampaign = (campaignId: string) => {
         const campaign = campaigns.find(c => c.id === campaignId)
         analytics.track({
-            name: 'campaign_started',
+            name: AnalyticsEventType.CAMPAIGN_START,
             properties: {
                 campaign_id: campaignId,
                 campaign_name: campaign?.title,
                 campaign_difficulty: campaign?.difficulty,
-                campaign_theme: campaign?.theme
+                campaign_theme: campaign?.theme,
+                total_nodes: campaign?.nodes.length,
+                user_rank: userStats.rank,
+                user_streak: userStats.streak
             }
         })
         startCampaign(campaignId)
@@ -175,9 +184,11 @@ export default function CampaignScreen() {
                     !activeCampaign ? (
                         <TouchableOpacity
                             style={styles.modeToggle}
-                            onPress={() => setCampaignMode(
-                                campaignMode === 'campaign' ? 'collection' : 'campaign'
-                            )}
+                            onPress={() => {
+                                const newMode = campaignMode === 'campaign' ? 'collection' : 'campaign'
+                                trainingModeChanged(campaignMode, newMode, { context: 'campaign_screen_toggle' })
+                                setCampaignMode(newMode)
+                            }}
                         >
                             <FontAwesome5
                                 name={campaignMode === 'campaign' ? 'book' : 'map'}

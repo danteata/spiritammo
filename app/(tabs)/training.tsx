@@ -39,7 +39,8 @@ import { militaryRankingService } from '@/services/militaryRanking'
 import { errorHandler } from '@/services/errorHandler'
 import StreakChallenge from '@/components/StreakChallenge'
 import CollectionAssault from '@/components/CollectionAssault'
-import { analytics, Analytics } from '@/services/analytics'
+import { analytics, AnalyticsEvents, Analytics, AnalyticsEventType } from '@/services/analytics'
+import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 
 interface AssaultResult {
   scriptureId: string
@@ -64,6 +65,9 @@ export default function TrainingScreen() {
     theme,
     gradients,
   } = useAppStore()
+
+  // Track screen view
+  useScreenTracking('training')
 
   const [selectedCollection, setSelectedCollection] =
     useState<Collection | null>(null)
@@ -147,6 +151,17 @@ export default function TrainingScreen() {
       collection_id: collection.id,
       collection_name: collection.name,
       scripture_count: scriptures.length
+    })
+
+    // Track collection selected event
+    analytics.track({
+      name: Analytics.Events.COLLECTION_SELECTED,
+      properties: {
+        collection_id: collection.id,
+        collection_name: collection.name,
+        scripture_count: scriptures.length,
+        context: 'training_screen'
+      }
     })
 
     if (scriptures.length > 0) {
@@ -261,6 +276,8 @@ export default function TrainingScreen() {
     if (currentScripture) {
       try {
         setIsLoadingIntel(true)
+        const startTime = Date.now()
+
         const intel = await generateAndStoreIntel(currentScripture, force)
         if (intel) {
           console.log('Generated battle intel:', intel.battlePlan)
@@ -270,12 +287,36 @@ export default function TrainingScreen() {
           const mnemonicText = `${intel.battlePlan}\n---\n${intel.tacticalNotes}`;
           await updateScriptureMnemonic(currentScripture.id, mnemonicText);
 
+          // Track intel generation success
+          analytics.track({
+            name: Analytics.Events.INTEL_GENERATED,
+            properties: {
+              scripture_id: currentScripture.id,
+              intel_type: 'battle_plan',
+              success: true,
+              generation_time_ms: Date.now() - startTime,
+              scripture_reference: currentScripture.reference
+            }
+          })
+
           errorHandler.showSuccess(
             'Battle intelligence deployed successfully! Tactical advantage secured.',
             'Intel Acquired'
           )
         }
-      } catch (error) {
+      } catch (error: any) {
+        // Track intel generation failure
+        analytics.track({
+          name: Analytics.Events.INTEL_GENERATED,
+          properties: {
+            scripture_id: currentScripture?.id,
+            intel_type: 'battle_plan',
+            success: false,
+            error_message: error.message,
+            scripture_reference: currentScripture?.reference
+          }
+        })
+
         await errorHandler.handleError(
           error,
           'Generate Intel',
@@ -434,7 +475,20 @@ export default function TrainingScreen() {
                     shadowColor: theme.accent
                   }],
                 ]}
-                onPress={() => setTrainingMode(mode)}
+                onPress={() => {
+                  // Track training mode change
+                  analytics.track({
+                    name: AnalyticsEventType.TRAINING_MODE_CHANGED,
+                    properties: {
+                      old_mode: trainingMode,
+                      new_mode: mode,
+                      context: 'training_screen',
+                      collection_id: selectedCollection?.id,
+                      collection_size: selectedCollection?.scriptures.length
+                    }
+                  })
+                  setTrainingMode(mode)
+                }}
                 accessibilityRole="button"
                 accessibilityLabel={`Select ${mode} mode`}
               >

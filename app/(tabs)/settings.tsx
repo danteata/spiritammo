@@ -9,21 +9,56 @@ import ScreenHeader from '@/components/ScreenHeader'
 
 import { useAuth } from '@clerk/clerk-expo'
 import { useRouter } from 'expo-router'
+import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
+import { AnalyticsEventType } from '@/services/analytics'
 
 export default function SettingsScreen() {
   const { isDark, setTheme, setThemeColor, themeColor, userSettings, saveUserSettings, theme } = useAppStore()
+  const { trackEvent } = useAnalytics()
   const [showNameModal, setShowNameModal] = useState(false)
   const [tempName, setTempName] = useState('')
   const styles = getStyles(theme)
 
+  // Track screen view
+  useScreenTracking('settings')
+
   const handleThemeChange = (value: boolean) => {
-    setTheme(value ? 'dark' : 'light')
+    const oldTheme = isDark ? 'dark' : 'light'
+    const newTheme = value ? 'dark' : 'light'
+    setTheme(newTheme)
+
+    // Track theme change
+    trackEvent(AnalyticsEventType.SETTING_CHANGED, {
+      setting_name: 'theme',
+      old_value: oldTheme,
+      new_value: newTheme
+    })
+  }
+
+  const handleThemeColorChange = (color: string) => {
+    const oldColor = themeColor
+    setThemeColor(color as any) // Type assertion since we know it's valid
+
+    // Track theme color change
+    trackEvent(AnalyticsEventType.SETTING_CHANGED, {
+      setting_name: 'theme_color',
+      old_value: oldColor,
+      new_value: color
+    })
   }
 
   const handleVoiceEngineChange = (engine: 'whisper' | 'native') => {
+    const oldEngine = userSettings.voiceEngine
     saveUserSettings({
       ...userSettings,
       voiceEngine: engine,
+    })
+
+    // Track voice engine change
+    trackEvent(AnalyticsEventType.VOICE_SETTINGS_CHANGED, {
+      setting: 'voice_engine',
+      old_value: oldEngine,
+      new_value: engine
     })
   }
 

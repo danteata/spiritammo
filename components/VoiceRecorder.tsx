@@ -16,6 +16,8 @@ import { AccuracyBadge } from './ui/AccuracyBadge';
 import { calculateTextAccuracy } from '@/utils/accuracyCalculator';
 import VoiceRecordingService from '@/services/voiceRecording';
 import VoicePlaybackService from '@/services/voicePlayback';
+import { useAnalytics } from '@/hooks/useAnalytics';
+import { AnalyticsEventType } from '@/services/analytics';
 
 interface VoiceRecorderProps {
   scriptureText: string;
@@ -27,6 +29,7 @@ interface VoiceRecorderProps {
 
 export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef, intelText, onRecordingComplete }: VoiceRecorderProps) {
   const { isDark, userSettings } = useAppStore();
+  const { trackEvent, trackVoiceRecordingStart, trackVoiceRecordingComplete, trackError } = useAnalytics();
 
   // Audio recording hook for mobile fallback
   const {
@@ -98,18 +101,41 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
         setIsInitializing(true);
         setStatusMessage('Initializing services...');
 
+        // Track initialization start
+        trackEvent(AnalyticsEventType.WHISPER_MODEL_LOADED, {
+          model_version: 'whisper',
+          load_time: 0,
+          success: false
+        });
+
         // Initialize voice recording service
         await VoiceRecordingService.initialize();
 
         // Initialize Whisper
+        const startTime = Date.now();
         await whisperService.init();
+        const loadTime = Date.now() - startTime;
         console.log('Whisper initialized');
         setWhisperReady(true);
+
+        // Track successful initialization
+        trackEvent(AnalyticsEventType.WHISPER_MODEL_LOADED, {
+          model_version: 'whisper',
+          load_time: loadTime,
+          success: true
+        });
 
         setStatusMessage('Ready to record');
       } catch (error) {
         console.error('Failed to init services:', error);
         setStatusMessage('Service initialization failed');
+
+        // Track initialization failure
+        trackError(error as Error, 'VoiceRecorder', {
+          context: 'service_initialization',
+          service: 'whisper'
+        });
+
         // Fallback handled by status effect
       } finally {
         setIsInitializing(false);
@@ -144,6 +170,13 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
   // Speak the intel text
   const speakIntel = async () => {
     try {
+      // Track TTS usage
+      trackEvent(AnalyticsEventType.TTS_VOICE_CHANGED, {
+        old_voice: 'none',
+        new_voice: userSettings.language || 'en-US',
+        language: userSettings.language || 'en-US'
+      });
+
       // Stop any existing speech
       await Speech.stop();
 
@@ -156,16 +189,43 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
         language: userSettings.language || 'en-US',
         onStart: () => {
           setStatusMessage('Reading intel...');
+
+          // Track TTS playback start
+          trackEvent(AnalyticsEventType.VOICE_PLAYBACK_START, {
+            recording_id: 'tts_intel',
+            playback_type: 'tts',
+            text_length: textToSpeak.length
+          });
         },
         onDone: () => {
           setStatusMessage('Ready to record');
+
+          // Track TTS playback complete
+          trackEvent(AnalyticsEventType.VOICE_PLAYBACK_COMPLETE, {
+            recording_id: 'tts_intel',
+            playback_type: 'tts',
+            duration: 0 // Would need to calculate actual duration
+          });
         },
         onError: (error) => {
           console.error('Speech error:', error);
+
+          // Track TTS error
+          trackError(new Error('TTS playback failed'), 'VoiceRecorder', {
+            context: 'tts_playback',
+            error_type: 'speech_error',
+            text: textToSpeak.substring(0, 100) // Limit text length for privacy
+          });
         }
       });
     } catch (error) {
       console.error('Failed to speak intel:', error);
+
+      // Track TTS initialization error
+      trackError(error as Error, 'VoiceRecorder', {
+        context: 'tts_initialization',
+        error_type: 'speech_initialization_error'
+      });
     }
   };  // Start recording
   const startRecording = async () => {
@@ -264,6 +324,8 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
       setStatusMessage('Transcribing...');
       console.log('🎙️ VoiceRecorder: Processing audio with Whisper:', audioResult.uri);
 
+      const transcriptionStartTime = Date.now();
+
       try {
         const result = await whisperService.transcribeFromFile(audioResult.uri);
         console.log('🎙️ VoiceRecorder: Whisper result:', result);
@@ -274,6 +336,18 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
           console.log('🎙️ VoiceRecorder: Calculated accuracy from Whisper:', calculatedAccuracy);
           setAccuracy(calculatedAccuracy);
           setShowAccuracy(true);
+
+          const transcriptionDuration = Date.now() - transcriptionStartTime;
+
+          // Track successful recording completion
+          trackVoiceRecordingComplete({
+            scripture_id: scriptureId,
+            recording_type: 'whisper',
+            accuracy: calculatedAccuracy,
+            duration: audioResult.duration || 0,
+            transcription_time: transcriptionDuration,
+            auto_saved: calculatedAccuracy >= 90
+          });
 
           // Auto-save high-accuracy recordings
           if (calculatedAccuracy >= 90) {
@@ -289,10 +363,25 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
               if (savedRecording) {
                 setStatusMessage(`Recording saved! ${calculatedAccuracy}% accuracy`);
                 console.log('🎙️ Voice recording auto-saved:', savedRecording);
+
+                // Track recording saved
+                trackEvent(AnalyticsEventType.VERSE_ADDED_TO_COLLECTION, {
+                  verse_id: scriptureId || 'temp_scripture_id',
+                  collection_id: 'voice_recordings',
+                  reference: scriptureRef || scriptureText.substring(0, 50) + '...',
+                  accuracy: calculatedAccuracy
+                });
               }
             } catch (saveError) {
               console.error('Failed to save voice recording:', saveError);
               // Don't block the main flow if saving fails
+
+              // Track save error
+              trackError(saveError as Error, 'VoiceRecorder', {
+                context: 'recording_save',
+                error_type: 'save_failure',
+                scripture_id: scriptureId
+              });
             }
           }
 
@@ -301,14 +390,34 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
         } else {
           console.warn('No transcription received from whisper service');
           setStatusMessage('Transcription failed');
+
+          // Track transcription failure
+          trackError(new Error('No transcription received'), 'VoiceRecorder', {
+            context: 'whisper_transcription',
+            error_type: 'empty_result',
+            service: 'whisper'
+          });
         }
       } catch (err) {
         console.error('Whisper transcription failed:', err);
         setStatusMessage('Transcription error');
+
+        // Track transcription error
+        trackError(err as Error, 'VoiceRecorder', {
+          context: 'whisper_transcription',
+          error_type: 'transcription_error',
+          service: 'whisper'
+        });
       }
     } catch (error) {
       console.error('Error processing audio recording:', error);
       setStatusMessage('Error processing audio');
+
+      // Track audio processing error
+      trackError(error as Error, 'VoiceRecorder', {
+        context: 'audio_processing',
+        error_type: 'processing_error'
+      });
     }
   };
 
@@ -325,6 +434,17 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
           console.log('🎙️ VoiceRecorder: Calculated accuracy:', calculatedAccuracy);
           setAccuracy(calculatedAccuracy);
           setShowAccuracy(true);
+
+          // Track native speech recognition completion
+          trackVoiceRecordingComplete({
+            scripture_id: scriptureId,
+            recording_type: 'native_speech',
+            accuracy: calculatedAccuracy,
+            duration: 0, // Would need to track actual duration
+            transcription_time: 0,
+            auto_saved: false
+          });
+
           console.log('🎙️ VoiceRecorder: Calling onRecordingComplete with accuracy:', calculatedAccuracy);
           onRecordingComplete(calculatedAccuracy);
           return;
@@ -337,10 +457,27 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
       setAccuracy(calculatedAccuracy);
       setShowAccuracy(true);
 
+      // Track fallback recording completion
+      trackVoiceRecordingComplete({
+        scripture_id: scriptureId,
+        recording_type: 'web_speech_fallback',
+        accuracy: calculatedAccuracy,
+        duration: 0, // Would need to track actual duration
+        transcription_time: 0,
+        auto_saved: false
+      });
+
       console.log('🎙️ VoiceRecorder: Calling onRecordingComplete with accuracy:', calculatedAccuracy);
       onRecordingComplete(calculatedAccuracy);
     } catch (error) {
       console.error('Error processing transcript:', error);
+
+      // Track transcript processing error
+      trackError(error as Error, 'VoiceRecorder', {
+        context: 'transcript_processing',
+        error_type: 'processing_error',
+        transcript_length: finalTranscript?.length || 0
+      });
     }
   };
 

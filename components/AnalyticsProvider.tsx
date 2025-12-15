@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react'
-import { AppState, AppStateStatus } from 'react-native'
-import { analytics, AnalyticsEventType } from '@/services/analytics'
+import { AppState, AppStateStatus, Platform } from 'react-native'
+import { analytics, Analytics, AnalyticsEventType } from '@/services/analytics'
 import * as Linking from 'expo-linking'
+import Constants from 'expo-constants'
 
 interface AnalyticsContextType {
     isInitialized: boolean
     trackDeepLink: (url: string) => void
+    sessionId: string | null
 }
 
 const AnalyticsContext = createContext<AnalyticsContextType | null>(null)
@@ -17,14 +19,33 @@ interface AnalyticsProviderProps {
 export const AnalyticsProvider: React.FC<AnalyticsProviderProps> = ({ children }) => {
     const [isInitialized, setIsInitialized] = useState(false)
     const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState)
+    const [sessionId, setSessionId] = useState<string | null>(null)
+    const [sessionStartTime, setSessionStartTime] = useState<number | null>(null)
 
     // Initialize analytics on mount
     useEffect(() => {
         const initializeAnalytics = async () => {
             try {
-                await analytics.initialize()
+                await Analytics.initialize()
+
+                // Generate session ID and track session start
+                const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 4)}`
+                setSessionId(newSessionId)
+                setSessionStartTime(Date.now())
+
+                // Track session start
+                analytics.track({
+                    name: AnalyticsEventType.SESSION_START,
+                    properties: {
+                        session_id: newSessionId,
+                        platform: Platform.OS,
+                        app_version: '1.0.0', // Hardcode for now, can be updated later
+                        timestamp: new Date().toISOString()
+                    }
+                })
+
                 setIsInitialized(true)
-                console.log('🎯 AnalyticsProvider: Analytics initialized successfully')
+                console.log('🎯 AnalyticsProvider: Analytics initialized successfully with session:', newSessionId)
             } catch (error) {
                 console.error('Failed to initialize analytics:', error)
             }
@@ -45,6 +66,19 @@ export const AnalyticsProvider: React.FC<AnalyticsProviderProps> = ({ children }
                     }
                 })
             } else if (appState === 'active' && nextAppState.match(/inactive|background/)) {
+                // App went to background - track session end
+                if (sessionStartTime && sessionId) {
+                    const sessionDuration = Date.now() - sessionStartTime
+                    analytics.track({
+                        name: AnalyticsEventType.SESSION_END,
+                        properties: {
+                            session_id: sessionId,
+                            duration_ms: sessionDuration,
+                            timestamp: new Date().toISOString()
+                        }
+                    })
+                }
+
                 // App went to background
                 analytics.track({
                     name: AnalyticsEventType.APP_BACKGROUND,
@@ -61,7 +95,7 @@ export const AnalyticsProvider: React.FC<AnalyticsProviderProps> = ({ children }
         return () => {
             subscription?.remove()
         }
-    }, [appState])
+    }, [appState, sessionStartTime, sessionId])
 
     // Track deep links
     useEffect(() => {
@@ -102,7 +136,8 @@ export const AnalyticsProvider: React.FC<AnalyticsProviderProps> = ({ children }
 
     const contextValue: AnalyticsContextType = {
         isInitialized,
-        trackDeepLink
+        trackDeepLink,
+        sessionId
     }
 
     return (

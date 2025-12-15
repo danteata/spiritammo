@@ -27,6 +27,7 @@ import { useRouter } from 'expo-router'
 
 import CreateOperationModal from '@/components/CreateOperationModal'
 import * as Linking from 'expo-linking'
+import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 
 const { width } = Dimensions.get('window')
 
@@ -36,6 +37,10 @@ export default function SquadScreen() {
     const { isSignedIn, isLoaded } = useAuth()
     const { user } = useUser()
     const router = useRouter()
+    const { trackEvent, trackTabSwitch } = useAnalytics()
+
+    // Track screen view
+    useScreenTracking('squad')
 
     const [activeTab, setActiveTab] = useState<'squad' | 'leaderboard'>('squad')
 
@@ -195,7 +200,10 @@ export default function SquadScreen() {
                                 borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
                             }
                         ]}
-                        onPress={() => setActiveTab('squad')}
+                        onPress={() => {
+                            trackTabSwitch(activeTab, 'squad')
+                            setActiveTab('squad')
+                        }}
                     >
                         <ThemedText
                             variant="caption"
@@ -216,7 +224,10 @@ export default function SquadScreen() {
                                 borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
                             }
                         ]}
-                        onPress={() => setActiveTab('leaderboard')}
+                        onPress={() => {
+                            trackTabSwitch(activeTab, 'leaderboard')
+                            setActiveTab('leaderboard')
+                        }}
                     >
                         <ThemedText
                             variant="caption"

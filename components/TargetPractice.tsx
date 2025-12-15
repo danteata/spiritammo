@@ -13,8 +13,8 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { BlurView } from 'expo-blur'
-import { FontAwesome, Feather, Ionicons } from '@expo/vector-icons';
-import * as Speech from 'expo-speech';
+import { FontAwesome, Feather, Ionicons } from '@expo/vector-icons'
+import * as Speech from 'expo-speech'
 import {
   MILITARY_TYPOGRAPHY,
   ACCURACY_COLORS,
@@ -30,6 +30,8 @@ import { useAudioRecording, AudioRecordingResult } from '@/services/audioRecordi
 import { calculateTextAccuracy } from '@/utils/accuracyCalculator'
 import whisperService from '@/services/whisper'
 import VoicePlaybackService from '@/services/voicePlayback'
+import { useAnalytics } from '@/hooks/useAnalytics'
+import { AnalyticsEventType } from '@/services/analytics'
 
 interface TargetPracticeProps {
   onRecordingComplete: (transcript: string, accuracy: number) => void
@@ -65,8 +67,8 @@ export default function TargetPractice({
   onClose,
 }: TargetPracticeProps) {
   const { theme, isDark } = useAppStore()
-
   const { userSettings } = useAppStore()
+  const { trackEvent, trackError, trackVoiceRecordingStart, trackVoiceRecordingComplete } = useAnalytics()
 
   const [shotResults, setShotResults] = useState<ShotResult[]>([])
   const [currentAccuracy, setCurrentAccuracy] = useState(0)
@@ -127,17 +129,48 @@ export default function TargetPractice({
   const targetAnimation = useRef(new Animated.Value(1)).current
   const shakeAnimation = useRef(new Animated.Value(0)).current
 
+  // Track target practice start
+  useEffect(() => {
+    if (isVisible) {
+      trackEvent(AnalyticsEventType.TARGET_PRACTICE_START, {
+        scripture_id: scriptureId,
+        reference: reference,
+        verse_length: targetVerse.length
+      })
+    }
+  }, [isVisible])
+
   // Initialize Whisper and check availability
   useEffect(() => {
     const init = async () => {
       try {
         setIsInitializing(true)
         setStatusMessage('Initializing Whisper model...')
+
+        // Track Whisper initialization
+        const startTime = Date.now()
         await whisperService.init()
+        const loadTime = Date.now() - startTime
+
+        trackEvent(AnalyticsEventType.WHISPER_MODEL_LOADED, {
+          model_version: 'whisper',
+          load_time: loadTime,
+          success: true,
+          context: 'target_practice'
+        })
+
         console.log('Whisper initialized')
         setWhisperReady(true)
       } catch (error) {
         console.error('Failed to init whisper:', error)
+
+        // Track initialization failure
+        trackError(error as Error, 'TargetPractice', {
+          context: 'whisper_initialization',
+          error_type: 'whisper_init_failed',
+          component: 'target_practice'
+        })
+
         // Fallback handled by status effect
       } finally {
         setIsInitializing(false)
@@ -181,6 +214,14 @@ export default function TargetPractice({
   // Speak the intel text
   const speakIntel = async () => {
     try {
+      // Track TTS usage
+      trackEvent(AnalyticsEventType.TTS_VOICE_CHANGED, {
+        old_voice: 'none',
+        new_voice: userSettings.language || 'en-US',
+        language: userSettings.language || 'en-US',
+        context: 'target_practice_intel'
+      })
+
       // Stop any existing speech
       await VoicePlaybackService.stopPlayback()
 
@@ -193,16 +234,47 @@ export default function TargetPractice({
         language: userSettings.language || 'en-US',
         onStart: () => {
           setStatusMessage('Reading intel...')
+
+          // Track TTS playback start
+          trackEvent(AnalyticsEventType.VOICE_PLAYBACK_START, {
+            recording_id: 'tts_intel',
+            playback_type: 'tts',
+            text_length: textToSpeak.length,
+            context: 'target_practice'
+          })
         },
         onDone: () => {
           setStatusMessage('Ready to record')
+
+          // Track TTS playback complete
+          trackEvent(AnalyticsEventType.VOICE_PLAYBACK_COMPLETE, {
+            recording_id: 'tts_intel',
+            playback_type: 'tts',
+            duration: 0, // Would need to calculate actual duration
+            context: 'target_practice'
+          })
         },
         onError: (error) => {
           console.error('Speech error:', error)
+
+          // Track TTS error
+          trackError(new Error('TTS playback failed'), 'TargetPractice', {
+            context: 'tts_playback',
+            error_type: 'speech_error',
+            text: textToSpeak.substring(0, 100), // Limit text length for privacy
+            component: 'target_practice'
+          })
         }
       })
     } catch (error) {
       console.error('Failed to speak intel:', error)
+
+      // Track TTS initialization error
+      trackError(error as Error, 'TargetPractice', {
+        context: 'tts_initialization',
+        error_type: 'speech_initialization_error',
+        context: 'target_practice'
+      })
     }
   }
 
@@ -220,6 +292,18 @@ export default function TargetPractice({
       console.log('🎤 VoiceRecorder: userSettings.voiceEngine:', userSettings.voiceEngine)
       console.log('🎤 VoiceRecorder: whisperReady:', whisperReady)
 
+      // Track recording start
+      const recordingStartTime = Date.now()
+      const recordingType = whisperReady && userSettings.voiceEngine === 'whisper' ? 'whisper' : 'native'
+
+      trackVoiceRecordingStart({
+        scripture_id: scriptureId,
+        recording_type: recordingType,
+        voice_engine: userSettings.voiceEngine,
+        platform: Platform.OS,
+        context: 'target_practice'
+      })
+
       if (whisperReady && userSettings.voiceEngine === 'whisper') {
         try {
           console.log('🎤 Starting Whisper recording...')
@@ -234,6 +318,15 @@ export default function TargetPractice({
           }
         } catch (error) {
           console.error('Whisper recording failed, falling back to native:', error)
+
+          // Track Whisper fallback
+          trackError(error as Error, 'TargetPractice', {
+            context: 'whisper_recording',
+            fallback_to: 'native',
+            error_type: 'whisper_failure',
+            component: 'target_practice'
+          })
+
           // Fallback to native if Whisper fails
           // 2. Fallback to Native Speech Recognition
           if (isAvailable) {
@@ -268,8 +361,23 @@ export default function TargetPractice({
 
       // If we get here, no recording method is available
       console.error('No recording method available on this platform')
+
+      // Track recording failure
+      trackError(new Error('No recording method available'), 'TargetPractice', {
+        context: 'recording_start',
+        error_type: 'no_recording_method',
+        platform: Platform.OS,
+        context: 'target_practice'
+      })
     } catch (error) {
       console.error('Error starting recording:', error)
+
+      // Track recording start error
+      trackError(error as Error, 'TargetPractice', {
+        context: 'recording_start',
+        error_type: 'recording_initialization_error',
+        context: 'target_practice'
+      })
     }
   }
 
@@ -294,6 +402,13 @@ export default function TargetPractice({
       }
     } catch (error) {
       console.error('Error stopping recording:', error)
+
+      // Track recording stop error
+      trackError(error as Error, 'TargetPractice', {
+        context: 'recording_stop',
+        error_type: 'recording_stop_error',
+        context: 'target_practice'
+      })
     }
   }
 
@@ -302,6 +417,8 @@ export default function TargetPractice({
     try {
       setStatusMessage('Transcribing...')
       console.log('🎙️ VoiceRecorder: Processing audio with Whisper:', audioResult.uri)
+
+      const transcriptionStartTime = Date.now()
 
       try {
         const result = await whisperService.transcribeFromFile(audioResult.uri)
@@ -313,19 +430,56 @@ export default function TargetPractice({
           console.log('🎙️ VoiceRecorder: Calculated accuracy from Whisper:', calculatedAccuracy)
           setLocalAccuracy(calculatedAccuracy)
           setShowAccuracy(true)
+
+          const transcriptionDuration = Date.now() - transcriptionStartTime
+
+          // Track successful recording completion
+          trackVoiceRecordingComplete({
+            scripture_id: scriptureId,
+            recording_type: 'whisper',
+            accuracy: calculatedAccuracy,
+            duration: audioResult.duration || 0,
+            transcription_time: transcriptionDuration,
+            auto_saved: false,
+            context: 'target_practice'
+          })
+
           console.log('🎙️ VoiceRecorder: Calling onRecordingComplete with accuracy:', calculatedAccuracy)
           onRecordingComplete(result.text, calculatedAccuracy)
         } else {
           console.warn('No transcription received from whisper service')
           setStatusMessage('Transcription failed')
+
+          // Track transcription failure
+          trackError(new Error('No transcription received'), 'TargetPractice', {
+            context: 'whisper_transcription',
+            error_type: 'empty_result',
+            service: 'whisper',
+            context: 'target_practice'
+          })
         }
       } catch (err) {
         console.error('Whisper transcription failed:', err)
         setStatusMessage('Transcription error')
+
+        // Track transcription error
+        trackError(err as Error, 'TargetPractice', {
+          context: 'whisper_transcription',
+          error_type: 'transcription_error',
+          service: 'whisper',
+          context: 'target_practice'
+        })
       }
     } catch (error) {
       console.error('Error processing audio recording:', error)
       setStatusMessage('Error processing audio')
+
+      // Track audio processing error
+      trackError(error as Error, 'TargetPractice', {
+        context: 'audio_processing',
+        error_type: 'processing_error',
+        context: 'target_practice'
+      })
     }
   }
 
@@ -339,10 +493,29 @@ export default function TargetPractice({
       setLocalAccuracy(calculatedAccuracy)
       setShowAccuracy(true)
 
+      // Track native speech recognition completion
+      trackVoiceRecordingComplete({
+        scripture_id: scriptureId,
+        recording_type: 'native_speech',
+        accuracy: calculatedAccuracy,
+        duration: 0, // Would need to track actual duration
+        transcription_time: 0,
+        auto_saved: false,
+        context: 'target_practice'
+      })
+
       console.log('🎙️ VoiceRecorder: Calling onRecordingComplete with accuracy:', calculatedAccuracy)
       onRecordingComplete(finalTranscript, calculatedAccuracy)
     } catch (error) {
       console.error('Error processing transcript:', error)
+
+      // Track transcript processing error
+      trackError(error as Error, 'TargetPractice', {
+        context: 'transcript_processing',
+        error_type: 'processing_error',
+        transcript_length: finalTranscript?.length || 0,
+        context: 'target_practice'
+      })
     }
   }
 
@@ -350,8 +523,22 @@ export default function TargetPractice({
   const toggleRecordingMode = () => {
     if (isRecordingMode) {
       setIsRecordingMode(false)
+
+      // Track recording mode change
+      trackEvent(AnalyticsEventType.TRAINING_MODE_CHANGED, {
+        old_mode: 'recording',
+        new_mode: 'target',
+        context: 'target_practice'
+      })
     } else {
       setIsRecordingMode(true)
+
+      // Track recording mode change
+      trackEvent(AnalyticsEventType.TRAINING_MODE_CHANGED, {
+        old_mode: 'target',
+        new_mode: 'recording',
+        context: 'target_practice'
+      })
     }
   }
 
@@ -384,6 +571,17 @@ export default function TargetPractice({
     }
     setShotResults(prev => [...prev, newResult])
 
+    // Track shot result
+    trackEvent(AnalyticsEventType.PRACTICE_COMPLETE, {
+      accuracy: finalAccuracy,
+      mode: 'target_practice',
+      wind_condition: windCondition,
+      range_distance: rangeDistance,
+      scripture_id: scriptureId,
+      reference: reference,
+      context: 'target_practice'
+    })
+
     // Calculate shot position
     // Target size is 200x200, center is 100,100
     // Accuracy 100 = center (0 deviation)
@@ -407,6 +605,17 @@ export default function TargetPractice({
     }
 
     setShots(prev => [...prev, newShot])
+
+    // Track shot placement
+    trackEvent('target_practice_shot', {
+      shot_id: newShot.id,
+      accuracy: finalAccuracy,
+      is_hit: isHit,
+      x_position: x,
+      y_position: y,
+      wind_condition: windCondition,
+      context: 'target_practice'
+    })
 
     // Animations
     if (isHit) {
@@ -435,9 +644,15 @@ export default function TargetPractice({
 
     // Simulate wind conditions affecting difficulty
     const windConditions = ['calm', 'light', 'strong'] as const
-    setWindCondition(
-      windConditions[Math.floor(Math.random() * windConditions.length)]
-    )
+    const newWindCondition = windConditions[Math.floor(Math.random() * windConditions.length)]
+    setWindCondition(newWindCondition)
+
+    // Track wind condition change
+    trackEvent('wind_condition_changed', {
+      old_condition: windCondition,
+      new_condition: newWindCondition,
+      context: 'target_practice'
+    })
 
 
 
@@ -457,20 +672,61 @@ export default function TargetPractice({
     const playbackScriptureId = scriptureId || reference || 'unknown_scripture'
 
     try {
+      // Track scripture playback
+      trackEvent(AnalyticsEventType.VOICE_PLAYBACK_START, {
+        recording_id: playbackScriptureId,
+        playback_type: 'scripture',
+        scripture_id: scriptureId,
+        reference: reference,
+        context: 'target_practice'
+      })
+
       await VoicePlaybackService.playScripture(playbackScriptureId, targetVerse, {
         rate: userSettings.voiceRate || 0.9,
         pitch: userSettings.voicePitch || 1.0,
         language: userSettings.language || 'en-US',
-        onStart: () => setIsPlaying(true),
-        onDone: () => setIsPlaying(false),
+        onStart: () => {
+          setIsPlaying(true)
+
+          // Track playback start
+          trackEvent(AnalyticsEventType.VOICE_PLAYBACK_START, {
+            recording_id: playbackScriptureId,
+            playback_type: 'scripture',
+            context: 'target_practice'
+          })
+        },
+        onDone: () => {
+          setIsPlaying(false)
+
+          // Track playback completion
+          trackEvent(AnalyticsEventType.VOICE_PLAYBACK_COMPLETE, {
+            recording_id: playbackScriptureId,
+            playback_type: 'scripture',
+            context: 'target_practice'
+          })
+        },
         onError: (error) => {
           console.error('Voice playback error:', error)
           setIsPlaying(false)
+
+          // Track playback error
+          trackError(new Error('Voice playback failed'), 'TargetPractice', {
+            error_type: 'playback_error',
+            scripture_id: scriptureId,
+            context: 'target_practice'
+          })
         }
       })
     } catch (error) {
       console.error('Failed to play scripture:', error)
       setIsPlaying(false)
+
+      // Track scripture playback error
+      trackError(error as Error, 'TargetPractice', {
+        error_type: 'playback_initialization_error',
+        scripture_id: scriptureId,
+        context: 'target_practice'
+      })
     }
   }
 

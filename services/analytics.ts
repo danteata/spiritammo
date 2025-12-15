@@ -140,7 +140,53 @@ export enum AnalyticsEventType {
     WHISPER_MODEL_LOADED = 'whisper_model_loaded',
     VOICE_LIBRARY_OPENED = 'voice_library_opened',
     RECORDING_DELETED = 'recording_deleted',
-    TTS_VOICE_CHANGED = 'tts_voice_changed'
+    TTS_VOICE_CHANGED = 'tts_voice_changed',
+
+    // Content Management
+    VERSE_DELETED = 'verse_deleted',
+    COLLECTION_DELETED = 'collection_deleted',
+    COLLECTION_CREATED = 'collection_created',
+    VERSE_ADDED_TO_COLLECTION = 'verse_added_to_collection',
+    VERSE_REMOVED_FROM_COLLECTION = 'verse_removed_from_collection',
+
+    // Training Mode Selection
+    STEALTH_DRILL_SELECTED = 'stealth_drill_selected',
+    TARGET_PRACTICE_SELECTED = 'target_practice_selected',
+    TRAINING_MODE_CHANGED = 'training_mode_changed',
+
+    // Settings & Preferences (Expanded)
+    NOTIFICATION_SETTINGS_CHANGED = 'notification_settings_changed',
+    PRIVACY_SETTINGS_CHANGED = 'privacy_settings_changed',
+    LANGUAGE_CHANGED = 'language_changed',
+    TRAINING_PREFERENCES_CHANGED = 'training_preferences_changed',
+    VOICE_SETTINGS_CHANGED = 'voice_settings_changed',
+
+    // User Actions
+    SEARCH_INITIATED = 'search_initiated',
+    FILTER_APPLIED = 'filter_applied',
+    SORT_CHANGED = 'sort_changed',
+    BULK_ACTION_PERFORMED = 'bulk_action_performed',
+
+    // Equipment & Arsenal Activities
+    ARSENAL_OPENED = 'arsenal_opened',
+    EQUIPMENT_CATEGORY_VIEWED = 'equipment_category_viewed',
+    EQUIPMENT_ITEM_VIEWED = 'equipment_item_viewed',
+    EQUIPMENT_SLOT_CHANGED = 'equipment_slot_changed',
+    EQUIPMENT_CUSTOMIZATION_OPENED = 'equipment_customization_opened',
+    AVATAR_PREVIEWED = 'avatar_previewed',
+    EQUIPMENT_UNLOCKED = 'equipment_unlocked',
+    EQUIPMENT_UPGRADED = 'equipment_upgraded',
+    ARSENAL_TAB_SWITCHED = 'arsenal_tab_switched',
+    EQUIPMENT_COMPARISON_VIEWED = 'equipment_comparison_viewed',
+
+    // Session & App Lifecycle
+    SESSION_START = 'session_start',
+    SESSION_END = 'session_end',
+
+    // Social & Squad Features
+    SQUAD_CHALLENGE_CREATED = 'squad_challenge_created',
+    SQUAD_INVITATION_SENT = 'squad_invitation_sent',
+    SQUAD_CHALLENGE_COMPLETED = 'squad_challenge_completed'
 }
 
 // Typed event properties interfaces
@@ -247,6 +293,194 @@ export const AnalyticsEvents = {
     // Rank Advancement
     rankAdvanced: (properties: { new_rank: string; old_rank: string } & BaseEventProperties = { new_rank: '', old_rank: '' }) => ({
         name: AnalyticsEventType.RANK_ADVANCED,
+        properties
+    }),
+
+    // Content Management
+    verseDeleted: (properties: { verse_id: string; reference: string; collection_id?: string } & BaseEventProperties = { verse_id: '', reference: '' }) => ({
+        name: AnalyticsEventType.VERSE_DELETED,
+        properties
+    }),
+
+    collectionDeleted: (properties: { collection_id: string; collection_name: string; verse_count: number } & BaseEventProperties = { collection_id: '', collection_name: '', verse_count: 0 }) => ({
+        name: AnalyticsEventType.COLLECTION_DELETED,
+        properties
+    }),
+
+    collectionCreated: (properties: { collection_id: string; collection_name: string; source?: string } & BaseEventProperties = { collection_id: '', collection_name: '' }) => ({
+        name: AnalyticsEventType.COLLECTION_CREATED,
+        properties
+    }),
+
+    verseAddedToCollection: (properties: { verse_id: string; collection_id: string; reference: string } & BaseEventProperties = { verse_id: '', collection_id: '', reference: '' }) => ({
+        name: AnalyticsEventType.VERSE_ADDED_TO_COLLECTION,
+        properties
+    }),
+
+    verseRemovedFromCollection: (properties: { verse_id: string; collection_id: string; reference: string } & BaseEventProperties = { verse_id: '', collection_id: '', reference: '' }) => ({
+        name: AnalyticsEventType.VERSE_REMOVED_FROM_COLLECTION,
+        properties
+    }),
+
+    // Training Mode Selection
+    stealthDrillSelected: (properties: { collection_id?: string; verse_count?: number } & BaseEventProperties = {}) => ({
+        name: AnalyticsEventType.STEALTH_DRILL_SELECTED,
+        properties
+    }),
+
+    targetPracticeSelected: (properties: { collection_id?: string; verse_count?: number } & BaseEventProperties = {}) => ({
+        name: AnalyticsEventType.TARGET_PRACTICE_SELECTED,
+        properties
+    }),
+
+    trainingModeChanged: (properties: { old_mode: string; new_mode: string; context?: string } & BaseEventProperties = { old_mode: '', new_mode: '' }) => ({
+        name: AnalyticsEventType.TRAINING_MODE_CHANGED,
+        properties
+    }),
+
+    // Settings & Preferences (Expanded)
+    notificationSettingsChanged: (properties: { setting: string; enabled: boolean } & BaseEventProperties = { setting: '', enabled: false }) => ({
+        name: AnalyticsEventType.NOTIFICATION_SETTINGS_CHANGED,
+        properties
+    }),
+
+    privacySettingsChanged: (properties: { analytics_enabled?: boolean; data_sharing?: boolean } & BaseEventProperties = {}) => ({
+        name: AnalyticsEventType.PRIVACY_SETTINGS_CHANGED,
+        properties
+    }),
+
+    languageChanged: (properties: { old_language: string; new_language: string } & BaseEventProperties = { old_language: '', new_language: '' }) => ({
+        name: AnalyticsEventType.LANGUAGE_CHANGED,
+        properties
+    }),
+
+    trainingPreferencesChanged: (properties: { preference: string; old_value: any; new_value: any } & BaseEventProperties = { preference: '', old_value: null, new_value: null }) => ({
+        name: AnalyticsEventType.TRAINING_PREFERENCES_CHANGED,
+        properties
+    }),
+
+    voiceSettingsChanged: (properties: { setting: string; old_value: any; new_value: any } & BaseEventProperties = { setting: '', old_value: null, new_value: null }) => ({
+        name: AnalyticsEventType.VOICE_SETTINGS_CHANGED,
+        properties
+    }),
+
+    // User Actions
+    searchInitiated: (properties: { search_term: string; search_type: string; results_count?: number } & BaseEventProperties = { search_term: '', search_type: '' }) => ({
+        name: AnalyticsEventType.SEARCH_INITIATED,
+        properties
+    }),
+
+    filterApplied: (properties: { filter_type: string; filter_value: any; result_count?: number } & BaseEventProperties = { filter_type: '', filter_value: null }) => ({
+        name: AnalyticsEventType.FILTER_APPLIED,
+        properties
+    }),
+
+    sortChanged: (properties: { sort_by: string; sort_order: 'asc' | 'desc' } & BaseEventProperties = { sort_by: '', sort_order: 'asc' }) => ({
+        name: AnalyticsEventType.SORT_CHANGED,
+        properties
+    }),
+
+    bulkActionPerformed: (properties: { action_type: string; item_count: number; affected_items: string[] } & BaseEventProperties = { action_type: '', item_count: 0, affected_items: [] }) => ({
+        name: AnalyticsEventType.BULK_ACTION_PERFORMED,
+        properties
+    }),
+
+    // Equipment & Arsenal Activities
+    arsenalOpened: (properties: BaseEventProperties = {}) => ({
+        name: AnalyticsEventType.ARSENAL_OPENED,
+        properties
+    }),
+
+    equipmentCategoryViewed: (properties: { category: string; item_count?: number } & BaseEventProperties = { category: '' }) => ({
+        name: AnalyticsEventType.EQUIPMENT_CATEGORY_VIEWED,
+        properties
+    }),
+
+    equipmentItemViewed: (properties: { item_id: string; item_name: string; category: string; equipped?: boolean } & BaseEventProperties = { item_id: '', item_name: '', category: '' }) => ({
+        name: AnalyticsEventType.EQUIPMENT_ITEM_VIEWED,
+        properties
+    }),
+
+    equipmentSlotChanged: (properties: { slot: string; old_item_id?: string; new_item_id: string; item_name: string } & BaseEventProperties = { slot: '', new_item_id: '', item_name: '' }) => ({
+        name: AnalyticsEventType.EQUIPMENT_SLOT_CHANGED,
+        properties
+    }),
+
+    equipmentCustomizationOpened: (properties: BaseEventProperties = {}) => ({
+        name: AnalyticsEventType.EQUIPMENT_CUSTOMIZATION_OPENED,
+        properties
+    }),
+
+    avatarPreviewed: (properties: BaseEventProperties = {}) => ({
+        name: AnalyticsEventType.AVATAR_PREVIEWED,
+        properties
+    }),
+
+    equipmentUnlocked: (properties: { item_id: string; item_name: string; category: string; unlock_method?: string } & BaseEventProperties = { item_id: '', item_name: '', category: '' }) => ({
+        name: AnalyticsEventType.EQUIPMENT_UNLOCKED,
+        properties
+    }),
+
+    equipmentUpgraded: (properties: { item_id: string; item_name: string; old_level?: number; new_level: number; upgrade_cost?: number } & BaseEventProperties = { item_id: '', item_name: '', new_level: 0 }) => ({
+        name: AnalyticsEventType.EQUIPMENT_UPGRADED,
+        properties
+    }),
+
+    arsenalTabSwitched: (properties: { from_tab: string; to_tab: string; tab_type?: string } & BaseEventProperties = { from_tab: '', to_tab: '' }) => ({
+        name: AnalyticsEventType.ARSENAL_TAB_SWITCHED,
+        properties
+    }),
+
+    equipmentComparisonViewed: (properties: { item1_id: string; item2_id: string; category: string } & BaseEventProperties = { item1_id: '', item2_id: '', category: '' }) => ({
+        name: AnalyticsEventType.EQUIPMENT_COMPARISON_VIEWED,
+        properties
+    }),
+
+    // Content Management Events
+    chapterSelected: (properties: { chapter_id: string; collection_id: string; verse_count?: number } & BaseEventProperties = { chapter_id: '', collection_id: '' }) => ({
+        name: AnalyticsEventType.CHAPTER_SELECTED,
+        properties
+    }),
+
+    scriptureViewed: (properties: { scripture_id: string; reference: string; context?: string } & BaseEventProperties = { scripture_id: '', reference: '' }) => ({
+        name: AnalyticsEventType.SCRIPTURE_VIEWED,
+        properties
+    }),
+
+    intelGenerated: (properties: { scripture_id: string; intel_type: string; success: boolean } & BaseEventProperties = { scripture_id: '', intel_type: '', success: false }) => ({
+        name: AnalyticsEventType.INTEL_GENERATED,
+        properties
+    }),
+
+    fileUploaded: (properties: { file_type: string; file_size: number; verse_count?: number } & BaseEventProperties = { file_type: '', file_size: 0 }) => ({
+        name: AnalyticsEventType.FILE_UPLOADED,
+        properties
+    }),
+
+    // Session & App Lifecycle Events
+    sessionStart: (properties: { session_id: string; platform: string; version: string } & BaseEventProperties = { session_id: '', platform: '', version: '' }) => ({
+        name: AnalyticsEventType.SESSION_START,
+        properties
+    }),
+
+    sessionEnd: (properties: { session_id: string; duration_ms: number } & BaseEventProperties = { session_id: '', duration_ms: 0 }) => ({
+        name: AnalyticsEventType.SESSION_END,
+        properties
+    }),
+
+    // Social & Squad Features Events
+    squadChallengeCreated: (properties: { challenge_id: string; challenge_type: string; participant_count: number } & BaseEventProperties = { challenge_id: '', challenge_type: '', participant_count: 0 }) => ({
+        name: AnalyticsEventType.SQUAD_CHALLENGE_CREATED,
+        properties
+    }),
+
+    squadInvitationSent: (properties: { invitation_type: string; recipient_count: number } & BaseEventProperties = { invitation_type: '', recipient_count: 0 }) => ({
+        name: AnalyticsEventType.SQUAD_INVITATION_SENT,
+        properties
+    }),
+
+    squadChallengeCompleted: (properties: { challenge_id: string; success: boolean; participant_count: number } & BaseEventProperties = { challenge_id: '', success: false, participant_count: 0 }) => ({
+        name: AnalyticsEventType.SQUAD_CHALLENGE_COMPLETED,
         properties
     })
 }

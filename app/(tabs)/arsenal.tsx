@@ -23,6 +23,7 @@ import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { errorHandler } from '@/services/errorHandler'
 import { getItemById } from '@/constants/avatarItems'
+import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 
 import { CollectionChapterService } from '@/services/collectionChapters'
 
@@ -52,6 +53,10 @@ export default function ArsenalScreen() {
     } = useAppStore()
     const styles = getStyles(theme)
     const router = useRouter()
+    const { trackEvent, arsenalOpened, equipmentItemViewed, equipmentSlotChanged, arsenalTabSwitched } = useAnalytics()
+
+    // Track screen view
+    useScreenTracking('arsenal')
 
     // Main tab state
     const [activeTab, setActiveTab] = useState<ArsenalTab>('equipment')
@@ -59,6 +64,11 @@ export default function ArsenalScreen() {
     // Equipment-specific state
     const [selectedSlot, setSelectedSlot] = useState<EquipmentSlot | null>(null)
     const [isProcessing, setIsProcessing] = useState(false)
+
+    // Track arsenal opened
+    React.useEffect(() => {
+        arsenalOpened({ context: 'main_navigation' })
+    }, [])
 
     // Ammunition-specific state
     const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
