@@ -11,6 +11,8 @@ import StreakChallenge from '@/components/StreakChallenge'
 import SoldierAvatar from '@/components/SoldierAvatar'
 import WelcomeModal from '@/components/WelcomeModal'
 import TutorialOverlay, { TutorialStep } from '@/components/TutorialOverlay'
+import { analytics, Analytics, AnalyticsEventType } from '@/services/analytics'
+import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 
 export default function HomeScreen() {
   const { isLoading, theme, isDark } = useAppStore()
@@ -19,10 +21,28 @@ export default function HomeScreen() {
   const [showTutorial, setShowTutorial] = useState(false)
   const [tutorialStep, setTutorialStep] = useState(0)
   const collectionDrillsRef = useRef(null)
+  const { trackEvent } = useAnalytics()
+
+  // Track screen view
+  useScreenTracking('command_center')
 
   useEffect(() => {
     checkFirstLaunch()
   }, [])
+
+  // Track welcome modal views
+  useEffect(() => {
+    if (showWelcome) {
+      trackEvent(AnalyticsEventType.SCREEN_VIEW, { screen_name: 'welcome_modal' })
+    }
+  }, [showWelcome, trackEvent])
+
+  // Track tutorial interactions
+  useEffect(() => {
+    if (showTutorial) {
+      trackEvent(AnalyticsEventType.SCREEN_VIEW, { screen_name: 'tutorial_overlay', step: tutorialStep })
+    }
+  }, [showTutorial, tutorialStep, trackEvent])
 
   const tutorialSteps: TutorialStep[] = [
     {
@@ -66,7 +86,10 @@ export default function HomeScreen() {
           {/* Primary Mission Cards */}
           <TouchableOpacity
             style={styles.missionCardWrapper}
-            onPress={() => router.push({ pathname: '/(tabs)/campaign', params: { mode: 'campaign' } })}
+            onPress={() => {
+              analytics.trackInteraction('tap', 'mission_card', { mission_type: 'conquest_mode' })
+              router.push({ pathname: '/(tabs)/campaign', params: { mode: 'campaign' } })
+            }}
             activeOpacity={0.9}
           >
             <ThemedCard variant="glass" style={[styles.missionCard, styles.primaryMissionCard]}>
@@ -96,7 +119,10 @@ export default function HomeScreen() {
           <TouchableOpacity
             ref={collectionDrillsRef}
             style={styles.missionCardWrapper}
-            onPress={() => router.push({ pathname: '/(tabs)/campaign', params: { mode: 'collection' } })}
+            onPress={() => {
+              analytics.trackInteraction('tap', 'mission_card', { mission_type: 'collection_drills' })
+              router.push({ pathname: '/(tabs)/campaign', params: { mode: 'collection' } })
+            }}
             activeOpacity={0.9}
           >
             <ThemedCard variant="glass" style={[styles.missionCard, styles.primaryMissionCard]}>

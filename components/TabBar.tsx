@@ -3,6 +3,7 @@ import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '@/hooks/useAppStore';
+import { analytics, Analytics } from '@/services/analytics';
 
 export default function TabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   const { isDark, theme } = useAppStore();
@@ -37,6 +38,16 @@ export default function TabBar({ state, descriptors, navigation }: BottomTabBarP
               });
 
               if (!isFocused && !event.defaultPrevented) {
+                // Track tab switch
+                analytics.track({
+                  name: Analytics.Events.TAB_SWITCH,
+                  properties: {
+                    from_tab: state.routes[state.index]?.name || 'unknown',
+                    to_tab: route.name,
+                    tab_label: label
+                  }
+                })
+
                 // Simple layout animation for the label appearance
                 LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
                 navigation.navigate(route.name, route.params);

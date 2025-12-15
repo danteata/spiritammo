@@ -27,6 +27,7 @@ import { militaryRankingService } from '@/services/militaryRanking'
 import { bibleApiService } from '@/services/bibleApi'
 import { errorHandler } from '@/services/errorHandler'
 import { createAvatarSlice, AvatarSlice } from '@/hooks/stores/createAvatarSlice'
+import { analytics, AnalyticsEvents } from '@/services/analytics'
 
 // Generate a simple UUID for React Native
 function generateUUID(): string {
@@ -434,6 +435,16 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
 
       set({ userStats: updatedStats })
       console.log('📊 Stats updated in state')
+
+      // Track rank advancement if it changed
+      if (updatedStats.rank !== get().userStats.rank) {
+        analytics.track(AnalyticsEvents.rankAdvanced({
+          screen_name: 'practice_session',
+          new_rank: updatedStats.rank,
+          old_rank: get().userStats.rank
+        }))
+      }
+
       return true
     } catch (error) {
       await errorHandler.handleError(

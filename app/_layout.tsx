@@ -11,6 +11,7 @@ import { ClerkProvider, ClerkLoaded } from '@clerk/clerk-expo'
 import { tokenCache } from '@/utils/cache'
 import * as Linking from 'expo-linking'
 import { useZustandStore } from '@/hooks/zustandStore'
+import AnalyticsProvider from '@/components/AnalyticsProvider'
 import "../global.css";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -109,18 +110,20 @@ export default function RootLayout() {
   }, [])
 
   return (
-    <SafeAreaProvider>
-      <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
-        <ClerkLoaded>
-          <QueryClientProvider client={queryClient}>
-            <AppStoreProvider>
-              <GestureHandlerRootView style={{ flex: 1 }}>
-                <BundleInspector><RorkErrorBoundary><RootLayoutNav /></RorkErrorBoundary></BundleInspector>
-              </GestureHandlerRootView>
-            </AppStoreProvider>
-          </QueryClientProvider>
-        </ClerkLoaded>
-      </ClerkProvider>
-    </SafeAreaProvider>
+    <AnalyticsProvider>
+      <SafeAreaProvider>
+        <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
+          <ClerkLoaded>
+            <QueryClientProvider client={queryClient}>
+              <AppStoreProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <BundleInspector><RorkErrorBoundary><RootLayoutNav /></RorkErrorBoundary></BundleInspector>
+                </GestureHandlerRootView>
+              </AppStoreProvider>
+            </QueryClientProvider>
+          </ClerkLoaded>
+        </ClerkProvider>
+      </SafeAreaProvider>
+    </AnalyticsProvider>
   );
 }

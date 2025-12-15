@@ -39,6 +39,7 @@ import { militaryRankingService } from '@/services/militaryRanking'
 import { errorHandler } from '@/services/errorHandler'
 import StreakChallenge from '@/components/StreakChallenge'
 import CollectionAssault from '@/components/CollectionAssault'
+import { analytics, Analytics } from '@/services/analytics'
 
 interface AssaultResult {
   scriptureId: string
@@ -140,6 +141,14 @@ export default function TrainingScreen() {
     setSelectedCollection(collection);
     const scriptures = getScripturesByCollection(collection.id);
     console.log('💯 Found', scriptures.length, 'scriptures in collection');
+
+    // Track collection selection
+    analytics.trackInteraction('select', 'collection', {
+      collection_id: collection.id,
+      collection_name: collection.name,
+      scripture_count: scriptures.length
+    })
+
     if (scriptures.length > 0) {
       // Reset previous accuracy when switching ammunition
       setPreviousAccuracy(0);
@@ -150,10 +159,30 @@ export default function TrainingScreen() {
   }
 
   const handleFireAmmunition = () => {
+    // Track target practice start
+    analytics.track({
+      name: Analytics.Events.PRACTICE_START,
+      properties: {
+        mode: 'target_practice',
+        scripture_id: currentScripture?.id,
+        scripture_reference: currentScripture?.reference,
+        collection: selectedCollection?.name
+      }
+    })
     setShowTargetPractice(true)
   }
 
   const handleStealthDrill = () => {
+    // Track stealth drill start
+    analytics.track({
+      name: Analytics.Events.PRACTICE_START,
+      properties: {
+        mode: 'stealth_drill',
+        scripture_id: currentScripture?.id,
+        scripture_reference: currentScripture?.reference,
+        collection: selectedCollection?.name
+      }
+    })
     setShowStealthDrill(true)
   }
 
@@ -172,11 +201,20 @@ export default function TrainingScreen() {
         lastSessionWordCount: currentScripture.text.split(' ').length,
       })
 
+      // Award Valor Points for stealth drill
+      const { default: ValorPointsService } = await import('@/services/valorPoints')
+      const vpEarned = await ValorPointsService.awardStealthDrillVP(
+        accuracy,
+        'RECRUIT', // Default difficulty for now
+        userStats.streak,
+        userStats.rank
+      )
+
       // Show different completion message for stealth mode
       if (accuracy >= 90) {
         Alert.alert(
           'SHADOW ASSISTANCE COMPLETE',
-          `Silent reconnaissance successful! Accuracy: ${accuracy.toFixed(1)}%`,
+          `Silent reconnaissance successful! Accuracy: ${accuracy.toFixed(1)}%\nValor Points Earned: ${vpEarned} VP`,
           [{ text: 'Hooah!' }]
         )
       } else {
@@ -273,6 +311,22 @@ export default function TrainingScreen() {
       // Record streak progress for practice completion
       const { streakManager } = await import('@/services/streakManager')
       await streakManager.recordPractice()
+
+      // Award Valor Points for successful target practice
+      const { default: ValorPointsService } = await import('@/services/valorPoints')
+      const vpEarned = await ValorPointsService.awardTargetPracticeVP(
+        accuracy,
+        userStats.streak,
+        userStats.rank
+      )
+
+      if (vpEarned > 0) {
+        Alert.alert(
+          'MISSION ACCOMPLISHED',
+          `Accuracy: ${accuracy.toFixed(1)}%\nValor Points Earned: ${vpEarned} VP`,
+          [{ text: 'HOOAH!' }]
+        )
+      }
 
       await loadMilitaryProfile()
       console.log('🎯 Training: handleTargetPracticeComplete completed')

@@ -2,6 +2,7 @@ import createContextHook from '@nkzw/create-context-hook'
 import { useEffect } from 'react'
 import { useTheme } from './useTheme'
 import useZustandStore from './zustandStore'
+import { Analytics } from '@/services/analytics'
 
 // Bridge the existing context-hook API to the zustand store. This preserves the
 // current imports (`AppStoreProvider`, `useAppStore`) while moving state into
@@ -12,7 +13,14 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   // Call initialize on mount
   const initializeAppData = useZustandStore((s) => s.initializeAppData)
   useEffect(() => {
-    initializeAppData()
+    const init = async () => {
+      // Initialize analytics first
+      await Analytics.initialize()
+
+      // Then initialize app data
+      await initializeAppData()
+    }
+    init()
   }, [initializeAppData])
 
   // Selectors: mirror the values previously exposed

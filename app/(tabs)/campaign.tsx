@@ -26,6 +26,8 @@ import { Scripture } from '@/types/scripture'
 import useZustandStore from '@/hooks/zustandStore'
 import { errorHandler } from '@/services/errorHandler'
 import { AccessDeniedModal } from '@/components/AccessDeniedModal'
+import { analytics } from '@/services/analytics'
+import ValorPointsService from '@/services/valorPoints'
 
 export default function CampaignScreen() {
     const {
@@ -69,6 +71,16 @@ export default function CampaignScreen() {
     }, [activeCampaignId, campaigns])
 
     const handleStartCampaign = (campaignId: string) => {
+        const campaign = campaigns.find(c => c.id === campaignId)
+        analytics.track({
+            name: 'campaign_started',
+            properties: {
+                campaign_id: campaignId,
+                campaign_name: campaign?.title,
+                campaign_difficulty: campaign?.difficulty,
+                campaign_theme: campaign?.theme
+            }
+        })
         startCampaign(campaignId)
     }
 
@@ -118,13 +130,20 @@ export default function CampaignScreen() {
 
         // Check pass/fail logic locally for immediate feedback
         if (accuracy >= selectedNode.requiredAccuracy) {
+            // Award Valor Points for successful mission
+            const vpEarned = await ValorPointsService.awardTargetPracticeVP(
+                accuracy,
+                0, // No streak bonus for campaign missions
+                'recruit' // Default rank for now
+            )
+
             // Update Store
             const success = await completeNode(activeCampaign.id, selectedNode.id, accuracy)
 
             if (success) {
                 Alert.alert(
                     'MISSION ACCOMPLISHED',
-                    `Sector Secured! Accuracy: ${accuracy.toFixed(1)}%`,
+                    `Sector Secured! Accuracy: ${accuracy.toFixed(1)}%\nValor Points Earned: ${vpEarned} VP`,
                     [{ text: 'Hooah!' }]
                 )
             } else {

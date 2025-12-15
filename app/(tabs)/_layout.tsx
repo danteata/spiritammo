@@ -8,6 +8,7 @@ import { FontAwesome, Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { COLORS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 import TabBar from '@/components/TabBar';
+import { analytics, Analytics } from '@/services/analytics'
 
 export default function TabLayout() {
   const { isDark } = useAppStore()
