@@ -7,7 +7,6 @@
     "icon": "./assets/images/icon.png",
     "scheme": "spiritammo",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/splash.png",
       "resizeMode": "contain",
@@ -51,10 +50,17 @@
       ],
       "expo-font",
       "./plugins/withAndroidAsset",
-      "./plugins/withJvmTarget"
+      "./plugins/withJvmTarget",
+      "expo-audio",
+      "expo-sqlite",
+      "expo-web-browser",
+      "expo-image",
+      "expo-secure-store",
+      "expo-asset"
     ],
     "experiments": {
-      "typedRoutes": true
+      "typedRoutes": true,
+      "reactCompiler": true
     },
     "extra": {
       "router": {

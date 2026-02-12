@@ -1,10 +1,9 @@
-import { Audio } from 'expo-av'
+import { AudioPlayer, createAudioPlayer } from 'expo-audio'
 import * as Speech from 'expo-speech'
 import VoiceRecordingService from './voiceRecording'
-import { useAppStore } from '@/hooks/useAppStore'
 
 class VoicePlaybackService {
-    private static currentSound: Audio.Sound | null = null
+    private static currentPlayer: AudioPlayer | null = null
     private static isPlaying = false
 
     /**
@@ -79,16 +78,14 @@ class VoicePlaybackService {
             }
 
             this.isPlaying = true
-            const { sound } = await Audio.Sound.createAsync(
-                { uri: recordingUri },
-                { shouldPlay: true }
-            )
 
-            this.currentSound = sound
+            // Create audio player with the recording URI
+            this.currentPlayer = createAudioPlayer({ uri: recordingUri })
+            this.currentPlayer.play()
 
-            // Handle playback completion
-            sound.setOnPlaybackStatusUpdate((status) => {
-                if (status.isLoaded && status.didJustFinish) {
+            // Listen for playback state changes
+            this.currentPlayer.addListener('playbackStatusUpdate', (status) => {
+                if (status.didJustFinish) {
                     this.isPlaying = false
                     if (settings?.onDone) {
                         settings.onDone()
@@ -170,10 +167,10 @@ class VoicePlaybackService {
      */
     static async stopPlayback(): Promise<void> {
         try {
-            if (this.currentSound) {
-                await this.currentSound.stopAsync()
-                await this.currentSound.unloadAsync()
-                this.currentSound = null
+            if (this.currentPlayer) {
+                this.currentPlayer.pause()
+                this.currentPlayer.release()
+                this.currentPlayer = null
             }
 
             await Speech.stop()

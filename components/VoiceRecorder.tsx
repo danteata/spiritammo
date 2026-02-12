@@ -2,7 +2,7 @@ import * as React from 'react';
 import { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Platform, ActivityIndicator, TouchableOpacity } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
-import { Audio } from 'expo-av';
+import { useAudioPlayer } from 'expo-audio';
 import { COLORS } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
 import * as Speech from 'expo-speech';
@@ -76,8 +76,9 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
   const [whisperReady, setWhisperReady] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [savedRecordingUri, setSavedRecordingUri] = useState<string | null>(null);
+
+  // Audio player for playback - use recordingUri from the audio recording hook
+  const player = useAudioPlayer(recordingUri ? { uri: recordingUri } : undefined);
 
   // Clear transcript when scripture changes
   useEffect(() => {
@@ -86,10 +87,9 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
     setAccuracy(0);
     setShowAccuracy(false);
     setAudioRecording(null);
-    // Cleanup sound
-    if (sound) {
-      sound.unloadAsync();
-      setSound(null);
+    // Cleanup player
+    if (isPlaying) {
+      player.pause();
     }
     setIsPlaying(false);
   }, [scriptureText]);
@@ -487,34 +487,19 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
     try {
       if (!recordingUri) return;
 
-      if (isPlaying && sound) {
+      if (isPlaying) {
         // Pause
-        await sound.pauseAsync();
+        player.pause();
         setIsPlaying(false);
         setStatusMessage('Playback paused');
-      } else if (sound) {
-        // Resume
-        await sound.playAsync();
-        setIsPlaying(true);
-        setStatusMessage('Playing recording...');
       } else {
-        // Start new playback
-        const { sound: newSound } = await Audio.Sound.createAsync(
-          { uri: recordingUri },
-          { shouldPlay: true }
-        );
-
-        setSound(newSound);
+        // Play - if we need to restart from beginning, seek to 0
+        if (player.currentTime >= player.duration) {
+          player.seekTo(0);
+        }
+        player.play();
         setIsPlaying(true);
         setStatusMessage('Playing recording...');
-
-        // Handle playback finished
-        newSound.setOnPlaybackStatusUpdate((status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            setIsPlaying(false);
-            setStatusMessage('Playback finished');
-          }
-        });
       }
     } catch (error) {
       console.error('Error toggling playback:', error);

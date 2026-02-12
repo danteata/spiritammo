@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as FileSystem from 'expo-file-system/legacy'
-import { Audio } from 'expo-av'
+import { createAudioPlayer, AudioPlayer } from 'expo-audio'
 import { VoiceRecording, VoiceLibrarySettings, VoiceRecordingStats } from '@/types/scripture'
 import { errorHandler } from './errorHandler'
 
@@ -164,13 +164,11 @@ class VoiceRecordingService {
     /**
      * Play a saved recording
      */
-    static async playRecording(recordingUri: string): Promise<Audio.Sound> {
+    static async playRecording(recordingUri: string): Promise<AudioPlayer> {
         try {
-            const { sound } = await Audio.Sound.createAsync(
-                { uri: recordingUri },
-                { shouldPlay: true }
-            )
-            return sound
+            const player = createAudioPlayer({ uri: recordingUri })
+            player.play()
+            return player
         } catch (error) {
             console.error('Failed to play recording:', error)
             throw error
