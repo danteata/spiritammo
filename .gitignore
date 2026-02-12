@@ -43,3 +43,11 @@ yarn-error.*
 /android
 .idea
 .env
+
+# Kilo Code
+.kilocode
+
+# Debug and test scripts
+debug-*.js
+test-*.js
+test_*.ts
