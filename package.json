@@ -15,15 +15,15 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
-    "@amplitude/analytics-react-native": "^1.5.16",
-    "@amplitude/plugin-session-replay-react-native": "^0.4.5",
+    "@amplitude/analytics-react-native": "^1.5.38",
+    "@amplitude/plugin-session-replay-react-native": "^0.4.6",
     "@clerk/clerk-expo": "^2.19.9",
     "@expo-google-fonts/nunito": "^0.4.2",
     "@expo/ui": "~55.0.0-preview.5",
     "@expo/vector-icons": "^15.0.3",
     "@nkzw/create-context-hook": "^1.1.0",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "@react-navigation/native": "^7.1.8",
+    "@react-navigation/native": "7.1.28",
     "@siteed/expo-audio-stream": "^2.2.0",
     "@tanstack/react-query": "^5.90.7",
     "@types/base-64": "^1.0.2",

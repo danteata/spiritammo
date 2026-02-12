@@ -874,6 +874,8 @@ try {
 }
 
 class AmplitudeProvider implements AnalyticsProvider {
+    private initialized = false;
+
     async initialize(config: any): Promise<void> {
         console.log('📊 Initializing Amplitude analytics with config:', config)
 
@@ -882,62 +884,60 @@ class AmplitudeProvider implements AnalyticsProvider {
             return
         }
 
+        if (this.initialized) {
+            console.log('📊 Amplitude already initialized')
+            return
+        }
+
         try {
+            // Suppress cookie-related errors that occur in React Native
+            const originalError = console.error;
+            console.error = (...args: any[]) => {
+                const message = args[0]?.toString() || '';
+                if (message.includes('cookie') || message.includes('AMP_TEST')) {
+                    // Suppress cookie errors in React Native
+                    return;
+                }
+                originalError.apply(console, args);
+            };
+
             // Initialize Amplitude with React Native specific configuration
             await amplitude.init(config.apiKey, {
                 // Disable automatic tracking that might cause issues
                 autocapture: false,
-                // Use React Native compatible storage
-                storageProvider: {
-                    isEnabled: true,
-                    get: async (key: string) => {
-                        const AsyncStorage = require('@react-native-async-storage/async-storage')
-                        try {
-                            return await AsyncStorage.getItem(key)
-                        } catch {
-                            return null
-                        }
-                    },
-                    set: async (key: string, value: string) => {
-                        const AsyncStorage = require('@react-native-async-storage/async-storage')
-                        try {
-                            await AsyncStorage.setItem(key, value)
-                        } catch {
-                            // Ignore storage errors
-                        }
-                    },
-                    remove: async (key: string) => {
-                        const AsyncStorage = require('@react-native-async-storage/async-storage')
-                        try {
-                            await AsyncStorage.removeItem(key)
-                        } catch {
-                            // Ignore storage errors
-                        }
-                    },
-                    reset: async () => {
-                        // Reset not needed for AsyncStorage
-                    }
-                },
-                // Disable cookie-based storage which doesn't work in RN
-                cookieStorage: null,
-                // Disable server-side rendering features
-                serverSideTracking: false,
                 // Disable all cookie-related functionality
                 disableCookies: true,
                 // Force device ID generation to avoid cookie fallback
-                deviceId: `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                deviceId: `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                // Opt out of tracking until fully initialized (prevents early cookie access)
+                optOut: false,
+                // Use minimal tracking options
+                trackingOptions: {
+                    ipAddress: false,
+                    language: true,
+                    platform: true,
+                },
             }).promise
+
+            // Restore original console.error
+            console.error = originalError;
+
+            this.initialized = true;
 
             // Add Session Replay if available
             if (SessionReplayPlugin) {
-                await amplitude.add(new SessionReplayPlugin()).promise
-                console.log('📊 Amplitude Session Replay enabled')
+                try {
+                    await amplitude.add(new SessionReplayPlugin()).promise
+                    console.log('📊 Amplitude Session Replay enabled')
+                } catch (replayError) {
+                    console.warn('📊 Session Replay not available:', replayError)
+                }
             }
 
             console.log('📊 Amplitude initialized successfully')
         } catch (error) {
             console.error('📊 Failed to initialize Amplitude:', error)
-            throw error
+            // Don't throw - allow app to continue without analytics
         }
     }
 

@@ -1,5 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react'
-import { useFocusEffect } from '@react-navigation/native'
+import { useCallback, useEffect, useRef } from 'react'
 import { analytics, AnalyticsEvents, AnalyticsEventType } from '@/services/analytics'
 import { useAppStore } from './useAppStore'
 
@@ -46,16 +45,8 @@ export const useAnalytics = () => {
         }
     }, [userStats])
 
-    // Track screen views automatically
-    useFocusEffect(
-        useCallback(() => {
-            const screenName = getCurrentScreenName()
-            if (screenName && screenName !== currentScreenRef.current) {
-                currentScreenRef.current = screenName
-                analytics.track(AnalyticsEvents.screenView(screenName))
-            }
-        }, [])
-    )
+    // Note: Screen tracking is now handled manually via trackScreenView
+    // NativeTabs doesn't provide NavigationContainer context for useFocusEffect
 
     // Core tracking methods
     const trackEvent = useCallback((eventName: AnalyticsEventType, properties?: Record<string, any>) => {
@@ -256,14 +247,14 @@ function getCurrentScreenName(): string | null {
 }
 
 // Screen tracking hook for individual components
+// With NativeTabs, screen tracking should be called manually in useEffect
 export const useScreenTracking = (screenName: string) => {
     const { trackEvent } = useAnalytics()
 
-    useFocusEffect(
-        useCallback(() => {
-            trackEvent(AnalyticsEventType.SCREEN_VIEW, { screen_name: screenName })
-        }, [trackEvent, screenName])
-    )
+    // Track screen view on mount - works without NavigationContainer context
+    useEffect(() => {
+        trackEvent(AnalyticsEventType.SCREEN_VIEW, { screen_name: screenName })
+    }, [trackEvent, screenName])
 }
 
 // Hook for tracking user interactions with retry logic

@@ -1,17 +1,18 @@
 import { BundleInspector } from '../.rorkai/inspector';
 import { RorkErrorBoundary } from '../.rorkai/rork-error-boundary';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AppStoreProvider, useAppStore } from "@/hooks/useAppStore";
+import { AppStoreProvider } from "@/hooks/useAppStore";
 import { ClerkProvider, ClerkLoaded } from '@clerk/clerk-expo'
 import { tokenCache } from '@/utils/cache'
 import * as Linking from 'expo-linking'
 import { useZustandStore } from '@/hooks/zustandStore'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
+import { NativeTabs } from 'expo-router/unstable-native-tabs';
+import { useTheme } from '@/hooks/useTheme';
 import "../global.css";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -27,38 +28,39 @@ if (!publishableKey) {
   )
 }
 
-
 function RootLayoutNav() {
-  const { theme } = useAppStore();
+  const { theme } = useTheme();
+
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        contentStyle: { backgroundColor: theme.background },
-        animation: 'fade', // Smooth fading for native feel
-      }}
-    >
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen
-        name="auth"
-        options={{
-          presentation: 'transparentModal',
-          animation: 'fade',
-          headerShown: false
-        }}
-      />
-    </Stack>
+    <NativeTabs minimizeBehavior="onScrollDown">
+      {/* Home Tab */}
+      <NativeTabs.Trigger name="index">
+        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="house.fill" />
+      </NativeTabs.Trigger>
+
+      {/* Train Tab */}
+      <NativeTabs.Trigger name="train">
+        <NativeTabs.Trigger.Label>Train</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="figure.run" />
+      </NativeTabs.Trigger>
+
+      {/* Arsenal Tab */}
+      <NativeTabs.Trigger name="arsenal">
+        <NativeTabs.Trigger.Label>Arsenal</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="book.fill" />
+      </NativeTabs.Trigger>
+
+      {/* Profile Tab */}
+      <NativeTabs.Trigger name="profile">
+        <NativeTabs.Trigger.Label>Profile</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="person.fill" />
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }
 
-
-
-// ... existing code ...
-
 export default function RootLayout() {
-  // Access store directly for deep link handling outside react tree if needed
-  // or inside useEffect
-
   useEffect(() => {
     SplashScreen.hideAsync();
   }, []);
@@ -117,7 +119,11 @@ export default function RootLayout() {
             <QueryClientProvider client={queryClient}>
               <AppStoreProvider>
                 <GestureHandlerRootView style={{ flex: 1 }}>
-                  <BundleInspector><RorkErrorBoundary><RootLayoutNav /></RorkErrorBoundary></BundleInspector>
+                  <BundleInspector>
+                    <RorkErrorBoundary>
+                      <RootLayoutNav />
+                    </RorkErrorBoundary>
+                  </BundleInspector>
                 </GestureHandlerRootView>
               </AppStoreProvider>
             </QueryClientProvider>
