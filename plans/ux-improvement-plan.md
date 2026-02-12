@@ -224,9 +224,9 @@ Step 4: "Great job! You've completed your first drill."
 4. ✅ Simplify onboarding flow
 
 ### Medium Priority (Week 3-4)
-5. ⬜ Consolidate Training and Campaign screens
-6. ⬜ Implement progressive disclosure system
-7. ⬜ Add contextual help system
+5. ✅ Consolidate Training and Campaign screens (train.tsx hub)
+6. ✅ Implement progressive disclosure system
+7. ✅ Add contextual help system
 
 ### Low Priority (Week 5-6)
 8. ⬜ Refine terminology throughout app
