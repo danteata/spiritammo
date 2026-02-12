@@ -21,6 +21,13 @@ export default function TabBar({ state, descriptors, navigation }: BottomTabBarP
         >
           {state.routes.map((route, index) => {
             const { options } = descriptors[route.key];
+
+            // Only show the 4 main tabs: index, train, arsenal, profile
+            const visibleTabs = ['index', 'train', 'arsenal', 'profile'];
+            if (!visibleTabs.includes(route.name)) {
+              return null;
+            }
+
             const label =
               options.tabBarLabel !== undefined
                 ? options.tabBarLabel
