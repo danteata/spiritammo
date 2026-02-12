@@ -24,6 +24,7 @@ export default function TabLayout() {
           headerShown: false,
         }}
       >
+        {/* Main 4 Tabs */}
         <Tabs.Screen
           name="index"
           options={{
@@ -33,45 +34,59 @@ export default function TabLayout() {
           }}
         />
         <Tabs.Screen
-          name="arsenal"
+          name="train"
           options={{
-            title: 'Arsenal',
-            tabBarIcon: ({ color }) => <FontAwesome5 name="shield-alt" size={24} color={color} />,
+            title: 'Train',
+            tabBarLabel: 'Train',
+            tabBarIcon: ({ color }) => <Ionicons name="fitness" size={24} color={color} />,
           }}
         />
         <Tabs.Screen
+          name="arsenal"
+          options={{
+            title: 'Arsenal',
+            tabBarLabel: 'Arsenal',
+            tabBarIcon: ({ color }) => <FontAwesome5 name="book" size={24} color={color} />,
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: 'Profile',
+            tabBarLabel: 'Profile',
+            tabBarIcon: ({ color }) => <Ionicons name="person" size={24} color={color} />,
+          }}
+        />
+
+        {/* Hidden screens - accessible via navigation but not in tab bar */}
+        <Tabs.Screen
           name="training"
           options={{
-            title: 'Training',
-            tabBarIcon: ({ color }) => <Ionicons name="fitness" size={24} color={color} />,
+            href: null, // Hide from tab bar
           }}
         />
         <Tabs.Screen
           name="campaign"
           options={{
-            title: 'Conquest',
-            tabBarIcon: ({ color }) => <FontAwesome name="map-marker" size={24} color={color} />,
+            href: null, // Hide from tab bar
           }}
         />
         <Tabs.Screen
           name="squad"
           options={{
-            title: 'Squad',
-            tabBarIcon: ({ color }) => <Ionicons name="people" size={24} color={color} />,
+            href: null, // Hide from tab bar
           }}
         />
         <Tabs.Screen
           name="mission-report"
           options={{
-            title: 'Report',
-            tabBarIcon: ({ color }) => <Ionicons name="document-text" size={24} color={color} />,
+            href: null, // Hide from tab bar
           }}
         />
         <Tabs.Screen
           name="settings"
           options={{
-            title: 'Command Post',
-            tabBarIcon: ({ color }) => <Ionicons name="shield" size={24} color={color} />,
+            href: null, // Hide from tab bar
           }}
         />
       </Tabs>

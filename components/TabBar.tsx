@@ -67,6 +67,12 @@ export default function TabBar({ state, descriptors, navigation }: BottomTabBarP
 
             if (route.name === 'index') {
               iconName = isFocused ? 'home' : 'home-outline';
+            } else if (route.name === 'train') {
+              iconName = isFocused ? 'fitness' : 'fitness-outline';
+            } else if (route.name === 'arsenal') {
+              iconName = isFocused ? 'book' : 'book-outline';
+            } else if (route.name === 'profile') {
+              iconName = isFocused ? 'person' : 'person-outline';
             } else if (route.name === 'arsenal') {
               iconName = isFocused ? 'shield' : 'shield-outline';
             } else if (route.name === 'training') {
