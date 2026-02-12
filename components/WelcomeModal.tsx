@@ -123,7 +123,7 @@ export default function WelcomeModal({ isVisible, onClose }: WelcomeModalProps) 
         {
             icon: "book",
             title: "ARMORY ACCESS",
-            description: "Build your scripture ammunition bank. Organize verses into collections and campaigns."
+            description: "Build your scripture ammunition bank. Extract verses from PDF/EPUB files or organize existing collections."
         },
         {
             icon: "crosshairs",

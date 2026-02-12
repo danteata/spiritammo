@@ -7,6 +7,8 @@ import {
     Image,
     Dimensions,
     Text,
+    Animated,
+    Easing,
 } from 'react-native'
 import { useAppStore } from '@/hooks/useAppStore'
 import { getItemById } from '@/constants/avatarItems'
@@ -28,7 +30,7 @@ export default function SoldierAvatar({
     style
 }: SoldierAvatarProps) {
 
-    const { avatarInventory, isLoadingAvatar, userSettings } = useAppStore()
+    const { avatarInventory, isLoadingAvatar, userSettings, isDark, theme } = useAppStore()
 
     // Size mappings
     const getSize = () => {
@@ -130,17 +132,48 @@ export default function SoldierAvatar({
         )
     }
 
-    // Valor Points badge
+    // Valor Points badge with theme-aware colors and animations
     const renderVPBadge = () => {
         if (size === 'small' || !showStats) return null
 
         const valorPoints = avatarInventory?.valorPoints || 100 // Default starting VP
+        const scaleValue = new Animated.Value(1)
+
+        // Create a subtle pulse animation for the VP badge
+        React.useEffect(() => {
+            const pulseAnimation = Animated.loop(
+                Animated.sequence([
+                    Animated.timing(scaleValue, {
+                        toValue: 1.05,
+                        duration: 1000,
+                        easing: Easing.inOut(Easing.quad),
+                        useNativeDriver: true,
+                    }),
+                    Animated.timing(scaleValue, {
+                        toValue: 1,
+                        duration: 1000,
+                        easing: Easing.inOut(Easing.quad),
+                        useNativeDriver: true,
+                    }),
+                ])
+            )
+
+            pulseAnimation.start()
+            return () => pulseAnimation.stop()
+        }, [scaleValue])
+
+        // Determine text color based on theme for better legibility
+        const vpTextColor = isDark ? '#000000' : theme.text // Black on light gold, dark text on dark themes
 
         return (
             <View style={[styles.vpBadge, { right: -10, top: -10 }]}>
-                <View style={styles.vpCoin}>
-                    <Text style={styles.vpText}>{valorPoints}</Text>
-                </View>
+                <Animated.View style={[styles.vpCoin, { transform: [{ scale: scaleValue }] }]}>
+                    <Text style={[styles.vpText, { color: vpTextColor }]}>{valorPoints}</Text>
+                </Animated.View>
+                {/* Add a subtle glow effect */}
+                <View style={[styles.vpGlow, {
+                    backgroundColor: isDark ? 'rgba(255, 215, 0, 0.2)' : 'rgba(255, 215, 0, 0.3)'
+                }]} />
             </View>
         )
     }
@@ -308,11 +341,26 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 4,
         elevation: 5,
+        // Enhanced styling
+        paddingHorizontal: 8,
+        paddingVertical: 4,
     },
     vpText: {
-        color: '#000',
         fontSize: 12,
         fontWeight: 'bold',
+        textShadowColor: 'rgba(0, 0, 0, 0.2)',
+        textShadowOffset: { width: 0, height: 1 },
+        textShadowRadius: 1,
+    },
+    vpGlow: {
+        position: 'absolute',
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        opacity: 0.8,
+        zIndex: -1,
+        top: -5,
+        left: -5,
     },
     mannequinImage: {
         borderRadius: 10,
