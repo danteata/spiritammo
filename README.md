@@ -6,7 +6,7 @@ A military-themed scripture memorization app that transforms Bible study into ta
 
 ### 📚 **Scripture Collections (Ammunition)**
 
-- **Pre-loaded Collections**: POSE (Shepherding), LAD (ALeadership), MC (Mission Command)
+- **Pre-loaded Collections**: POSE (Shepherding), LAD (Leadership), MC (Mission Command)
 - **Chapter-Based Organization**: Practice specific chapters or combine multiple chapters
 - **Custom Collections**: Upload PDF/EPUB files to create custom scripture collections
 - **Words of Jesus**: Red-letter highlighting for Christ's direct quotes (traditional Bible format)
@@ -23,13 +23,55 @@ A military-themed scripture memorization app that transforms Bible study into ta
 - **Real-time Scoring**: Immediate feedback on memorization accuracy
 - **Environmental Factors**: Wind conditions affect difficulty
 - **Shot Grouping**: Track consistency over multiple attempts
+- **Voice Playback**: Hear recorded voices or TTS when available
+
+### 🎙️ **Voice Recording & Playback**
+
+- **High-Accuracy Recording**: Auto-save recordings above 90% accuracy
+- **Voice Library**: Browse and manage all saved recordings
+- **Playback Toggle**: Choose between recorded voices or text-to-speech
+- **Scripture Playback**: Hear target verses with recorded voices when available
+- **Recording Management**: Delete, organize, and review voice recordings
+
+### 🏆 **Valor Points (VP) System**
+
+- **Activity Rewards**: Earn VP for target practice, stealth drills, and campaign missions
+- **Accuracy-Based Scoring**: Higher accuracy = more VP earned
+- **Streak Multipliers**: Daily streaks increase VP rewards
+- **Rank Bonuses**: Higher military ranks provide VP bonuses
+- **Avatar Customization**: Spend VP on equipment in the Barracks
+
+### 🪖 **The Barracks (Avatar System)**
+
+- **Equipment Slots**: Helmet, Body Armor, Legs, Primary Weapon, Communications, Background
+- **VP Currency**: Earn and spend Valor Points for customization
+- **Military Equipment**: Unlock tactical gear as you progress
+- **Progress Tracking**: VP balance and purchase history
+- **Equipment Effects**: Visual customization and progression markers
+
+### ⚔️ **Campaign Conquest System**
+
+- **Strategic Campaigns**: Multi-mission operations with unlockable content
+- **Campaign Map**: Visual progression through mission theaters
+- **Mission Briefings**: Tactical intelligence before each engagement
+- **Progressive Unlocking**: Complete missions to unlock new sectors
+- **Campaign Progress**: Track completion across multiple theaters
+
+### 🥷 **Stealth Drill Mode**
+
+- **Word Bank Challenge**: Fill in blanks from scrambled word banks
+- **Difficulty Levels**: RECRUIT (25%), SOLDIER (50%), SNIPER (75%), GHOST (100%)
+- **Silent Operation**: Practice without seeing the full text
+- **Difficulty Multipliers**: Higher difficulty = more VP rewards
+- **Tactical Recall**: Test memorization under pressure
 
 ### 📊 **Military Ranking System**
 
-- **Rank Progression**: Advance from Trainee to Marksman based on performance
+- **Rank Progression**: Advance from Recruit to General based on performance
 - **Accuracy Tracking**: Detailed statistics for each scripture and collection
 - **Mission Reports**: Comprehensive progress analytics
 - **Specializations**: Unlock achievements for consistent practice
+- **Streak Tracking**: Daily practice streaks with bonus rewards
 
 ## 🚀 **Getting Started**
 
@@ -60,8 +102,10 @@ npm start
 - **Collection Selector**: Choose your ammunition type
 - **Training Modes**: Single, Burst, Automatic
 - **Ammunition Card**: Current scripture with accuracy display
-- **Target Practice**: Voice-based memorization testing
+- **Target Practice**: Voice-based memorization testing with environmental factors
 - **Rank Display**: Current military rank and progress
+- **Stealth Drill**: Word bank challenge mode for advanced practice
+- **Voice Playback**: Toggle between recorded voices and TTS
 
 ### **🎖️ Armory (Collections Management)**
 
@@ -69,6 +113,7 @@ npm start
 - **Chapter Organization**: View chapter-based collections
 - **File Upload**: Import PDF/EPUB files for custom collections
 - **Scripture Browser**: Explore individual verses by book
+- **Words of Jesus Update**: One-time setup for red-letter highlighting
 
 ### **📊 Mission Report (Analytics)**
 
@@ -76,6 +121,30 @@ npm start
 - **Rank Progression**: Military advancement tracking
 - **Achievement System**: Specializations and milestones
 - **Historical Data**: Practice trends and improvement metrics
+
+### **🎙️ Voice Library (Recording Management)**
+
+- **Recording List**: Browse all saved voice recordings
+- **Playback Controls**: Play, pause, and manage recordings
+- **Accuracy Display**: View recording quality and stats
+- **Delete Management**: Remove unwanted recordings
+- **Storage Stats**: Monitor recording storage usage
+
+### **⚔️ Conquest (Campaign Mode)**
+
+- **Campaign Map**: Visual strategic battlefield
+- **Mission Nodes**: Individual tactical engagements
+- **Progress Tracking**: Unlock new sectors as you advance
+- **Mission Briefings**: Intelligence briefings before engagements
+- **VP Rewards**: Earn Valor Points for campaign success
+
+### **🪖 The Barracks (Avatar Customization)**
+
+- **Equipment Slots**: 6-slot military gear customization
+- **VP Balance**: Current Valor Points available
+- **Item Catalog**: Browse available military equipment
+- **Purchase System**: Spend VP on gear upgrades
+- **Equipped Items**: View current loadout
 
 ## 🎯 **Training Strategies**
 
@@ -119,6 +188,41 @@ npm start
 - **EPUB Support**: Import from electronic book formats
 - **Auto-Organization**: Intelligent chapter detection
 - **Custom Collections**: Create themed scripture groups
+
+### **Valor Points Reward System**
+
+- **VP Calculation**: Base VP (5-25) based on accuracy thresholds
+- **Streak Multipliers**: Up to 2x bonus for 7+ day streaks
+- **Rank Bonuses**: Additional VP for higher military ranks
+- **Activity Types**: Target practice, stealth drills, campaign missions
+- **Reward Display**: VP earned shown in success messages
+
+### **Voice Recording Integration**
+
+- **Automatic Saving**: Recordings ≥90% accuracy saved automatically
+- **Playback Priority**: Recorded voices preferred over TTS when enabled
+- **Storage Management**: Automatic cleanup of old recordings
+- **Quality Tracking**: High-accuracy recordings tagged and prioritized
+- **Cross-Platform**: Works with Whisper AI and native speech recognition
+
+### **Campaign Progression**
+
+- **Mission Requirements**: Accuracy-based completion thresholds
+- **Unlock System**: Complete missions to unlock new sectors
+- **Persistent Progress**: Campaign state saved across sessions
+- **Multiple Theaters**: Different campaign types and difficulties
+- **Strategic Planning**: Mission briefings with tactical intelligence
+
+### **Analytics & Tracking**
+
+- **Multi-Provider Support**: PostHog, Amplitude, Mixpanel, Firebase, Segment
+- **Easy Provider Switching**: Change analytics provider via environment variables
+- **Comprehensive Event Tracking**: User interactions, practice sessions, achievements
+- **Session Replay**: Amplitude Session Replay for detailed user behavior analysis
+- **Privacy Compliant**: GDPR-compliant data reset and opt-out functionality
+- **User Profiling**: Automatic updates of user rank, accuracy, streaks, and VP
+- **Performance Metrics**: App performance and engagement tracking
+- **Complete Events Reference**: See `ANALYTICS_EVENTS.md` for full tracking documentation
 
 ## 📊 **Data & Storage**
 
@@ -178,17 +282,44 @@ To reload all scripture data:
 
 ### **Common Issues**
 
-- **No Words of Jesus**: Run the UPDATE WOJ process
-- **Missing Chapters**: Ensure collection is chapter-based
-- **Accuracy Not Tracking**: Check voice recognition permissions
-- **Collections Not Loading**: Verify data transformation completed
+- **No Words of Jesus**: Run the UPDATE WOJ process in Armory tab
+- **Missing Chapters**: Ensure collection is chapter-based in settings
+- **Accuracy Not Tracking**: Check voice recognition permissions in device settings
+- **Collections Not Loading**: Verify data transformation completed on first launch
+- **VP Not Increasing**: Ensure "USE MY VOICE" toggle is enabled for playback rewards
+- **Voice Recordings Not Playing**: Check that recordings exist and toggle is enabled
+- **Campaign Missions Locked**: Complete previous missions to unlock new sectors
+- **Avatar Items Not Unlocking**: Earn more VP through practice activities
+
+### **Voice Recording Issues**
+
+- **Recordings Not Saving**: Ensure 90%+ accuracy for automatic saving
+- **TTS Still Playing**: Toggle "USE MY VOICE" on and ensure recordings exist
+- **Storage Full**: Delete old recordings in Voice Library to free space
+- **Poor Recording Quality**: Check microphone permissions and background noise
+
+### **VP & Avatar Issues**
+
+- **VP Balance Not Updating**: Restart app if balance doesn't reflect recent earnings
+- **Cannot Afford Items**: Earn more VP through target practice and campaigns
+- **Equipment Not Showing**: Check that items are equipped in The Barracks
+- **VP Calculations Wrong**: VP includes accuracy bonuses, streak multipliers, and rank bonuses
+
+### **Campaign Issues**
+
+- **Cannot Start Missions**: Complete prerequisite missions first
+- **Progress Not Saving**: Ensure stable internet for campaign sync
+- **Mission Accuracy Too High**: Practice in training mode to improve accuracy
+- **Briefings Not Loading**: Check intelligence generation settings
 
 ### **Performance Tips**
 
-- **Regular Practice**: Consistent daily use improves experience
+- **Regular Practice**: Consistent daily use improves experience and VP earnings
 - **Chapter Focus**: Use chapter selection for targeted practice
 - **Mode Variety**: Mix training modes for comprehensive learning
-- **Progress Review**: Check Mission Report for insights
+- **Progress Review**: Check Mission Report for insights and achievements
+- **Voice Quality**: Record in quiet environments for better accuracy
+- **Streak Maintenance**: Daily practice maximizes VP multipliers
 
 ## 🎖️ **Contributing**
 

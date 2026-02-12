@@ -65,6 +65,11 @@ This document provides a comprehensive reference of all analytics events tracked
 | `scripture_viewed` | Scripture displayed to user | Scripture load | `scripture_id`, `reference`, `context` |
 | `intel_generated` | Battle intelligence created | Intel generation | `scripture_id`, `intel_type`, `success` |
 | `file_uploaded` | PDF/EPUB file imported | File import | `file_type`, `file_size`, `verse_count` |
+| `verse_deleted` | Verse removed from collection | Verse deletion | `verse_id`, `reference`, `collection_id` |
+| `collection_deleted` | Collection permanently deleted | Collection removal | `collection_id`, `collection_name`, `verse_count` |
+| `collection_created` | New collection created | Collection creation | `collection_id`, `collection_name`, `source` |
+| `verse_added_to_collection` | Verse added to existing collection | Verse addition | `verse_id`, `collection_id`, `reference` |
+| `verse_removed_from_collection` | Verse removed from collection | Verse removal | `verse_id`, `collection_id`, `reference` |
 
 ### 🪖 User Progression Events
 
@@ -93,6 +98,18 @@ This document provides a comprehensive reference of all analytics events tracked
 | `theme_changed` | UI theme switched | Theme toggle | `old_theme`, `new_theme`, `theme_type` |
 | `voice_engine_changed` | Speech engine switched | Engine selection | `old_engine`, `new_engine`, `reason` |
 | `privacy_settings_updated` | Privacy preferences changed | Privacy update | `analytics_enabled`, `data_sharing` |
+| `notification_settings_changed` | Notification preferences updated | Notification setting | `setting`, `enabled` |
+| `language_changed` | App language changed | Language selection | `old_language`, `new_language` |
+| `training_preferences_changed` | Training settings modified | Training config | `preference`, `old_value`, `new_value` |
+| `voice_settings_changed` | Voice/TTS settings updated | Voice config | `setting`, `old_value`, `new_value` |
+
+### 🎯 Training Mode Selection Events
+
+| Event Name | Description | Trigger | Properties |
+|------------|-------------|---------|------------|
+| `stealth_drill_selected` | Stealth drill mode chosen | Mode selection | `collection_id`, `verse_count` |
+| `target_practice_selected` | Target practice mode chosen | Mode selection | `collection_id`, `verse_count` |
+| `training_mode_changed` | Training mode switched | Mode change | `old_mode`, `new_mode`, `context` |
 
 ### 🎙️ Voice Features Events
 
@@ -118,6 +135,38 @@ This document provides a comprehensive reference of all analytics events tracked
 | `share_initiated` | Share action started | Share button | `share_type`, `content_type`, `platform` |
 | `squad_invitation_sent` | Squad invite sent | Invite action | `invitation_type`, `recipient_count` |
 | `squad_challenge_created` | Group challenge created | Challenge setup | `challenge_type`, `participant_count` |
+| `squad_challenge_completed` | Squad challenge finished | Challenge completion | `challenge_id`, `success`, `participant_count` |
+
+### 🕒 Session & App Lifecycle Events
+
+| Event Name | Description | Trigger | Properties |
+|------------|-------------|---------|------------|
+| `session_start` | User session begins | App launch/foreground | `session_id`, `platform`, `version` |
+| `session_end` | User session ends | App background/close | `session_id`, `duration_ms` |
+
+### � User Actions & Interactions
+
+| Event Name | Description | Trigger | Properties |
+|------------|-------------|---------|------------|
+| `search_initiated` | User performs search | Search input | `search_term`, `search_type`, `results_count` |
+| `filter_applied` | Filter applied to content | Filter selection | `filter_type`, `filter_value`, `result_count` |
+| `sort_changed` | Sort order modified | Sort selection | `sort_by`, `sort_order` |
+| `bulk_action_performed` | Multiple items actioned | Bulk operation | `action_type`, `item_count`, `affected_items` |
+
+### ⚔️ Equipment & Arsenal Activities
+
+| Event Name | Description | Trigger | Properties |
+|------------|-------------|---------|------------|
+| `arsenal_opened` | Arsenal screen accessed | Navigation to arsenal | `context` |
+| `equipment_category_viewed` | Equipment category browsed | Category selection | `category`, `item_count` |
+| `equipment_item_viewed` | Individual equipment item viewed | Item inspection | `item_id`, `item_name`, `category`, `equipped` |
+| `equipment_slot_changed` | Equipment slot modified | Item equipped/unequipped | `slot`, `old_item_id`, `new_item_id`, `item_name` |
+| `equipment_customization_opened` | Avatar customization accessed | Customization menu | `context` |
+| `avatar_previewed` | Avatar preview displayed | Preview action | `context` |
+| `equipment_unlocked` | New equipment unlocked | Unlock achievement | `item_id`, `item_name`, `category`, `unlock_method` |
+| `equipment_upgraded` | Equipment level increased | Upgrade action | `item_id`, `item_name`, `old_level`, `new_level`, `upgrade_cost` |
+| `arsenal_tab_switched` | Arsenal tab navigation | Tab change | `from_tab`, `to_tab`, `tab_type` |
+| `equipment_comparison_viewed` | Equipment comparison opened | Compare action | `item1_id`, `item2_id`, `category` |
 
 ---
 
@@ -176,15 +225,18 @@ analytics.trackInteraction('action', 'element', { custom_data: true })
 
 ### Current Implementation Status
 
-- ✅ **App Lifecycle**: Fully implemented
+- ✅ **App Lifecycle**: Fully implemented with session tracking
 - ✅ **Navigation**: Tab switches and screen views
 - ✅ **Practice Sessions**: Target practice and stealth drills
 - ✅ **Campaign Progress**: Mission starts and completions
 - ✅ **User Progression**: Ranks and achievements
 - ✅ **Economy**: VP transactions and purchases
 - ✅ **Settings**: Configuration changes
-- ⏳ **Performance**: Basic timing (expandable)
-- ⏳ **Social**: Basic sharing (expandable)
+- ✅ **Content Management**: Collections, chapters, scriptures, intel
+- ✅ **Session Tracking**: Session start/end events
+- ✅ **Social Features**: Squad challenges and invitations
+- ✅ **Performance**: Basic timing (expandable)
+- ✅ **Error Tracking**: Comprehensive error logging
 
 ---
 
