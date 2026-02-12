@@ -149,63 +149,70 @@ export default function HomeScreen() {
             </ThemedCard>
           </TouchableOpacity>
 
-          {/* Secondary Mission Cards */}
+        </View>
+
+        {/* Quick Actions - Import & Squad */}
+        <View style={styles.quickActionsSection}>
           <TouchableOpacity
-            style={styles.missionCardWrapper}
-            onPress={() => router.replace('/(tabs)/squad')}
-            activeOpacity={0.9}
+            style={[styles.quickActionButton, isDark ? styles.quickActionDark : styles.quickActionLight]}
+            onPress={() => {
+              analytics.trackInteraction('tap', 'quick_action', { action: 'import_intel' })
+              router.push({ pathname: '/(tabs)/arsenal', params: { action: 'import' } })
+            }}
+            activeOpacity={0.8}
           >
-            <ThemedCard variant="glass" style={styles.missionCard}>
-              <View style={styles.missionCardLeft}>
-                <View style={[
-                  styles.iconBox,
-                  {
-                    backgroundColor: isDark
-                      ? 'rgba(255,255,255,0.05)'
-                      : 'rgba(0,0,0,0.05)'
-                  }
-                ]}>
-                  <FontAwesome5 name="users" size={28} color={theme.accent} />
-                </View>
-                <View style={styles.missionCardContent}>
-                  <ThemedText variant="heading" style={styles.missionCardTitle}>SQUAD MISSIONS</ThemedText>
-                  <ThemedText variant="body" numberOfLines={2} style={styles.missionCardSubtitle}>
-                    Join forces with other believers in group challenges. Coming soon - collaborative scripture adventures!
-                  </ThemedText>
-                </View>
-              </View>
-              <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} style={{ opacity: 0.5 }} />
-            </ThemedCard>
+            <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(255, 107, 53, 0.15)', borderColor: '#FF6B35' }]}>
+              <FontAwesome name="cloud-upload" size={20} color="#FF6B35" />
+            </View>
+            <View>
+              <ThemedText variant="body" style={styles.quickActionTitle}>IMPORT INTEL</ThemedText>
+              <ThemedText variant="caption" style={styles.quickActionSubtitle}>Extract verses from PDF/EPUB</ThemedText>
+            </View>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.missionCardWrapper}
-            onPress={() => router.replace('/(tabs)/arsenal')}
-            activeOpacity={0.9}
+            style={[styles.quickActionButton, isDark ? styles.quickActionDark : styles.quickActionLight]}
+            onPress={() => router.replace('/(tabs)/squad')}
+            activeOpacity={0.8}
           >
-            <ThemedCard variant="glass" style={styles.missionCard}>
-              <View style={styles.missionCardLeft}>
-                <View style={[
-                  styles.iconBox,
-                  {
-                    backgroundColor: isDark
-                      ? 'rgba(255,255,255,0.05)'
-                      : 'rgba(0,0,0,0.05)'
-                  }
-                ]}>
-                  <FontAwesome name="cubes" size={28} color={theme.accent} />
-                </View>
-                <View style={styles.missionCardContent}>
-                  <ThemedText variant="heading" style={styles.missionCardTitle}>EQUIP ARSENAL</ThemedText>
-                  <ThemedText variant="body" numberOfLines={2} style={styles.missionCardSubtitle}>
-                    Customize your soldier avatar with gear earned from missions. Manage your scripture arsenal and unlock powerful items.
-                  </ThemedText>
-                </View>
-              </View>
-              <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} style={{ opacity: 0.5 }} />
-            </ThemedCard>
+            <View style={[styles.quickActionIcon, { backgroundColor: 'rgba(255, 215, 0, 0.15)', borderColor: '#FFD700' }]}>
+              <FontAwesome5 name="users" size={20} color="#FFD700" />
+            </View>
+            <View>
+              <ThemedText variant="body" style={styles.quickActionTitle}>SQUAD OPS</ThemedText>
+              <ThemedText variant="caption" style={styles.quickActionSubtitle}>Team Challenges (Soon)</ThemedText>
+            </View>
           </TouchableOpacity>
         </View>
+
+        {/* Secondary Mission Card - Arsenal */}
+        <TouchableOpacity
+          style={styles.missionCardWrapper}
+          onPress={() => router.replace('/(tabs)/arsenal')}
+          activeOpacity={0.9}
+        >
+          <ThemedCard variant="glass" style={styles.missionCard}>
+            <View style={styles.missionCardLeft}>
+              <View style={[
+                styles.iconBox,
+                {
+                  backgroundColor: isDark
+                    ? 'rgba(255,255,255,0.05)'
+                    : 'rgba(0,0,0,0.05)'
+                }
+              ]}>
+                <FontAwesome name="cubes" size={28} color={theme.accent} />
+              </View>
+              <View style={styles.missionCardContent}>
+                <ThemedText variant="heading" style={styles.missionCardTitle}>EQUIP ARSENAL</ThemedText>
+                <ThemedText variant="body" numberOfLines={2} style={styles.missionCardSubtitle}>
+                  Customize your soldier avatar with gear earned from missions. Manage your scripture arsenal and unlock powerful items.
+                </ThemedText>
+              </View>
+            </View>
+            <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} style={{ opacity: 0.5 }} />
+          </ThemedCard>
+        </TouchableOpacity>
 
         {/* Daily Goals & Progress - Subordinate Information */}
         <View style={styles.statusSection}>
@@ -440,5 +447,44 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  quickActionsSection: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  quickActionButton: {
+    flex: 1,
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'column',
+    gap: 12,
+  },
+  quickActionDark: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  quickActionLight: {
+    backgroundColor: 'rgba(0,0,0,0.03)',
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  quickActionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  quickActionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 2,
+    letterSpacing: 0.5,
+  },
+  quickActionSubtitle: {
+    fontSize: 11,
+    opacity: 0.7,
   },
 })

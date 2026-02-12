@@ -248,8 +248,10 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
           });
 
           // Merge into collections
-          // Merge into collections
-          const mergedCollections: Collection[] = dbCollections.map(c => ({
+          // Identify system collections by their IDs
+          const systemCollectionIds = new Set(COLLECTIONS.filter(c => c.isSystem).map(c => c.id));
+
+          let mergedCollections: Collection[] = dbCollections.map(c => ({
             id: c.id,
             name: c.name,
             abbreviation: c.abbreviation || undefined,
@@ -260,8 +262,137 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
             sourceBook: c.sourceBook || undefined,
             bookInfo: (c.bookInfo as Collection['bookInfo']) || undefined,
             chapters: (c.chapters as Collection['chapters']) || undefined,
+            isSystem: systemCollectionIds.has(c.id), // Restore isSystem property
             scriptures: scripturesByCollection[c.id] || []
           }));
+
+          // Ensure system collections are included
+          const systemCollections = COLLECTIONS.filter(c => c.isSystem);
+          const existingSystemIds = new Set(mergedCollections.map(c => c.id));
+          const missingSystemCollections = systemCollections.filter(c => !existingSystemIds.has(c.id));
+
+          console.log('🔍 System collections check:', {
+            totalSystemCollections: systemCollections.length,
+            existingSystemIds: Array.from(existingSystemIds),
+            missingSystemCollections: missingSystemCollections.length
+          });
+
+          // Check if existing system collections have their scripture relationships
+          // Identify system collections by their IDs since the database doesn't store isSystem
+          const existingSystemCollections = mergedCollections.filter(c => systemCollectionIds.has(c.id));
+          const systemCollectionsNeedingRelationships = existingSystemCollections.filter(sysCol => !sysCol.scriptures || sysCol.scriptures.length === 0);
+
+          // Get the original system collection data to access their scriptures arrays
+          const systemCollectionData = COLLECTIONS.filter(c => c.isSystem);
+          const systemCollectionDataMap = new Map(systemCollectionData.map(c => [c.id, c]));
+
+          console.log('🔍 System collections needing relationships:', systemCollectionsNeedingRelationships.map(c => c.id));
+
+          if (missingSystemCollections.length > 0 || systemCollectionsNeedingRelationships.length > 0) {
+            // Get existing scripture IDs
+            const existingScriptureIds = new Set(dbScriptures.map(s => s.id));
+
+            // Ensure all referenced scriptures exist in database
+            const allReferencedScriptures = [...missingSystemCollections, ...systemCollectionsNeedingRelationships].flatMap(c => c.scriptures);
+            const missingScriptures = allReferencedScriptures.filter(sid => !existingScriptureIds.has(sid));
+
+            if (missingScriptures.length > 0) {
+              // Find the missing scriptures from the SCRIPTURES mock
+              const scripturesToAdd = SCRIPTURES.filter(s => missingScriptures.includes(s.id));
+              if (scripturesToAdd.length > 0) {
+                console.log(`📖 Adding ${scripturesToAdd.length} missing scriptures for system collections`);
+                const scripturesToInsert = scripturesToAdd.map(s => ({
+                  id: s.id,
+                  book: s.book,
+                  chapter: s.chapter,
+                  verse: s.verse,
+                  endVerse: s.endVerse,
+                  text: s.text,
+                  reference: s.reference,
+                  mnemonic: s.mnemonic,
+                  lastPracticed: s.lastPracticed,
+                  accuracy: s.accuracy,
+                  practiceCount: s.practiceCount,
+                  isJesusWords: s.isJesusWords
+                }));
+                await db.insert(scripturesTable).values(scripturesToInsert);
+
+                // Add to scriptures state
+                const updatedScriptures = [...dbScriptures, ...scripturesToAdd];
+                set({
+                  scriptures: updatedScriptures.map(s => ({
+                    ...s,
+                    endVerse: s.endVerse || undefined,
+                    mnemonic: s.mnemonic || undefined,
+                    lastPracticed: s.lastPracticed || undefined,
+                    accuracy: s.accuracy || undefined,
+                    practiceCount: s.practiceCount || 0,
+                    isJesusWords: s.isJesusWords || false,
+                  }))
+                });
+              }
+            }
+
+            // Insert missing system collections
+            for (const sysCol of missingSystemCollections) {
+              const { scriptures: _scriptures, ...collectionData } = sysCol;
+              await db.insert(collectionsTable).values({
+                id: collectionData.id,
+                name: collectionData.name,
+                abbreviation: collectionData.abbreviation,
+                description: collectionData.description,
+                createdAt: collectionData.createdAt,
+                tags: collectionData.tags,
+                isChapterBased: collectionData.isChapterBased,
+                sourceBook: collectionData.sourceBook,
+                bookInfo: collectionData.bookInfo,
+                chapters: collectionData.chapters
+              });
+
+              // Insert all scripture relationships
+              if (sysCol.scriptures.length > 0) {
+                await db.insert(collectionScripturesTable).values(
+                  sysCol.scriptures.map(sid => ({ collectionId: sysCol.id, scriptureId: sid }))
+                );
+              }
+            }
+
+
+
+
+
+            // Re-fetch collection scriptures to include newly inserted system collection relationships
+            const updatedDbCollectionScriptures = await db.select().from(collectionScripturesTable);
+            const updatedScripturesByCollection: Record<string, string[]> = {};
+            updatedDbCollectionScriptures.forEach(row => {
+              if (!updatedScripturesByCollection[row.collectionId]) {
+                updatedScripturesByCollection[row.collectionId] = [];
+              }
+              updatedScripturesByCollection[row.collectionId].push(row.scriptureId);
+            });
+
+            console.log('🔍 Final collection scriptures map:', updatedScripturesByCollection);
+
+            // Update all collections with correct scriptures arrays from the updated map
+            mergedCollections = mergedCollections.map(c => ({
+              ...c,
+              scriptures: updatedScripturesByCollection[c.id] || []
+            }));
+
+            // Add system collections with correct scriptures arrays
+            const systemCollectionsWithScriptures = missingSystemCollections.map(sysCol => {
+              const scriptures = updatedScripturesByCollection[sysCol.id] || [];
+              console.log(`📚 System collection ${sysCol.id}: ${scriptures.length} scriptures`);
+              return {
+                ...sysCol,
+                scriptures
+              };
+            });
+
+            mergedCollections = [...mergedCollections, ...systemCollectionsWithScriptures];
+
+            console.log('✅ Final collections loaded:', mergedCollections.map(c => `${c.name}: ${c.scriptures.length} verses`));
+          }
 
           set({
             scriptures: dbScriptures.map(s => ({
@@ -847,6 +978,17 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
 
   deleteCollection: async (collectionId: string) => {
     try {
+      // Check if this is a system collection
+      const collection = get().collections.find(c => c.id === collectionId);
+      if (collection?.isSystem) {
+        await errorHandler.handleError(
+          new Error('Cannot delete system collection'),
+          'Delete Arsenal',
+          { customMessage: 'System collections cannot be deleted. These are default collections provided for training.' }
+        );
+        return false;
+      }
+
       const db = await getDb();
 
       if (!db) {

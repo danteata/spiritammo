@@ -484,18 +484,18 @@ const CollectionDetailModal = React.memo(({
               )}
               {isEditingInfo ? (
                 <TextInput
-                  style={[styles.titleInput, MILITARY_TYPOGRAPHY.heading, { color: theme.text, borderBottomColor: theme.accent }]}
+                  style={[styles.titleInput, { color: theme.text, borderBottomColor: theme.accent, ...MILITARY_TYPOGRAPHY.heading }]}
                   value={editedName}
                   onChangeText={setEditedName}
                   placeholder="Arsenal Name"
                   placeholderTextColor={isDark ? '#666' : '#999'}
                 />
               ) : isBulkSelecting ? (
-                <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]} numberOfLines={1}>
+                <Text style={[styles.title, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]} numberOfLines={1}>
                   {selectedScriptureIds.size} Selected
                 </Text>
               ) : (
-                <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]} numberOfLines={1}>
+                <Text style={[styles.title, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]} numberOfLines={1}>
                   {collection.abbreviation
                     ? `${collection.abbreviation} - ${collection.name}`
                     : collection.name}
@@ -566,6 +566,17 @@ const CollectionDetailModal = React.memo(({
                   >
                     <Feather name="edit-3" size={22} color={theme.text} />
                   </TouchableOpacity>
+                  {!collection.isSystem && (
+                    <TouchableOpacity
+                      style={[styles.iconButton, { backgroundColor: theme.error, borderColor: theme.error }]}
+                      onPress={handleDeleteCollection}
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete arsenal"
+                      testID="delete-button"
+                    >
+                      <Feather name="trash-2" size={22} color={theme.text} />
+                    </TouchableOpacity>
+                  )}
                   <TouchableOpacity style={[styles.closeButton, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close modal">
                     <Feather name="x" size={22} color={theme.text} />
                   </TouchableOpacity>
@@ -577,11 +588,11 @@ const CollectionDetailModal = React.memo(({
           {!isEditingInfo && !isBulkSelecting && (
             <View style={styles.descriptionContainer}>
               {collection.description ? (
-                <Text style={[styles.description, MILITARY_TYPOGRAPHY.body, { color: theme.textSecondary }]} numberOfLines={3}>
+                <Text style={[styles.description, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.body }]} numberOfLines={3}>
                   {collection.description}
                 </Text>
               ) : (
-                <Text style={[styles.description, MILITARY_TYPOGRAPHY.body, { color: theme.textSecondary, opacity: 0.6 }]}>
+                <Text style={[styles.description, { color: theme.textSecondary, opacity: 0.6, ...MILITARY_TYPOGRAPHY.body }]}>
                   No description provided.
                 </Text>
               )}
@@ -667,7 +678,7 @@ const CollectionDetailModal = React.memo(({
 
           {/* Stats Section */}
           <View style={styles.statsSection}>
-            <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading, { color: theme.text }]}>
+            <Text style={[styles.sectionTitle, { color: theme.text, ...MILITARY_TYPOGRAPHY.subheading }]}>
               AMMUNITION STATS
             </Text>
 
@@ -676,10 +687,10 @@ const CollectionDetailModal = React.memo(({
                 style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
               >
                 <MaterialCommunityIcons name="ammunition" size={24} color={theme.accent} />
-                <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]}>
+                <Text style={[styles.statValue, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]}>
                   {localScriptures.length}
                 </Text>
-                <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>
+                <Text style={[styles.statLabel, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}>
                   ROUNDS
                 </Text>
               </View>
@@ -689,10 +700,10 @@ const CollectionDetailModal = React.memo(({
                   style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
                 >
                   <MaterialCommunityIcons name="book-open-variant" size={24} color={theme.accent} />
-                  <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]}>
+                  <Text style={[styles.statValue, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]}>
                     {collection.chapters.length}
                   </Text>
-                  <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>
+                  <Text style={[styles.statLabel, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}>
                     CHAPTERS
                   </Text>
                 </View>
@@ -703,10 +714,10 @@ const CollectionDetailModal = React.memo(({
                   style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
                 >
                   <MaterialCommunityIcons name="crosshairs-gps" size={24} color={theme.success} />
-                  <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]}>
+                  <Text style={[styles.statValue, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]}>
                     {collection.bookInfo.averageAccuracy?.toFixed(0) || '0'}%
                   </Text>
-                  <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>
+                  <Text style={[styles.statLabel, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}>
                     ACCURACY
                   </Text>
                 </View>
@@ -716,7 +727,7 @@ const CollectionDetailModal = React.memo(({
                 style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
               >
                 <MaterialCommunityIcons name="calendar-month" size={24} color={theme.textSecondary} />
-                <Text style={[styles.statValue, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]}>
+                <Text style={[styles.statValue, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]}>
                   {new Date(
                     collection.createdAt || Date.now()
                   ).toLocaleDateString('en-US', {
@@ -724,7 +735,7 @@ const CollectionDetailModal = React.memo(({
                     day: 'numeric',
                   })}
                 </Text>
-                <Text style={[styles.statLabel, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>
+                <Text style={[styles.statLabel, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}>
                   CREATED
                 </Text>
               </View>
@@ -735,7 +746,7 @@ const CollectionDetailModal = React.memo(({
           {collection.tags && collection.tags.length > 0 && (
             <View style={styles.tagsSection}>
               <Text
-                style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading, { color: theme.text }]}
+                style={[styles.sectionTitle, { color: theme.text, ...MILITARY_TYPOGRAPHY.subheading }]}
               >
                 MISSION TAGS
               </Text>
@@ -762,7 +773,7 @@ const CollectionDetailModal = React.memo(({
           {collection.isChapterBased && collection.chapters && (
             <View style={styles.chaptersSection}>
               <Text
-                style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}
+                style={[styles.sectionTitle, { ...MILITARY_TYPOGRAPHY.subheading }]}
               >
                 CHAPTER PROGRESS
               </Text>
@@ -776,15 +787,14 @@ const CollectionDetailModal = React.memo(({
                   >
                     <View style={styles.chapterInfo}>
                       <Text
-                        style={[styles.chapterName, MILITARY_TYPOGRAPHY.body, { color: theme.text }]}
+                        style={[styles.chapterName, { color: theme.text, ...MILITARY_TYPOGRAPHY.body }]}
                       >
                         {chapter.name}
                       </Text>
                       <Text
                         style={[
                           styles.chapterStats,
-                          MILITARY_TYPOGRAPHY.caption,
-                          { color: theme.textSecondary },
+                          { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption },
                         ]}
                       >
                         {chapter.scriptures.length} verses
@@ -809,7 +819,7 @@ const CollectionDetailModal = React.memo(({
 
                 {collection.chapters.length > 5 && (
                   <Text
-                    style={[styles.moreChapters, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}
+                    style={[styles.moreChapters, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}
                   >
                     +{collection.chapters.length - 5} more chapters
                   </Text>
@@ -1201,13 +1211,13 @@ const getStyles = (theme: any) => StyleSheet.create({
     flex: 1,
   },
   chapterName: {
-    color: [0, 0, 0], // Will be overridden by inline styles
+    color: 'black', // Will be overridden by inline styles
     marginBottom: 4,
     fontWeight: '600',
     fontSize: 15,
   },
   chapterStats: {
-    color: [0, 0, 0], // Will be overridden by inline styles
+    color: 'black', // Will be overridden by inline styles
     fontSize: 12,
   },
   chapterStatus: {

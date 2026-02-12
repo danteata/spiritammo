@@ -178,7 +178,7 @@ const collectionDefinitions = {
     description: 'Transformational approaches to pastoral leadership',
   },
   AOL: {
-    name: 'Art of Leadership',
+    name: 'The Art of Leadership',
     abbreviation: 'AOL',
     description: 'Biblical principles of effective Christian leadership',
   },
@@ -248,41 +248,86 @@ export const transformCollections = async (): Promise<{
     })
   }
 
-  // Add placeholders for others
-  const placeholderCollections = [
-    {
+  // Process MC
+  if (rawCollections.MC) {
+    const mcScriptures = await transformToScriptures(rawCollections.MC, 'MC')
+    const mcChapters = createChapters(rawCollections.MC, mcScriptures, 'MC')
+
+    transformedScriptures.push(...mcScriptures)
+    transformedCollections.push({
       id: 'collection_mc',
       name: collectionDefinitions.MC.name,
       abbreviation: collectionDefinitions.MC.abbreviation,
       description: collectionDefinitions.MC.description,
-      scriptures: [],
+      scriptures: mcScriptures.map((s) => s.id),
       createdAt: new Date().toISOString(),
       tags: ['megachurch', 'large-ministry', 'leadership'],
-      isChapterBased: false,
-    },
-    {
+      isChapterBased: true,
+      chapters: mcChapters,
+      sourceBook: 'Mixed',
+      bookInfo: {
+        totalChapters: mcChapters.length,
+        completedChapters: mcChapters.filter((c) => c.isCompleted).length,
+        averageAccuracy:
+          mcChapters.reduce((sum, c) => sum + (c.averageAccuracy || 0), 0) /
+          mcChapters.length,
+      },
+    })
+  }
+
+  // Process TYPM
+  if (rawCollections.TYPM) {
+    const typmScriptures = await transformToScriptures(rawCollections.TYPM, 'TYPM')
+    const typmChapters = createChapters(rawCollections.TYPM, typmScriptures, 'TYPM')
+
+    transformedScriptures.push(...typmScriptures)
+    transformedCollections.push({
       id: 'collection_typm',
       name: collectionDefinitions.TYPM.name,
       abbreviation: collectionDefinitions.TYPM.abbreviation,
       description: collectionDefinitions.TYPM.description,
-      scriptures: [],
+      scriptures: typmScriptures.map((s) => s.id),
       createdAt: new Date().toISOString(),
       tags: ['transformation', 'pastoral', 'ministry'],
-      isChapterBased: false,
-    },
-    {
+      isChapterBased: true,
+      chapters: typmChapters,
+      sourceBook: 'Mixed',
+      bookInfo: {
+        totalChapters: typmChapters.length,
+        completedChapters: typmChapters.filter((c) => c.isCompleted).length,
+        averageAccuracy:
+          typmChapters.reduce((sum, c) => sum + (c.averageAccuracy || 0), 0) /
+          typmChapters.length,
+      },
+    })
+  }
+
+  // Process AOL
+  if (rawCollections.AOL) {
+    const aolScriptures = await transformToScriptures(rawCollections.AOL, 'AOL')
+    const aolChapters = createChapters(rawCollections.AOL, aolScriptures, 'AOL')
+
+    transformedScriptures.push(...aolScriptures)
+    transformedCollections.push({
       id: 'collection_aol',
       name: collectionDefinitions.AOL.name,
       abbreviation: collectionDefinitions.AOL.abbreviation,
       description: collectionDefinitions.AOL.description,
-      scriptures: [],
+      scriptures: aolScriptures.map((s) => s.id),
       createdAt: new Date().toISOString(),
       tags: ['leadership', 'art', 'principles'],
-      isChapterBased: false,
-    },
-  ]
-
-  transformedCollections.push(...placeholderCollections)
+      isChapterBased: true,
+      chapters: aolChapters,
+      sourceBook: 'Mixed',
+      bookInfo: {
+        totalChapters: aolChapters.length,
+        completedChapters: aolChapters.filter((c) => c.isCompleted).length,
+        averageAccuracy:
+          aolChapters.reduce((sum, c) => sum + (c.averageAccuracy || 0), 0) /
+          aolChapters.length,
+      },
+    })
+  }
 
   console.log(`✅ Transformation complete: ${transformedCollections.length} collections, ${transformedScriptures.length} scriptures`)
 
@@ -291,4 +336,3 @@ export const transformCollections = async (): Promise<{
     scriptures: transformedScriptures,
   }
 }
-

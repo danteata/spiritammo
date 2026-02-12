@@ -7,7 +7,7 @@ import {
     TouchableOpacity,
 } from 'react-native'
 import { FontAwesome, FontAwesome5 } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
+import { useRouter, useLocalSearchParams } from 'expo-router'
 import { EquipmentSlot } from '@/types/avatar'
 import {
     GARRISON_THEME,
@@ -53,17 +53,29 @@ export default function ArsenalScreen() {
     } = useAppStore()
     const styles = getStyles(theme)
     const router = useRouter()
+    const { action } = useLocalSearchParams()
     const { trackEvent, arsenalOpened, equipmentItemViewed, equipmentSlotChanged, arsenalTabSwitched } = useAnalytics()
 
     // Track screen view
     useScreenTracking('arsenal')
 
-    // Main tab state
-    const [activeTab, setActiveTab] = useState<ArsenalTab>('equipment')
+    // Main tab state (Default to 'ammunition' for content focus)
+    const [activeTab, setActiveTab] = useState<ArsenalTab>('ammunition')
 
     // Equipment-specific state
     const [selectedSlot, setSelectedSlot] = useState<EquipmentSlot | null>(null)
     const [isProcessing, setIsProcessing] = useState(false)
+
+    // Handle deep link / navigation actions
+    React.useEffect(() => {
+        if (action === 'import') {
+            setActiveTab('ammunition')
+            // Small delay to ensure UI is ready
+            setTimeout(() => {
+                setShowFileUploader(true)
+            }, 500)
+        }
+    }, [action])
 
     // Track arsenal opened
     React.useEffect(() => {

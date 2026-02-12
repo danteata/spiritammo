@@ -1,14 +1,16 @@
 import React from 'react'
 import { View, StyleSheet, TouchableOpacity, Text } from 'react-native'
 import { FontAwesome, Feather } from '@expo/vector-icons'
-import { ThemedCard, ThemedText } from '@/components/Themed' // Assuming these exist based on arsenal.tsx usage
+import { ThemedCard, ThemedText } from '@/components/Themed'
 import { Collection } from '@/types/scripture'
+import { analytics } from '@/services/analytics'
 
 type CollectionListItemProps = {
     item: Collection
     isSelected: boolean
     onPress: (item: Collection) => void
     onLongPress: (item: Collection) => void
+    onDelete?: (item: Collection) => void
     theme: any
     isDark?: boolean
 }
@@ -18,6 +20,7 @@ export const CollectionListItem: React.FC<CollectionListItemProps> = ({
     isSelected,
     onPress,
     onLongPress,
+    onDelete,
     theme,
     isDark
 }) => {
@@ -31,7 +34,7 @@ export const CollectionListItem: React.FC<CollectionListItemProps> = ({
                 },
                 isSelected && {
                     borderColor: theme.warning || '#FFD700',
-                    backgroundColor: theme.surfaceHighlight // Subtle highlight
+                    backgroundColor: theme.surfaceHighlight
                 }
             ]}
             onPress={() => onPress(item)}
@@ -72,6 +75,21 @@ export const CollectionListItem: React.FC<CollectionListItemProps> = ({
                 </View>
             </View>
 
+            {/* Delete button for non-system collections */}
+            {!item.isSystem && onDelete && (
+                <TouchableOpacity
+                    style={[styles.deleteButton, { backgroundColor: theme.error || '#ef4444' }]}
+                    onPress={(e) => {
+                        e.stopPropagation();
+                        onDelete(item);
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Delete ${item.name} collection`}
+                >
+                    <Feather name="trash-2" size={14} color="white" />
+                </TouchableOpacity>
+            )}
+
             <TouchableOpacity
                 style={[styles.arrowCircle, { backgroundColor: theme.surfaceHighlight || 'rgba(255,255,255,0.05)' }]}
                 onPress={() => onLongPress(item)}
@@ -86,16 +104,11 @@ const styles = StyleSheet.create({
     collectionItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12, // Compacted
+        paddingVertical: 12,
         paddingHorizontal: 12,
         borderWidth: 1,
-        // borderColor handled inline
-        minHeight: 56, // Compacted
+        minHeight: 56,
         overflow: 'hidden',
-    },
-    activeCollection: {
-        // borderColor handled inline
-        // backgroundColor handled inline
     },
     statusStripe: {
         position: 'absolute',
@@ -108,13 +121,11 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 4,
-        // backgroundColor handled inline
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 12,
-        marginLeft: 8, // Space for stripe
+        marginLeft: 8,
         borderWidth: 1,
-        // borderColor handled inline
     },
     collectionInfo: {
         flex: 1,
@@ -125,7 +136,7 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         marginBottom: 2,
         letterSpacing: 0.5,
-        fontFamily: 'Courier', // Military mono feel
+        fontFamily: 'Courier',
     },
     collectionMeta: {
         flexDirection: 'row',
@@ -141,11 +152,18 @@ const styles = StyleSheet.create({
         fontSize: 10,
         fontWeight: '600',
     },
+    deleteButton: {
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginRight: 8,
+    },
     arrowCircle: {
-        width: 24, // Smaller
+        width: 24,
         height: 24,
         borderRadius: 12,
-        // backgroundColor handled inline
         justifyContent: 'center',
         alignItems: 'center',
         marginLeft: 8,

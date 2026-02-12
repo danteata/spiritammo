@@ -263,4 +263,31 @@ export class DataLoaderService {
       return null
     }
   }
+
+  // Debug function to force data reload and apply transformation fixes
+  static async debugForceDataReload(): Promise<{
+    collections: Collection[]
+    scriptures: Scripture[]
+    success: boolean
+  }> {
+    try {
+      console.log('🔄 DEBUG: Force reloading all data to apply transformation fixes...')
+
+      // Clear all existing data
+      await this.clearAllData()
+
+      // Force reload with fresh transformation
+      const result = await this.loadTransformedData()
+
+      console.log('🔄 DEBUG: Force reload complete')
+      return result
+    } catch (error) {
+      console.error('DEBUG: Error in force reload:', error)
+      return {
+        collections: [],
+        scriptures: [],
+        success: false,
+      }
+    }
+  }
 }

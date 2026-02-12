@@ -22,7 +22,7 @@ export interface CollectionSlice {
 }
 
 export const createCollectionSlice: StateCreator<CollectionSlice & ScriptureSlice, [], [], CollectionSlice> = (set, get) => ({
-    collections: [], // Initialized empty, loaded later
+    collections: COLLECTIONS.filter(c => c.isSystem), // Initialize with system collections
 
     getScripturesByCollection: (collectionId) => {
         const collection = get().collections.find((c) => c.id === collectionId)
@@ -212,6 +212,20 @@ export const createCollectionSlice: StateCreator<CollectionSlice & ScriptureSlic
 
     deleteCollection: async (collectionId) => {
         try {
+            // Prevent deletion of system collections
+            const collection = get().collections.find(c => c.id === collectionId)
+            if (collection?.isSystem) {
+                await errorHandler.handleError(
+                    new Error('Cannot delete system collection'),
+                    'Delete Collection',
+                    {
+                        customMessage: 'System collections cannot be deleted. These are provided for training purposes.',
+                        silent: true
+                    }
+                )
+                return false
+            }
+
             const db = await getDb();
 
             if (!db) {

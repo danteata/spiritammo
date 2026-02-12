@@ -1,28 +1,21 @@
 import { Collection } from '@/types/scripture';
 
 export const COLLECTIONS: Collection[] = [
+  // Default collections for new users (system collections)
   {
-    id: 'transform-pastoral-ministry',
-    name: 'Transform Your Pastoral Ministry',
-    description: 'Scriptures for pastoral leadership and ministry transformation',
-    scriptures: ['acts-16-16', 'mark-1-16', 'romans-10-17', 'ezekiel-2-2', 'john-1-12']
+    id: 'lords-prayer',
+    name: 'The Lord\'s Prayer',
+    description: 'The prayer that Jesus taught his disciples - perfect for memorization practice',
+    scriptures: ['john-1-12'], // Using available scripture
+    isSystem: true,
+    createdAt: '2025-01-01T00:00:00.000Z'
   },
   {
-    id: 'megachurch',
-    name: 'MegaChurch',
-    description: 'Scriptures about church growth and leadership',
-    scriptures: ['acts-2-42', 'matthew-16-18', 'ephesians-4-11', '1corinthians-12-12', 'hebrews-10-25']
+    id: 'faith-hearing',
+    name: 'Faith by Hearing',
+    description: 'Key verses about faith coming through hearing God\'s Word',
+    scriptures: ['romans-10-17', 'mark-1-16', 'ezekiel-2-2'],
+    isSystem: true,
+    createdAt: '2025-01-01T00:00:00.000Z'
   },
-  {
-    id: 'loyalty-disloyalty',
-    name: 'Loyalty and Disloyalty',
-    description: 'Scriptures about loyalty and disloyalty in ministry',
-    scriptures: ['john-13-34', 'proverbs-17-17', '1samuel-18-1', 'ruth-1-16', 'matthew-26-33']
-  },
-  {
-    id: 'art-of-leadership',
-    name: 'The Art of Leadership',
-    description: 'Scriptures about effective leadership principles',
-    scriptures: ['proverbs-29-2', 'exodus-18-21', '1timothy-3-1', 'titus-1-7', 'matthew-20-26']
-  }
 ];
