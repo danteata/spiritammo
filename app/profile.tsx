@@ -183,7 +183,7 @@ export default function ProfileScreen() {
                     <View style={styles.sectionContent}>
                         <TouchableOpacity
                             style={styles.menuItem}
-                            onPress={() => router.push('/(tabs)/mission-report')}
+                            onPress={() => router.push('/mission-report')}
                         >
                             <View style={styles.menuIcon}>
                                 <Ionicons name="document-text" size={22} color={theme.accent} />
@@ -250,7 +250,7 @@ export default function ProfileScreen() {
                         {/* Full Settings Link */}
                         <TouchableOpacity
                             style={styles.menuItem}
-                            onPress={() => router.push('/(tabs)/settings')}
+                            onPress={() => router.push('/settings')}
                         >
                             <View style={styles.menuIcon}>
                                 <Ionicons name="settings-outline" size={22} color={theme.accent} />

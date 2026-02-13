@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { StyleSheet, Text, ScrollView, View, TouchableOpacity, Dimensions } from 'react-native'
 import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { useRouter } from 'expo-router'
+import { useRouter, Link } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
@@ -68,7 +68,7 @@ export default function HomeScreen() {
 
   const handleStartDrill = () => {
     trackEvent(AnalyticsEventType.PRACTICE_START, { source: 'home_quick_start' })
-    router.push({ pathname: '/(tabs)/campaign', params: { mode: 'collection' } })
+    router.push({ pathname: '/train/campaign', params: { mode: 'collection' } })
   }
 
   const verseCount = scriptures?.length || 0
@@ -142,32 +142,35 @@ export default function HomeScreen() {
           </ThemedText>
 
           <View style={styles.quickLinksRow}>
-            <TouchableOpacity
-              style={[styles.quickLinkCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
-              onPress={() => router.replace('/(tabs)/arsenal' as any)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="book-outline" size={24} color={theme.accent} />
-              <ThemedText variant="body" style={styles.quickLinkText}>Arsenal</ThemedText>
-            </TouchableOpacity>
+            <Link href="/arsenal" asChild>
+              <TouchableOpacity
+                style={{ ...styles.quickLinkCard, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="book-outline" size={24} color={theme.accent} />
+                <ThemedText variant="body" style={styles.quickLinkText}>Arsenal</ThemedText>
+              </TouchableOpacity>
+            </Link>
 
-            <TouchableOpacity
-              style={[styles.quickLinkCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
-              onPress={() => router.replace('/(tabs)/train' as any)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="fitness-outline" size={24} color={theme.accent} />
-              <ThemedText variant="body" style={styles.quickLinkText}>Training</ThemedText>
-            </TouchableOpacity>
+            <Link href="/train" asChild>
+              <TouchableOpacity
+                style={{ ...styles.quickLinkCard, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="fitness-outline" size={24} color={theme.accent} />
+                <ThemedText variant="body" style={styles.quickLinkText}>Training</ThemedText>
+              </TouchableOpacity>
+            </Link>
 
-            <TouchableOpacity
-              style={[styles.quickLinkCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
-              onPress={() => router.replace('/(tabs)/profile' as any)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="person-outline" size={24} color={theme.accent} />
-              <ThemedText variant="body" style={styles.quickLinkText}>Profile</ThemedText>
-            </TouchableOpacity>
+            <Link href="/profile" asChild>
+              <TouchableOpacity
+                style={{ ...styles.quickLinkCard, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="person-outline" size={24} color={theme.accent} />
+                <ThemedText variant="body" style={styles.quickLinkText}>Profile</ThemedText>
+              </TouchableOpacity>
+            </Link>
           </View>
         </View>
       </ScrollView>

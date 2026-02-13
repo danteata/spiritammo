@@ -62,7 +62,7 @@ export default function AuthScreen() {
 
             if (createdSessionId && setActive) {
                 setActive({ session: createdSessionId })
-                router.replace('/(tabs)/squad')
+                router.replace('/squad')
             }
         } catch (err) {
             console.error('OAuth error', err)
@@ -77,7 +77,7 @@ export default function AuthScreen() {
 
             if (createdSessionId && setActive) {
                 setActive({ session: createdSessionId })
-                router.replace('/(tabs)/squad')
+                router.replace('/squad')
             }
         } catch (err) {
             console.error('OAuth error', err)
@@ -85,7 +85,7 @@ export default function AuthScreen() {
     }
 
     const handleSkip = () => {
-        router.replace('/(tabs)/campaign')
+        router.replace('/campaign')
     }
 
     return (

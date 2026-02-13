@@ -320,7 +320,7 @@ export default function ArsenalScreen() {
                         </View>
                         <TouchableOpacity
                             style={[styles.avatarButton, { backgroundColor: theme.accent + '20' }]}
-                            onPress={() => router.push('/(tabs)/settings' as any)}
+                            onPress={() => router.push('/settings' as any)}
                         >
                             <Ionicons name="settings-outline" size={20} color={theme.accent} />
                             <ThemedText variant="body" style={[styles.avatarButtonText, { color: theme.accent }]}>
