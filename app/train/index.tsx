@@ -42,7 +42,7 @@ export default function TrainingScreen() {
             practice_type: 'collection_training',
             source: 'training_screen'
         })
-        router.push({ pathname: '/train/practice', params: { mode: 'collection' } })
+        router.push('/train/collection')
     }
 
     const verseCount = scriptures?.length || 0

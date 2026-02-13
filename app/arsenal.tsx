@@ -12,6 +12,7 @@ import {
 import { FontAwesome, FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
+import { VoiceLibrary } from '@/components/VoiceLibrary'
 import { useAppStore } from '@/hooks/useAppStore'
 import { Collection, Scripture } from '@/types/scripture'
 import ScreenHeader from '@/components/ScreenHeader'
@@ -21,11 +22,10 @@ import CollectionDetailModal from '@/components/CollectionDetailModal'
 import AddVersesModal from '@/components/AddVersesModal'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
-import SoldierAvatar from '@/components/SoldierAvatar'
 
 const { width } = Dimensions.get('window')
 
-type ArsenalSection = 'collections' | 'voice' | 'avatar'
+type ArsenalSection = 'collections' | 'voice'
 
 export default function ArsenalScreen() {
     const {
@@ -91,7 +91,6 @@ export default function ArsenalScreen() {
     const sections: { key: ArsenalSection; label: string; icon: string }[] = [
         { key: 'collections', label: 'Collections', icon: 'folder' },
         { key: 'voice', label: 'Voice', icon: 'mic' },
-        { key: 'avatar', label: 'Avatar', icon: 'person' },
     ]
 
     return (
@@ -144,13 +143,13 @@ export default function ArsenalScreen() {
                             <Ionicons
                                 name={section.icon as any}
                                 size={16}
-                                color={activeSection === section.key ? '#FFFFFF' : theme.textSecondary}
+                                color={activeSection === section.key ? (theme.accentContrastText || '#FFFFFF') : theme.textSecondary}
                             />
                             <ThemedText
                                 variant="caption"
                                 style={[
                                     styles.tabText,
-                                    activeSection === section.key && styles.activeTabText
+                                    activeSection === section.key && { color: theme.accentContrastText || '#FFFFFF' }
                                 ]}
                             >
                                 {section.label}
@@ -198,13 +197,22 @@ export default function ArsenalScreen() {
                                 <ThemedText variant="caption" style={styles.groupTitle}>
                                     MY COLLECTIONS
                                 </ThemedText>
-                                <TouchableOpacity
-                                    style={[styles.addButton, { backgroundColor: theme.accent + '15' }]}
-                                    onPress={() => setShowFileUploader(true)}
-                                >
-                                    <Ionicons name="add" size={16} color={theme.accent} />
-                                    <ThemedText variant="caption" style={{ color: theme.accent, fontWeight: '600' }}>Add</ThemedText>
-                                </TouchableOpacity>
+                                <View style={styles.addButtonGroup}>
+                                    <TouchableOpacity
+                                        style={[styles.addButton, { backgroundColor: theme.accent + '15' }]}
+                                        onPress={() => setShowAddVerses(true)}
+                                    >
+                                        <Ionicons name="create-outline" size={16} color={theme.accent} />
+                                        <ThemedText variant="caption" style={{ color: theme.accent, fontWeight: '600' }}>Manual</ThemedText>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity
+                                        style={[styles.addButton, { backgroundColor: theme.accent + '15' }]}
+                                        onPress={() => setShowFileUploader(true)}
+                                    >
+                                        <Ionicons name="cloud-upload-outline" size={16} color={theme.accent} />
+                                        <ThemedText variant="caption" style={{ color: theme.accent, fontWeight: '600' }}>Upload</ThemedText>
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                             {customCollections.length === 0 ? (
                                 <View style={[styles.emptyState, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]}>
@@ -255,33 +263,7 @@ export default function ArsenalScreen() {
                 {/* Voice Section */}
                 {activeSection === 'voice' && (
                     <View style={styles.sectionContent}>
-                        <View style={[styles.comingSoonCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]}>
-                            <View style={[styles.comingSoonIcon, { backgroundColor: theme.accent + '15' }]}>
-                                <Ionicons name="mic-circle" size={40} color={theme.accent} />
-                            </View>
-                            <ThemedText variant="heading" style={styles.comingSoonTitle}>Voice Library</ThemedText>
-                            <ThemedText variant="body" style={styles.comingSoonText}>
-                                Your voice recordings will appear here. Record verses during practice to build your audio library.
-                            </ThemedText>
-                        </View>
-                    </View>
-                )}
-
-                {/* Avatar Section */}
-                {activeSection === 'avatar' && (
-                    <View style={styles.sectionContent}>
-                        <View style={[styles.avatarCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]}>
-                            <View style={styles.avatarContainer}>
-                                <SoldierAvatar size="large" showStats={true} />
-                            </View>
-                            <TouchableOpacity
-                                style={[styles.avatarButton, { backgroundColor: theme.accent }]}
-                                onPress={() => router.push('/settings' as any)}
-                            >
-                                <Ionicons name="settings-outline" size={18} color="#FFFFFF" />
-                                <Text style={styles.avatarButtonText}>Customize Avatar</Text>
-                            </TouchableOpacity>
-                        </View>
+                        <VoiceLibrary isDark={isDark} theme={theme} />
                     </View>
                 )}
             </ScrollView>
@@ -389,7 +371,6 @@ const styles = StyleSheet.create({
     },
     activeTabText: {
         opacity: 1,
-        color: '#FFFFFF',
     },
     sectionContent: {
         marginBottom: 20,
@@ -416,6 +397,10 @@ const styles = StyleSheet.create({
         paddingVertical: 6,
         borderRadius: 8,
         gap: 4,
+    },
+    addButtonGroup: {
+        flexDirection: 'row',
+        gap: 8,
     },
     collectionCard: {
         flexDirection: 'row',
@@ -533,27 +518,5 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         opacity: 0.6,
         lineHeight: 22,
-    },
-    avatarCard: {
-        alignItems: 'center',
-        padding: 24,
-        borderRadius: 16,
-    },
-    avatarContainer: {
-        marginBottom: 20,
-    },
-    avatarButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 14,
-        paddingHorizontal: 24,
-        borderRadius: 12,
-        gap: 8,
-    },
-    avatarButtonText: {
-        color: '#FFFFFF',
-        fontWeight: '600',
-        fontSize: 14,
     },
 })

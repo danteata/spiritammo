@@ -88,6 +88,12 @@ export default function ProfileScreen() {
         )
     }
 
+    const handleCustomizeAvatar = () => {
+        console.log('Navigating to avatar screen')
+        // Use push to navigate to avatar as a modal/screen
+        router.push('/avatar')
+    }
+
     // Get current rank info
     const currentRank = userStats?.rank || 'recruit'
     const rankInfo = MILITARY_RANKS.find(r => r.rank === currentRank) || MILITARY_RANKS[0]
@@ -106,37 +112,7 @@ export default function ProfileScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Avatar and Rank Section */}
-                <View style={styles.avatarSection}>
-                    <SoldierAvatar size="large" showStats={true} />
-                    <View style={styles.rankInfo}>
-                        <ThemedText variant="heading" style={styles.rankTitle}>{rankInfo.title}</ThemedText>
-                        <ThemedText variant="caption" style={styles.rankXP}>
-                            {rankInfo.insignia} {rankInfo.description}
-                        </ThemedText>
-                    </View>
-                </View>
-
-                {/* Quick Stats */}
-                <View style={styles.statsGrid}>
-                    <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                        <Ionicons name="flame" size={24} color="#FF6B35" />
-                        <ThemedText variant="heading" style={styles.statValue}>{userStats?.streak || 0}</ThemedText>
-                        <ThemedText variant="caption" style={styles.statLabel}>Day Streak</ThemedText>
-                    </View>
-                    <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                        <FontAwesome5 name="crosshairs" size={24} color={theme.accent} />
-                        <ThemedText variant="heading" style={styles.statValue}>{userStats?.totalPracticed || 0}</ThemedText>
-                        <ThemedText variant="caption" style={styles.statLabel}>Drills</ThemedText>
-                    </View>
-                    <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                        <FontAwesome name="star" size={24} color="#FFD700" />
-                        <ThemedText variant="heading" style={styles.statValue}>{userStats?.averageAccuracy ? Math.round(userStats.averageAccuracy) : 0}%</ThemedText>
-                        <ThemedText variant="caption" style={styles.statLabel}>Accuracy</ThemedText>
-                    </View>
-                </View>
-
-                {/* Section Tabs - Pill Style */}
+                {/* Section Tabs - At the top for easy access */}
                 <View style={[styles.sectionTabs, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                     <TouchableOpacity
                         style={[
@@ -150,11 +126,11 @@ export default function ProfileScreen() {
                         <Ionicons
                             name="stats-chart"
                             size={16}
-                            color={activeSection === 'stats' ? '#FFFFFF' : theme.textSecondary}
+                            color={activeSection === 'stats' ? (theme.accentContrastText || '#FFFFFF') : theme.textSecondary}
                         />
                         <ThemedText
                             variant="caption"
-                            style={[styles.tabText, activeSection === 'stats' && styles.activeTabText]}
+                            style={[styles.tabText, activeSection === 'stats' && { color: theme.accentContrastText || '#FFFFFF' }]}
                         >
                             Stats
                         </ThemedText>
@@ -171,11 +147,11 @@ export default function ProfileScreen() {
                         <Ionicons
                             name="settings"
                             size={16}
-                            color={activeSection === 'settings' ? '#FFFFFF' : theme.textSecondary}
+                            color={activeSection === 'settings' ? (theme.accentContrastText || '#FFFFFF') : theme.textSecondary}
                         />
                         <ThemedText
                             variant="caption"
-                            style={[styles.tabText, activeSection === 'settings' && styles.activeTabText]}
+                            style={[styles.tabText, activeSection === 'settings' && { color: theme.accentContrastText || '#FFFFFF' }]}
                         >
                             Settings
                         </ThemedText>
@@ -192,20 +168,59 @@ export default function ProfileScreen() {
                         <Ionicons
                             name="people"
                             size={16}
-                            color={activeSection === 'squad' ? '#FFFFFF' : theme.textSecondary}
+                            color={activeSection === 'squad' ? (theme.accentContrastText || '#FFFFFF') : theme.textSecondary}
                         />
                         <ThemedText
                             variant="caption"
-                            style={[styles.tabText, activeSection === 'squad' && styles.activeTabText]}
+                            style={[styles.tabText, activeSection === 'squad' && { color: theme.accentContrastText || '#FFFFFF' }]}
                         >
                             Squad
                         </ThemedText>
                     </TouchableOpacity>
                 </View>
 
-                {/* Section Content */}
+                {/* Stats Section */}
                 {activeSection === 'stats' && (
                     <View style={styles.sectionContent}>
+                        {/* Avatar and Rank Section */}
+                        <View style={styles.avatarSection}>
+                            <SoldierAvatar size="large" showStats={true} />
+                            <View style={styles.rankInfo}>
+                                <ThemedText variant="heading" style={styles.rankTitle}>{rankInfo.title}</ThemedText>
+                                <ThemedText variant="caption" style={styles.rankXP}>
+                                    {rankInfo.insignia} {rankInfo.description}
+                                </ThemedText>
+                            </View>
+                            <TouchableOpacity
+                                style={StyleSheet.flatten([styles.customizeButton, { backgroundColor: theme.accent }])}
+                                activeOpacity={0.8}
+                                onPress={() => router.push('/avatar')}
+                            >
+                                <Ionicons name="create-outline" size={16} color={theme.accentContrastText || '#FFFFFF'} />
+                                <Text style={[styles.customizeButtonText, { color: theme.accentContrastText || '#FFFFFF' }]}>Customize Avatar</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {/* Quick Stats */}
+                        <View style={styles.statsGrid}>
+                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                                <Ionicons name="flame" size={24} color="#FF6B35" />
+                                <ThemedText variant="heading" style={styles.statValue}>{userStats?.streak || 0}</ThemedText>
+                                <ThemedText variant="caption" style={styles.statLabel}>Day Streak</ThemedText>
+                            </View>
+                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                                <FontAwesome5 name="crosshairs" size={24} color={theme.accent} />
+                                <ThemedText variant="heading" style={styles.statValue}>{userStats?.totalPracticed || 0}</ThemedText>
+                                <ThemedText variant="caption" style={styles.statLabel}>Drills</ThemedText>
+                            </View>
+                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                                <FontAwesome name="star" size={24} color="#FFD700" />
+                                <ThemedText variant="heading" style={styles.statValue}>{userStats?.averageAccuracy ? Math.round(userStats.averageAccuracy) : 0}%</ThemedText>
+                                <ThemedText variant="caption" style={styles.statLabel}>Accuracy</ThemedText>
+                            </View>
+                        </View>
+
+                        {/* Mission Reports Link */}
                         <TouchableOpacity
                             style={styles.menuItem}
                             onPress={() => router.push('/mission-report')}
@@ -222,6 +237,7 @@ export default function ProfileScreen() {
                     </View>
                 )}
 
+                {/* Settings Section */}
                 {activeSection === 'settings' && (
                     <View style={styles.sectionContent}>
                         {/* Dark Mode Toggle */}
@@ -281,14 +297,15 @@ export default function ProfileScreen() {
                                 <Ionicons name="settings-outline" size={22} color={theme.accent} />
                             </View>
                             <View style={styles.menuContent}>
-                                <ThemedText variant="body">All Settings</ThemedText>
-                                <ThemedText variant="caption" style={styles.menuSubtitle}>Advanced options</ThemedText>
+                                <ThemedText variant="body">Advanced Settings</ThemedText>
+                                <ThemedText variant="caption" style={styles.menuSubtitle}>Theme colors, notifications & more</ThemedText>
                             </View>
                             <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
                         </TouchableOpacity>
                     </View>
                 )}
 
+                {/* Squad Section */}
                 {activeSection === 'squad' && (
                     <View style={styles.sectionContent}>
                         <View style={styles.comingSoonCard}>
@@ -324,46 +341,12 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
         paddingHorizontal: 16,
         paddingBottom: 100,
     },
-    avatarSection: {
-        alignItems: 'center',
-        paddingVertical: 24,
-    },
-    rankInfo: {
-        alignItems: 'center',
-        marginTop: 16,
-    },
-    rankTitle: {
-        fontSize: 24,
-    },
-    rankXP: {
-        marginTop: 4,
-        opacity: 0.7,
-    },
-    statsGrid: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginBottom: 24,
-        gap: 12,
-    },
-    statItem: {
-        flex: 1,
-        alignItems: 'center',
-        paddingVertical: 16,
-        borderRadius: 12,
-    },
-    statValue: {
-        fontSize: 20,
-        marginTop: 8,
-    },
-    statLabel: {
-        marginTop: 4,
-        opacity: 0.7,
-    },
     sectionTabs: {
         flexDirection: 'row',
         borderRadius: 14,
         padding: 4,
         marginBottom: 20,
+        marginTop: 8,
     },
     sectionTab: {
         flex: 1,
@@ -388,10 +371,58 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     },
     activeTabText: {
         opacity: 1,
-        color: '#FFFFFF',
     },
     sectionContent: {
         marginBottom: 24,
+    },
+    avatarSection: {
+        alignItems: 'center',
+        paddingVertical: 16,
+        marginBottom: 16,
+    },
+    rankInfo: {
+        alignItems: 'center',
+        marginTop: 12,
+    },
+    rankTitle: {
+        fontSize: 24,
+    },
+    rankXP: {
+        marginTop: 4,
+        opacity: 0.7,
+    },
+    customizeButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 20,
+        marginTop: 16,
+        gap: 6,
+    },
+    customizeButtonText: {
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    statsGrid: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        marginBottom: 20,
+        gap: 12,
+    },
+    statItem: {
+        flex: 1,
+        alignItems: 'center',
+        paddingVertical: 16,
+        borderRadius: 12,
+    },
+    statValue: {
+        fontSize: 20,
+        marginTop: 8,
+    },
+    statLabel: {
+        marginTop: 4,
+        opacity: 0.7,
     },
     settingItem: {
         flexDirection: 'row',

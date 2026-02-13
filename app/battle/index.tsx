@@ -52,7 +52,7 @@ export default function BattleScreen() {
             practice_type: 'quick_battle',
             source: 'battle_screen'
         })
-        router.push({ pathname: '/battle/campaign', params: { mode: 'quick' } })
+        router.push('/battle/quick')
     }
 
     const handleCollectionBattle = () => {
@@ -60,7 +60,7 @@ export default function BattleScreen() {
             practice_type: 'collection_battle',
             source: 'battle_screen'
         })
-        router.push({ pathname: '/battle/campaign', params: { mode: 'collection' } })
+        router.push('/battle/collection')
     }
 
     const valorPoints = userStats?.valorPoints || 0

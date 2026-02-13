@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -17,8 +17,6 @@ import {
   Book,
   Collection,
   Scripture,
-  UserSettings,
-  UserStats,
 } from '@/types/scripture'
 import { BOOKS } from '@/mocks/books'
 import BookSelector from './BookSelector';
@@ -588,7 +586,7 @@ const getStyles = (theme: typeof TACTICAL_THEME) => StyleSheet.create({
     borderRadius: 6,
   },
   goButtonText: {
-    color: theme.text, // Accent usually has light text, but let's stick to theme.text for now or hardcode white if needed
+    color: theme.accentContrastText || '#FFFFFF',
     fontSize: 14,
     fontWeight: 'bold',
   },
@@ -646,7 +644,7 @@ const getStyles = (theme: typeof TACTICAL_THEME) => StyleSheet.create({
     gap: 8,
   },
   newCollectionText: {
-    color: theme.text, // Check contrast
+    color: theme.accentContrastText || '#FFFFFF',
     fontWeight: 'bold',
   },
   footer: {
@@ -680,7 +678,7 @@ const getStyles = (theme: typeof TACTICAL_THEME) => StyleSheet.create({
     borderRadius: 8,
   },
   deployButtonText: {
-    color: theme.text, // Check contrast
+    color: theme.accentContrastText || '#FFFFFF',
   },
   newCollectionForm: {
     padding: 20,
@@ -720,10 +718,10 @@ const getStyles = (theme: typeof TACTICAL_THEME) => StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 6,
     alignItems: 'center',
-    backgroundColor: theme.surface,
+    backgroundColor: theme.accent,
   },
   createButtonText: {
-    color: theme.text,
+    color: theme.accentContrastText || '#FFFFFF',
     fontWeight: 'bold',
   },
 });

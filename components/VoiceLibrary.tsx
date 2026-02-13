@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
     View,
     StyleSheet,
-    FlatList,
+    ScrollView,
     TouchableOpacity,
     Text,
     Alert,
@@ -195,17 +195,20 @@ export const VoiceLibrary: React.FC<VoiceLibraryProps> = ({ isDark, theme }) => 
                     <FontAwesome5 name="microphone-slash" size={48} color={theme.textSecondary} />
                     <ThemedText style={styles.emptyTitle}>No Voice Recordings</ThemedText>
                     <ThemedText style={styles.emptyText}>
-                        High-accuracy recordings (90%+) will be automatically saved here.
+                        🎯 High-accuracy recitals (90%+) are automatically captured during battles and saved here for review.
                     </ThemedText>
                 </View>
             ) : (
-                <FlatList
-                    data={recordings}
-                    keyExtractor={(item) => item.id}
-                    renderItem={renderRecordingItem}
-                    contentContainerStyle={styles.listContainer}
+                <ScrollView
+                    style={styles.listContainer}
                     showsVerticalScrollIndicator={false}
-                />
+                >
+                    {recordings.map((item) => (
+                        <View key={item.id}>
+                            {renderRecordingItem({ item })}
+                        </View>
+                    ))}
+                </ScrollView>
             )}
         </View>
     )

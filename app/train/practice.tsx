@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
     StyleSheet,
     View,
@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     Alert,
     ActivityIndicator,
+    Animated,
 } from 'react-native'
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -40,6 +41,12 @@ export default function TrainingPracticeScreen() {
     const [showTargetPractice, setShowTargetPractice] = useState(false)
     const [showStealthDrill, setShowStealthDrill] = useState(false)
     const [isLoadingScripture, setIsLoadingScripture] = useState(false)
+    const [burstQueue, setBurstQueue] = useState<Scripture[]>([])
+    const [burstIndex, setBurstIndex] = useState(0)
+    const [isBurstActive, setIsBurstActive] = useState(false)
+    const [burstScore, setBurstScore] = useState({ correct: 0, total: 0 })
+    const burstTimerRef = useRef<NodeJS.Timeout | null>(null)
+    const fadeAnim = useRef(new Animated.Value(1)).current
 
     // Load a random scripture for practice
     const loadRandomScripture = () => {
@@ -56,8 +63,77 @@ export default function TrainingPracticeScreen() {
         }
     }
 
+    // Initialize burst mode with multiple verses
+    const initBurstMode = () => {
+        if (!scriptures || scriptures.length === 0) return
+
+        // Shuffle and pick 5-10 verses for burst mode
+        const shuffled = [...scriptures].sort(() => Math.random() - 0.5)
+        const burstCount = Math.min(7, shuffled.length)
+        const selectedVerses = shuffled.slice(0, burstCount)
+
+        setBurstQueue(selectedVerses)
+        setBurstIndex(0)
+        setCurrentScripture(selectedVerses[0])
+        setIsBurstActive(true)
+        setBurstScore({ correct: 0, total: 0 })
+    }
+
+    // Move to next verse in burst mode
+    const nextBurstVerse = (wasCorrect: boolean) => {
+        setBurstScore(prev => ({
+            correct: prev.correct + (wasCorrect ? 1 : 0),
+            total: prev.total + 1
+        }))
+
+        const nextIndex = burstIndex + 1
+        if (nextIndex < burstQueue.length) {
+            // Animate transition
+            Animated.sequence([
+                Animated.timing(fadeAnim, {
+                    toValue: 0,
+                    duration: 150,
+                    useNativeDriver: true,
+                }),
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: 150,
+                    useNativeDriver: true,
+                })
+            ]).start()
+
+            setBurstIndex(nextIndex)
+            setCurrentScripture(burstQueue[nextIndex])
+        } else {
+            // Burst complete
+            const finalScore = {
+                correct: burstScore.correct + (wasCorrect ? 1 : 0),
+                total: burstScore.total + 1
+            }
+            setIsBurstActive(false)
+            Alert.alert(
+                'Burst Complete!',
+                `You got ${finalScore.correct}/${finalScore.total} correct!`,
+                [
+                    { text: 'New Burst', onPress: initBurstMode },
+                    { text: 'Exit', onPress: () => router.back() }
+                ]
+            )
+        }
+    }
+
     useEffect(() => {
-        loadRandomScripture()
+        if (trainingMode === 'burst') {
+            initBurstMode()
+        } else {
+            loadRandomScripture()
+        }
+
+        return () => {
+            if (burstTimerRef.current) {
+                clearTimeout(burstTimerRef.current)
+            }
+        }
     }, [])
 
     const handlePracticeComplete = (transcript: string, accuracy: number) => {

@@ -954,7 +954,7 @@ export default function TargetPractice({
             color={isPlaying ? theme.accent : (isDark ? 'white' : 'black')}
           />
           <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button, { color: isDark ? 'white' : 'black' }, isPlaying && { color: theme.accent }]}>
-            {isPlaying ? "PLAYING..." : "HEAR TARGET"}
+            {isPlaying ? "PLAYING..." : "LISTEN"}
           </Text>
         </TouchableOpacity>
 
@@ -967,7 +967,7 @@ export default function TargetPractice({
             <View style={styles.recordIconInner} />
           </View>
           <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button, { color: 'white' }]}>
-            {isRecordingMode ? 'TARGET' : 'ENGAGE TARGET'}
+            {isRecordingMode ? 'TARGET' : 'ENGAGE'}
           </Text>
         </TouchableOpacity>
       </View>

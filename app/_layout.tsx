@@ -35,7 +35,9 @@ function RootLayoutNav() {
   return (
     <NativeTabs
       minimizeBehavior="onScrollDown"
-      tintColor="#007AFF"
+      tintColor={isDark ? theme.accent : "#007AFF"}
+      barTintColor={isDark ? theme.background : "#FFFFFF"}
+      unselectedItemTintColor={isDark ? theme.textSecondary : "#999999"}
     >
       {/* Home Tab */}
       <NativeTabs.Trigger name="index">
