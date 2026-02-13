@@ -13,6 +13,7 @@ import { useZustandStore } from '@/hooks/zustandStore'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
 import { NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useTheme } from '@/hooks/useTheme';
+import { ConvexClientProvider } from '@/providers/ConvexProvider';
 import "../global.css";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -125,17 +126,19 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
           <ClerkLoaded>
-            <QueryClientProvider client={queryClient}>
-              <AppStoreProvider>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <BundleInspector>
-                    <RorkErrorBoundary>
-                      <RootLayoutNav />
-                    </RorkErrorBoundary>
-                  </BundleInspector>
-                </GestureHandlerRootView>
-              </AppStoreProvider>
-            </QueryClientProvider>
+            <ConvexClientProvider>
+              <QueryClientProvider client={queryClient}>
+                <AppStoreProvider>
+                  <GestureHandlerRootView style={{ flex: 1 }}>
+                    <BundleInspector>
+                      <RorkErrorBoundary>
+                        <RootLayoutNav />
+                      </RorkErrorBoundary>
+                    </BundleInspector>
+                  </GestureHandlerRootView>
+                </AppStoreProvider>
+              </QueryClientProvider>
+            </ConvexClientProvider>
           </ClerkLoaded>
         </ClerkProvider>
       </SafeAreaProvider>

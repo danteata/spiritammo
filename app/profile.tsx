@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import * as React from 'react'
+import { useState } from 'react'
 import {
     StyleSheet,
     View,
@@ -135,44 +136,68 @@ export default function ProfileScreen() {
                     </View>
                 </View>
 
-                {/* Section Tabs */}
-                <View style={styles.sectionTabs}>
+                {/* Section Tabs - Pill Style */}
+                <View style={[styles.sectionTabs, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                     <TouchableOpacity
-                        style={[styles.sectionTab, activeSection === 'stats' && styles.activeTab]}
+                        style={[
+                            styles.sectionTab,
+                            activeSection === 'stats' && styles.activeTab,
+                            activeSection === 'stats' && { backgroundColor: theme.accent }
+                        ]}
                         onPress={() => setActiveSection('stats')}
+                        activeOpacity={0.8}
                     >
                         <Ionicons
                             name="stats-chart"
-                            size={20}
-                            color={activeSection === 'stats' ? theme.accent : theme.textSecondary}
+                            size={16}
+                            color={activeSection === 'stats' ? '#FFFFFF' : theme.textSecondary}
                         />
-                        <ThemedText variant="caption" style={[styles.tabText, activeSection === 'stats' && styles.activeTabText]}>
+                        <ThemedText
+                            variant="caption"
+                            style={[styles.tabText, activeSection === 'stats' && styles.activeTabText]}
+                        >
                             Stats
                         </ThemedText>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.sectionTab, activeSection === 'settings' && styles.activeTab]}
+                        style={[
+                            styles.sectionTab,
+                            activeSection === 'settings' && styles.activeTab,
+                            activeSection === 'settings' && { backgroundColor: theme.accent }
+                        ]}
                         onPress={() => setActiveSection('settings')}
+                        activeOpacity={0.8}
                     >
                         <Ionicons
                             name="settings"
-                            size={20}
-                            color={activeSection === 'settings' ? theme.accent : theme.textSecondary}
+                            size={16}
+                            color={activeSection === 'settings' ? '#FFFFFF' : theme.textSecondary}
                         />
-                        <ThemedText variant="caption" style={[styles.tabText, activeSection === 'settings' && styles.activeTabText]}>
+                        <ThemedText
+                            variant="caption"
+                            style={[styles.tabText, activeSection === 'settings' && styles.activeTabText]}
+                        >
                             Settings
                         </ThemedText>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.sectionTab, activeSection === 'squad' && styles.activeTab]}
+                        style={[
+                            styles.sectionTab,
+                            activeSection === 'squad' && styles.activeTab,
+                            activeSection === 'squad' && { backgroundColor: theme.accent }
+                        ]}
                         onPress={() => setActiveSection('squad')}
+                        activeOpacity={0.8}
                     >
                         <Ionicons
                             name="people"
-                            size={20}
-                            color={activeSection === 'squad' ? theme.accent : theme.textSecondary}
+                            size={16}
+                            color={activeSection === 'squad' ? '#FFFFFF' : theme.textSecondary}
                         />
-                        <ThemedText variant="caption" style={[styles.tabText, activeSection === 'squad' && styles.activeTabText]}>
+                        <ThemedText
+                            variant="caption"
+                            style={[styles.tabText, activeSection === 'squad' && styles.activeTabText]}
+                        >
                             Squad
                         </ThemedText>
                     </TouchableOpacity>
@@ -336,28 +361,34 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     },
     sectionTabs: {
         flexDirection: 'row',
-        backgroundColor: theme.surface,
-        borderRadius: 12,
+        borderRadius: 14,
         padding: 4,
-        marginBottom: 16,
+        marginBottom: 20,
     },
     sectionTab: {
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 12,
-        borderRadius: 8,
+        paddingVertical: 10,
+        borderRadius: 10,
         gap: 6,
     },
     activeTab: {
-        backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 4,
+        elevation: 3,
     },
     tabText: {
-        opacity: 0.7,
+        fontSize: 12,
+        fontWeight: '600',
+        opacity: 0.6,
     },
     activeTabText: {
         opacity: 1,
+        color: '#FFFFFF',
     },
     sectionContent: {
         marginBottom: 24,
