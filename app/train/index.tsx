@@ -45,6 +45,14 @@ export default function TrainingScreen() {
         router.push('/train/collection')
     }
 
+    const handleListenAndLearn = () => {
+        trackEvent(AnalyticsEventType.PRACTICE_START, {
+            practice_type: 'listen_and_learn',
+            source: 'training_screen'
+        })
+        router.push('/train/listen')
+    }
+
     const verseCount = scriptures?.length || 0
     const collectionCount = collections?.length || 0
 
@@ -162,7 +170,7 @@ export default function TrainingScreen() {
                             <View style={styles.modeContent}>
                                 <ThemedText variant="heading" style={styles.modeTitle}>AUTO PILOT</ThemedText>
                                 <ThemedText variant="body" style={styles.modeDescription}>
-                                    Continuous, hands-free practice. Listen and repeat at your own pace.
+                                    Verses read aloud automatically, one after another. Just listen and absorb.
                                 </ThemedText>
                                 <View style={styles.modeTag}>
                                     <ThemedText variant="caption" style={styles.modeTagText}>Passive Learning</ThemedText>
@@ -181,6 +189,34 @@ export default function TrainingScreen() {
                         COLLECTION PRACTICE
                     </ThemedText>
 
+                    {/* Listen & Learn */}
+                    <TouchableOpacity
+                        style={styles.modeCard}
+                        onPress={handleListenAndLearn}
+                        activeOpacity={0.9}
+                    >
+                        <ThemedCard variant="glass" style={[styles.modeCardInner, styles.listenMode]}>
+                            <View style={styles.modeIconContainer}>
+                                <View style={[styles.modeIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+                                    <Ionicons name="headset" size={28} color="#A855F7" />
+                                </View>
+                            </View>
+                            <View style={styles.modeContent}>
+                                <ThemedText variant="heading" style={styles.modeTitle}>LISTEN & LEARN</ThemedText>
+                                <ThemedText variant="body" style={styles.modeDescription}>
+                                    Passive memorization — select a collection and listen to verses read aloud automatically.
+                                </ThemedText>
+                                <View style={[styles.modeTag, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: '#A855F7' }]}>Hands-Free</ThemedText>
+                                </View>
+                            </View>
+                            <View style={styles.modeArrow}>
+                                <FontAwesome5 name="chevron-right" size={16} color={theme.textSecondary} />
+                            </View>
+                        </ThemedCard>
+                    </TouchableOpacity>
+
+                    {/* Collection Drill */}
                     <TouchableOpacity
                         style={styles.modeCard}
                         onPress={handleCollectionPractice}
@@ -220,7 +256,13 @@ export default function TrainingScreen() {
                         <View style={styles.tipItem}>
                             <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
                             <ThemedText variant="body" style={styles.tipText}>
-                                Switch to Burst Fire for verses you know well
+                                Switch to Burst Fire for rapid review of familiar verses
+                            </ThemedText>
+                        </View>
+                        <View style={styles.tipItem}>
+                            <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                            <ThemedText variant="body" style={styles.tipText}>
+                                Use Listen & Learn for passive memorization while on the go
                             </ThemedText>
                         </View>
                         <View style={styles.tipItem}>
@@ -343,6 +385,10 @@ const styles = StyleSheet.create({
     },
     collectionSection: {
         marginBottom: 24,
+    },
+    listenMode: {
+        borderWidth: 2,
+        borderColor: 'rgba(168, 85, 247, 0.3)',
     },
     tipsSection: {
         marginBottom: 24,
