@@ -1,6 +1,6 @@
 import * as React from 'react';
-import { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Platform, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { useState, useEffect, useRef } from 'react';
+import { StyleSheet, Text, View, Platform, ActivityIndicator, TouchableOpacity, Animated } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import { COLORS } from '@/constants/colors';
@@ -18,6 +18,80 @@ import VoiceRecordingService from '@/services/voiceRecording';
 import VoicePlaybackService from '@/services/voicePlayback';
 import { useAnalytics } from '@/hooks/useAnalytics';
 import { AnalyticsEventType } from '@/services/analytics';
+
+// Format recording time as MM:SS
+const formatRecordingTime = (ms: number): string => {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
+
+// Animated waveform bar component
+interface AnimatedWaveformBarProps {
+  isActive: boolean;
+  delay: number;
+}
+
+const AnimatedWaveformBar: React.FC<AnimatedWaveformBarProps> = ({ isActive, delay }) => {
+  const animatedHeight = useRef(new Animated.Value(10));
+  const animatedOpacity = useRef(new Animated.Value(0.3));
+
+  React.useEffect(() => {
+    if (isActive) {
+      // Create random height animation
+      const animate = () => {
+        const randomHeight = Math.random() * 20 + 10; // 10-30
+        const randomOpacity = Math.random() * 0.5 + 0.5; // 0.5-1.0
+
+        Animated.parallel([
+          Animated.timing(animatedHeight.current, {
+            toValue: randomHeight,
+            duration: 150,
+            useNativeDriver: false,
+          }),
+          Animated.timing(animatedOpacity.current, {
+            toValue: randomOpacity,
+            duration: 150,
+            useNativeDriver: false,
+          }),
+        ]).start(() => {
+          if (isActive) {
+            setTimeout(animate, 50 + delay);
+          }
+        });
+      };
+
+      setTimeout(animate, delay);
+    } else {
+      // Reset to default
+      Animated.parallel([
+        Animated.timing(animatedHeight.current, {
+          toValue: 10,
+          duration: 200,
+          useNativeDriver: false,
+        }),
+        Animated.timing(animatedOpacity.current, {
+          toValue: 0.3,
+          duration: 200,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    }
+  }, [isActive, delay]);
+
+  return (
+    <Animated.View
+      style={[
+        styles.waveformBar,
+        {
+          height: animatedHeight.current,
+          opacity: animatedOpacity.current,
+        },
+      ]}
+    />
+  );
+};
 
 interface VoiceRecorderProps {
   scriptureText: string;
@@ -536,11 +610,36 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
           <Text style={[styles.displayText, { color: textColor, opacity: 0.7 }]}>{interimTranscript}...</Text>
         ) : (
           <View style={styles.waveformContainer}>
-            <View style={[styles.waveformBar, { height: 10, opacity: 0.3 }]} />
-            <View style={[styles.waveformBar, { height: 16, opacity: 0.5 }]} />
-            <View style={[styles.waveformBar, { height: 24, opacity: 0.7 }]} />
-            <View style={[styles.waveformBar, { height: 16, opacity: 0.5 }]} />
-            <View style={[styles.waveformBar, { height: 10, opacity: 0.3 }]} />
+            {/* Animated waveform bars for recording feedback */}
+            {isRecording ? (
+              <>
+                <AnimatedWaveformBar key="1" isActive={true} delay={0} />
+                <AnimatedWaveformBar key="2" isActive={true} delay={100} />
+                <AnimatedWaveformBar key="3" isActive={true} delay={200} />
+                <AnimatedWaveformBar key="4" isActive={true} delay={100} />
+                <AnimatedWaveformBar key="5" isActive={true} delay={0} />
+              </>
+            ) : (
+              <>
+                <View style={[styles.waveformBar, { height: 10, opacity: 0.3 }]} />
+                <View style={[styles.waveformBar, { height: 16, opacity: 0.5 }]} />
+                <View style={[styles.waveformBar, { height: 24, opacity: 0.7 }]} />
+                <View style={[styles.waveformBar, { height: 16, opacity: 0.5 }]} />
+                <View style={[styles.waveformBar, { height: 10, opacity: 0.3 }]} />
+              </>
+            )}
+          </View>
+        )}
+
+        {/* Recording Duration Timer */}
+        {isRecording && (
+          <View style={styles.timerContainer}>
+            <View style={styles.recordingIndicator}>
+              <View style={styles.recordingDot} />
+              <Text style={styles.timerText}>
+                {formatRecordingTime(recordingDuration)}
+              </Text>
+            </View>
           </View>
         )}
 
@@ -619,9 +718,30 @@ const styles = StyleSheet.create({
     height: 24,
   },
   waveformBar: {
-    width: 3,
+    width: 4,
     backgroundColor: 'white',
     borderRadius: 2,
+  },
+  timerContainer: {
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  recordingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  recordingDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: COLORS.error,
+  },
+  timerText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    fontVariant: ['tabular-nums'],
   },
   accuracyBadge: {
     marginTop: 4,

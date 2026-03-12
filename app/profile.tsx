@@ -21,7 +21,7 @@ import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
 import { MILITARY_RANKS } from '@/services/militaryRanking'
 
-type ProfileSection = 'stats' | 'settings' | 'squad'
+type ProfileSection = 'journey' | 'settings'
 
 export default function ProfileScreen() {
     const {
@@ -41,7 +41,7 @@ export default function ProfileScreen() {
     // Track screen view
     useScreenTracking('profile')
 
-    const [activeSection, setActiveSection] = useState<ProfileSection>('stats')
+    const [activeSection, setActiveSection] = useState<ProfileSection>('journey')
 
     const handleThemeChange = (value: boolean) => {
         const oldTheme = isDark ? 'dark' : 'light'
@@ -117,22 +117,22 @@ export default function ProfileScreen() {
                     <TouchableOpacity
                         style={[
                             styles.sectionTab,
-                            activeSection === 'stats' && styles.activeTab,
-                            activeSection === 'stats' && { backgroundColor: theme.accent }
+                            activeSection === 'journey' && styles.activeTab,
+                            activeSection === 'journey' && { backgroundColor: theme.accent }
                         ]}
-                        onPress={() => setActiveSection('stats')}
+                        onPress={() => setActiveSection('journey')}
                         activeOpacity={0.8}
                     >
                         <Ionicons
-                            name="stats-chart"
+                            name="map"
                             size={16}
-                            color={activeSection === 'stats' ? (theme.accentContrastText || '#FFFFFF') : theme.textSecondary}
+                            color={activeSection === 'journey' ? (theme.accentContrastText || '#FFFFFF') : theme.textSecondary}
                         />
                         <ThemedText
                             variant="caption"
-                            style={[styles.tabText, activeSection === 'stats' && { color: theme.accentContrastText || '#FFFFFF' }]}
+                            style={[styles.tabText, activeSection === 'journey' && { color: theme.accentContrastText || '#FFFFFF' }]}
                         >
-                            Stats
+                            Journey
                         </ThemedText>
                     </TouchableOpacity>
                     <TouchableOpacity
@@ -156,31 +156,10 @@ export default function ProfileScreen() {
                             Settings
                         </ThemedText>
                     </TouchableOpacity>
-                    <TouchableOpacity
-                        style={[
-                            styles.sectionTab,
-                            activeSection === 'squad' && styles.activeTab,
-                            activeSection === 'squad' && { backgroundColor: theme.accent }
-                        ]}
-                        onPress={() => setActiveSection('squad')}
-                        activeOpacity={0.8}
-                    >
-                        <Ionicons
-                            name="people"
-                            size={16}
-                            color={activeSection === 'squad' ? (theme.accentContrastText || '#FFFFFF') : theme.textSecondary}
-                        />
-                        <ThemedText
-                            variant="caption"
-                            style={[styles.tabText, activeSection === 'squad' && { color: theme.accentContrastText || '#FFFFFF' }]}
-                        >
-                            Squad
-                        </ThemedText>
-                    </TouchableOpacity>
                 </View>
 
-                {/* Stats Section */}
-                {activeSection === 'stats' && (
+                {/* Journey Section */}
+                {activeSection === 'journey' && (
                     <View style={styles.sectionContent}>
                         {/* Avatar and Rank Section */}
                         <View style={styles.avatarSection}>
@@ -302,19 +281,6 @@ export default function ProfileScreen() {
                             </View>
                             <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
                         </TouchableOpacity>
-                    </View>
-                )}
-
-                {/* Squad Section */}
-                {activeSection === 'squad' && (
-                    <View style={styles.sectionContent}>
-                        <View style={styles.comingSoonCard}>
-                            <Ionicons name="people-circle" size={48} color={theme.textSecondary} />
-                            <ThemedText variant="heading" style={styles.comingSoonTitle}>Squad Ops</ThemedText>
-                            <ThemedText variant="body" style={styles.comingSoonText}>
-                                Team challenges coming soon! Compete with friends and grow together in your scripture memorization journey.
-                            </ThemedText>
-                        </View>
                     </View>
                 )}
 

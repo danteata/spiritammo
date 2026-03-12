@@ -216,22 +216,31 @@ export default function ArsenalScreen() {
                             </View>
                             {customCollections.length === 0 ? (
                                 <View style={[styles.emptyState, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]}>
-                                    <View style={[styles.emptyIconBg, { backgroundColor: theme.accent + '10' }]}>
-                                        <Ionicons name="folder-outline" size={32} color={theme.accent} />
+                                    <View style={[styles.emptyIconBg, { backgroundColor: theme.accent + '15' }]}>
+                                        <Ionicons name="library-outline" size={32} color={theme.accent} />
                                     </View>
+                                    <ThemedText variant="heading" style={styles.emptyTitle}>
+                                        Start Your Collection
+                                    </ThemedText>
                                     <ThemedText variant="body" style={styles.emptyText}>
-                                        No custom collections yet
+                                        Build your personal scripture library by adding your first verse.
                                     </ThemedText>
-                                    <ThemedText variant="caption" style={styles.emptySubtext}>
-                                        Start building your personal scripture library
-                                    </ThemedText>
-                                    <TouchableOpacity
-                                        style={[styles.emptyButton, { backgroundColor: theme.accent }]}
-                                        onPress={() => setShowFileUploader(true)}
-                                    >
-                                        <Ionicons name="add" size={18} color="#FFFFFF" />
-                                        <Text style={styles.emptyButtonText}>Add Your First Verse</Text>
-                                    </TouchableOpacity>
+                                    <View style={styles.emptyButtonGroup}>
+                                        <TouchableOpacity
+                                            style={[styles.emptyButton, { backgroundColor: theme.accent }]}
+                                            onPress={() => setShowAddVerses(true)}
+                                        >
+                                            <Ionicons name="create-outline" size={16} color="#FFFFFF" />
+                                            <Text style={styles.emptyButtonText}>Add Verse</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[styles.emptyButtonSecondary, { borderColor: theme.accent }]}
+                                            onPress={() => setShowFileUploader(true)}
+                                        >
+                                            <Ionicons name="document-text-outline" size={16} color={theme.accent} />
+                                            <Text style={[styles.emptyButtonTextSecondary, { color: theme.accent }]}>Import PDF</Text>
+                                        </TouchableOpacity>
+                                    </View>
                                 </View>
                             ) : (
                                 customCollections.map(collection => (
@@ -437,38 +446,59 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
     },
     emptyState: {
-        alignItems: 'center',
-        padding: 28,
+        padding: 24,
         borderRadius: 16,
+        alignItems: 'center',
+        marginVertical: 8,
     },
     emptyIconBg: {
-        width: 64,
-        height: 64,
-        borderRadius: 20,
+        width: 72,
+        height: 72,
+        borderRadius: 24,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 16,
     },
-    emptyText: {
+    emptyTitle: {
+        fontSize: 18,
         fontWeight: '600',
-        marginBottom: 4,
+        marginBottom: 8,
     },
-    emptySubtext: {
-        opacity: 0.5,
+    emptyText: {
+        opacity: 0.7,
+        textAlign: 'center',
         marginBottom: 20,
+        paddingHorizontal: 16,
+    },
+    emptyButtonGroup: {
+        flexDirection: 'row',
+        gap: 12,
     },
     emptyButton: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 20,
-        paddingVertical: 12,
-        borderRadius: 12,
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 10,
+        gap: 6,
+    },
+    emptyButtonSecondary: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 10,
+        borderWidth: 1,
         gap: 6,
     },
     emptyButtonText: {
         color: '#FFFFFF',
+        fontSize: 13,
         fontWeight: '600',
-        fontSize: 14,
+    },
+    emptyButtonTextSecondary: {
+        fontSize: 13,
+        fontWeight: '600',
     },
     addCard: {
         flexDirection: 'row',

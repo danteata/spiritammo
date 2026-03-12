@@ -8,7 +8,8 @@ import {
     Alert,
     ActivityIndicator
 } from 'react-native'
-import { FontAwesome5 } from '@expo/vector-icons'
+import { FontAwesome5, Ionicons } from '@expo/vector-icons'
+import { useRouter } from 'expo-router'
 import { ThemedText, ThemedCard } from './Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 import VoiceRecordingService from '@/services/voiceRecording'
@@ -25,6 +26,7 @@ export const VoiceLibrary: React.FC<VoiceLibraryProps> = ({ isDark, theme }) => 
     const [stats, setStats] = useState<VoiceRecordingStats | null>(null)
     const [loading, setLoading] = useState(true)
     const [playingId, setPlayingId] = useState<string | null>(null)
+    const router = useRouter()
 
     useEffect(() => {
         loadRecordings()
@@ -192,11 +194,20 @@ export const VoiceLibrary: React.FC<VoiceLibraryProps> = ({ isDark, theme }) => 
             {/* Recordings List */}
             {recordings.length === 0 ? (
                 <View style={styles.emptyContainer}>
-                    <FontAwesome5 name="microphone-slash" size={48} color={theme.textSecondary} />
-                    <ThemedText style={styles.emptyTitle}>No Voice Recordings</ThemedText>
+                    <View style={[styles.emptyIconBg, { backgroundColor: theme.accent + '15' }]}>
+                        <FontAwesome5 name="microphone" size={32} color={theme.accent} />
+                    </View>
+                    <ThemedText style={styles.emptyTitle}>Record Your First Verse</ThemedText>
                     <ThemedText style={styles.emptyText}>
-                        🎯 High-accuracy recitals (90%+) are automatically captured during battles and saved here for review.
+                        Practice speaking verses to build your audio library. High-accuracy recitals (90%+) are automatically saved.
                     </ThemedText>
+                    <TouchableOpacity
+                        style={[styles.emptyButton, { backgroundColor: theme.accent }]}
+                        onPress={() => router.push('/train/campaign')}
+                    >
+                        <Ionicons name="play-circle" size={18} color="#FFFFFF" />
+                        <Text style={styles.emptyButtonText}>Start Practice</Text>
+                    </TouchableOpacity>
                 </View>
             ) : (
                 <ScrollView
@@ -254,19 +265,41 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        paddingVertical: 60,
+        paddingVertical: 40,
+        paddingHorizontal: 16,
+    },
+    emptyIconBg: {
+        width: 72,
+        height: 72,
+        borderRadius: 24,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginBottom: 16,
     },
     emptyTitle: {
-        fontSize: 20,
+        fontSize: 18,
         fontWeight: 'bold',
-        marginTop: 16,
         marginBottom: 8,
     },
     emptyText: {
         fontSize: 14,
         textAlign: 'center',
         opacity: 0.7,
-        paddingHorizontal: 32,
+        paddingHorizontal: 24,
+        marginBottom: 20,
+    },
+    emptyButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 20,
+        paddingVertical: 12,
+        borderRadius: 12,
+        gap: 8,
+    },
+    emptyButtonText: {
+        color: '#FFFFFF',
+        fontSize: 14,
+        fontWeight: '600',
     },
     listContainer: {
         paddingBottom: 100,

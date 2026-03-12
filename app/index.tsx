@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { StyleSheet, Text, ScrollView, View, TouchableOpacity, Dimensions, Animated } from 'react-native'
 import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -16,6 +16,20 @@ import { analytics, Analytics, AnalyticsEventType } from '@/services/analytics'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 
 const { width } = Dimensions.get('window')
+
+// Helper to get time-based greeting
+const getTimeBasedGreeting = (): { greeting: string; subtext: string } => {
+  const hour = new Date().getHours()
+  if (hour >= 5 && hour < 12) {
+    return { greeting: 'Good morning, Soldier!', subtext: 'Ready for today\'s verse?' }
+  } else if (hour >= 12 && hour < 17) {
+    return { greeting: 'Good afternoon, Soldier!', subtext: 'Stay sharp with daily drills.' }
+  } else if (hour >= 17 && hour < 21) {
+    return { greeting: 'Evening drill!', subtext: 'Keep your streak alive.' }
+  } else {
+    return { greeting: 'Night ops!', subtext: 'Final practice before rest.' }
+  }
+}
 
 // Animated typing text component for military briefing feel
 interface TypewriterTextProps {
@@ -105,6 +119,7 @@ export default function HomeScreen() {
   const [showWelcome, setShowWelcome] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
   const [tutorialStep, setTutorialStep] = useState(0)
+  const [dailyCompleted, setDailyCompleted] = useState(false)
   const { trackEvent } = useAnalytics()
 
   // Animation refs
@@ -117,7 +132,22 @@ export default function HomeScreen() {
 
   useEffect(() => {
     checkFirstLaunch()
+    checkDailyCompletion()
   }, [])
+
+  // Check if daily practice was completed today
+  const checkDailyCompletion = async () => {
+    try {
+      const lastPracticeDate = await AsyncStorage.getItem('lastPracticeDate')
+      if (lastPracticeDate) {
+        const lastDate = new Date(lastPracticeDate).toDateString()
+        const today = new Date().toDateString()
+        setDailyCompleted(lastDate === today)
+      }
+    } catch (error) {
+      console.error('Failed to check daily completion:', error)
+    }
+  }
 
   // Start animation only after loading is complete
   useEffect(() => {
@@ -203,6 +233,50 @@ export default function HomeScreen() {
   const streak = userStats?.streak || 0
   const valorPoints = (userStats as any)?.valorPoints || 0
 
+  // Determine CTA state based on user progress
+  const ctaState = useMemo(() => {
+    const isNewUser = verseCount === 0 && streak === 0
+    const timeGreeting = getTimeBasedGreeting()
+
+    if (isNewUser) {
+      return {
+        title: 'START FIRST DRILL',
+        subtitle: 'Begin your scripture memorization journey',
+        icon: 'rocket' as const,
+        color: '#22C55E',
+        greeting: 'Welcome, Recruit!',
+        subtext: 'Your training begins now.'
+      }
+    } else if (dailyCompleted) {
+      return {
+        title: 'EXTRA PRACTICE',
+        subtitle: 'Daily mission complete! Keep sharp with bonus drills',
+        icon: 'trophy' as const,
+        color: '#FFD700',
+        greeting: 'Mission Complete!',
+        subtext: 'Return tomorrow for your next mission.'
+      }
+    } else if (streak > 0) {
+      return {
+        title: 'CONTINUE STREAK',
+        subtitle: `${streak} day streak! Don't break the chain`,
+        icon: 'fire' as const,
+        color: '#FF6B35',
+        greeting: timeGreeting.greeting,
+        subtext: timeGreeting.subtext
+      }
+    } else {
+      return {
+        title: 'START DAILY DRILL',
+        subtitle: 'Practice your verses and build your streak',
+        icon: 'flash' as const,
+        color: '#3B82F6',
+        greeting: timeGreeting.greeting,
+        subtext: timeGreeting.subtext
+      }
+    }
+  }, [verseCount, streak, dailyCompleted])
+
   return (
     <ThemedContainer style={styles.container}>
       <ScreenHeader
@@ -211,7 +285,7 @@ export default function HomeScreen() {
       />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Mission Briefing Section */}
+        {/* Contextual Greeting Section */}
         <Animated.View style={StyleSheet.flatten([styles.briefingSection, {
           opacity: fadeAnim,
           transform: [{ translateY: slideAnim }]
@@ -221,34 +295,30 @@ export default function HomeScreen() {
               <FontAwesome5 name="satellite-dish" size={16} color="#FFD700" />
               <ThemedText variant="caption" style={styles.briefingLabel}>INCOMING TRANSMISSION</ThemedText>
             </View>
-            <TypewriterText
-              text="Soldier, your mission awaits. Engage in daily drills to maintain combat readiness."
-              style={styles.briefingText}
-              delay={500}
-              isDark={isDark}
-            />
+            <ThemedText variant="heading" style={styles.greetingText}>{ctaState.greeting}</ThemedText>
+            <ThemedText variant="body" style={styles.subtextText}>{ctaState.subtext}</ThemedText>
           </View>
         </Animated.View>
 
-        {/* Primary CTA - Start Daily Drill */}
+        {/* Single Primary CTA - Contextual based on user state */}
         <Animated.View style={{
           opacity: fadeAnim,
           transform: [{ scale: scaleAnim }]
         }}>
-          <PulsingGlow color="#3B82F6" style={styles.primaryCTA}>
+          <PulsingGlow color={ctaState.color} style={styles.primaryCTA}>
             <TouchableOpacity
               onPress={handleStartDrill}
               activeOpacity={0.9}
             >
-              <ThemedCard variant="glass" style={[styles.primaryCTACard, { borderColor: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(59, 130, 246, 0.3)' }]}>
+              <ThemedCard variant="glass" style={[styles.primaryCTACard, { borderColor: `${ctaState.color}40` }]}>
                 <View style={styles.primaryCTAContent}>
-                  <View style={[styles.primaryCTAIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                    <Ionicons name="flash" size={40} color="#3B82F6" />
+                  <View style={[styles.primaryCTAIcon, { backgroundColor: `${ctaState.color}20` }]}>
+                    <FontAwesome5 name={ctaState.icon} size={32} color={ctaState.color} />
                   </View>
                   <View style={styles.primaryCTAText}>
-                    <ThemedText variant="heading" style={styles.primaryCTATitle}>START DAILY DRILL</ThemedText>
+                    <ThemedText variant="heading" style={[styles.primaryCTATitle, { color: ctaState.color }]}>{ctaState.title}</ThemedText>
                     <ThemedText variant="body" style={styles.primaryCTASubtitle}>
-                      Practice your verses and maintain your streak
+                      {ctaState.subtitle}
                     </ThemedText>
                   </View>
                   <View style={styles.primaryCTAArrow}>
@@ -260,39 +330,50 @@ export default function HomeScreen() {
           </PulsingGlow>
         </Animated.View>
 
-        {/* Battle Ready CTA - Moved directly under Daily Drill */}
-        <Animated.View style={StyleSheet.flatten([styles.battleSection, {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }]
-        }])}>
-          <TouchableOpacity
-            style={styles.battleCard}
-            onPress={handleNavigateToBattle}
-            activeOpacity={0.9}
-          >
-            <View style={[styles.battleCardInner, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)' }]}>
-              <View style={styles.battleIconContainer}>
-                <FontAwesome5 name="crosshairs" size={28} color="#EF4444" />
+        {/* Challenge Mode - Secondary CTA (only for users with verses) */}
+        {verseCount > 0 && (
+          <Animated.View style={StyleSheet.flatten([styles.battleSection, {
+            opacity: fadeAnim,
+            transform: [{ translateY: slideAnim }]
+          }])}>
+            <TouchableOpacity
+              style={styles.battleCard}
+              onPress={handleNavigateToBattle}
+              activeOpacity={0.9}
+            >
+              <View style={[styles.battleCardInner, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : 'rgba(239, 68, 68, 0.05)' }]}>
+                <View style={styles.battleIconContainer}>
+                  <FontAwesome5 name="crosshairs" size={24} color="#EF4444" />
+                </View>
+                <View style={styles.battleContent}>
+                  <ThemedText variant="heading" style={styles.battleTitle}>CHALLENGE MODE</ThemedText>
+                  <ThemedText variant="caption" style={styles.battleSubtitle}>
+                    Test your recall and earn Valor Points
+                  </ThemedText>
+                </View>
+                <FontAwesome5 name="chevron-right" size={14} color="#EF4444" />
               </View>
-              <View style={styles.battleContent}>
-                <ThemedText variant="heading" style={styles.battleTitle}>ENTER BATTLE</ThemedText>
-                <ThemedText variant="caption" style={styles.battleSubtitle}>
-                  Test your mettle and earn Valor Points
-                </ThemedText>
-              </View>
-              <FontAwesome5 name="chevron-right" size={16} color="#EF4444" />
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
+            </TouchableOpacity>
+          </Animated.View>
+        )}
 
-        {/* Battle Stats Grid - Only Valor and Arsenal (streak shown in StreakChallenge) */}
+        {/* Simplified Stats Grid - Streak, Valor, Arsenal */}
         <Animated.View style={StyleSheet.flatten([styles.statsGrid, {
           opacity: fadeAnim,
           transform: [{ translateY: slideAnim }]
         }])}>
           <View style={[styles.statsCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
             <View style={styles.statsCardHeader}>
-              <FontAwesome5 name="coins" size={20} color="#FFD700" />
+              <FontAwesome5 name="fire" size={18} color="#FF6B35" />
+              <ThemedText variant="caption" style={styles.statsCardLabel}>STREAK</ThemedText>
+            </View>
+            <ThemedText variant="heading" style={styles.statsCardValue}>{streak}</ThemedText>
+            <ThemedText variant="caption" style={styles.statsCardSub}>days</ThemedText>
+          </View>
+
+          <View style={[styles.statsCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+            <View style={styles.statsCardHeader}>
+              <FontAwesome5 name="coins" size={18} color="#FFD700" />
               <ThemedText variant="caption" style={styles.statsCardLabel}>VALOR</ThemedText>
             </View>
             <ThemedText variant="heading" style={styles.statsCardValue}>{valorPoints}</ThemedText>
@@ -301,7 +382,7 @@ export default function HomeScreen() {
 
           <View style={[styles.statsCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
             <View style={styles.statsCardHeader}>
-              <FontAwesome5 name="book" size={20} color={theme.accent} />
+              <FontAwesome5 name="book" size={18} color={theme.accent} />
               <ThemedText variant="caption" style={styles.statsCardLabel}>ARSENAL</ThemedText>
             </View>
             <ThemedText variant="heading" style={styles.statsCardValue}>{verseCount}</ThemedText>
@@ -309,7 +390,7 @@ export default function HomeScreen() {
           </View>
         </Animated.View>
 
-        {/* Avatar Section - No streak display */}
+        {/* Avatar Section */}
         <Animated.View style={StyleSheet.flatten([styles.avatarSection, {
           opacity: fadeAnim,
           transform: [{ translateY: slideAnim }]
@@ -382,6 +463,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 10,
   },
+  greetingText: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  subtextText: {
+    fontSize: 14,
+    opacity: 0.8,
+  },
   briefingText: {
     fontSize: 14,
     lineHeight: 20,
@@ -400,9 +490,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   primaryCTAIcon: {
-    width: 72,
-    height: 72,
-    borderRadius: 20,
+    width: 64,
+    height: 64,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -415,7 +505,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   primaryCTASubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     opacity: 0.7,
   },
   primaryCTAArrow: {
@@ -426,31 +516,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 20,
-    gap: 12,
+    gap: 8,
   },
   statsCard: {
     flex: 1,
-    padding: 16,
-    borderRadius: 16,
+    padding: 14,
+    borderRadius: 14,
     alignItems: 'center',
   },
   statsCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
+    gap: 4,
+    marginBottom: 6,
   },
   statsCardLabel: {
-    fontSize: 10,
+    fontSize: 9,
     letterSpacing: 1,
     opacity: 0.7,
   },
   statsCardValue: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '800',
   },
   statsCardSub: {
-    fontSize: 11,
+    fontSize: 10,
     opacity: 0.5,
     marginTop: 2,
   },
@@ -459,10 +549,10 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   battleSection: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   battleCard: {
-    borderRadius: 16,
+    borderRadius: 14,
     overflow: 'hidden',
   },
   battleCardInner: {
