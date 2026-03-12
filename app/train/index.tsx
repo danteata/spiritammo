@@ -51,8 +51,8 @@ export default function TrainingScreen() {
     return (
         <ThemedContainer style={styles.container}>
             <ScreenHeader
-                title="TRAINING RANGE"
-                subtitle="PRACTICE WITHOUT PRESSURE"
+                title="PRACTICE AREA"
+                subtitle="LEARN AT YOUR PACE"
             />
 
             <ScrollView
@@ -64,7 +64,7 @@ export default function TrainingScreen() {
                 <View style={[styles.infoBanner, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
                     <Ionicons name="information-circle" size={20} color="#3B82F6" />
                     <ThemedText variant="caption" style={styles.infoText}>
-                        Training mode is pressure-free. No scores recorded, no VP at stake.
+                        Practice mode is pressure-free. Learn at your own pace without affecting your stats.
                     </ThemedText>
                 </View>
 

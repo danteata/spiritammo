@@ -94,6 +94,7 @@ export interface UserStats {
   specializations?: string[]
   commendations?: string[]
   totalPoints?: number
+  weeklyActivity?: number[] // Array of 7 values (0-1) representing activity level for each day
 }
 
 // Enhanced Military Types

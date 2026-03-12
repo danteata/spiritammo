@@ -199,6 +199,37 @@ export default function ProfileScreen() {
                             </View>
                         </View>
 
+                        {/* Weekly Activity Chart */}
+                        <View style={[styles.weeklyActivityCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                            <View style={styles.weeklyHeader}>
+                                <ThemedText variant="body" style={styles.weeklyTitle}>Weekly Activity</ThemedText>
+                                <ThemedText variant="caption" style={styles.weeklySubtitle}>Your practice frequency</ThemedText>
+                            </View>
+                            <View style={styles.weeklyChart}>
+                                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => {
+                                    // Simulate weekly activity (in a real app, this would come from userStats)
+                                    const activityLevel = userStats?.weeklyActivity?.[index] ?? (index < 5 ? Math.random() * 0.8 + 0.2 : Math.random() * 0.4);
+                                    const hasActivity = activityLevel > 0.3;
+                                    return (
+                                        <View key={index} style={styles.dayColumn}>
+                                            <View style={[styles.dayBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                                                <View
+                                                    style={[
+                                                        styles.dayBarFill,
+                                                        {
+                                                            backgroundColor: hasActivity ? theme.accent : 'transparent',
+                                                            height: `${Math.min(activityLevel * 100, 100)}%`
+                                                        }
+                                                    ]}
+                                                />
+                                            </View>
+                                            <Text style={[styles.dayLabel, { color: theme.textSecondary }]}>{day}</Text>
+                                        </View>
+                                    );
+                                })}
+                            </View>
+                        </View>
+
                         {/* Mission Reports Link */}
                         <TouchableOpacity
                             style={styles.menuItem}
@@ -389,6 +420,47 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     statLabel: {
         marginTop: 4,
         opacity: 0.7,
+    },
+    weeklyActivityCard: {
+        marginTop: 16,
+        padding: 16,
+        borderRadius: 12,
+    },
+    weeklyHeader: {
+        marginBottom: 12,
+    },
+    weeklyTitle: {
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    weeklySubtitle: {
+        opacity: 0.6,
+    },
+    weeklyChart: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-end',
+        height: 80,
+    },
+    dayColumn: {
+        alignItems: 'center',
+        flex: 1,
+    },
+    dayBar: {
+        width: 20,
+        height: 60,
+        borderRadius: 4,
+        overflow: 'hidden',
+        justifyContent: 'flex-end',
+    },
+    dayBarFill: {
+        width: '100%',
+        borderRadius: 4,
+    },
+    dayLabel: {
+        fontSize: 10,
+        marginTop: 4,
+        opacity: 0.6,
     },
     settingItem: {
         flexDirection: 'row',

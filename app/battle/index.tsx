@@ -70,8 +70,8 @@ export default function BattleScreen() {
     return (
         <ThemedContainer style={styles.container}>
             <ScreenHeader
-                title="BATTLE GROUND"
-                subtitle="TEST YOUR METTLE"
+                title="CHALLENGE ARENA"
+                subtitle="TEST YOUR PROGRESS"
             />
 
             <ScrollView
