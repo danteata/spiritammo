@@ -3,6 +3,7 @@ import { AppState, AppStateStatus, Platform } from 'react-native'
 import { analytics, Analytics, AnalyticsEventType } from '@/services/analytics'
 import * as Linking from 'expo-linking'
 import Constants from 'expo-constants'
+import { useUser } from '@clerk/clerk-expo'
 
 interface AnalyticsContextType {
     isInitialized: boolean
@@ -21,6 +22,7 @@ export const AnalyticsProvider: React.FC<AnalyticsProviderProps> = ({ children }
     const [appState, setAppState] = useState<AppStateStatus>(AppState.currentState)
     const [sessionId, setSessionId] = useState<string | null>(null)
     const [sessionStartTime, setSessionStartTime] = useState<number | null>(null)
+    const { user, isLoaded } = useUser()
 
     // Initialize analytics on mount
     useEffect(() => {
@@ -53,6 +55,29 @@ export const AnalyticsProvider: React.FC<AnalyticsProviderProps> = ({ children }
 
         initializeAnalytics()
     }, [])
+
+    // Sync user identity with Clerk
+    useEffect(() => {
+        if (!isInitialized || !isLoaded) return
+
+        const syncUser = async () => {
+            if (user) {
+                console.log('🎯 Syncing analytics identity with Clerk user:', user.id)
+                await analytics.setUserId(user.id)
+                // Also set some basic user properties
+                await analytics.setUserProperties({
+                    email: user.primaryEmailAddress?.emailAddress,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                })
+            } else {
+                console.log('🎯 User signed out, resetting analytics identity')
+                await analytics.reset()
+            }
+        }
+
+        syncUser()
+    }, [user, isLoaded, isInitialized])
 
     // Track app lifecycle events
     useEffect(() => {

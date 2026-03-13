@@ -124,10 +124,10 @@ export default function RootLayout() {
   }, [])
 
   return (
-    <AnalyticsProvider>
-      <SafeAreaProvider>
-        <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
-          <ClerkLoaded>
+    <SafeAreaProvider>
+      <ClerkProvider tokenCache={tokenCache} publishableKey={publishableKey}>
+        <ClerkLoaded>
+          <AnalyticsProvider>
             <ConvexClientProvider>
               <QueryClientProvider client={queryClient}>
                 <AppStoreProvider>
@@ -141,9 +141,9 @@ export default function RootLayout() {
                 </AppStoreProvider>
               </QueryClientProvider>
             </ConvexClientProvider>
-          </ClerkLoaded>
-        </ClerkProvider>
-      </SafeAreaProvider>
-    </AnalyticsProvider>
+          </AnalyticsProvider>
+        </ClerkLoaded>
+      </ClerkProvider>
+    </SafeAreaProvider>
   );
 }

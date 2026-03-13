@@ -1,3 +1,5 @@
+import AsyncStorage from '@react-native-async-storage/async-storage'
+
 /**
  * Service-Agnostic Analytics System
  * Provides a unified interface for analytics tracking that can easily switch
@@ -903,15 +905,27 @@ class AmplitudeProvider implements AnalyticsProvider {
                 originalError.apply(console, args);
             };
 
+            // 1. Get or create persistent device ID
+            const DEVICE_ID_KEY = 'amplitude_device_id'
+            let deviceId = await AsyncStorage.getItem(DEVICE_ID_KEY)
+            if (!deviceId) {
+                deviceId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+                await AsyncStorage.setItem(DEVICE_ID_KEY, deviceId)
+                console.log('📊 Generated and saved new persistent device ID:', deviceId)
+            } else {
+                console.log('📊 Using existing persistent device ID:', deviceId)
+            }
+
             // Initialize Amplitude with React Native specific configuration
-            await amplitude.init(config.apiKey, {
+            // Correct parameter order: apiKey, userId, config
+            await amplitude.init(config.apiKey, undefined, {
                 // Disable automatic tracking that might cause issues
                 autocapture: false,
                 // Disable all cookie-related functionality
                 disableCookies: true,
-                // Force device ID generation to avoid cookie fallback
-                deviceId: `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-                // Opt out of tracking until fully initialized (prevents early cookie access)
+                // Use persistent device ID
+                deviceId: deviceId,
+                // Opt out of tracking until fully initialized
                 optOut: false,
                 // Use minimal tracking options
                 trackingOptions: {
@@ -1020,7 +1034,7 @@ class AmplitudeProvider implements AnalyticsProvider {
         }
 
         try {
-            await amplitude.clearUserProperties().promise
+            await amplitude.reset().promise
         } catch (error) {
             console.error('📊 Amplitude reset error:', error)
         }
