@@ -138,6 +138,18 @@ export default function CollectionBattleScreen() {
         }
     }
 
+    const handleSkip = () => {
+        const collectionScriptures = scriptures?.filter(s =>
+            selectedCollection?.scriptures.includes(s.id)
+        ) || []
+
+        if (scriptureIndex < collectionScriptures.length - 1) {
+            loadNextScripture()
+        } else {
+            router.back()
+        }
+    }
+
     return (
         <ThemedContainer style={styles.container}>
             <ScreenHeader
@@ -211,11 +223,12 @@ export default function CollectionBattleScreen() {
                         {currentScripture && (
                             <ScriptureCard
                                 scripture={currentScripture}
+                                isBattleMode={true}
+                                isRecording={showVoiceRecorder}
                                 onReveal={() => { }}
                             />
                         )}
 
-                        {/* Battle Button */}
                         <TouchableOpacity
                             style={styles.battleButton}
                             onPress={() => setShowVoiceRecorder(true)}
@@ -223,6 +236,17 @@ export default function CollectionBattleScreen() {
                             <FontAwesome5 name="crosshairs" size={20} color="#FFF" />
                             <ThemedText variant="body" style={styles.battleButtonText}>
                                 ENGAGE
+                            </ThemedText>
+                        </TouchableOpacity>
+
+                        {/* Skip Button */}
+                        <TouchableOpacity
+                            style={styles.skipButton}
+                            onPress={handleSkip}
+                        >
+                            <FontAwesome5 name="fast-forward" size={16} color={theme.textSecondary} />
+                            <ThemedText variant="caption" style={styles.skipText}>
+                                SKIP TARGET
                             </ThemedText>
                         </TouchableOpacity>
                     </View>
@@ -364,5 +388,18 @@ const styles = StyleSheet.create({
         top: 60,
         right: 20,
         zIndex: 10,
+    },
+    skipButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 12,
+        marginTop: 12,
+        gap: 8,
+    },
+    skipText: {
+        opacity: 0.7,
+        fontWeight: 'bold',
+        letterSpacing: 1,
     },
 })

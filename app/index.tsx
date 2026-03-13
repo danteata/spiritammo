@@ -42,6 +42,8 @@ interface TypewriterTextProps {
 const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0, isDark }: TypewriterTextProps) => {
   const [displayedText, setDisplayedText] = useState('')
   const [started, setStarted] = useState(false)
+  const [showCursor, setShowCursor] = useState(true)
+  const [isComplete, setIsComplete] = useState(false)
 
   useEffect(() => {
     const startTimer = setTimeout(() => {
@@ -49,6 +51,14 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0,
     }, delay)
     return () => clearTimeout(startTimer)
   }, [delay])
+
+  useEffect(() => {
+    // Blinking cursor effect
+    const cursorInterval = setInterval(() => {
+      setShowCursor(prev => !prev)
+    }, 500)
+    return () => clearInterval(cursorInterval)
+  }, [])
 
   useEffect(() => {
     if (!started) return
@@ -63,8 +73,9 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0,
         currentIndex++
       } else {
         clearInterval(interval)
+        setIsComplete(true)
       }
-    }, 25)
+    }, 30) // Match WelcomeModal speed
 
     return () => clearInterval(interval)
   }, [started, text])
@@ -72,9 +83,7 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0,
   return (
     <Text style={[style, { fontFamily: 'monospace', color: isDark ? '#94a3b8' : '#64748b' }]}>
       {displayedText}
-      {started && displayedText.length < text.length && (
-        <Text style={{ opacity: 0.5 }}>▌</Text>
-      )}
+      {(!isComplete || showCursor) && <Text style={{ opacity: showCursor ? 1 : 0 }}>█</Text>}
     </Text>
   )
 }
@@ -293,10 +302,15 @@ export default function HomeScreen() {
           <View style={[styles.briefingCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]}>
             <View style={styles.briefingHeader}>
               <FontAwesome5 name="satellite-dish" size={16} color="#FFD700" />
-              <ThemedText variant="caption" style={styles.briefingLabel}>INCOMING TRANSMISSION</ThemedText>
+              <ThemedText variant="caption" style={styles.briefingLabel}>SECURE CHANNEL</ThemedText>
             </View>
             <ThemedText variant="heading" style={styles.greetingText}>{ctaState.greeting}</ThemedText>
-            <ThemedText variant="body" style={styles.subtextText}>{ctaState.subtext}</ThemedText>
+            <TypewriterText
+              text={`INCOMING TRANSMISSION... ${ctaState.subtext}`}
+              style={styles.briefingText}
+              delay={300}
+              isDark={isDark}
+            />
           </View>
         </Animated.View>
 
@@ -346,7 +360,7 @@ export default function HomeScreen() {
                   <FontAwesome5 name="crosshairs" size={24} color="#EF4444" />
                 </View>
                 <View style={styles.battleContent}>
-                  <ThemedText variant="heading" style={styles.battleTitle}>CHALLENGE MODE</ThemedText>
+                  <ThemedText variant="heading" style={styles.battleTitle}>BATTLE MODE</ThemedText>
                   <ThemedText variant="caption" style={styles.battleSubtitle}>
                     Test your recall and earn Valor Points
                   </ThemedText>

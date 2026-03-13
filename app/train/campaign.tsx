@@ -111,18 +111,15 @@ export default function TrainingCampaignScreen() {
         }
     }
 
-    const handleStartMission = (mode: 'VOICE' | 'STEALTH') => {
-        setShowBriefing(false)
-        setTimeout(() => {
-            setPracticeMode(mode)
-        }, 200)
-    }
-
     const handleMissionComplete = async (accuracy: number) => {
         if (!selectedNode || !activeCampaign) return
 
-        // Close modals
+        // Close practice mode
         setPracticeMode(null)
+
+        // Reset selection
+        setSelectedNode(null)
+        setTargetScripture(null)
 
         // In training mode, we don't track scores - just show feedback
         if (accuracy >= 70) {
@@ -138,10 +135,54 @@ export default function TrainingCampaignScreen() {
                 [{ text: 'Try Again' }]
             )
         }
+    }
 
-        // Reset selection
-        setSelectedNode(null)
-        setTargetScripture(null)
+    const renderBriefingCard = () => {
+        if (!selectedNode || !targetScripture || practiceMode) return null
+
+        return (
+            <Animated.View style={[styles.briefingCard, { backgroundColor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', borderColor: theme.border }]}>
+                <View style={styles.briefingHeader}>
+                    <View style={styles.briefingTitleRow}>
+                        <View style={[styles.briefingIndicator, { backgroundColor: theme.accent }]} />
+                        <ThemedText variant="heading" style={styles.briefingTitle}>MISSION INTEL</ThemedText>
+                    </View>
+                    <TouchableOpacity onPress={() => setSelectedNode(null)}>
+                        <Ionicons name="close-circle" size={24} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                </View>
+
+                <View style={styles.briefingDetails}>
+                    <View style={styles.briefingStat}>
+                        <ThemedText variant="caption" style={styles.briefingLabel}>OBJECTIVE</ThemedText>
+                        <ThemedText variant="body" style={styles.briefingValue}>{targetScripture.reference}</ThemedText>
+                    </View>
+                    <View style={styles.briefingDivider} />
+                    <View style={styles.briefingStat}>
+                        <ThemedText variant="caption" style={styles.briefingLabel}>REQD. ACCURACY</ThemedText>
+                        <ThemedText variant="body" style={styles.briefingValue}>{selectedNode.requiredAccuracy}%</ThemedText>
+                    </View>
+                </View>
+
+                <View style={styles.briefingActions}>
+                    <TouchableOpacity
+                        style={[styles.briefingButton, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}
+                        onPress={() => setPracticeMode('STEALTH')}
+                    >
+                        <FontAwesome5 name="mask" size={14} color={theme.text} />
+                        <ThemedText variant="button" style={styles.briefingButtonText}>STEALTH</ThemedText>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[styles.briefingButton, styles.primaryBriefingButton, { backgroundColor: theme.accent }]}
+                        onPress={() => setPracticeMode('VOICE')}
+                    >
+                        <FontAwesome5 name="microphone" size={14} color="white" />
+                        <ThemedText variant="button" style={[styles.briefingButtonText, { color: 'white' }]}>ENGAGE</ThemedText>
+                    </TouchableOpacity>
+                </View>
+            </Animated.View>
+        )
     }
 
     return (
@@ -227,33 +268,31 @@ export default function TrainingCampaignScreen() {
                 />
             </View>
 
-            <MissionBriefingModal
-                isVisible={showBriefing}
-                onClose={() => setShowBriefing(false)}
-                onStartMission={handleStartMission}
-                node={selectedNode}
-                scripture={targetScripture}
-            />
+            {renderBriefingCard()}
 
             {targetScripture && practiceMode === 'VOICE' && (
-                <TargetPractice
-                    isVisible={true}
-                    targetVerse={targetScripture.text}
-                    reference={targetScripture.reference}
-                    scriptureId={targetScripture.id}
-                    onRecordingComplete={(_, acc) => handleMissionComplete(acc)}
-                    onClose={() => setPracticeMode(null)}
-                />
+                <View style={styles.fullScreenPractice}>
+                    <TargetPractice
+                        isVisible={true}
+                        targetVerse={targetScripture.text}
+                        reference={targetScripture.reference}
+                        scriptureId={targetScripture.id}
+                        onRecordingComplete={(_, acc) => handleMissionComplete(acc)}
+                        onClose={() => setPracticeMode(null)}
+                    />
+                </View>
             )}
 
             {targetScripture && practiceMode === 'STEALTH' && (
-                <StealthDrill
-                    isVisible={true}
-                    targetVerse={targetScripture.text}
-                    reference={targetScripture.reference}
-                    onComplete={handleMissionComplete}
-                    onClose={() => setPracticeMode(null)}
-                />
+                <View style={styles.fullScreenPractice}>
+                    <StealthDrill
+                        isVisible={true}
+                        targetVerse={targetScripture.text}
+                        reference={targetScripture.reference}
+                        onComplete={handleMissionComplete}
+                        onClose={() => setPracticeMode(null)}
+                    />
+                </View>
             )}
         </ThemedContainer>
     )
@@ -338,10 +377,92 @@ const styles = StyleSheet.create({
         borderColor: 'rgba(255,255,255,0.05)',
         borderRadius: 24,
     },
-    loadingOverlay: {
+    fullScreenPractice: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.8)',
-        justifyContent: 'center',
+        backgroundColor: 'black',
+        zIndex: 100,
+    },
+    briefingCard: {
+        position: 'absolute',
+        bottom: 100,
+        left: 20,
+        right: 20,
+        padding: 20,
+        borderRadius: 24,
+        borderWidth: 1,
+        zIndex: 50,
+        elevation: 10,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 10,
+    },
+    briefingHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
         alignItems: 'center',
+        marginBottom: 16,
+    },
+    briefingTitleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    briefingIndicator: {
+        width: 3,
+        height: 16,
+        borderRadius: 2,
+    },
+    briefingTitle: {
+        fontSize: 16,
+        letterSpacing: 1,
+    },
+    briefingDetails: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 20,
+        backgroundColor: 'rgba(128,128,128,0.05)',
+        borderRadius: 16,
+        padding: 12,
+    },
+    briefingStat: {
+        flex: 1,
+        alignItems: 'center',
+    },
+    briefingDivider: {
+        width: 1,
+        height: 30,
+        backgroundColor: 'rgba(128,128,128,0.2)',
+    },
+    briefingLabel: {
+        fontSize: 9,
+        opacity: 0.5,
+        marginBottom: 2,
+    },
+    briefingValue: {
+        fontWeight: 'bold',
+        fontSize: 14,
+    },
+    briefingActions: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    briefingButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 14,
+        borderRadius: 16,
+        borderWidth: 1,
+        gap: 8,
+    },
+    primaryBriefingButton: {
+        flex: 2,
+    },
+    briefingButtonText: {
+        fontSize: 14,
+        fontWeight: 'bold',
+        letterSpacing: 1,
     },
 })

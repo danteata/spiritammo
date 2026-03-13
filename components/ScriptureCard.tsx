@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import {
   StyleSheet,
   Text,
@@ -7,8 +7,8 @@ import {
   Platform,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { BlurView } from 'expo-blur'
 import { FontAwesome } from '@expo/vector-icons';
+import { BlurView, BlurTargetView } from 'expo-blur'
 import { Scripture } from '@/types/scripture'
 import { useAppStore } from '@/hooks/useAppStore'
 import ScriptureText from './ScriptureText'
@@ -17,15 +17,27 @@ interface ScriptureCardProps {
   scripture: Scripture
   onReveal?: () => void
   onNext?: () => void
+  isBattleMode?: boolean
+  isRecording?: boolean
 }
 
 export default function ScriptureCard({
   scripture,
   onReveal,
   onNext,
+  isBattleMode = false,
+  isRecording = false,
 }: ScriptureCardProps) {
-  const { theme } = useAppStore()
+  const { theme, isDark } = useAppStore()
   const [revealed, setRevealed] = useState(false)
+
+  // Auto-blur when recording starts in Battle Mode
+  useEffect(() => {
+    if (isBattleMode && isRecording && revealed) {
+      setRevealed(false)
+    }
+  }, [isRecording, isBattleMode])
+  const blurTargetRef = useRef(null)
 
   const handleReveal = () => {
     setRevealed(true)
@@ -51,7 +63,24 @@ export default function ScriptureCard({
         <View style={styles.iconContainer}>
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={revealed ? () => setRevealed(false) : handleReveal}
+            onPress={() => {
+              if (revealed) {
+                setRevealed(false)
+              } else {
+                if (isBattleMode) {
+                  Alert.alert(
+                    'UNAUTHORIZED DISCLOSURE',
+                    'Manual scripture reveal is not encouraged during active combat operations. Do you wish to proceed?',
+                    [
+                      { text: 'ABORT', style: 'cancel' },
+                      { text: 'PROCEED', onPress: handleReveal }
+                    ]
+                  )
+                } else {
+                  handleReveal()
+                }
+              }
+            }}
             testID="toggle-reveal-button"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -71,17 +100,23 @@ export default function ScriptureCard({
           style={[styles.text, { color: textColor }]}
         />
       ) : (
-        <View style={styles.hiddenTextContainer}>
-          <ScriptureText
-            text={scripture.text}
-            isJesusWords={scripture.isJesusWords}
-            style={[styles.text, styles.hiddenText, { color: textColor }]}
-          />
+        <View style={styles.hiddenTextWrapper}>
+          <BlurTargetView
+            ref={blurTargetRef}
+            style={styles.hiddenTextContainer}
+          >
+            <ScriptureText
+              text={scripture.text}
+              isJesusWords={scripture.isJesusWords}
+              style={[styles.text, styles.hiddenText, { color: textColor }]}
+            />
+          </BlurTargetView>
           <BlurView
-            intensity={Platform.OS === 'ios' ? 25 : 20}
-            experimentalBlurMethod="dimezisBlurView"
+            blurTarget={blurTargetRef}
+            blurMethod="dimezisBlurView"
+            intensity={Platform.OS === 'ios' ? 15 : 12}
             style={styles.blurOverlay}
-            tint="light"
+            tint={isDark ? "dark" : "light"}
           />
         </View>
       )}
@@ -138,22 +173,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginRight: 4,
   },
-  hiddenTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  hiddenTextWrapper: {
     position: 'relative',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  hiddenTextContainer: {
+    padding: 2,
   },
   hiddenText: {
     fontSize: 18,
     lineHeight: 26,
+    userSelect: 'none',
+    opacity: 0.5,
   },
   blurOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 8,
+    ...StyleSheet.absoluteFillObject,
   },
   buttonContainer: {
     flexDirection: 'row',

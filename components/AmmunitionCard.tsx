@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import {
   StyleSheet,
   Text,
@@ -8,9 +8,8 @@ import {
   ActivityIndicator,
   Platform,
 } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
-import { BlurView } from 'expo-blur'
 import { FontAwesome, Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
+import { BlurView, BlurTargetView } from 'expo-blur'
 import {
   COLORS,
   MILITARY_TYPOGRAPHY,
@@ -28,8 +27,9 @@ interface AmmunitionCardProps {
   onIntel: (force?: boolean) => void // Generate mnemonic
   onStealth?: () => void // Silent Drill
   isLoading?: boolean
-  isDark?: boolean
+  isDark?: boolean // This prop is now redundant as isDark is derived from theme
   allowBlur?: boolean // Default true for practice, false for assessments
+  isBattleMode?: boolean
 }
 
 const AmmunitionCard = React.memo(({
@@ -39,14 +39,16 @@ const AmmunitionCard = React.memo(({
   onIntel,
   onStealth,
   isLoading = false,
-  isDark = false,
+  // isDark = false, // Removed as it's derived from theme
   allowBlur = true, // Default true for practice mode
+  isBattleMode = false,
 }: AmmunitionCardProps) => {
-  const { theme } = useAppStore()
+  const { theme, isDark } = useAppStore()
   const styles = getStyles(theme)
-  const [fireAnimation] = useState(new Animated.Value(1))
+  const fireAnimation = useRef(new Animated.Value(1)).current
   const [pulseAnimation] = useState(new Animated.Value(1))
-  const [revealed, setRevealed] = useState(false)
+  const [revealed, setRevealed] = useState(!allowBlur) // Default to revealed if blur is not allowed
+  const blurTargetRef = useRef(null)
 
   useEffect(() => {
     // Start pulsing animation for the FIRE button
@@ -84,6 +86,11 @@ const AmmunitionCard = React.memo(({
         useNativeDriver: true,
       }),
     ]).start()
+
+    // Auto-blur if in battle mode
+    if (isBattleMode) {
+      setRevealed(false)
+    }
 
     onFire()
   }
@@ -166,7 +173,20 @@ const AmmunitionCard = React.memo(({
             {allowBlur && (
               <TouchableOpacity
                 style={[styles.iconButton, { marginRight: 12 }]}
-                onPress={() => setRevealed(!revealed)}
+                onPress={() => {
+                  if (isBattleMode && !revealed) {
+                    Alert.alert(
+                      'UNAUTHORIZED DISCLOSURE',
+                      'Manual scripture reveal is not encouraged during active combat operations. Do you wish to proceed?',
+                      [
+                        { text: 'ABORT', style: 'cancel' },
+                        { text: 'PROCEED', onPress: () => setRevealed(true) }
+                      ]
+                    )
+                  } else {
+                    setRevealed(!revealed)
+                  }
+                }}
                 testID="toggle-reveal-button"
                 hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
@@ -211,20 +231,26 @@ const AmmunitionCard = React.memo(({
               ]}
             />
           ) : (
-            <View style={styles.hiddenTextContainer}>
-              <ScriptureText
-                text={scripture.text}
-                isJesusWords={scripture.isJesusWords}
-                style={[
-                  styles.scriptureText,
-                  styles.hiddenText,
-                  MILITARY_TYPOGRAPHY.body,
-                  { color: isDark ? theme.text : GARRISON_THEME.text }
-                ]}
-              />
+            <View style={styles.hiddenTextWrapper}>
+              <BlurTargetView
+                ref={blurTargetRef}
+                style={styles.hiddenTextContainer}
+              >
+                <ScriptureText
+                  text={scripture.text}
+                  isJesusWords={scripture.isJesusWords}
+                  style={[
+                    styles.scriptureText,
+                    styles.hiddenText,
+                    MILITARY_TYPOGRAPHY.body,
+                    { color: isDark ? theme.text : GARRISON_THEME.text }
+                  ]}
+                />
+              </BlurTargetView>
               <BlurView
-                intensity={Platform.OS === 'ios' ? 25 : 20}
-                experimentalBlurMethod="dimezisBlurView"
+                blurTarget={blurTargetRef}
+                blurMethod="dimezisBlurView"
+                intensity={Platform.OS === 'ios' ? 15 : 12}
                 style={styles.blurOverlay}
                 tint={isDark ? "dark" : "light"}
               />
@@ -455,20 +481,19 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderLeftWidth: 3,
     borderLeftColor: theme.accent,
   },
-  hiddenTextContainer: {
+  hiddenTextWrapper: {
     position: 'relative',
-    justifyContent: 'center',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  hiddenTextContainer: {
+    padding: 2, // Minor padding to avoid clipping
   },
   hiddenText: {
-    lineHeight: 24,
+    opacity: 0.5,
   },
   blurOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderRadius: 8,
+    ...StyleSheet.absoluteFillObject,
   },
   scriptureText: {
     lineHeight: 24,

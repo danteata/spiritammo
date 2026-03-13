@@ -102,7 +102,7 @@ interface VoiceRecorderProps {
 }
 
 export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef, intelText, onRecordingComplete }: VoiceRecorderProps) {
-  const { isDark, userSettings } = useAppStore();
+  const { isDark, userSettings, theme } = useAppStore();
   const { trackEvent, trackVoiceRecordingStart, trackVoiceRecordingComplete, trackError } = useAnalytics();
 
   // Audio recording hook for mobile fallback
@@ -645,6 +645,16 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
 
         {/* Accuracy Badge */}
         {showAccuracy && <AccuracyBadge accuracy={accuracy} />}
+
+        {/* Processing Overlay */}
+        {statusMessage.includes('Transcribing') && (
+          <View style={styles.processingOverlay}>
+            <ActivityIndicator size="large" color={theme.accent} />
+            <Text style={{ marginTop: 10, color: theme.accent, fontWeight: 'bold', fontSize: 12 }}>
+              ANALYZING BALLISTICS...
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Controls */}
@@ -704,6 +714,15 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
+    position: 'relative',
+  },
+  processingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 20,
   },
   displayText: {
     fontSize: 14,

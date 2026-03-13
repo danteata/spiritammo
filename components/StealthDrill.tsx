@@ -1,10 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
     StyleSheet,
     Text,
     View,
     TouchableOpacity,
-    Modal,
     Animated,
     StatusBar,
     ScrollView,
@@ -380,13 +379,10 @@ export default function StealthDrill({
         </>
     )
 
+    if (!isVisible) return null
+
     return (
-        <Modal
-            visible={isVisible}
-            animationType="fade"
-            transparent={false}
-            statusBarTranslucent
-        >
+        <View style={styles.inlineContainer}>
             {isDark ? (
                 <LinearGradient
                     colors={['#1a1f1a', '#0D0D0D']} // Darker, stealthier gradient
@@ -399,14 +395,20 @@ export default function StealthDrill({
                     {renderContent()}
                 </View>
             )}
-        </Modal>
+        </View>
     )
 }
 
 const styles = StyleSheet.create({
+    inlineContainer: {
+        height: 600, // Fixed height or minHeight
+        borderRadius: 16,
+        overflow: 'hidden',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
     container: {
         flex: 1,
-        paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 50,
     },
     header: {
         flexDirection: 'row',

@@ -94,6 +94,8 @@ export enum AnalyticsEventType {
     VOICE_RECORDING_COMPLETE = 'voice_recording_complete',
     VOICE_PLAYBACK_START = 'voice_playback_start',
     VOICE_PLAYBACK_COMPLETE = 'voice_playback_complete',
+    WIND_CONDITION_CHANGED = 'wind_condition_changed',
+    PRACTICE_SHOT = 'practice_shot',
 
     // Collections & Content
     COLLECTION_SELECTED = 'collection_selected',

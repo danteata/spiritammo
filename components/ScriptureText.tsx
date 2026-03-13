@@ -36,7 +36,7 @@ export default function ScriptureText({
   }
 
   // Check if text contains Words of Jesus markers (legacy support)
-  const hasWordsOfJesus = text.includes('{{WJ_START}}') && text.includes('{{WJ_END}}');
+  const hasWordsOfJesus = text && text.includes('{{WJ_START}}') && text.includes('{{WJ_END}}');
 
   if (!hasWordsOfJesus) {
     // No Words of Jesus, render normally

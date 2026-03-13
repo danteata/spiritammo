@@ -1,18 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
   Animated,
-  Modal,
   Alert,
   Platform,
   StatusBar,
   ActivityIndicator,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { BlurView } from 'expo-blur'
+import { BlurView, BlurTargetView } from 'expo-blur'
 import { FontAwesome, Feather, Ionicons } from '@expo/vector-icons'
 import * as Speech from 'expo-speech'
 import {
@@ -76,7 +75,7 @@ export default function TargetPractice({
     'calm' | 'light' | 'strong'
   >('calm')
   const [rangeDistance, setRangeDistance] = useState(100)
-  const [isRecordingMode, setIsRecordingMode] = useState(false)
+  const [isRecordingMode, setIsRecordingMode] = useState(true)
   const [shots, setShots] = useState<BulletHole[]>([])
   const [isPlaying, setIsPlaying] = useState(false)
 
@@ -128,6 +127,7 @@ export default function TargetPractice({
   // Animations
   const targetAnimation = useRef(new Animated.Value(1)).current
   const shakeAnimation = useRef(new Animated.Value(0)).current
+  const blurTargetRef = useRef(null)
 
   // Track target practice start
   useEffect(() => {
@@ -139,6 +139,17 @@ export default function TargetPractice({
       })
     }
   }, [isVisible])
+
+  // Auto-start recording when appearing or scripture changes
+  useEffect(() => {
+    if (isVisible && !isInitializing && !audioIsRecording && !isRecognizing && !showAccuracy) {
+      // Small delay for UI to settle
+      const timer = setTimeout(() => {
+        startRecording()
+      }, 600)
+      return () => clearTimeout(timer)
+    }
+  }, [isVisible, isInitializing, targetVerse])
 
   // Initialize Whisper and check availability
   useEffect(() => {
@@ -467,7 +478,6 @@ export default function TargetPractice({
           context: 'whisper_transcription',
           error_type: 'transcription_error',
           service: 'whisper',
-          context: 'target_practice'
         })
       }
     } catch (error) {
@@ -478,7 +488,6 @@ export default function TargetPractice({
       trackError(error as Error, 'TargetPractice', {
         context: 'audio_processing',
         error_type: 'processing_error',
-        context: 'target_practice'
       })
     }
   }
@@ -519,28 +528,6 @@ export default function TargetPractice({
     }
   }
 
-  // Toggle recording mode
-  const toggleRecordingMode = () => {
-    if (isRecordingMode) {
-      setIsRecordingMode(false)
-
-      // Track recording mode change
-      trackEvent(AnalyticsEventType.TRAINING_MODE_CHANGED, {
-        old_mode: 'recording',
-        new_mode: 'target',
-        context: 'target_practice'
-      })
-    } else {
-      setIsRecordingMode(true)
-
-      // Track recording mode change
-      trackEvent(AnalyticsEventType.TRAINING_MODE_CHANGED, {
-        old_mode: 'target',
-        new_mode: 'recording',
-        context: 'target_practice'
-      })
-    }
-  }
 
   const textColor = isDark ? COLORS.text.dark : COLORS.text.light
   const isRecording = isRecognizing || audioIsRecording
@@ -607,7 +594,7 @@ export default function TargetPractice({
     setShots(prev => [...prev, newShot])
 
     // Track shot placement
-    trackEvent('target_practice_shot', {
+    trackEvent(AnalyticsEventType.PRACTICE_SHOT, {
       shot_id: newShot.id,
       accuracy: finalAccuracy,
       is_hit: isHit,
@@ -648,7 +635,7 @@ export default function TargetPractice({
     setWindCondition(newWindCondition)
 
     // Track wind condition change
-    trackEvent('wind_condition_changed', {
+    trackEvent(AnalyticsEventType.WIND_CONDITION_CHANGED, {
       old_condition: windCondition,
       new_condition: newWindCondition,
       context: 'target_practice'
@@ -798,7 +785,6 @@ export default function TargetPractice({
           </View>
         </View>
 
-        <View style={{ width: 40 }} />
       </View>
 
       {/* Recording Mode - Show Voice Recorder UI */}
@@ -807,11 +793,11 @@ export default function TargetPractice({
           {/* Comms Panel Header */}
           <View style={styles.panelHeader}>
             {isInitializing || statusMessage.includes('Transcribing') || statusMessage.includes('Initializing') ? (
-              <ActivityIndicator size="small" color={textColor} style={{ marginRight: 8 }} />
+              <ActivityIndicator size="small" color={theme.accent} style={{ marginRight: 8 }} />
             ) : (
               <StatusIndicator isActive={isRecording} isLoading={false} isError={false} />
             )}
-            <Text style={[styles.statusText, { color: textColor }]}>
+            <Text style={[styles.statusText, { color: statusMessage.includes('Transcribing') ? theme.accent : textColor }]}>
               {statusMessage.toUpperCase()}
             </Text>
           </View>
@@ -836,6 +822,16 @@ export default function TargetPractice({
 
             {/* Accuracy Badge */}
             {showAccuracy && <AccuracyBadge accuracy={accuracy} />}
+            
+            {/* Processing Overlay */}
+            {statusMessage.includes('Transcribing') && (
+              <View style={styles.processingOverlay}>
+                <ActivityIndicator size="large" color={theme.accent} />
+                <ThemedText variant="caption" style={{ marginTop: 10, color: theme.accent, fontWeight: 'bold' }}>
+                  ANALYZING BALLISTICS...
+                </ThemedText>
+              </View>
+            )}
           </View>
 
           {/* Controls */}
@@ -885,35 +881,43 @@ export default function TargetPractice({
         </View>
       )}
 
-      {/* Reference Display - Hide when recording */}
-      {!isRecordingMode && (
-        <View style={[styles.referenceContainer, {
-          backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.8)',
-          borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-        }]}>
-          {/* Reference (visible - e.g. "John 3:16") */}
+      {/* Reference Display - Always show in practice */}
+      <View style={[styles.referenceContainer, {
+        backgroundColor: isDark ? 'rgba(0,0,0,0.4)' : 'rgba(255,255,255,0.8)',
+        borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+      }]}>
+        {/* Hide reference label while recording to save space */}
+        {!isRecordingMode && (
           <Text style={[styles.referenceLabel, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]}>
             {reference || 'Verse Reference'}
           </Text>
+        )}
 
-          {/* Blurred verse text (hidden - e.g. "For God so loved...") */}
-          <View style={styles.verseContent}>
-            <Text style={[styles.verseText, { color: theme.text }]}>
-              {targetVerse}
-            </Text>
+        {/* Blurred verse text */}
+        <View style={styles.verseContent}>
+          <View style={styles.hiddenTextWrapper}>
+            <BlurTargetView
+              ref={blurTargetRef}
+              style={styles.verseTarget}
+            >
+              <Text style={[styles.targetText, styles.blurredText, { color: textColor }]}>
+                {targetVerse}
+              </Text>
+            </BlurTargetView>
             <BlurView
-              intensity={Platform.OS === 'ios' ? 20 : 15}
-              experimentalBlurMethod="dimezisBlurView"
-              style={styles.referenceBlur}
+              blurTarget={blurTargetRef}
+              blurMethod="dimezisBlurView"
+              intensity={Platform.OS === 'ios' ? 15 : 12}
+              style={styles.blurOverlay}
               tint={isDark ? "dark" : "light"}
             />
           </View>
-
-          <Text style={[styles.hintText, { color: theme.textSecondary }]}>
-            TARGET TEXT (BLURRED)
-          </Text>
         </View>
-      )}
+
+        <Text style={[styles.hintText, { color: theme.textSecondary }]}>
+          TARGET TEXT (BLURRED)
+        </Text>
+      </View>
 
       {/* Shot grouping display */}
       {shotResults.length > 0 && (
@@ -959,15 +963,19 @@ export default function TargetPractice({
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.controlButton, styles.recordButton]}
-          onPress={toggleRecordingMode}
+          style={[styles.controlButton, styles.recordButton, isRecording && { backgroundColor: theme.error }]}
+          onPress={isRecording ? stopRecording : startRecording}
           testID="start-recording"
         >
           <View style={styles.recordIconOuter}>
-            <View style={styles.recordIconInner} />
+            {isRecording ? (
+              <FontAwesome name="stop" size={20} color="white" />
+            ) : (
+              <View style={styles.recordIconInner} />
+            )}
           </View>
           <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button, { color: 'white' }]}>
-            {isRecordingMode ? 'TARGET' : 'ENGAGE'}
+            {isRecording ? 'STOP' : 'ENGAGE'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -1002,13 +1010,10 @@ export default function TargetPractice({
 
   )
 
+  if (!isVisible) return null
+
   return (
-    <Modal
-      visible={isVisible}
-      animationType="slide"
-      presentationStyle="fullScreen"
-      statusBarTranslucent
-    >
+    <View style={styles.inlineContainer}>
       {isDark ? (
         <LinearGradient
           colors={[theme.background, '#0D0D0D']}
@@ -1021,21 +1026,29 @@ export default function TargetPractice({
           {renderContent()}
         </View>
       )}
-    </Modal>
+    </View>
   )
 }
 
 const styles = StyleSheet.create({
+  inlineContainer: {
+    height: 480, // Fixed height for inline practice area
+    borderRadius: 16,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
   container: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 50,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 10,
+    paddingBottom: 5,
+    paddingTop: 5,
+    height: 60,
   },
   closeButton: {
     width: 40,
@@ -1130,11 +1143,12 @@ const styles = StyleSheet.create({
   },
   referenceContainer: {
     marginHorizontal: 20,
-    marginBottom: 20,
-    padding: 16,
+    marginBottom: 10,
+    padding: 12,
     borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
+    maxHeight: 120,
   },
   referenceContent: {
     position: 'relative',
@@ -1259,7 +1273,8 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 10,
+    minHeight: 180,
   },
   panelHeader: {
     flexDirection: 'row',
@@ -1282,6 +1297,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     marginHorizontal: 16,
+    position: 'relative',
+  },
+  processingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 20,
   },
   displayText: {
     fontSize: 14,
@@ -1299,5 +1323,17 @@ const styles = StyleSheet.create({
     width: 3,
     backgroundColor: 'white',
     borderRadius: 2,
+  },
+  hiddenTextWrapper: {
+    position: 'relative',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  verseTarget: {
+    padding: 2,
+  },
+  blurOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 10,
   },
 })

@@ -16,7 +16,9 @@ import ScriptureCard from '@/components/ScriptureCard'
 import VoiceRecorder from '@/components/VoiceRecorder'
 import { Scripture } from '@/types/scripture'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
-import { AnalyticsEventType } from '@/services/analytics'
+import { practiceLogService } from '@/services/practiceLogService'
+import { generateBattleIntel } from '@/services/battleIntelligence'
+import { militaryRankingService } from '@/services/militaryRanking'
 import ValorPointsService from '@/services/valorPoints'
 
 export default function QuickBattleScreen() {
@@ -40,6 +42,8 @@ export default function QuickBattleScreen() {
     const [totalVP, setTotalVP] = useState(0)
     const [battlesWon, setBattlesWon] = useState(0)
     const [isLoading, setIsLoading] = useState(true)
+
+    const [isLoadingIntel, setIsLoadingIntel] = useState(false)
 
     // Load a random scripture on mount
     useEffect(() => {
@@ -79,6 +83,22 @@ export default function QuickBattleScreen() {
             is_training: false
         })
 
+        // Save mission log
+        await practiceLogService.saveLog({
+            scriptureId: currentScripture.id,
+            accuracy: accuracy,
+            transcription: '', // VoiceRecorder doesn't return transcript yet
+        })
+
+        // Update military profile
+        await militaryRankingService.updateProfile({
+            versesMemorized: userStats?.totalPracticed || 0,
+            averageAccuracy: userStats?.averageAccuracy || 0,
+            consecutiveDays: userStats?.streak || 0,
+            lastSessionAccuracy: accuracy,
+            lastSessionWordCount: currentScripture.text.split(' ').length
+        })
+
         setShowVoiceRecorder(false)
 
         // Show feedback based on performance
@@ -110,6 +130,32 @@ export default function QuickBattleScreen() {
                     { text: 'Next Verse', onPress: loadRandomScripture }
                 ]
             )
+        }
+    }
+
+    const handleShowIntel = async () => {
+        if (!currentScripture) return
+
+        setIsLoadingIntel(true)
+        try {
+            const intel = await generateBattleIntel({
+                reference: currentScripture.reference,
+                text: currentScripture.text
+            })
+
+            Alert.alert(
+                'BATTLE INTELLIGENCE 📡',
+                `MNEMONIC: ${intel.battlePlan}\n\nTACTICAL NOTES: ${intel.tacticalNotes}`,
+                [{ text: 'COPY THAT' }]
+            )
+
+            // Record intel generation for rank progress
+            await militaryRankingService.recordIntelGenerated()
+        } catch (error) {
+            console.error('Failed to get intel:', error)
+            Alert.alert('SYSTEM ERROR', 'Failed to retrieve battle intelligence. Check communications.')
+        } finally {
+            setIsLoadingIntel(false)
         }
     }
 
@@ -165,7 +211,9 @@ export default function QuickBattleScreen() {
                         </View>
                         <ScriptureCard
                             scripture={currentScripture}
-                            onReveal={() => { }}
+                            onReveal={handleShowIntel}
+                            isBattleMode={true}
+                            isRecording={showVoiceRecorder}
                         />
                     </View>
                 ) : (
@@ -189,7 +237,12 @@ export default function QuickBattleScreen() {
                 {currentScripture && (
                     <TouchableOpacity
                         style={styles.battleButton}
-                        onPress={() => setShowVoiceRecorder(true)}
+                        onPress={() => {
+                            // Recording started, should auto-blur happen here?
+                            // ScriptureCard internal state is private, but we can force un-mount/re-mount or passed reached revealed.
+                            // Actually, I'll update ScriptureCard to take a 'forceBlur' prop or just use its own isRecording state if shared.
+                            setShowVoiceRecorder(true)
+                        }}
                     >
                         <FontAwesome5 name="crosshairs" size={20} color="#FFF" />
                         <ThemedText variant="body" style={styles.battleButtonText}>
@@ -206,7 +259,7 @@ export default function QuickBattleScreen() {
                     >
                         <FontAwesome5 name="random" size={16} color={theme.textSecondary} />
                         <ThemedText variant="caption" style={styles.skipText}>
-                            Different Verse
+                            Next Verse
                         </ThemedText>
                     </TouchableOpacity>
                 )}

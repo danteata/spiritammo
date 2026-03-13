@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import {
     StyleSheet,
     View,
@@ -15,16 +15,22 @@ import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import TargetPractice from '@/components/TargetPractice'
 import StealthDrill from '@/components/StealthDrill'
+import AmmunitionCard from '@/components/AmmunitionCard'
 import VoicePlaybackService from '@/services/voicePlayback'
 import { Scripture } from '@/types/scripture'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
+import { practiceLogService } from '@/services/practiceLogService'
+import { generateBattleIntel } from '@/services/battleIntelligence'
+import { militaryRankingService } from '@/services/militaryRanking'
+import ValorPointsService from '@/services/valorPoints'
 
 const AUTO_ADVANCE_DELAY = 3000 // ms delay between auto-pilot verses
 
 export default function TrainingPracticeScreen() {
     const {
-        scriptures,
+        scriptures: allScriptures,
+        collections,
         isDark,
         theme,
         userSettings,
@@ -33,6 +39,22 @@ export default function TrainingPracticeScreen() {
     const params = useLocalSearchParams()
     const router = useRouter()
     const { trackEvent } = useAnalytics()
+
+    // Determine working set of scriptures based on collection selection
+    const scriptures = useMemo(() => {
+        const collectionId = params.collectionId as string
+        if (!collectionId || !collections) return allScriptures
+
+        const collection = collections.find(c => c.id === collectionId)
+        if (!collection) return allScriptures
+
+        // collection.scriptures is an array of IDs. We need to map them back to the actual scripture objects.
+        const mappedScriptures = collection.scriptures
+            .map(id => allScriptures.find(s => s.id === id))
+            .filter((s): s is Scripture => s !== undefined)
+
+        return mappedScriptures.length > 0 ? mappedScriptures : allScriptures
+    }, [allScriptures, collections, params.collectionId])
 
     // Track screen view
     useScreenTracking('training_practice')
@@ -45,6 +67,8 @@ export default function TrainingPracticeScreen() {
     const [showTargetPractice, setShowTargetPractice] = useState(false)
     const [showStealthDrill, setShowStealthDrill] = useState(false)
     const [isLoadingScripture, setIsLoadingScripture] = useState(false)
+    const [history, setHistory] = useState<Scripture[]>([])
+    const [historyIndex, setHistoryIndex] = useState(-1)
 
     // Burst mode state
     const [burstQueue, setBurstQueue] = useState<Scripture[]>([])
@@ -77,18 +101,47 @@ export default function TrainingPracticeScreen() {
 
     // Load a random scripture for practice
     const loadRandomScripture = useCallback(() => {
+        if (!scriptures || scriptures.length === 0 || !isMountedRef.current) return
+
         setIsLoadingScripture(true)
-        try {
-            if (scriptures && scriptures.length > 0) {
-                const randomIndex = Math.floor(Math.random() * scriptures.length)
-                setCurrentScripture(scriptures[randomIndex])
+
+        // Find a random scripture not equal to current if possible
+        let nextScripture: Scripture
+        if (scriptures.length > 1) {
+            let randomIndex = Math.floor(Math.random() * scriptures.length)
+            while (currentScripture && scriptures[randomIndex].id === currentScripture.id) {
+                randomIndex = Math.floor(Math.random() * scriptures.length)
             }
-        } catch (error) {
-            console.error('Error loading scripture:', error)
-        } finally {
-            setIsLoadingScripture(false)
+            nextScripture = scriptures[randomIndex]
+        } else {
+            nextScripture = scriptures[0]
         }
-    }, [scriptures])
+
+        // Animated transition
+        Animated.sequence([
+            Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+            Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        ]).start()
+
+        setCurrentScripture(nextScripture)
+        setHistory(prev => [...prev.slice(0, historyIndex + 1), nextScripture])
+        setHistoryIndex(prev => prev + 1)
+        setIsLoadingScripture(false)
+    }, [scriptures, currentScripture, historyIndex])
+
+    const loadPreviousScripture = useCallback(() => {
+        if (historyIndex <= 0) return
+
+        const prevScripture = history[historyIndex - 1]
+
+        Animated.sequence([
+            Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+            Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        ]).start()
+
+        setCurrentScripture(prevScripture)
+        setHistoryIndex(prev => prev - 1)
+    }, [history, historyIndex])
 
     // ──────────────────────────────────────
     //  BURST MODE
@@ -250,7 +303,7 @@ export default function TrainingPracticeScreen() {
     //  PRACTICE COMPLETE HANDLER
     // ──────────────────────────────────────
 
-    const handlePracticeComplete = (transcript: string, accuracy: number) => {
+    const handlePracticeComplete = async (transcript: string, accuracy: number) => {
         trackEvent(AnalyticsEventType.PRACTICE_COMPLETE, {
             practice_type: 'training',
             mode: trainingMode,
@@ -258,6 +311,24 @@ export default function TrainingPracticeScreen() {
             scripture_id: currentScripture?.id,
             is_training: true,
         })
+
+        // Save mission log
+        if (currentScripture) {
+            await practiceLogService.saveLog({
+                scriptureId: currentScripture.id,
+                accuracy: accuracy,
+                transcription: transcript,
+            })
+
+            // Update military profile with session stats
+            await militaryRankingService.updateProfile({
+                versesMemorized: userStats?.totalPracticed || 0,
+                averageAccuracy: userStats?.averageAccuracy || 0,
+                consecutiveDays: userStats?.streak || 0,
+                lastSessionAccuracy: accuracy,
+                lastSessionWordCount: currentScripture.text.split(' ').length
+            })
+        }
 
         setShowTargetPractice(false)
         setShowStealthDrill(false)
@@ -271,17 +342,20 @@ export default function TrainingPracticeScreen() {
 
         // Single mode feedback
         if (accuracy >= 90) {
-            Alert.alert('Excellent!', `You're ready for battle! ${accuracy}% accuracy`, [
-                { text: 'Practice Again', onPress: loadRandomScripture },
-                { text: 'Try Battle Mode', onPress: () => router.push('/battle') },
+            Alert.alert('Target Destroyed!', `Excellent marksmanship! ${accuracy}% accuracy`, [
+                { text: 'Engage Next Target', onPress: loadRandomScripture },
+                { text: 'Try Again', onPress: () => { } },
+                { text: 'Ready for Battle', onPress: () => router.push('/battle') },
             ])
         } else if (accuracy >= 70) {
             Alert.alert('Good Progress!', `Keep practicing! ${accuracy}% accuracy`, [
-                { text: 'Continue Training', onPress: loadRandomScripture },
+                { text: 'Next Target', onPress: loadRandomScripture },
+                { text: 'Try Again', onPress: () => { } },
             ])
         } else {
-            Alert.alert('Keep Going!', `Practice makes perfect! ${accuracy}% accuracy`, [
-                { text: 'Try Again', onPress: loadRandomScripture },
+            Alert.alert('Missed Target!', `Recalibrate and fire again. ${accuracy}% accuracy`, [
+                { text: 'Retry Drill', onPress: () => { } },
+                { text: 'Next Target', onPress: loadRandomScripture },
             ])
         }
     }
@@ -311,7 +385,7 @@ export default function TrainingPracticeScreen() {
     const getModeInfo = () => {
         switch (trainingMode) {
             case 'burst':
-                return { title: 'BURST FIRE', subtitle: 'RAPID-FIRE PRACTICE', icon: 'flash' as const, color: '#22C55E' }
+                return { title: 'BURST FIRE', subtitle: 'RAPID-FIRE DRILL', icon: 'flash' as const, color: '#22C55E' }
             case 'automatic':
                 return { title: 'AUTO PILOT', subtitle: 'HANDS-FREE LEARNING', icon: 'infinite' as const, color: '#A855F7' }
             default:
@@ -320,6 +394,32 @@ export default function TrainingPracticeScreen() {
     }
 
     const modeInfo = getModeInfo()
+
+    const handleShowIntel = async () => {
+        if (!currentScripture) return
+
+        setIsLoadingScripture(true)
+        try {
+            const intel = await generateBattleIntel({
+                reference: currentScripture.reference,
+                text: currentScripture.text
+            })
+
+            Alert.alert(
+                'BATTLE INTELLIGENCE 📡',
+                `MNEMONIC: ${intel.battlePlan}\n\nTACTICAL NOTES: ${intel.tacticalNotes}`,
+                [{ text: 'COPY THAT' }]
+            )
+
+            // Record intel generation for rank progress
+            await militaryRankingService.recordIntelGenerated()
+        } catch (error) {
+            console.error('Failed to get intel:', error)
+            Alert.alert('SYSTEM ERROR', 'Failed to retrieve battle intelligence. Check communications.')
+        } finally {
+            setIsLoadingScripture(false)
+        }
+    }
 
     // ──────────────────────────────────────
     //  RENDER
@@ -340,8 +440,8 @@ export default function TrainingPracticeScreen() {
                         {trainingMode === 'automatic'
                             ? 'Auto Pilot — Verses read aloud automatically'
                             : trainingMode === 'burst'
-                                ? `Burst Fire — ${isBurstActive ? `Verse ${burstIndex + 1} of ${burstQueue.length}` : 'Preparing...'}`
-                                : 'Training Mode — No scores recorded'}
+                                ? `Burst Fire — ${isBurstActive ? `Target ${burstIndex + 1} of ${burstQueue.length}` : 'Loading Ammunition...'}`
+                                : 'Training Mode — No Valor points affected'}
                     </ThemedText>
                 </View>
 
@@ -461,79 +561,36 @@ export default function TrainingPracticeScreen() {
                     </View>
                 )}
 
-                {/* Current Scripture Display */}
+                {/* Combined Scripture Display & Actions (Ammunition Card) */}
                 {currentScripture && !practiceMode && (
                     <Animated.View style={[styles.scriptureSection, { opacity: fadeAnim }]}>
-                        <ThemedCard variant="glass" style={styles.scriptureCard}>
-                            <ThemedText variant="caption" style={styles.reference}>
-                                {currentScripture.reference}
-                            </ThemedText>
-                            <ThemedText variant="body" style={styles.text}>
-                                {currentScripture.text}
-                            </ThemedText>
-                        </ThemedCard>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 16 }}>
+                            <TouchableOpacity
+                                disabled={historyIndex <= 0}
+                                onPress={loadPreviousScripture}
+                                style={{ opacity: historyIndex <= 0 ? 0.3 : 1, flexDirection: 'row', alignItems: 'center' }}
+                            >
+                                <Ionicons name="arrow-back" size={16} color={theme.textSecondary} />
+                                <ThemedText variant="caption" style={{ marginLeft: 4 }}>PREVIOUS TARGET</ThemedText>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                onPress={loadRandomScripture}
+                                style={{ flexDirection: 'row', alignItems: 'center' }}
+                            >
+                                <ThemedText variant="caption" style={{ marginRight: 4 }}>NEXT TARGET</ThemedText>
+                                <Ionicons name="arrow-forward" size={16} color={theme.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <AmmunitionCard
+                            scripture={currentScripture}
+                            onFire={handleStartVoicePractice}
+                            onReload={trainingMode === 'burst' && isBurstActive ? skipBurstVerse : loadRandomScripture}
+                            onIntel={handleShowIntel}
+                            onStealth={handleStartStealthPractice}
+                            isDark={isDark}
+                            allowBlur={true}
+                        />
                     </Animated.View>
-                )}
-
-                {/* Practice Options (Single & Burst modes) */}
-                {!practiceMode && currentScripture && trainingMode !== 'automatic' && (
-                    <View style={styles.practiceOptions}>
-                        <ThemedText variant="caption" style={styles.sectionTitle}>
-                            CHOOSE PRACTICE TYPE
-                        </ThemedText>
-
-                        <TouchableOpacity
-                            style={styles.optionCard}
-                            onPress={handleStartVoicePractice}
-                        >
-                            <ThemedCard variant="glass" style={styles.optionInner}>
-                                <FontAwesome5 name="microphone" size={24} color={theme.accent} />
-                                <View style={styles.optionContent}>
-                                    <ThemedText variant="heading" style={styles.optionTitle}>VOICE PRACTICE</ThemedText>
-                                    <ThemedText variant="body" style={styles.optionDesc}>
-                                        Speak the verse and see your accuracy
-                                    </ThemedText>
-                                </View>
-                            </ThemedCard>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={styles.optionCard}
-                            onPress={handleStartStealthPractice}
-                        >
-                            <ThemedCard variant="glass" style={styles.optionInner}>
-                                <FontAwesome5 name="mask" size={24} color={theme.accent} />
-                                <View style={styles.optionContent}>
-                                    <ThemedText variant="heading" style={styles.optionTitle}>STEALTH DRILL</ThemedText>
-                                    <ThemedText variant="body" style={styles.optionDesc}>
-                                        Fill in the blanks from memory
-                                    </ThemedText>
-                                </View>
-                            </ThemedCard>
-                        </TouchableOpacity>
-
-                        {/* Next / Skip button */}
-                        <TouchableOpacity
-                            style={styles.optionCard}
-                            onPress={trainingMode === 'burst' && isBurstActive ? skipBurstVerse : loadRandomScripture}
-                        >
-                            <ThemedCard variant="glass" style={styles.optionInner}>
-                                <FontAwesome5
-                                    name={trainingMode === 'burst' ? 'forward' : 'random'}
-                                    size={24}
-                                    color={theme.accent}
-                                />
-                                <View style={styles.optionContent}>
-                                    <ThemedText variant="heading" style={styles.optionTitle}>
-                                        {trainingMode === 'burst' ? 'SKIP VERSE' : 'NEXT VERSE'}
-                                    </ThemedText>
-                                    <ThemedText variant="body" style={styles.optionDesc}>
-                                        {trainingMode === 'burst' ? 'Skip to next burst verse (counts as incorrect)' : 'Skip to a different scripture'}
-                                    </ThemedText>
-                                </View>
-                            </ThemedCard>
-                        </TouchableOpacity>
-                    </View>
                 )}
 
                 {/* Stealth Practice Mode */}
@@ -552,6 +609,23 @@ export default function TrainingPracticeScreen() {
                     </View>
                 )}
 
+                {/* Target Practice Mode */}
+                {practiceMode === 'VOICE' && currentScripture && (
+                    <View style={styles.practiceSection}>
+                        <TargetPractice
+                            isVisible={showTargetPractice}
+                            onClose={() => {
+                                setShowTargetPractice(false)
+                                setPracticeMode(null)
+                            }}
+                            targetVerse={currentScripture.text}
+                            reference={currentScripture.reference}
+                            scriptureId={currentScripture.id}
+                            onRecordingComplete={handlePracticeComplete}
+                        />
+                    </View>
+                )}
+
                 {isLoadingScripture && (
                     <View style={styles.loadingContainer}>
                         <ActivityIndicator size="large" color={theme.accent} />
@@ -559,20 +633,6 @@ export default function TrainingPracticeScreen() {
                 )}
             </ScrollView>
 
-            {/* Target Practice Modal */}
-            {currentScripture && (
-                <TargetPractice
-                    isVisible={showTargetPractice}
-                    onClose={() => {
-                        setShowTargetPractice(false)
-                        setPracticeMode(null)
-                    }}
-                    targetVerse={currentScripture.text}
-                    reference={currentScripture.reference}
-                    scriptureId={currentScripture.id}
-                    onRecordingComplete={handlePracticeComplete}
-                />
-            )}
         </ThemedContainer>
     )
 }

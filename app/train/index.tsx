@@ -15,6 +15,8 @@ import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
+import CollectionSelector from '@/components/CollectionSelector'
+import { Collection } from '@/types/scripture'
 
 const { width } = Dimensions.get('window')
 
@@ -25,16 +27,25 @@ export default function TrainingScreen() {
     const router = useRouter()
     const { trackEvent } = useAnalytics()
 
+    const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
+
     // Track screen view
     useScreenTracking('training')
 
     const handleModeSelect = (mode: TrainingMode) => {
         trackEvent(AnalyticsEventType.PRACTICE_START, {
             practice_type: 'training_mode_selected',
-            mode_selected: mode
+            mode_selected: mode,
+            collection_id: selectedCollection?.id
         })
-        // Navigate to training practice screen
-        router.push({ pathname: '/train/practice', params: { mode } })
+        // Navigate to training practice screen with collection info
+        router.push({ 
+            pathname: '/train/practice', 
+            params: { 
+                mode,
+                collectionId: selectedCollection?.id 
+            } 
+        })
     }
 
     const handleCollectionPractice = () => {
@@ -55,6 +66,10 @@ export default function TrainingScreen() {
 
     const verseCount = scriptures?.length || 0
     const collectionCount = collections?.length || 0
+
+    const displayVerseCount = selectedCollection 
+        ? selectedCollection.scriptures.length 
+        : verseCount
 
     return (
         <ThemedContainer style={styles.container}>
@@ -80,7 +95,7 @@ export default function TrainingScreen() {
                 <View style={styles.statsRow}>
                     <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                         <FontAwesome5 name="book" size={20} color={theme.accent} />
-                        <ThemedText variant="heading" style={styles.statNumber}>{verseCount}</ThemedText>
+                        <ThemedText variant="heading" style={styles.statNumber}>{displayVerseCount}</ThemedText>
                         <ThemedText variant="caption" style={styles.statLabel}>Verses</ThemedText>
                     </View>
                     <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
@@ -95,10 +110,21 @@ export default function TrainingScreen() {
                     </View>
                 </View>
 
-                {/* Training Mode Selection */}
-                <View style={styles.modesSection}>
+                {/* Load Ammunition */}
+                <View style={styles.collectionSection}>
                     <ThemedText variant="caption" style={styles.sectionTitle}>
-                        TRAINING MODES
+                        LOAD ARSENAL (OPTIONAL)
+                    </ThemedText>
+                    <CollectionSelector
+                        selectedCollection={selectedCollection}
+                        onSelectCollection={setSelectedCollection}
+                    />
+                </View>
+
+                {/* Training Mode Selection */}
+                <View style={[styles.modesSection, { marginTop: 10 }]}>
+                    <ThemedText variant="caption" style={styles.sectionTitle}>
+                        CHOOSE DRILL
                     </ThemedText>
 
                     {/* Single Mode - Focus on one verse */}
@@ -116,10 +142,10 @@ export default function TrainingScreen() {
                             <View style={styles.modeContent}>
                                 <ThemedText variant="heading" style={styles.modeTitle}>SINGLE FOCUS</ThemedText>
                                 <ThemedText variant="body" style={styles.modeDescription}>
-                                    Deep memorization on one verse at a time. Perfect for learning new scriptures.
+                                    Deep memorization drill. Master one target verse at a time before advancing.
                                 </ThemedText>
                                 <View style={styles.modeTag}>
-                                    <ThemedText variant="caption" style={styles.modeTagText}>No Pressure</ThemedText>
+                                    <ThemedText variant="caption" style={styles.modeTagText}>Deep Focus</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
@@ -143,7 +169,7 @@ export default function TrainingScreen() {
                             <View style={styles.modeContent}>
                                 <ThemedText variant="heading" style={styles.modeTitle}>BURST FIRE</ThemedText>
                                 <ThemedText variant="body" style={styles.modeDescription}>
-                                    Rapid-fire practice for quick recall. Great for reviewing familiar verses.
+                                    Rapid-fire tactical drill for quick recall. Engage multiple familiar verses in succession.
                                 </ThemedText>
                                 <View style={styles.modeTag}>
                                     <ThemedText variant="caption" style={styles.modeTagText}>Quick Review</ThemedText>
@@ -183,92 +209,34 @@ export default function TrainingScreen() {
                     </TouchableOpacity>
                 </View>
 
-                {/* Collection Practice Section */}
-                <View style={styles.collectionSection}>
-                    <ThemedText variant="caption" style={styles.sectionTitle}>
-                        COLLECTION PRACTICE
-                    </ThemedText>
-
-                    {/* Listen & Learn */}
-                    <TouchableOpacity
-                        style={styles.modeCard}
-                        onPress={handleListenAndLearn}
-                        activeOpacity={0.9}
-                    >
-                        <ThemedCard variant="glass" style={[styles.modeCardInner, styles.listenMode]}>
-                            <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
-                                    <Ionicons name="headset" size={28} color="#A855F7" />
-                                </View>
-                            </View>
-                            <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={styles.modeTitle}>LISTEN & LEARN</ThemedText>
-                                <ThemedText variant="body" style={styles.modeDescription}>
-                                    Passive memorization — select a collection and listen to verses read aloud automatically.
-                                </ThemedText>
-                                <View style={[styles.modeTag, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
-                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: '#A855F7' }]}>Hands-Free</ThemedText>
-                                </View>
-                            </View>
-                            <View style={styles.modeArrow}>
-                                <FontAwesome5 name="chevron-right" size={16} color={theme.textSecondary} />
-                            </View>
-                        </ThemedCard>
-                    </TouchableOpacity>
-
-                    {/* Collection Drill */}
-                    <TouchableOpacity
-                        style={styles.modeCard}
-                        onPress={handleCollectionPractice}
-                        activeOpacity={0.9}
-                    >
-                        <ThemedCard variant="glass" style={styles.modeCardInner}>
-                            <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: 'rgba(251, 191, 36, 0.15)' }]}>
-                                    <FontAwesome name="folder-open" size={28} color="#FBBF24" />
-                                </View>
-                            </View>
-                            <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={styles.modeTitle}>COLLECTION DRILL</ThemedText>
-                                <ThemedText variant="body" style={styles.modeDescription}>
-                                    Practice verses from your personal collections. Focus on specific topics or chapters.
-                                </ThemedText>
-                            </View>
-                            <View style={styles.modeArrow}>
-                                <FontAwesome5 name="chevron-right" size={16} color={theme.textSecondary} />
-                            </View>
-                        </ThemedCard>
-                    </TouchableOpacity>
-                </View>
-
                 {/* Tips Section */}
                 <View style={styles.tipsSection}>
                     <ThemedText variant="caption" style={styles.sectionTitle}>
-                        TRAINING TIPS
+                        TRAINING INTEL
                     </ThemedText>
                     <ThemedCard variant="glass" style={styles.tipCard}>
                         <View style={styles.tipItem}>
-                            <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                            <FontAwesome5 name="bullseye" size={14} color={theme.accent} />
                             <ThemedText variant="body" style={styles.tipText}>
-                                Use Single Focus for new verses you're memorizing
+                                Use Single Focus for deep coordinate precision
                             </ThemedText>
                         </View>
                         <View style={styles.tipItem}>
-                            <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                            <FontAwesome5 name="bullseye" size={14} color={theme.accent} />
                             <ThemedText variant="body" style={styles.tipText}>
-                                Switch to Burst Fire for rapid review of familiar verses
+                                Switch to Burst Fire for rapid-fire review sessions
                             </ThemedText>
                         </View>
                         <View style={styles.tipItem}>
-                            <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                            <FontAwesome5 name="bullseye" size={14} color={theme.accent} />
                             <ThemedText variant="body" style={styles.tipText}>
-                                Use Listen & Learn for passive memorization while on the go
+                                Use Auto Pilot for passive reconnaissance & absorption
                             </ThemedText>
                         </View>
                         <View style={styles.tipItem}>
-                            <Ionicons name="checkmark-circle" size={16} color="#22C55E" />
+                            <FontAwesome5 name="bullseye" size={14} color={theme.accent} />
                             <ThemedText variant="body" style={styles.tipText}>
-                                Ready for a challenge? Try Battle mode!
+                                Ready for combat? Deploy to Battle Mode!
                             </ThemedText>
                         </View>
                     </ThemedCard>

@@ -30,19 +30,32 @@ interface TypewriterTextProps {
     text: string
     style?: any
     delay?: number
+    startTyping?: boolean
     onComplete?: () => void
 }
 
-const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0, onComplete }) => {
+const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0, startTyping = true, onComplete }) => {
     const [displayedText, setDisplayedText] = useState('')
     const [started, setStarted] = useState(false)
+    const [showCursor, setShowCursor] = useState(true)
+    const [isComplete, setIsComplete] = useState(false)
 
     useEffect(() => {
+        if (!startTyping) return
+        
         const startTimer = setTimeout(() => {
             setStarted(true)
         }, delay)
         return () => clearTimeout(startTimer)
-    }, [delay])
+    }, [delay, startTyping])
+
+    useEffect(() => {
+        // Blinking cursor effect
+        const cursorInterval = setInterval(() => {
+            setShowCursor(prev => !prev)
+        }, 500)
+        return () => clearInterval(cursorInterval)
+    }, [])
 
     useEffect(() => {
         if (!started) return
@@ -57,6 +70,7 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0,
                 currentIndex++
             } else {
                 clearInterval(interval)
+                setIsComplete(true)
                 onComplete?.()
             }
         }, 30) // Typing speed
@@ -64,7 +78,12 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0,
         return () => clearInterval(interval)
     }, [started, text])
 
-    return <ThemedText style={style}>{displayedText}</ThemedText>
+    return (
+        <ThemedText style={style}>
+            {displayedText}
+            {(!isComplete || showCursor) && <ThemedText style={[style, { opacity: showCursor ? 1 : 0 }]}>█</ThemedText>}
+        </ThemedText>
+    )
 }
 
 export default function WelcomeModal({ isVisible, onClose }: WelcomeModalProps) {
@@ -75,6 +94,7 @@ export default function WelcomeModal({ isVisible, onClose }: WelcomeModalProps) 
     // Mission Status State
     const [missionAccepted, setMissionAccepted] = useState(false)
     const [briefingComplete, setBriefingComplete] = useState(false)
+    const [animationComplete, setAnimationComplete] = useState(false)
 
     React.useEffect(() => {
         if (isVisible) {
@@ -90,7 +110,9 @@ export default function WelcomeModal({ isVisible, onClose }: WelcomeModalProps) 
                     duration: 400,
                     useNativeDriver: true,
                 }),
-            ]).start()
+            ]).start(() => {
+                setAnimationComplete(true)
+            })
         }
     }, [isVisible])
 
@@ -204,9 +226,10 @@ export default function WelcomeModal({ isVisible, onClose }: WelcomeModalProps) 
                                     GREETINGS, SOLDIER.
                                 </ThemedText>
                                 <TypewriterText
-                                    text="You have been selected for elite spiritual warfare training. Your objective is to internalize the Word of God and deploy it in combat scenarios."
+                                    text="INCOMING TRANSMISSION... You have been selected for elite spiritual warfare training. Your objective is to internalize the Word of God and deploy it in combat scenarios."
                                     style={[styles.briefingText, { color: isDark ? '#e2e8f0' : '#334155' }]}
-                                    delay={600}
+                                    delay={400}
+                                    startTyping={animationComplete}
                                     onComplete={() => setBriefingComplete(true)}
                                 />
                             </View>
