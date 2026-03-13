@@ -33,6 +33,8 @@ export default function ArsenalScreen() {
         collections,
         scriptures,
         getScripturesByCollection,
+        addScriptures,
+        addScripturesToCollection,
         theme,
     } = useAppStore()
     const router = useRouter()
@@ -292,8 +294,22 @@ export default function ArsenalScreen() {
             <FileUploader
                 isVisible={showFileUploader}
                 onClose={() => setShowFileUploader(false)}
-                onVersesExtracted={(verses, targetCollectionId) => {
+                onVersesExtracted={async (verses, targetCollectionId) => {
                     console.log('Extracted verses:', verses.length, 'for collection:', targetCollectionId)
+                    if (verses.length > 0) {
+                        try {
+                            // 1. Add scriptures to global store
+                            const addSuccess = await addScriptures(verses)
+                            if (addSuccess && targetCollectionId) {
+                                // 2. Link them to the selected collection
+                                await addScripturesToCollection(targetCollectionId, verses.map(v => v.id))
+                            }
+                            console.log('✅ Successfully persisted extracted verses')
+                        } catch (error) {
+                            console.error('❌ Failed to persist extracted verses:', error)
+                            Alert.alert('Persistence Failed', 'Failed to save extracted verses to your arsenal.')
+                        }
+                    }
                     setShowFileUploader(false)
                 }}
             />
@@ -301,8 +317,11 @@ export default function ArsenalScreen() {
             <AddVersesModal
                 isVisible={showAddVerses}
                 onClose={() => setShowAddVerses(false)}
-                onVersesAdded={(collectionId, verses) => {
+                onVersesAdded={async (collectionId, verses) => {
                     console.log('Added verses:', verses.length, 'to collection:', collectionId)
+                    // Note: AddVersesModal internally calls addScriptures and addScripturesToCollection
+                    // However, we ensure the UI is updated by potentially refreshing data if needed
+                    // For now, since it's using the same store, it should be automatic.
                     setShowAddVerses(false)
                 }}
             />
