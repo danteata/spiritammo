@@ -584,7 +584,6 @@ export default function TrainingPracticeScreen() {
                         <AmmunitionCard
                             scripture={currentScripture}
                             onFire={handleStartVoicePractice}
-                            onReload={trainingMode === 'burst' && isBurstActive ? skipBurstVerse : loadRandomScripture}
                             onIntel={handleShowIntel}
                             onStealth={handleStartStealthPractice}
                             isDark={isDark}

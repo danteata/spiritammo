@@ -7,6 +7,7 @@ import {
   Animated,
   ActivityIndicator,
   Platform,
+  Alert,
 } from 'react-native'
 import { FontAwesome, Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import { BlurView, BlurTargetView } from 'expo-blur'
@@ -19,11 +20,12 @@ import {
 import { Scripture } from '@/types/scripture'
 import ScriptureText from './ScriptureText'
 import { useAppStore } from '@/hooks/useAppStore'
+import VoicePlaybackService from '@/services/voicePlayback'
 
 interface AmmunitionCardProps {
   scripture: Scripture
   onFire: () => void
-  onReload: () => void
+  onReload?: () => void
   onIntel: (force?: boolean) => void // Generate mnemonic
   onStealth?: () => void // Silent Drill
   isLoading?: boolean
@@ -43,7 +45,7 @@ const AmmunitionCard = React.memo(({
   allowBlur = true, // Default true for practice mode
   isBattleMode = false,
 }: AmmunitionCardProps) => {
-  const { theme, isDark } = useAppStore()
+  const { theme, isDark, userSettings } = useAppStore()
   const styles = getStyles(theme)
   const fireAnimation = useRef(new Animated.Value(1)).current
   const [pulseAnimation] = useState(new Animated.Value(1))
@@ -363,21 +365,6 @@ const AmmunitionCard = React.memo(({
               </TouchableOpacity>
             </Animated.View>
 
-            <TouchableOpacity
-              style={[styles.actionButton, styles.reloadButton]}
-              onPress={onReload}
-              disabled={isLoading}
-              testID="reload-button"
-            >
-              <FontAwesome name="undo" size={20} color={theme.text} />
-              <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
-                RELOAD
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Row 2: Tactical Actions */}
-          <View style={styles.actionRow}>
             {onStealth && (
               <TouchableOpacity
                 style={[styles.actionButton, styles.stealthButton]}
@@ -391,11 +378,29 @@ const AmmunitionCard = React.memo(({
                 </Text>
               </TouchableOpacity>
             )}
+          </View>
 
+          {/* Row 2: Tactical Actions */}
+          <View style={styles.actionRow}>
             <TouchableOpacity
               style={[styles.actionButton, styles.intelButton]}
-              onPress={() => onIntel(false)}
-              disabled={isLoading || !!scripture.mnemonic}
+              onPress={async () => {
+                // First, speak the verse
+                await VoicePlaybackService.playScripture(
+                  scripture.id,
+                  `${scripture.reference}. ${scripture.text}`,
+                  {
+                    rate: userSettings?.voiceRate || 0.9,
+                    pitch: userSettings?.voicePitch || 1.0,
+                    language: userSettings?.language || 'en-US',
+                  }
+                );
+                // Then show intel after a short delay
+                setTimeout(() => {
+                  onIntel(false);
+                }, 500);
+              }}
+              disabled={isLoading}
               testID="intel-button"
             >
               {isLoading ? (

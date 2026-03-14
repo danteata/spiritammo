@@ -7,6 +7,7 @@ import { COLORS } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
 import * as Speech from 'expo-speech';
 import whisperService from '@/services/whisper';
+import neuralTTSService, { speakWithNeuralTTS, TTSProgress } from '@/services/neuralTTS';
 import Constants from 'expo-constants';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useAudioRecording, AudioRecordingResult } from '@/services/audioRecording';
@@ -150,6 +151,7 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
   const [whisperReady, setWhisperReady] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [ttsProgress, setTtsProgress] = useState(0); // Neural TTS download progress (0-100)
 
   // Audio player for playback - use recordingUri from the audio recording hook
   const player = useAudioPlayer(recordingUri ? { uri: recordingUri } : undefined);
@@ -241,7 +243,7 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
     }
   }, [isRecognizing, audioIsRecording, recordingDuration, showAccuracy, accuracy, isInitializing, userSettings.voiceEngine, whisperReady, hasPermission, isAvailable]);
 
-  // Speak the intel text
+  // Speak the intel text using neural TTS for better quality
   const speakIntel = async () => {
     try {
       // Track TTS usage
@@ -253,42 +255,57 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
 
       // Stop any existing speech
       await Speech.stop();
+      await neuralTTSService.stop();
 
       const textToSpeak = intelText || "No tactical intel available for this target.";
 
-      // Start new speech with proper settings
-      await Speech.speak(textToSpeak, {
-        rate: userSettings.voiceRate || 0.9,
-        pitch: userSettings.voicePitch || 1.0,
-        language: userSettings.language || 'en-US',
+      // Show progress for TTS initialization/download
+      setStatusMessage('Preparing speech...');
+
+      // Use neural TTS for more natural-sounding speech
+      // Falls back to expo-speech if native module unavailable
+      await speakWithNeuralTTS(textToSpeak, {
+        onProgress: (progress: TTSProgress) => {
+          setTtsProgress(progress.progress);
+          if (progress.status === 'downloading') {
+            setStatusMessage(`Downloading voice model: ${progress.progress.toFixed(0)}%`);
+          } else if (progress.status === 'initializing') {
+            setStatusMessage('Initializing speech engine...');
+          } else if (progress.status === 'playing') {
+            setStatusMessage('Reading intel...');
+          }
+        },
         onStart: () => {
           setStatusMessage('Reading intel...');
 
           // Track TTS playback start
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_START, {
             recording_id: 'tts_intel',
-            playback_type: 'tts',
+            playback_type: 'neural_tts',
             text_length: textToSpeak.length
           });
         },
         onDone: () => {
+          setTtsProgress(0);
           setStatusMessage('Ready to record');
 
           // Track TTS playback complete
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_COMPLETE, {
             recording_id: 'tts_intel',
-            playback_type: 'tts',
-            duration: 0 // Would need to calculate actual duration
+            playback_type: 'neural_tts',
+            duration: 0
           });
         },
-        onError: (error) => {
-          console.error('Speech error:', error);
+        onError: (error: Error) => {
+          setTtsProgress(0);
+          console.error('Neural TTS error:', error);
+          setStatusMessage('Using standard voice');
 
           // Track TTS error
-          trackError(new Error('TTS playback failed'), 'VoiceRecorder', {
+          trackError(error, 'VoiceRecorder', {
             context: 'tts_playback',
             error_type: 'speech_error',
-            text: textToSpeak.substring(0, 100) // Limit text length for privacy
+            text: textToSpeak.substring(0, 100)
           });
         }
       });
