@@ -26,6 +26,7 @@ import { DataLoaderService } from '@/services/dataLoader'
 import { militaryRankingService } from '@/services/militaryRanking'
 import { bibleApiService } from '@/services/bibleApi'
 import { errorHandler } from '@/services/errorHandler'
+import { CollectionChapterService } from '@/services/collectionChapters'
 import { createAvatarSlice, AvatarSlice } from '@/hooks/stores/createAvatarSlice'
 import { analytics, AnalyticsEvents } from '@/services/analytics'
 
@@ -47,7 +48,7 @@ const DEFAULT_USER_SETTINGS: UserSettings = {
   voicePitch: 1.0,
   language: 'en-US',
   trainingMode: 'single',
-  voiceEngine: 'whisper',
+  voiceEngine: 'native',
 }
 
 const DEFAULT_USER_STATS: UserStats = {
@@ -394,6 +395,62 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
             console.log('✅ Final collections loaded:', mergedCollections.map(c => `${c.name}: ${c.scriptures.length} verses`));
           }
 
+          // Auto-generate chapters for legacy/imported collections missing chapter data
+          const collectionsWithChapters = [...mergedCollections]
+          const dbUpdates: Promise<any>[] = []
+
+          for (let i = 0; i < collectionsWithChapters.length; i++) {
+            const collection = collectionsWithChapters[i]
+            if (collection.isSystem) continue
+            if (collection.isChapterBased && collection.chapters && collection.chapters.length > 0) continue
+
+            const scriptureIds = scripturesByCollection[collection.id] || []
+            const collectionScriptures = dbScriptures.filter(s => scriptureIds.includes(s.id)).map(s => ({
+              ...s,
+              endVerse: s.endVerse ?? undefined,
+              mnemonic: s.mnemonic ?? undefined,
+              lastPracticed: s.lastPracticed ?? undefined,
+              accuracy: s.accuracy ?? undefined,
+              practiceCount: s.practiceCount ?? 0,
+              isJesusWords: s.isJesusWords ?? false,
+            }))
+            const analysis = CollectionChapterService.analyzeScripturesForChapters(collectionScriptures)
+
+            if (analysis.canBeChapterBased && analysis.suggestedChapters.length > 0) {
+              const updatedCollection: Collection = {
+                ...collection,
+                isChapterBased: true,
+                chapters: analysis.suggestedChapters,
+                sourceBook: analysis.sourceBook,
+                bookInfo: analysis.sourceBook ? {
+                  totalChapters: analysis.stats.totalChapters,
+                  completedChapters: 0,
+                  averageAccuracy: 0,
+                } : undefined,
+              }
+
+              collectionsWithChapters[i] = updatedCollection
+
+              // Queue the update instead of executing in loop
+              const updatePromise = db.update(collectionsTable)
+                .set({
+                  isChapterBased: updatedCollection.isChapterBased,
+                  sourceBook: updatedCollection.sourceBook || null,
+                  bookInfo: updatedCollection.bookInfo || null,
+                  chapters: updatedCollection.chapters || null,
+                })
+                .where(eq(collectionsTable.id, updatedCollection.id))
+
+              dbUpdates.push(updatePromise)
+            }
+          }
+
+          // Execute all database updates in parallel
+          if (dbUpdates.length > 0) {
+            await Promise.all(dbUpdates)
+            console.log(`✅ Batch updated ${dbUpdates.length} collections with chapter data`)
+          }
+
           set({
             scriptures: dbScriptures.map(s => ({
               ...s,
@@ -404,7 +461,7 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
               practiceCount: s.practiceCount || 0,
               isJesusWords: s.isJesusWords || false,
             })),
-            collections: mergedCollections
+            collections: collectionsWithChapters
           })
         } else {
           // First time load: Seed from Mocks/DataLoader
@@ -469,7 +526,8 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
           set({ currentScripture: get().scriptures[0] })
         }
 
-        // Success - break retry loop
+        // Success - mark loaded and break retry loop
+        set({ isLoading: false })
         break;
       } catch (error) {
         await errorHandler.handleError(error, `Initialize App Data (Attempt ${retryCount + 1}/${maxRetries})`, { silent: true });
@@ -820,7 +878,7 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
       }
 
       // Update State
-      const updatedCollections = get().collections.map((collection) => {
+      let updatedCollections = get().collections.map((collection) => {
         if (collection.id === collectionId) {
           // We also need to update the in-memory 'scriptures' array of the collection
           const currentIds = new Set(collection.scriptures);
@@ -829,6 +887,53 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
         }
         return collection;
       });
+
+      // Auto-generate chapters for uploaded collections when possible
+      const updatedCollection = updatedCollections.find(c => c.id === collectionId);
+      if (updatedCollection && !updatedCollection.isSystem) {
+        const shouldAnalyze = !updatedCollection.isChapterBased || !updatedCollection.chapters || updatedCollection.chapters.length === 0;
+        if (shouldAnalyze) {
+          const collectionScriptures = get().scriptures.filter(s =>
+            updatedCollection.scriptures.includes(s.id)
+          ).map(s => ({
+            ...s,
+            endVerse: s.endVerse ?? undefined,
+            mnemonic: s.mnemonic ?? undefined,
+            lastPracticed: s.lastPracticed ?? undefined,
+            accuracy: s.accuracy ?? undefined,
+            practiceCount: s.practiceCount ?? 0,
+            isJesusWords: s.isJesusWords ?? false,
+          }));
+          const analysis = CollectionChapterService.analyzeScripturesForChapters(collectionScriptures);
+
+          if (analysis.canBeChapterBased && analysis.suggestedChapters.length > 0) {
+            const chapterBasedCollection: Collection = {
+              ...updatedCollection,
+              isChapterBased: true,
+              chapters: analysis.suggestedChapters,
+              sourceBook: analysis.sourceBook,
+              bookInfo: analysis.sourceBook ? {
+                totalChapters: analysis.stats.totalChapters,
+                completedChapters: 0,
+                averageAccuracy: 0,
+              } : undefined,
+            };
+
+            updatedCollections = updatedCollections.map(c =>
+              c.id === collectionId ? chapterBasedCollection : c
+            );
+
+            await db.update(collectionsTable)
+              .set({
+                isChapterBased: chapterBasedCollection.isChapterBased,
+                sourceBook: chapterBasedCollection.sourceBook || null,
+                bookInfo: chapterBasedCollection.bookInfo || null,
+                chapters: chapterBasedCollection.chapters || null,
+              })
+              .where(eq(collectionsTable.id, chapterBasedCollection.id));
+          }
+        }
+      }
 
       set({ collections: updatedCollections });
       return true;
@@ -1025,16 +1130,28 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
         return false;
       }
 
+      const existingCollection = get().collections.find(c => c.id === updatedCollection.id);
+      const mergedCollection: Collection = {
+        ...(existingCollection || updatedCollection),
+        ...updatedCollection,
+      };
+
       // Use Drizzle ORM with proper error handling
       await db.update(collectionsTable)
         .set({
-          name: updatedCollection.name,
-          description: updatedCollection.description || null,
+          name: mergedCollection.name,
+          abbreviation: mergedCollection.abbreviation || null,
+          description: mergedCollection.description || null,
+          tags: mergedCollection.tags || [],
+          isChapterBased: mergedCollection.isChapterBased || false,
+          sourceBook: mergedCollection.sourceBook || null,
+          bookInfo: mergedCollection.bookInfo || null,
+          chapters: mergedCollection.chapters || null,
         })
-        .where(eq(collectionsTable.id, updatedCollection.id));
+        .where(eq(collectionsTable.id, mergedCollection.id));
 
       const updatedCollections = get().collections.map((collection) =>
-        collection.id === updatedCollection.id ? updatedCollection : collection
+        collection.id === mergedCollection.id ? mergedCollection : collection
       )
       set({ collections: updatedCollections })
       return true
