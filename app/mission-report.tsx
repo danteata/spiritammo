@@ -18,6 +18,7 @@ import RankBadge from '@/components/RankBadge'
 import AccuracyMeter from '@/components/AccuracyMeter'
 import { militaryRankingService } from '@/services/militaryRanking'
 import { getDb } from '@/db/client'
+import { initializeDatabase } from '@/db/init'
 import { practiceLogs as practiceLogsTable } from '@/db/schema'
 import { desc } from 'drizzle-orm'
 import ScreenHeader from '@/components/ScreenHeader'
@@ -48,6 +49,7 @@ export default function MissionReportScreen() {
 
   const loadPracticeLogs = async () => {
     try {
+      await initializeDatabase()
       const db = await getDb()
       if (!db) return
 

@@ -75,7 +75,7 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0,
         clearInterval(interval)
         setIsComplete(true)
       }
-    }, 30) // Match WelcomeModal speed
+    }, 45) // Slightly slower typing pace
 
     return () => clearInterval(interval)
   }, [started, text])
@@ -302,11 +302,11 @@ export default function HomeScreen() {
           <View style={[styles.briefingCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]}>
             <View style={styles.briefingHeader}>
               <FontAwesome5 name="satellite-dish" size={16} color="#FFD700" />
-              <ThemedText variant="caption" style={styles.briefingLabel}>SECURE CHANNEL</ThemedText>
+              <ThemedText variant="caption" style={styles.briefingLabel}>INCOMING TRANSMISSION</ThemedText>
             </View>
             <ThemedText variant="heading" style={styles.greetingText}>{ctaState.greeting}</ThemedText>
             <TypewriterText
-              text={`INCOMING TRANSMISSION... ${ctaState.subtext}`}
+              text={`🗣️ ${ctaState.subtext}`}
               style={styles.briefingText}
               delay={300}
               isDark={isDark}
@@ -345,7 +345,7 @@ export default function HomeScreen() {
         </Animated.View>
 
         {/* Challenge Mode - Secondary CTA (only for users with verses) */}
-        {verseCount > 0 && (
+        {/* {verseCount > 0 && (
           <Animated.View style={StyleSheet.flatten([styles.battleSection, {
             opacity: fadeAnim,
             transform: [{ translateY: slideAnim }]
@@ -369,7 +369,7 @@ export default function HomeScreen() {
               </View>
             </TouchableOpacity>
           </Animated.View>
-        )}
+        )} */}
 
         {/* Simplified Stats Grid - Streak, Valor, Arsenal */}
         <Animated.View style={StyleSheet.flatten([styles.statsGrid, {

@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
     StyleSheet,
     View,
@@ -20,6 +20,10 @@ import { VoicePlaybackToggle } from '@/components/ui/VoicePlaybackToggle'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
 import { MILITARY_RANKS } from '@/services/militaryRanking'
+import { getDb } from '@/db/client'
+import { practiceLogs as practiceLogsTable } from '@/db/schema'
+import { desc } from 'drizzle-orm'
+import { initializeDatabase } from '@/db/init'
 
 type ProfileSection = 'journey' | 'settings'
 
@@ -33,6 +37,7 @@ export default function ProfileScreen() {
         saveUserSettings,
         userStats,
         theme,
+        scriptures,
     } = useAppStore()
     const router = useRouter()
     const { signOut, isSignedIn } = useAuth()
@@ -42,6 +47,29 @@ export default function ProfileScreen() {
     useScreenTracking('profile')
 
     const [activeSection, setActiveSection] = useState<ProfileSection>('journey')
+    const [practiceLogs, setPracticeLogs] = useState<any[]>([])
+
+    useEffect(() => {
+        const loadPracticeLogs = async () => {
+            try {
+                await initializeDatabase()
+                const db = await getDb()
+                if (!db) return
+
+                const logs = await db
+                    .select()
+                    .from(practiceLogsTable)
+                    .orderBy(desc(practiceLogsTable.date))
+                    .limit(5)
+
+                setPracticeLogs(logs)
+            } catch (error) {
+                console.error('Failed to load practice logs:', error)
+            }
+        }
+
+        loadPracticeLogs()
+    }, [])
 
     const handleThemeChange = (value: boolean) => {
         const oldTheme = isDark ? 'dark' : 'light'
@@ -199,51 +227,78 @@ export default function ProfileScreen() {
                             </View>
                         </View>
 
-                        {/* Weekly Activity Chart */}
+                        {/* Mission Report Snapshot */}
                         <View style={[styles.weeklyActivityCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                             <View style={styles.weeklyHeader}>
-                                <ThemedText variant="body" style={styles.weeklyTitle}>Weekly Activity</ThemedText>
-                                <ThemedText variant="caption" style={styles.weeklySubtitle}>Your practice frequency</ThemedText>
+                                <ThemedText variant="body" style={styles.weeklyTitle}>Mission Reports</ThemedText>
+                                <ThemedText variant="caption" style={styles.weeklySubtitle}>Recent performance snapshots</ThemedText>
                             </View>
-                            <View style={styles.weeklyChart}>
-                                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => {
-                                    // Simulate weekly activity (in a real app, this would come from userStats)
-                                    const activityLevel = userStats?.weeklyActivity?.[index] ?? (index < 5 ? Math.random() * 0.8 + 0.2 : Math.random() * 0.4);
-                                    const hasActivity = activityLevel > 0.3;
-                                    return (
-                                        <View key={index} style={styles.dayColumn}>
-                                            <View style={[styles.dayBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
-                                                <View
-                                                    style={[
-                                                        styles.dayBarFill,
-                                                        {
-                                                            backgroundColor: hasActivity ? theme.accent : 'transparent',
-                                                            height: `${Math.min(activityLevel * 100, 100)}%`
-                                                        }
-                                                    ]}
-                                                />
-                                            </View>
-                                            <Text style={[styles.dayLabel, { color: theme.textSecondary }]}>{day}</Text>
-                                        </View>
-                                    );
-                                })}
-                            </View>
-                        </View>
 
-                        {/* Mission Reports Link */}
-                        <TouchableOpacity
-                            style={styles.menuItem}
-                            onPress={() => router.push('/mission-report')}
-                        >
-                            <View style={styles.menuIcon}>
-                                <Ionicons name="document-text" size={22} color={theme.accent} />
-                            </View>
-                            <View style={styles.menuContent}>
-                                <ThemedText variant="body">Mission Reports</ThemedText>
-                                <ThemedText variant="caption" style={styles.menuSubtitle}>View your detailed progress</ThemedText>
-                            </View>
-                            <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
-                        </TouchableOpacity>
+                            {practiceLogs.length === 0 ? (
+                                <View style={styles.emptyLogState}>
+                                    <MaterialCommunityIcons name="file-document-outline" size={36} color={theme.textSecondary} />
+                                    <ThemedText variant="caption" style={styles.emptyLogText}>
+                                        No mission logs yet. Complete a drill to see results here.
+                                    </ThemedText>
+                                </View>
+                            ) : (
+                                <View style={styles.logsList}>
+                                    {practiceLogs.map((log) => {
+                                        const scripture = scriptures.find(s => s.id === log.scriptureId)
+                                        const date = new Date(log.date)
+                                        const accuracy = Number(log.accuracy || 0)
+                                        const accuracyColor = accuracy >= 90
+                                            ? theme.success
+                                            : accuracy >= 75
+                                                ? theme.warning
+                                                : theme.error
+
+                                        return (
+                                            <View
+                                                key={log.id}
+                                                style={[
+                                                    styles.logItem,
+                                                    {
+                                                        backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                                                        borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
+                                                    }
+                                                ]}
+                                            >
+                                                <View style={styles.logHeader}>
+                                                    <View style={styles.logDateContainer}>
+                                                        <Ionicons name="time-outline" size={12} color={theme.textSecondary} />
+                                                        <Text style={[styles.logDate, { color: theme.textSecondary }]}>
+                                                            {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                        </Text>
+                                                    </View>
+                                                    <View style={[styles.accuracyBadge, { backgroundColor: accuracyColor }]}>
+                                                        <Text style={styles.accuracyBadgeText}>{accuracy.toFixed(0)}%</Text>
+                                                    </View>
+                                                </View>
+                                                {scripture && (
+                                                    <View style={styles.logContent}>
+                                                        <Text style={[styles.logReference, { color: theme.accent }]}>
+                                                            {scripture.reference}
+                                                        </Text>
+                                                        <Text style={[styles.logText, { color: theme.textSecondary }]} numberOfLines={2}>
+                                                            {scripture.text}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        )
+                                    })}
+                                </View>
+                            )}
+
+                            <TouchableOpacity
+                                style={styles.reportLink}
+                                onPress={() => router.push('/mission-report')}
+                            >
+                                <Ionicons name="document-text" size={16} color={theme.accent} />
+                                <ThemedText variant="caption" style={styles.reportLinkText}>View Full Report</ThemedText>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 )}
 
@@ -435,6 +490,74 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     },
     weeklySubtitle: {
         opacity: 0.6,
+    },
+    emptyLogState: {
+        alignItems: 'center',
+        paddingVertical: 20,
+        gap: 8,
+    },
+    emptyLogText: {
+        textAlign: 'center',
+        opacity: 0.7,
+    },
+    logsList: {
+        gap: 10,
+    },
+    logItem: {
+        padding: 12,
+        borderRadius: 10,
+        borderWidth: 1,
+    },
+    logHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 6,
+    },
+    logDateContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    logDate: {
+        fontSize: 11,
+    },
+    accuracyBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 999,
+    },
+    accuracyBadgeText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#fff',
+    },
+    logContent: {
+        gap: 4,
+    },
+    logReference: {
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    logText: {
+        fontSize: 12,
+        lineHeight: 16,
+    },
+    reportLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        marginTop: 12,
+        paddingVertical: 10,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderColor: theme.border,
+    },
+    reportLinkText: {
+        color: theme.accent,
+        fontWeight: '600',
+        letterSpacing: 0.6,
     },
     weeklyChart: {
         flexDirection: 'row',

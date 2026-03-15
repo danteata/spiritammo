@@ -39,12 +39,12 @@ export default function TrainingScreen() {
             collection_id: selectedCollection?.id
         })
         // Navigate to training practice screen with collection info
-        router.push({ 
-            pathname: '/train/practice', 
-            params: { 
+        router.push({
+            pathname: '/train/practice',
+            params: {
                 mode,
-                collectionId: selectedCollection?.id 
-            } 
+                collectionId: selectedCollection?.id
+            }
         })
     }
 
@@ -67,8 +67,8 @@ export default function TrainingScreen() {
     const verseCount = scriptures?.length || 0
     const collectionCount = collections?.length || 0
 
-    const displayVerseCount = selectedCollection 
-        ? selectedCollection.scriptures.length 
+    const displayVerseCount = selectedCollection
+        ? selectedCollection.scriptures.length
         : verseCount
 
     return (
@@ -92,7 +92,7 @@ export default function TrainingScreen() {
                 </View>
 
                 {/* Quick Stats */}
-                <View style={styles.statsRow}>
+                {/* <View style={styles.statsRow}>
                     <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                         <FontAwesome5 name="book" size={20} color={theme.accent} />
                         <ThemedText variant="heading" style={styles.statNumber}>{displayVerseCount}</ThemedText>
@@ -108,13 +108,13 @@ export default function TrainingScreen() {
                         <ThemedText variant="heading" style={styles.statNumber}>{userStats?.totalPracticed || 0}</ThemedText>
                         <ThemedText variant="caption" style={styles.statLabel}>Sessions</ThemedText>
                     </View>
-                </View>
+                </View> */}
 
                 {/* Load Ammunition */}
                 <View style={styles.collectionSection}>
-                    <ThemedText variant="caption" style={styles.sectionTitle}>
+                    {/* <ThemedText variant="caption" style={styles.sectionTitle}>
                         LOAD ARSENAL (OPTIONAL)
-                    </ThemedText>
+                    </ThemedText> */}
                     <CollectionSelector
                         selectedCollection={selectedCollection}
                         onSelectCollection={setSelectedCollection}
