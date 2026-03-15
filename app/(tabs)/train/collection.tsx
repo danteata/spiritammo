@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import {
     StyleSheet,
     View,
@@ -8,13 +8,16 @@ import {
     ActivityIndicator,
 } from 'react-native'
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import CollectionSelector from '@/components/CollectionSelector'
-import ScriptureCard from '@/components/ScriptureCard'
-import VoiceRecorder from '@/components/VoiceRecorder'
+import CollectionChapterSelector from '@/components/CollectionChapterSelector'
+import UnifiedScriptureRecorderCard from '@/components/UnifiedScriptureRecorderCard'
+import ScriptureActionRow from '@/components/ScriptureActionRow'
+import StealthDrill from '@/components/StealthDrill'
+import VoicePlaybackService from '@/services/voicePlayback'
 import { Collection } from '@/types/scripture'
 import { Scripture } from '@/types/scripture'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
@@ -23,11 +26,14 @@ import { AnalyticsEventType } from '@/services/analytics'
 export default function CollectionDrillScreen() {
     const {
         scriptures,
+        collections,
         isDark,
         theme,
         updateScriptureAccuracy,
+        userSettings,
     } = useAppStore()
 
+    const params = useLocalSearchParams()
     const router = useRouter()
     const { trackEvent } = useAnalytics()
 
@@ -35,23 +41,83 @@ export default function CollectionDrillScreen() {
     useScreenTracking('collection_drill')
 
     const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
+    const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
+    const [showChapterSelector, setShowChapterSelector] = useState(false)
     const [currentScripture, setCurrentScripture] = useState<Scripture | null>(null)
     const [scriptureIndex, setScriptureIndex] = useState(0)
-    const [showVoiceRecorder, setShowVoiceRecorder] = useState(false)
+    const [showStealthDrill, setShowStealthDrill] = useState(false)
+    const [isListeningVerse, setIsListeningVerse] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
 
-    // Load scripture when collection is selected
-    useEffect(() => {
-        if (selectedCollection && scriptures) {
-            const collectionScriptures = scriptures.filter(s =>
-                selectedCollection.scriptures.includes(s.id)
-            )
-            if (collectionScriptures.length > 0) {
-                setCurrentScripture(collectionScriptures[0])
-                setScriptureIndex(0)
-            }
+    const initialChapterIds = useMemo(() => {
+        const raw = params.chapterIds
+        if (!raw) return []
+        if (Array.isArray(raw)) {
+            return raw.flatMap((id) => id.split(',')).filter(Boolean)
         }
-    }, [selectedCollection, scriptures])
+        return raw.split(',').filter(Boolean)
+    }, [params.chapterIds])
+
+    // Preselect collection if provided via params
+    useEffect(() => {
+        const collectionId = params.collectionId as string | undefined
+        if (!collectionId || !collections) return
+        const preselected = collections.find(c => c.id === collectionId) || null
+        if (preselected) {
+            setSelectedCollection(preselected)
+        }
+    }, [params.collectionId, collections])
+
+    useEffect(() => {
+        if (!selectedCollection) {
+            setSelectedChapterIds([])
+            return
+        }
+
+        if (selectedCollection.isChapterBased && selectedCollection.chapters?.length) {
+            if (initialChapterIds.length > 0) {
+                setSelectedChapterIds(initialChapterIds)
+            } else {
+                setSelectedChapterIds(selectedCollection.chapters.map((ch) => ch.id))
+            }
+        } else {
+            setSelectedChapterIds([])
+        }
+    }, [selectedCollection?.id, initialChapterIds.join(',')])
+
+    const collectionScriptures = useMemo(() => {
+        if (!selectedCollection || !scriptures) return []
+
+        const base = scriptures.filter(s =>
+            selectedCollection.scriptures.includes(s.id)
+        )
+
+        if (
+            selectedCollection.isChapterBased &&
+            selectedCollection.chapters &&
+            selectedChapterIds.length > 0
+        ) {
+            const selectedIds = new Set(
+                selectedCollection.chapters
+                    .filter((ch) => selectedChapterIds.includes(ch.id))
+                    .flatMap((ch) => ch.scriptures)
+            )
+            return base.filter(s => selectedIds.has(s.id))
+        }
+
+        return base
+    }, [selectedCollection, scriptures, selectedChapterIds])
+
+    // Load scripture when collection or chapter selection changes
+    useEffect(() => {
+        if (collectionScriptures.length > 0) {
+            setCurrentScripture(collectionScriptures[0])
+            setScriptureIndex(0)
+        } else {
+            setCurrentScripture(null)
+            setScriptureIndex(0)
+        }
+    }, [collectionScriptures, selectedCollection?.id])
 
     const handleRecordingComplete = async (accuracy: number) => {
         if (!currentScripture || !selectedCollection) return
@@ -67,13 +133,7 @@ export default function CollectionDrillScreen() {
             is_training: true
         })
 
-        setShowVoiceRecorder(false)
-
         // Show feedback
-        const collectionScriptures = scriptures?.filter(s =>
-            selectedCollection.scriptures.includes(s.id)
-        ) || []
-
         const isLastScripture = scriptureIndex >= collectionScriptures.length - 1
 
         if (accuracy >= 80) {
@@ -85,7 +145,7 @@ export default function CollectionDrillScreen() {
                     { text: 'Choose Another', onPress: () => setSelectedCollection(null) }
                 ] : [
                     { text: 'Next Verse', onPress: loadNextScripture },
-                    { text: 'Try Again', onPress: () => setShowVoiceRecorder(true) }
+                    { text: 'Try Again', onPress: () => { } }
                 ]
             )
         } else {
@@ -93,7 +153,7 @@ export default function CollectionDrillScreen() {
                 'Keep Practicing! 💪',
                 `${accuracy}% accuracy - you're getting there!`,
                 [
-                    { text: 'Try Again', onPress: () => setShowVoiceRecorder(true) },
+                    { text: 'Try Again', onPress: () => { } },
                     { text: 'Skip', onPress: loadNextScripture }
                 ]
             )
@@ -101,16 +161,41 @@ export default function CollectionDrillScreen() {
     }
 
     const loadNextScripture = () => {
-        if (!selectedCollection || !scriptures) return
-
-        const collectionScriptures = scriptures.filter(s =>
-            selectedCollection.scriptures.includes(s.id)
-        )
+        if (!selectedCollection || collectionScriptures.length === 0) return
 
         const nextIndex = scriptureIndex + 1
         if (nextIndex < collectionScriptures.length) {
             setScriptureIndex(nextIndex)
             setCurrentScripture(collectionScriptures[nextIndex])
+        }
+    }
+
+    const handleStartStealthPractice = () => {
+        if (!currentScripture || !selectedCollection) return
+        setShowStealthDrill(true)
+        trackEvent(AnalyticsEventType.PRACTICE_START, {
+            practice_type: 'stealth_collection',
+            collection_id: selectedCollection.id,
+            scripture_id: currentScripture.id,
+            is_training: true,
+        })
+    }
+
+    const handleListenVerse = async () => {
+        if (!currentScripture) return
+        setIsListeningVerse(true)
+        try {
+            await VoicePlaybackService.playScripture(
+                currentScripture.id,
+                `${currentScripture.reference}. ${currentScripture.text}`,
+                {
+                    rate: userSettings.voiceRate || 0.9,
+                    pitch: userSettings.voicePitch || 1.0,
+                    language: userSettings.language || 'en-US',
+                }
+            )
+        } finally {
+            setIsListeningVerse(false)
         }
     }
 
@@ -142,6 +227,7 @@ export default function CollectionDrillScreen() {
                         <CollectionSelector
                             onSelectCollection={setSelectedCollection}
                             selectedCollection={selectedCollection}
+                            selectedChapterIds={selectedChapterIds}
                         />
                     </View>
                 ) : (
@@ -158,17 +244,34 @@ export default function CollectionDrillScreen() {
                             <FontAwesome5 name="chevron-down" size={12} color={theme.textSecondary} />
                         </TouchableOpacity>
 
+                        {selectedCollection.isChapterBased && selectedCollection.chapters && (
+                            <TouchableOpacity
+                                style={styles.chapterFilter}
+                                onPress={() => setShowChapterSelector(true)}
+                            >
+                                <FontAwesome5 name="layer-group" size={14} color={theme.textSecondary} />
+                                <ThemedText variant="caption" style={styles.chapterFilterText}>
+                                    {selectedChapterIds.length === selectedCollection.chapters.length
+                                        ? 'All Chapters'
+                                        : `${selectedChapterIds.length} Chapter${selectedChapterIds.length !== 1 ? 's' : ''} Selected`}
+                                </ThemedText>
+                                <FontAwesome5 name="chevron-right" size={12} color={theme.textSecondary} />
+                            </TouchableOpacity>
+                        )}
+
                         {/* Progress */}
                         <View style={styles.progressContainer}>
                             <ThemedText variant="caption" style={styles.progressText}>
-                                Verse {scriptureIndex + 1} of {selectedCollection.scriptures.length}
+                                Verse {scriptureIndex + 1} of {collectionScriptures.length}
                             </ThemedText>
                             <View style={styles.progressBar}>
                                 <View
                                     style={[
                                         styles.progressFill,
                                         {
-                                            width: `${((scriptureIndex + 1) / selectedCollection.scriptures.length) * 100}%`,
+                                            width: `${collectionScriptures.length > 0
+                                                ? ((scriptureIndex + 1) / collectionScriptures.length) * 100
+                                                : 0}%`,
                                             backgroundColor: theme.accent
                                         }
                                     ]}
@@ -176,46 +279,55 @@ export default function CollectionDrillScreen() {
                             </View>
                         </View>
 
-                        {/* Scripture Card */}
+                        {/* Unified Verse + Recorder Card */}
                         {currentScripture && (
-                            <ScriptureCard
-                                scripture={currentScripture}
-                                onReveal={() => { }}
-                            />
+                            <>
+                                <UnifiedScriptureRecorderCard
+                                    scripture={currentScripture}
+                                    onRecordingComplete={handleRecordingComplete}
+                                />
+                                <ScriptureActionRow
+                                    onStealth={handleStartStealthPractice}
+                                    onListen={handleListenVerse}
+                                    isListening={isListeningVerse}
+                                />
+                            </>
                         )}
-
-                        {/* Practice Button */}
-                        <TouchableOpacity
-                            style={[styles.practiceButton, { backgroundColor: theme.accent }]}
-                            onPress={() => setShowVoiceRecorder(true)}
-                        >
-                            <FontAwesome5 name="microphone" size={20} color="#FFF" />
-                            <ThemedText variant="body" style={styles.practiceButtonText}>
-                                Start Practice
-                            </ThemedText>
-                        </TouchableOpacity>
                     </View>
                 )}
             </ScrollView>
 
-            {/* Voice Recorder Modal */}
-            {showVoiceRecorder && currentScripture && (
-                <View style={styles.voiceRecorderOverlay}>
-                    <TouchableOpacity
-                        style={styles.closeButton}
-                        onPress={() => setShowVoiceRecorder(false)}
-                    >
-                        <Ionicons name="close-circle" size={32} color="#FFF" />
-                    </TouchableOpacity>
-                    <VoiceRecorder
-                        scriptureText={currentScripture.text}
-                        scriptureId={currentScripture.id}
-                        scriptureRef={currentScripture.reference}
-                        intelText={`Reference: ${currentScripture.reference}`}
-                        onRecordingComplete={handleRecordingComplete}
-                    />
-                </View>
+            {currentScripture && (
+                <StealthDrill
+                    isVisible={showStealthDrill}
+                    onClose={() => setShowStealthDrill(false)}
+                    onComplete={(accuracy: number) => handleRecordingComplete(accuracy)}
+                    targetVerse={currentScripture.text}
+                    reference={currentScripture.reference}
+                />
             )}
+
+            {selectedCollection?.isChapterBased && selectedCollection.chapters && (
+                <CollectionChapterSelector
+                    isVisible={showChapterSelector}
+                    collection={selectedCollection}
+                    onClose={() => setShowChapterSelector(false)}
+                    initialSelectedChapterIds={selectedChapterIds}
+                    actionLabel="APPLY SELECTION"
+                    onStartPractice={(chapterIds) => {
+                        setSelectedChapterIds(chapterIds)
+                        chapterIds.forEach((chapterId) => {
+                            const chapter = selectedCollection.chapters?.find((ch) => ch.id === chapterId)
+                            trackEvent(AnalyticsEventType.CHAPTER_SELECTED, {
+                                chapter_id: chapterId,
+                                collection_id: selectedCollection.id,
+                                verse_count: chapter?.scriptures.length,
+                            })
+                        })
+                    }}
+                />
+            )}
+
         </ThemedContainer>
     )
 }
@@ -263,6 +375,20 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         gap: 10,
     },
+    chapterFilter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 10,
+        backgroundColor: 'rgba(255,255,255,0.04)',
+        marginBottom: 12,
+        gap: 8,
+    },
+    chapterFilterText: {
+        flex: 1,
+        opacity: 0.8,
+    },
     collectionName: {
         flex: 1,
         fontWeight: '600',
@@ -297,22 +423,5 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontWeight: '600',
         fontSize: 16,
-    },
-    voiceRecorderOverlay: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0,0,0,0.9)',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: 20,
-    },
-    closeButton: {
-        position: 'absolute',
-        top: 60,
-        right: 20,
-        zIndex: 10,
     },
 })

@@ -8,14 +8,15 @@ import {
     ActivityIndicator,
     Animated,
 } from 'react-native'
-import { FontAwesome5, Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
-import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
+import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
-import TargetPractice from '@/components/TargetPractice'
 import StealthDrill from '@/components/StealthDrill'
-import AmmunitionCard from '@/components/AmmunitionCard'
+import UnifiedScriptureRecorderCard from '@/components/UnifiedScriptureRecorderCard'
+import ScriptureActionRow from '@/components/ScriptureActionRow'
+import CollectionChapterSelector from '@/components/CollectionChapterSelector'
 import VoicePlaybackService from '@/services/voicePlayback'
 import { Scripture } from '@/types/scripture'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
@@ -34,39 +35,85 @@ export default function TrainingPracticeScreen() {
         isDark,
         theme,
         userSettings,
+        userStats,
     } = useAppStore()
 
     const params = useLocalSearchParams()
     const router = useRouter()
     const { trackEvent } = useAnalytics()
 
+    const initialChapterIds = useMemo(() => {
+        const raw = params.chapterIds
+        if (!raw) return []
+        if (Array.isArray(raw)) {
+            return raw.flatMap((id) => id.split(',')).filter(Boolean)
+        }
+        return raw.split(',').filter(Boolean)
+    }, [params.chapterIds])
+
+    const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
+    const [showChapterSelector, setShowChapterSelector] = useState(false)
+
+    const selectedCollection = useMemo(() => {
+        const collectionId = params.collectionId as string
+        if (!collectionId || !collections) return null
+        return collections.find(c => c.id === collectionId) || null
+    }, [params.collectionId, collections])
+
+    useEffect(() => {
+        if (!selectedCollection) {
+            setSelectedChapterIds([])
+            return
+        }
+
+        if (selectedCollection.isChapterBased && selectedCollection.chapters?.length) {
+            if (initialChapterIds.length > 0) {
+                setSelectedChapterIds(initialChapterIds)
+            } else {
+                setSelectedChapterIds(selectedCollection.chapters.map((ch) => ch.id))
+            }
+        } else {
+            setSelectedChapterIds([])
+        }
+    }, [selectedCollection?.id, initialChapterIds.join(',')])
+
     // Determine working set of scriptures based on collection selection
     const scriptures = useMemo(() => {
-        const collectionId = params.collectionId as string
-        if (!collectionId || !collections) return allScriptures
-
-        const collection = collections.find(c => c.id === collectionId)
-        if (!collection) return allScriptures
+        if (!selectedCollection) return allScriptures
 
         // collection.scriptures is an array of IDs. We need to map them back to the actual scripture objects.
-        const mappedScriptures = collection.scriptures
+        const mappedScriptures = selectedCollection.scriptures
             .map(id => allScriptures.find(s => s.id === id))
             .filter((s): s is Scripture => s !== undefined)
 
+        if (
+            selectedCollection.isChapterBased &&
+            selectedCollection.chapters &&
+            selectedChapterIds.length > 0
+        ) {
+            const selectedIds = new Set(
+                selectedCollection.chapters
+                    .filter((ch) => selectedChapterIds.includes(ch.id))
+                    .flatMap((ch) => ch.scriptures)
+            )
+            const filtered = mappedScriptures.filter(s => selectedIds.has(s.id))
+            return filtered.length > 0 ? filtered : mappedScriptures
+        }
+
         return mappedScriptures.length > 0 ? mappedScriptures : allScriptures
-    }, [allScriptures, collections, params.collectionId])
+    }, [allScriptures, selectedCollection, selectedChapterIds])
 
     // Track screen view
     useScreenTracking('training_practice')
 
     const [currentScripture, setCurrentScripture] = useState<Scripture | null>(null)
-    const [practiceMode, setPracticeMode] = useState<'VOICE' | 'STEALTH' | null>(null)
     const [trainingMode] = useState<'single' | 'burst' | 'automatic' | 'collection'>(
         (params.mode as 'single' | 'burst' | 'automatic' | 'collection') || 'single'
     )
-    const [showTargetPractice, setShowTargetPractice] = useState(false)
     const [showStealthDrill, setShowStealthDrill] = useState(false)
     const [isLoadingScripture, setIsLoadingScripture] = useState(false)
+    const [isLoadingIntel, setIsLoadingIntel] = useState(false)
+    const [isListeningVerse, setIsListeningVerse] = useState(false)
     const [history, setHistory] = useState<Scripture[]>([])
     const [historyIndex, setHistoryIndex] = useState(-1)
 
@@ -159,7 +206,6 @@ export default function TrainingPracticeScreen() {
         setCurrentScripture(selectedVerses[0])
         setIsBurstActive(true)
         setBurstScore({ correct: 0, total: 0 })
-        setPracticeMode(null)
     }, [scriptures])
 
     const nextBurstVerse = useCallback((wasCorrect: boolean) => {
@@ -179,7 +225,6 @@ export default function TrainingPracticeScreen() {
 
             setBurstIndex(nextIdx)
             setCurrentScripture(burstQueue[nextIdx])
-            setPracticeMode(null)
         } else {
             // Burst complete
             setIsBurstActive(false)
@@ -292,12 +337,19 @@ export default function TrainingPracticeScreen() {
     // ──────────────────────────────────────
 
     useEffect(() => {
+        if (!scriptures || scriptures.length === 0) return
+
         if (trainingMode === 'burst') {
             initBurstMode()
-        } else {
-            loadRandomScripture()
+            return
         }
-    }, [])
+
+        const randomIndex = Math.floor(Math.random() * scriptures.length)
+        const nextScripture = scriptures[randomIndex]
+        setCurrentScripture(nextScripture)
+        setHistory([nextScripture])
+        setHistoryIndex(0)
+    }, [scriptures, trainingMode, initBurstMode])
 
     // ──────────────────────────────────────
     //  PRACTICE COMPLETE HANDLER
@@ -330,9 +382,7 @@ export default function TrainingPracticeScreen() {
             })
         }
 
-        setShowTargetPractice(false)
         setShowStealthDrill(false)
-        setPracticeMode(null)
 
         if (trainingMode === 'burst' && isBurstActive) {
             // In burst mode, advance to next verse
@@ -360,22 +410,30 @@ export default function TrainingPracticeScreen() {
         }
     }
 
-    const handleStartVoicePractice = () => {
-        setPracticeMode('VOICE')
-        setShowTargetPractice(true)
-        trackEvent(AnalyticsEventType.PRACTICE_START, {
-            practice_type: 'voice_training',
-            scripture_id: currentScripture?.id,
-        })
-    }
-
     const handleStartStealthPractice = () => {
-        setPracticeMode('STEALTH')
         setShowStealthDrill(true)
         trackEvent(AnalyticsEventType.PRACTICE_START, {
             practice_type: 'stealth_training',
             scripture_id: currentScripture?.id,
         })
+    }
+
+    const handleListenVerse = async () => {
+        if (!currentScripture) return
+        setIsListeningVerse(true)
+        try {
+            await VoicePlaybackService.playScripture(
+                currentScripture.id,
+                `${currentScripture.reference}. ${currentScripture.text}`,
+                {
+                    rate: userSettings.voiceRate || 0.9,
+                    pitch: userSettings.voicePitch || 1.0,
+                    language: userSettings.language || 'en-US',
+                }
+            )
+        } finally {
+            setIsListeningVerse(false)
+        }
     }
 
     // ──────────────────────────────────────
@@ -398,7 +456,7 @@ export default function TrainingPracticeScreen() {
     const handleShowIntel = async () => {
         if (!currentScripture) return
 
-        setIsLoadingScripture(true)
+        setIsLoadingIntel(true)
         try {
             const intel = await generateBattleIntel({
                 reference: currentScripture.reference,
@@ -417,7 +475,7 @@ export default function TrainingPracticeScreen() {
             console.error('Failed to get intel:', error)
             Alert.alert('SYSTEM ERROR', 'Failed to retrieve battle intelligence. Check communications.')
         } finally {
-            setIsLoadingScripture(false)
+            setIsLoadingIntel(false)
         }
     }
 
@@ -444,6 +502,32 @@ export default function TrainingPracticeScreen() {
                                 : 'Training Mode — No Valor points affected'}
                     </ThemedText>
                 </View>
+
+                {selectedCollection && (
+                    <View style={styles.collectionMeta}>
+                        <View style={[styles.collectionHeader, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                            <Ionicons name="book" size={16} color={theme.accent} />
+                            <ThemedText variant="body" style={styles.collectionName}>
+                                {selectedCollection.name}
+                            </ThemedText>
+                        </View>
+
+                        {selectedCollection.isChapterBased && selectedCollection.chapters && (
+                            <TouchableOpacity
+                                style={[styles.chapterFilter, { backgroundColor: theme.surface, borderColor: theme.border }]}
+                                onPress={() => setShowChapterSelector(true)}
+                            >
+                                <Ionicons name="layers" size={14} color={theme.textSecondary} />
+                                <ThemedText variant="caption" style={styles.chapterFilterText}>
+                                    {selectedChapterIds.length === selectedCollection.chapters.length
+                                        ? 'All Chapters'
+                                        : `${selectedChapterIds.length} Chapter${selectedChapterIds.length !== 1 ? 's' : ''} Selected`}
+                                </ThemedText>
+                                <Ionicons name="chevron-forward" size={12} color={theme.textSecondary} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                )}
 
                 {/* ──────── BURST MODE UI ──────── */}
                 {trainingMode === 'burst' && isBurstActive && (
@@ -561,8 +645,8 @@ export default function TrainingPracticeScreen() {
                     </View>
                 )}
 
-                {/* Combined Scripture Display & Actions (Ammunition Card) */}
-                {currentScripture && !practiceMode && (
+                {/* Unified Scripture + Recorder */}
+                {currentScripture && (
                     <Animated.View style={[styles.scriptureSection, { opacity: fadeAnim }]}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 16 }}>
                             <TouchableOpacity
@@ -581,48 +665,28 @@ export default function TrainingPracticeScreen() {
                                 <Ionicons name="arrow-forward" size={16} color={theme.textSecondary} />
                             </TouchableOpacity>
                         </View>
-                        <AmmunitionCard
+                        <UnifiedScriptureRecorderCard
                             scripture={currentScripture}
-                            onFire={handleStartVoicePractice}
-                            onIntel={handleShowIntel}
+                            onRecordingComplete={(accuracy) => handlePracticeComplete('', accuracy)}
+                        />
+                        <ScriptureActionRow
                             onStealth={handleStartStealthPractice}
-                            isDark={isDark}
-                            allowBlur={true}
+                            onIntel={handleShowIntel}
+                            isLoadingIntel={isLoadingIntel}
+                            onListen={handleListenVerse}
+                            isListening={isListeningVerse}
                         />
                     </Animated.View>
                 )}
 
-                {/* Stealth Practice Mode */}
-                {practiceMode === 'STEALTH' && currentScripture && (
-                    <View style={styles.practiceSection}>
-                        <StealthDrill
-                            isVisible={showStealthDrill}
-                            onClose={() => {
-                                setShowStealthDrill(false)
-                                setPracticeMode(null)
-                            }}
-                            onComplete={(accuracy: number) => handlePracticeComplete('', accuracy)}
-                            targetVerse={currentScripture.text}
-                            reference={currentScripture.reference}
-                        />
-                    </View>
-                )}
-
-                {/* Target Practice Mode */}
-                {practiceMode === 'VOICE' && currentScripture && (
-                    <View style={styles.practiceSection}>
-                        <TargetPractice
-                            isVisible={showTargetPractice}
-                            onClose={() => {
-                                setShowTargetPractice(false)
-                                setPracticeMode(null)
-                            }}
-                            targetVerse={currentScripture.text}
-                            reference={currentScripture.reference}
-                            scriptureId={currentScripture.id}
-                            onRecordingComplete={handlePracticeComplete}
-                        />
-                    </View>
+                {currentScripture && (
+                    <StealthDrill
+                        isVisible={showStealthDrill}
+                        onClose={() => setShowStealthDrill(false)}
+                        onComplete={(accuracy: number) => handlePracticeComplete('', accuracy)}
+                        targetVerse={currentScripture.text}
+                        reference={currentScripture.reference}
+                    />
                 )}
 
                 {isLoadingScripture && (
@@ -631,6 +695,27 @@ export default function TrainingPracticeScreen() {
                     </View>
                 )}
             </ScrollView>
+
+            {selectedCollection?.isChapterBased && selectedCollection.chapters && (
+                <CollectionChapterSelector
+                    isVisible={showChapterSelector}
+                    collection={selectedCollection}
+                    onClose={() => setShowChapterSelector(false)}
+                    initialSelectedChapterIds={selectedChapterIds}
+                    actionLabel="APPLY SELECTION"
+                    onStartPractice={(chapterIds) => {
+                        setSelectedChapterIds(chapterIds)
+                        chapterIds.forEach((chapterId) => {
+                            const chapter = selectedCollection.chapters?.find((ch) => ch.id === chapterId)
+                            trackEvent(AnalyticsEventType.CHAPTER_SELECTED, {
+                                chapter_id: chapterId,
+                                collection_id: selectedCollection.id,
+                                verse_count: chapter?.scriptures.length,
+                            })
+                        })
+                    }}
+                />
+            )}
 
         </ThemedContainer>
     )
@@ -657,6 +742,36 @@ const styles = StyleSheet.create({
     },
     modeText: {
         flex: 1,
+    },
+    collectionMeta: {
+        gap: 10,
+        marginBottom: 16,
+    },
+    collectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        gap: 8,
+    },
+    collectionName: {
+        flex: 1,
+        fontWeight: '600',
+    },
+    chapterFilter: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 12,
+        paddingVertical: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        gap: 8,
+    },
+    chapterFilterText: {
+        flex: 1,
+        opacity: 0.8,
     },
     scriptureSection: {
         marginBottom: 24,
