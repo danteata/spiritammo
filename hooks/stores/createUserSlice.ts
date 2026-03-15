@@ -14,7 +14,7 @@ const DEFAULT_USER_SETTINGS: UserSettings = {
     voicePitch: 1.0,
     language: 'en-US',
     trainingMode: 'single',
-    voiceEngine: 'whisper',
+    voiceEngine: 'native',
 }
 
 const DEFAULT_USER_STATS: UserStats = {

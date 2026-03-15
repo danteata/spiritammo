@@ -33,6 +33,7 @@ export interface TranscriptionResult {
 const MODEL_NAME = 'ggml-base.en.bin';
 const MODEL_URL = `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${MODEL_NAME}`;
 const MODEL_PATH = `${FS.DocumentDirectoryPath}/${MODEL_NAME}`;
+const WHISPER_ENABLED = process.env.EXPO_PUBLIC_ENABLE_WHISPER === 'true';
 
 class WhisperService {
   private context: WhisperContext | null = null;
@@ -52,6 +53,11 @@ class WhisperService {
 
     this.initPromise = (async () => {
       try {
+        if (!WHISPER_ENABLED) {
+          console.warn('Whisper init skipped: EXPO_PUBLIC_ENABLE_WHISPER is not enabled');
+          return;
+        }
+
         this.isInitializing = true;
         console.log('Initializing Whisper Service...');
 
