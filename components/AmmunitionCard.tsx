@@ -251,8 +251,8 @@ const AmmunitionCard = React.memo(({
               </BlurTargetView>
               <BlurView
                 blurTarget={blurTargetRef}
-                blurMethod="dimezisBlurView"
-                intensity={Platform.OS === 'ios' ? 15 : 12}
+                blurMethod="dimezisBlurViewSdk31Plus"
+                intensity={Platform.OS === 'ios' ? 15 : 5}
                 style={styles.blurOverlay}
                 tint={isDark ? "dark" : "light"}
               />

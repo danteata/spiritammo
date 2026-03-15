@@ -5,8 +5,8 @@ import {
   View,
   TouchableOpacity,
   Platform,
+  Alert,
 } from 'react-native'
-import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome } from '@expo/vector-icons';
 import { BlurView, BlurTargetView } from 'expo-blur'
 import { Scripture } from '@/types/scripture'
@@ -19,6 +19,7 @@ interface ScriptureCardProps {
   onNext?: () => void
   isBattleMode?: boolean
   isRecording?: boolean
+  embedded?: boolean
 }
 
 export default function ScriptureCard({
@@ -27,6 +28,7 @@ export default function ScriptureCard({
   onNext,
   isBattleMode = false,
   isRecording = false,
+  embedded = false,
 }: ScriptureCardProps) {
   const { theme, isDark } = useAppStore()
   const [revealed, setRevealed] = useState(false)
@@ -51,8 +53,8 @@ export default function ScriptureCard({
 
   const textColor = theme.text
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.surface }]}>
+  const content = (
+    <>
       <View style={styles.header}>
         <View style={styles.referenceContainer}>
           <Text style={[styles.reference, { color: textColor }]}>
@@ -113,13 +115,27 @@ export default function ScriptureCard({
           </BlurTargetView>
           <BlurView
             blurTarget={blurTargetRef}
-            blurMethod="dimezisBlurView"
-            intensity={Platform.OS === 'ios' ? 15 : 12}
+            blurMethod="dimezisBlurViewSdk31Plus"
             style={styles.blurOverlay}
+            intensity={Platform.OS === 'ios' ? 15 : 14}
             tint={isDark ? "dark" : "light"}
           />
         </View>
       )}
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <View style={styles.embeddedContainer}>
+        {content}
+      </View>
+    )
+  }
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.surface }]}>
+      {content}
     </View>
   )
 }
@@ -145,6 +161,9 @@ const styles = StyleSheet.create({
         boxShadow: '0px 2px 4px rgba(0, 0, 0, 0.3)',
       },
     }),
+  },
+  embeddedContainer: {
+    padding: 20,
   },
   header: {
     flexDirection: 'row',
@@ -188,7 +207,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   blurOverlay: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   buttonContainer: {
     flexDirection: 'row',

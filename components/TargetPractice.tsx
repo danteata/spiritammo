@@ -162,16 +162,21 @@ export default function TargetPractice({
         const startTime = Date.now()
         await whisperService.init()
         const loadTime = Date.now() - startTime
+        const whisperAvailable = whisperService.isAvailable()
 
         trackEvent(AnalyticsEventType.WHISPER_MODEL_LOADED, {
           model_version: 'whisper',
           load_time: loadTime,
-          success: true,
+          success: whisperAvailable,
           context: 'target_practice'
         })
 
-        console.log('Whisper initialized')
-        setWhisperReady(true)
+        if (whisperAvailable) {
+          console.log('Whisper initialized')
+        } else {
+          console.warn('Whisper unavailable, falling back to native')
+        }
+        setWhisperReady(whisperAvailable)
       } catch (error) {
         console.error('Failed to init whisper:', error)
 
@@ -822,7 +827,7 @@ export default function TargetPractice({
 
             {/* Accuracy Badge */}
             {showAccuracy && <AccuracyBadge accuracy={accuracy} />}
-            
+
             {/* Processing Overlay */}
             {statusMessage.includes('Transcribing') && (
               <View style={styles.processingOverlay}>
@@ -906,7 +911,7 @@ export default function TargetPractice({
             </BlurTargetView>
             <BlurView
               blurTarget={blurTargetRef}
-              blurMethod="dimezisBlurView"
+              blurMethod="dimezisBlurViewSdk31Plus"
               intensity={Platform.OS === 'ios' ? 15 : 12}
               style={styles.blurOverlay}
               tint={isDark ? "dark" : "light"}
