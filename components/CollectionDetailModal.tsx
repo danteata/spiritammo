@@ -63,6 +63,7 @@ const CollectionDetailModal = React.memo(({
   const [expandedScriptureIds, setExpandedScriptureIds] = useState<Set<string>>(new Set())
   const [isProcessing, setIsProcessing] = useState(false)
   const [selectedChapterId, setSelectedChapterId] = useState<string | undefined>(undefined)
+  const [isVersesExpanded, setIsVersesExpanded] = useState(true)
 
   const chapterAnalysis = React.useMemo(() => {
     if (!localScriptures || localScriptures.length === 0) {
@@ -685,9 +686,8 @@ const CollectionDetailModal = React.memo(({
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Stats Grid - Match Mission Report Style */}
+          {/* Stats Grid - Compact Overview */}
           <View style={styles.statsSection}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>STATISTICS</Text>
             <View style={styles.statsGrid}>
               <View style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}>
                 <Feather name="target" size={16} color={theme.accent} />
@@ -708,129 +708,26 @@ const CollectionDetailModal = React.memo(({
                 </Text>
                 <Text style={[styles.statLabel, { color: theme.textSecondary }]}>TRAINING</Text>
               </View>
-            </View>
-          </View>
-
-          {/* Verses List */}
-          <View style={styles.versesSection}>
-            <View style={styles.versesSectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0 }]}>AMMUNITION INVENTORY</Text>
-            </View>
-
-            {localScriptures.length > 0 ? (
-              <FlatList
-                data={localScriptures}
-                renderItem={renderScriptureItem}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-                initialNumToRender={8}
-                maxToRenderPerBatch={8}
-                windowSize={3}
-                removeClippedSubviews={true}
-                updateCellsBatchingPeriod={50}
-              />
-            ) : (
-              <View style={[styles.emptyVerses, { backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
-                <Feather name="inbox" size={32} color={theme.textSecondary} style={{ opacity: 0.5 }} />
-                <Text style={[styles.emptyVersesText, { color: theme.textSecondary }]}>No ammunition loaded yet.</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Stats Section */}
-          <View style={styles.statsSection}>
-            <Text style={[styles.sectionTitle, { color: theme.text, ...MILITARY_TYPOGRAPHY.subheading }]}>
-              AMMUNITION STATS
-            </Text>
-
-            <View style={styles.statsGrid}>
-              <View
-                style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
-              >
-                <MaterialCommunityIcons name="ammunition" size={24} color={theme.accent} />
-                <Text style={[styles.statValue, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]}>
-                  {localScriptures.length}
-                </Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}>
-                  ROUNDS
-                </Text>
-              </View>
-
               {collection.isChapterBased && collection.chapters && (
-                <View
-                  style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
-                >
-                  <MaterialCommunityIcons name="book-open-variant" size={24} color={theme.accent} />
-                  <Text style={[styles.statValue, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]}>
-                    {collection.chapters.length}
-                  </Text>
-                  <Text style={[styles.statLabel, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}>
-                    CHAPTERS
-                  </Text>
+                <View style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}>
+                  <MaterialCommunityIcons name="book-open-variant" size={16} color={theme.accent} />
+                  <Text style={[styles.statValue, { color: theme.text }]}>{collection.chapters.length}</Text>
+                  <Text style={[styles.statLabel, { color: theme.textSecondary }]}>CHAPTERS</Text>
                 </View>
               )}
-
               {collection.bookInfo && (
-                <View
-                  style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
-                >
-                  <MaterialCommunityIcons name="crosshairs-gps" size={24} color={theme.success} />
-                  <Text style={[styles.statValue, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]}>
+                <View style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}>
+                  <MaterialCommunityIcons name="crosshairs-gps" size={16} color={theme.success} />
+                  <Text style={[styles.statValue, { color: theme.text }]}>
                     {collection.bookInfo.averageAccuracy?.toFixed(0) || '0'}%
                   </Text>
-                  <Text style={[styles.statLabel, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}>
-                    ACCURACY
-                  </Text>
+                  <Text style={[styles.statLabel, { color: theme.textSecondary }]}>ACCURACY</Text>
                 </View>
               )}
-
-              <View
-                style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
-              >
-                <MaterialCommunityIcons name="calendar-month" size={24} color={theme.textSecondary} />
-                <Text style={[styles.statValue, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]}>
-                  {new Date(
-                    collection.createdAt || Date.now()
-                  ).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}>
-                  CREATED
-                </Text>
-              </View>
             </View>
           </View>
 
-          {/* Tags Section */}
-          {collection.tags && collection.tags.length > 0 && (
-            <View style={styles.tagsSection}>
-              <Text
-                style={[styles.sectionTitle, { color: theme.text, ...MILITARY_TYPOGRAPHY.subheading }]}
-              >
-                MISSION TAGS
-              </Text>
-              <View style={styles.tagsContainer}>
-                {collection.tags.map((tag, index) => (
-                  <LinearGradient
-                    key={index}
-                    colors={[theme.accent, isDark ? '#CC5529' : '#FF9966']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.tag}
-                  >
-                    <MaterialCommunityIcons name="tag-text-outline" size={12} color={theme.accentContrastText} />
-                    <Text style={[styles.tagText, MILITARY_TYPOGRAPHY.caption, { color: theme.accentContrastText }]}>
-                      {tag.toUpperCase()}
-                    </Text>
-                  </LinearGradient>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* Chapter Selection & Progress */}
+          {/* Chapter Selection & Progress - Prominent Position */}
           <View style={styles.chaptersSection}>
             {!collection.isChapterBased && chapterAnalysis.canBeChapterBased && (
               <View style={[styles.chapterEnableCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -867,6 +764,74 @@ const CollectionDetailModal = React.memo(({
                   Tap a chapter to launch a focused drill.
                 </Text>
               </>
+            )}
+          </View>
+
+          {/* Tags Section */}
+          {collection.tags && collection.tags.length > 0 && (
+            <View style={styles.tagsSection}>
+              <Text
+                style={[styles.sectionTitle, { color: theme.text, ...MILITARY_TYPOGRAPHY.subheading }]}
+              >
+                MISSION TAGS
+              </Text>
+              <View style={styles.tagsContainer}>
+                {collection.tags.map((tag, index) => (
+                  <LinearGradient
+                    key={index}
+                    colors={[theme.accent, isDark ? '#CC5529' : '#FF9966']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.tag}
+                  >
+                    <MaterialCommunityIcons name="tag-text-outline" size={12} color={theme.accentContrastText} />
+                    <Text style={[styles.tagText, MILITARY_TYPOGRAPHY.caption, { color: theme.accentContrastText }]}>
+                      {tag.toUpperCase()}
+                    </Text>
+                  </LinearGradient>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Collapsible Verses List */}
+          <View style={styles.versesSection}>
+            <TouchableOpacity
+              style={styles.versesSectionHeader}
+              onPress={() => setIsVersesExpanded(prev => !prev)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={isVersesExpanded ? 'Collapse ammunition inventory' : 'Expand ammunition inventory'}
+            >
+              <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0 }]}>
+                AMMUNITION INVENTORY ({localScriptures.length})
+              </Text>
+              <MaterialCommunityIcons
+                name={isVersesExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={theme.textSecondary}
+              />
+            </TouchableOpacity>
+
+            {isVersesExpanded && (
+              localScriptures.length > 0 ? (
+                <FlatList
+                  data={localScriptures}
+                  renderItem={renderScriptureItem}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  initialNumToRender={8}
+                  maxToRenderPerBatch={8}
+                  windowSize={3}
+                  removeClippedSubviews={true}
+                  updateCellsBatchingPeriod={50}
+                />
+              ) : (
+                <View style={[styles.emptyVerses, { backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+                  <Feather name="inbox" size={32} color={theme.textSecondary} style={{ opacity: 0.5 }} />
+                  <Text style={[styles.emptyVersesText, { color: theme.textSecondary }]}>No ammunition loaded yet.</Text>
+                </View>
+              )
             )}
           </View>
         </ScrollView>
@@ -1167,6 +1132,9 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   versesSectionHeader: {
     marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   emptyVerses: {
     alignItems: 'center',
