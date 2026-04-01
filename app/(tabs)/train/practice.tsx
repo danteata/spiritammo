@@ -121,6 +121,7 @@ export default function TrainingPracticeScreen() {
     const [isLoadingScripture, setIsLoadingScripture] = useState(false)
     const [isLoadingIntel, setIsLoadingIntel] = useState(false)
     const [isListeningVerse, setIsListeningVerse] = useState(false)
+    const [isListeningIntel, setIsListeningIntel] = useState(false)
     const [history, setHistory] = useState<Scripture[]>([])
     const [historyIndex, setHistoryIndex] = useState(-1)
 
@@ -434,6 +435,25 @@ export default function TrainingPracticeScreen() {
         }
     }
 
+    const handleListenIntel = async () => {
+        if (!currentScripture) return
+        setIsListeningIntel(true)
+        try {
+            const textToRead = currentScripture.mnemonic || `Reference: ${currentScripture.reference}`
+            await VoicePlaybackService.playScripture(
+                currentScripture.id,
+                textToRead,
+                {
+                    rate: userSettings.voiceRate || 0.9,
+                    pitch: userSettings.voicePitch || 1.0,
+                    language: userSettings.language || 'en-US',
+                }
+            )
+        } finally {
+            setIsListeningIntel(false)
+        }
+    }
+
     // ──────────────────────────────────────
     //  MODE TITLE & SUBTITLE
     // ──────────────────────────────────────
@@ -497,7 +517,7 @@ export default function TrainingPracticeScreen() {
 
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
                 {/* Training Mode Indicator */}
-                <View style={[styles.modeIndicator, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
+                <View style={[styles.modeIndicator, { backgroundColor: isDark ? `${theme.accent}15` : `${theme.accent}10` }]}>
                     <Ionicons name={modeInfo.icon} size={20} color={modeInfo.color} />
                     <ThemedText variant="caption" style={[styles.modeText, { color: modeInfo.color }]}>
                         {trainingMode === 'automatic'
@@ -568,9 +588,9 @@ export default function TrainingPracticeScreen() {
                                             {
                                                 backgroundColor:
                                                     idx < burstIndex
-                                                        ? '#22C55E'
+                                                        ? theme.success
                                                         : idx === burstIndex
-                                                            ? '#FBBF24'
+                                                            ? theme.warning
                                                             : isDark
                                                                 ? 'rgba(255,255,255,0.2)'
                                                                 : 'rgba(0,0,0,0.1)',
@@ -591,7 +611,7 @@ export default function TrainingPracticeScreen() {
                                 style={[styles.startAutoButton, { backgroundColor: theme.accent }]}
                                 onPress={handleStartAutoPilot}
                             >
-                                <Ionicons name="play" size={24} color="#FFF" />
+                                <Ionicons name="play" size={24} color={theme.accentContrastText} />
                                 <ThemedText variant="body" style={styles.startAutoText}>
                                     START AUTO PILOT
                                 </ThemedText>
@@ -604,14 +624,14 @@ export default function TrainingPracticeScreen() {
                                             style={[styles.autoControlButton, { backgroundColor: theme.accent }]}
                                             onPress={handleResumeAutoPilot}
                                         >
-                                            <Ionicons name="play" size={24} color="#FFF" />
+                                            <Ionicons name="play" size={24} color={theme.accentContrastText} />
                                         </TouchableOpacity>
                                     ) : (
                                         <TouchableOpacity
                                             style={[styles.autoControlButton, { backgroundColor: theme.accent }]}
                                             onPress={handlePauseAutoPilot}
                                         >
-                                            <Ionicons name="pause" size={24} color="#FFF" />
+                                            <Ionicons name="pause" size={24} color={theme.accentContrastText} />
                                         </TouchableOpacity>
                                     )}
                                     <TouchableOpacity
@@ -674,7 +694,10 @@ export default function TrainingPracticeScreen() {
                             scripture={currentScripture}
                             onRecordingComplete={(accuracy) => handlePracticeComplete('', accuracy)}
                             onListen={handleListenVerse}
+                            onIntel={handleListenIntel}
                             isListening={isListeningVerse}
+                            isListeningIntel={isListeningIntel}
+                            intelText={currentScripture.mnemonic}
                         />
                         <ScriptureActionRow
                             onStealth={handleStartStealthPractice}
@@ -851,7 +874,6 @@ const styles = StyleSheet.create({
         opacity: 0.7,
     },
     burstScoreLabel: {
-        color: '#22C55E',
         fontWeight: '700',
     },
     burstProgressBar: {
@@ -889,7 +911,6 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         gap: 10,
         width: '100%',
-        shadowColor: '#A855F7',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,

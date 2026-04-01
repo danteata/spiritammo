@@ -176,9 +176,10 @@ export default function TrainingCampaignScreen() {
 
             <View style={styles.content}>
                 {/* Info Banner */}
-                <View style={[styles.infoBanner, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
-                    <Ionicons name="information-circle" size={20} color="#3B82F6" />
-                    <ThemedText variant="caption" style={styles.infoText}>
+                {/* Info Banner */}
+                <View style={[styles.infoBanner, { backgroundColor: isDark ? `${theme.accent}15` : theme.border, borderColor: isDark ? 'transparent' : theme.textSecondary + '20', borderWidth: isDark ? 0 : 1 }]}>
+                    <Ionicons name="information-circle" size={18} color={isDark ? theme.accent : theme.textSecondary} />
+                    <ThemedText variant="caption" style={[styles.infoText, { color: isDark ? theme.accent : theme.textSecondary }]}>
                         Training mode: No scores recorded, no VP at stake. Practice freely!
                     </ThemedText>
                 </View>
@@ -232,9 +233,9 @@ export default function TrainingCampaignScreen() {
                         </View>
 
                         {isLoadingScripture && (
-                            <View style={styles.loadingOverlay}>
+                            <View style={[styles.loadingOverlay, { backgroundColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(245, 240, 225, 0.8)' }]}>
                                 <ActivityIndicator size="large" color={theme.accent} />
-                                <ThemedText style={{ marginTop: 16, letterSpacing: 2 }}>LOADING...</ThemedText>
+                                <ThemedText style={{ marginTop: 16, letterSpacing: 2, color: theme.accent }}>LOADING SECTOR...</ThemedText>
                             </View>
                         )}
                     </View>
@@ -285,11 +286,12 @@ export default function TrainingCampaignScreen() {
                             isBattleMode={true}
                             onRecordingComplete={handleMissionComplete}
                             onListen={handleListenVerse}
+                            onIntel={handleIntelPress}
                             isListening={isListeningVerse}
                         />
                         <ScriptureActionRow
+                            onStealth={() => setPracticeMode('STEALTH')}
                             onIntel={handleIntelPress}
-                            accentColor={theme.accent}
                         />
                         
                         <ThemedCard variant="glass" style={styles.missionNote}>

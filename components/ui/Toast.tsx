@@ -65,7 +65,7 @@ export const Toast = {
       type: 'success',
       title: '✅ MISSION ACCOMPLISHED',
       message,
-      duration: 7000,
+      duration: 10000,
     })
   },
 
@@ -75,7 +75,7 @@ export const Toast = {
       type: 'error',
       title: '⚠️ MISSION FAILED',
       message,
-      duration: 9000,
+      duration: 12000,
     })
   },
 }

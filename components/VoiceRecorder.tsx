@@ -599,7 +599,10 @@ export default function VoiceRecorder({
         'ESTABLISHING SECURE UPLINK...',
         'CALIBRATING TACTICAL DATA...',
         'TRIANGULATING SCRIPTURE...',
-        'FINALIZING MISSION BRIEF...'
+        'FINALIZING MISSION BRIEF...',
+        'ESTABLISHING VIRTUAL SIGHT...',
+        'SYNCRONIZING SQUAD COMMS...',
+        'VERIFYING TARGET SECTOR...'
       ];
       const randomMsg = statusMsgs[Math.floor(Math.random() * statusMsgs.length)];
       setStatusMessage(randomMsg);

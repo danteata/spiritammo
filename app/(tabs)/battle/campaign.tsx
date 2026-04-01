@@ -60,6 +60,7 @@ export default function CampaignScreen() {
 
     const [isLoadingScripture, setIsLoadingScripture] = useState(false)
     const [isListeningVerse, setIsListeningVerse] = useState(false)
+    const [isListeningIntel, setIsListeningIntel] = useState(false)
 
     useEffect(() => {
         if (activeCampaignId) {
@@ -106,7 +107,7 @@ export default function CampaignScreen() {
         if (scripture) {
             setTargetScripture(scripture)
             setSelectedNode(node)
-            setShowBriefing(true) // Show custom briefing instead of Alert
+            setPracticeMode('VOICE') // Direct to recorder
         } else {
             // This shouldn't happen for non-locked nodes, but just in case
             setDeniedModal({
@@ -120,19 +121,13 @@ export default function CampaignScreen() {
     const handleMissionComplete = async (accuracy: number) => {
         if (!selectedNode || !activeCampaign) return
 
-        // Close practice mode
-        setPracticeMode(null)
-
-        // Check pass/fail logic locally for immediate feedback
         if (accuracy >= selectedNode.requiredAccuracy) {
-            // Award Valor Points for successful mission
             const vpEarned = await ValorPointsService.awardTargetPracticeVP(
                 accuracy,
-                0, // No streak bonus for campaign missions
-                'recruit' // Default rank for now
+                0, 
+                userStats.rank || 'recruit'
             )
 
-            // Update Store
             const success = await completeNode(activeCampaign.id, selectedNode.id, accuracy)
 
             if (success) {
@@ -143,10 +138,6 @@ export default function CampaignScreen() {
         } else {
             Toast.missionFailed(`Required: ${selectedNode.requiredAccuracy}%. You got ${accuracy.toFixed(1)}%.`)
         }
-
-        // Reset selection
-        setSelectedNode(null)
-        setTargetScripture(null)
     }
 
     const handleListenVerse = async () => {
@@ -170,7 +161,7 @@ export default function CampaignScreen() {
     const handleIntelPress = async () => {
         if (!targetScripture) return
         const intelText = targetScripture.mnemonic || `Target objective: ${targetScripture.reference}`
-        setIsListeningVerse(true)
+        setIsListeningIntel(true)
         try {
             await VoicePlaybackService.playTextToSpeech(intelText, {
                 rate: 0.9,
@@ -178,7 +169,7 @@ export default function CampaignScreen() {
                 language: 'en-US',
             })
         } finally {
-            setIsListeningVerse(false)
+            setIsListeningIntel(false)
         }
     }
 
@@ -339,10 +330,18 @@ export default function CampaignScreen() {
                             isBattleMode={true}
                             onRecordingComplete={handleMissionComplete}
                             onListen={handleListenVerse}
+                            onIntel={handleIntelPress}
+                            onClose={() => {
+                                setPracticeMode(null)
+                                setSelectedNode(null)
+                                setTargetScripture(null)
+                            }}
                             isListening={isListeningVerse}
+                            isListeningIntel={isListeningIntel}
+                            intelText={targetScripture.mnemonic}
                         />
                         <ScriptureActionRow
-                            onIntel={handleIntelPress}
+                            onStealth={() => setPracticeMode('STEALTH')}
                             accentColor={theme.accent}
                         />
                         
@@ -390,7 +389,6 @@ const styles = StyleSheet.create({
     warningText: {
         flex: 1,
         opacity: 0.8,
-        color: '#FF6B35',
     },
     campaignList: {
         paddingBottom: 100, // Space for tab bar
@@ -443,7 +441,6 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
         marginBottom: 80, // Space for tab bar
     },
     mapBorder: {
@@ -540,7 +537,6 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 20,
-        backgroundColor: 'rgba(128,128,128,0.05)',
         borderRadius: 16,
         padding: 12,
     },

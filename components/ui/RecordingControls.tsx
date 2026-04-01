@@ -32,18 +32,6 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
     return (
         <View style={styles.controlsContainer}>
             <View style={styles.leftControls}>
-                {onListen && (
-                    <TouchableOpacity
-                        style={[styles.secondaryButton, { borderColor: textColor }]}
-                        onPress={onListen}
-                        disabled={isLoading || isProcessing}
-                        testID="listen-verse-button"
-                    >
-                        <Ionicons name="volume-high" size={18} color={textColor} />
-                        <Text style={[styles.secondaryButtonText, { color: textColor }]}>LISTEN</Text>
-                    </TouchableOpacity>
-                )}
-
                 {hasRecording && onTogglePlayback && (
                     <TouchableOpacity
                         style={[styles.secondaryButton, { borderColor: textColor, marginLeft: 8 }]}

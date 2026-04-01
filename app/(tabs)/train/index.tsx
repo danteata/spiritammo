@@ -83,9 +83,9 @@ export default function TrainingScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Info Banner */}
-                <View style={[styles.infoBanner, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : '#FFFFFF', borderColor: isDark ? 'transparent' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
-                    <Ionicons name="information-circle" size={18} color={isDark ? '#3B82F6' : '#4A5D23'} />
-                    <ThemedText variant="caption" style={[styles.infoText, { color: isDark ? '#3B82F6' : '#4A5D23' }]}>
+                <View style={[styles.infoBanner, { backgroundColor: isDark ? `${theme.accent}15` : theme.surface, borderColor: isDark ? 'transparent' : theme.border, borderWidth: isDark ? 0 : 1.5 }]}>
+                    <Ionicons name="information-circle" size={18} color={isDark ? theme.accent : theme.textSecondary} />
+                    <ThemedText variant="caption" style={[styles.infoText, { color: isDark ? theme.accent : theme.textSecondary }]}>
                         Practice mode is pressure-free. Learn at your own pace without affecting your stats.
                     </ThemedText>
                 </View>
@@ -147,7 +147,7 @@ export default function TrainingScreen() {
                             </View>
                             <View style={styles.modeContent}>
                                 <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.accent }]}>SINGLE FOCUS</ThemedText>
-                                <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
+                                <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
                                     Deep memorization drill. Master one target verse at a time before advancing.
                                 </ThemedText>
                                 <View style={[styles.modeTag, { backgroundColor: `${theme.accent}15` }]}>
@@ -174,7 +174,7 @@ export default function TrainingScreen() {
                             </View>
                             <View style={styles.modeContent}>
                                 <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.success }]}>BURST FIRE</ThemedText>
-                                <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
+                                <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
                                     Rapid-fire tactical drill for quick recall. Engage multiple familiar verses in succession.
                                 </ThemedText>
                                 <View style={[styles.modeTag, { backgroundColor: `${theme.success}15` }]}>
@@ -318,7 +318,6 @@ const styles = StyleSheet.create({
     },
     primaryMode: {
         borderWidth: 2,
-        borderColor: 'rgba(59, 130, 246, 0.3)',
     },
     modeIconContainer: {
         marginRight: 12,
@@ -347,11 +346,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 4,
-        backgroundColor: 'rgba(59, 130, 246, 0.15)',
         alignSelf: 'flex-start',
     },
     modeTagText: {
-        color: '#3B82F6',
         fontSize: 10,
     },
     modeArrow: {
@@ -362,7 +359,6 @@ const styles = StyleSheet.create({
     },
     listenMode: {
         borderWidth: 2,
-        borderColor: 'rgba(168, 85, 247, 0.3)',
     },
     tipsSection: {
         marginBottom: 24,

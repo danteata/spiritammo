@@ -26,7 +26,7 @@ export default function ScreenHeader({
                 styles.container,
                 {
                     paddingTop: insets.top + 4,
-                    borderBottomColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(74, 93, 35, 0.12)',
+                    borderBottomColor: theme.border,
                 },
                 style,
             ]}
@@ -39,7 +39,7 @@ export default function ScreenHeader({
                 <View style={styles.textContainer}>
                     <ThemedText variant="heading" style={[
                         styles.title,
-                        { color: isDark ? theme.text : '#1A2309' }
+                        { color: theme.text }
                     ]}>
                         {title}
                     </ThemedText>
@@ -48,11 +48,11 @@ export default function ScreenHeader({
                             {/* Brass dash accent */}
                             <View style={[
                                 styles.accentBar,
-                                { backgroundColor: isDark ? theme.accent : '#C8A951' }
+                                { backgroundColor: theme.accent }
                             ]} />
                             <ThemedText
                                 variant="caption"
-                                style={[styles.subtitle, { color: isDark ? theme.accent : '#6B7B3A' }]}
+                                style={[styles.subtitle, { color: theme.accent }]}
                             >
                                 {subtitle}
                             </ThemedText>

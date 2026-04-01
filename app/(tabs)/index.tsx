@@ -38,9 +38,10 @@ interface TypewriterTextProps {
   style?: any
   delay?: number
   isDark: boolean
+  theme: any
 }
 
-const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0, isDark }: TypewriterTextProps) => {
+const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0, theme }: TypewriterTextProps) => {
   const [displayedText, setDisplayedText] = useState('')
   const [started, setStarted] = useState(false)
   const [showCursor, setShowCursor] = useState(true)
@@ -81,7 +82,7 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0,
   }, [started, text])
 
   return (
-    <Text style={[style, { fontFamily: 'monospace', color: isDark ? '#94a3b8' : '#6B7B3A' }]}>
+    <Text style={[style, { fontFamily: 'monospace', color: theme.textSecondary }]}>
       {displayedText}
       {(!isComplete || showCursor) && <Text style={{ opacity: showCursor ? 1 : 0 }}>█</Text>}
     </Text>
@@ -123,7 +124,7 @@ const PulsingGlow: React.FC<PulsingGlowProps> = ({ children, color, style }: Pul
 }
 
 export default function HomeScreen() {
-  const { isLoading, theme, isDark, userStats, scriptures, collections } = useAppStore()
+  const { isLoading, theme, isDark, userStats, scriptures, collections, userSettings } = useAppStore()
   const router = useRouter()
   const [showWelcome, setShowWelcome] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)
@@ -247,7 +248,7 @@ export default function HomeScreen() {
         title: 'CONTINUE STREAK',
         subtitle: `${streak} day streak! Don't break the chain`,
         icon: 'fire' as const,
-        color: isDark ? '#F59E0B' : theme.warning,
+        color: theme.warning,
         greeting: timeGreeting.greeting,
         subtext: timeGreeting.subtext
       }
@@ -261,7 +262,7 @@ export default function HomeScreen() {
         subtext: timeGreeting.subtext
       }
     }
-  }, [verseCount, streak, dailyCompleted, isDark, theme])
+  }, [verseCount, streak, dailyCompleted, theme])
 
   const tutorialSteps: TutorialStep[] = [
     {
@@ -284,137 +285,131 @@ export default function HomeScreen() {
         {isLoading ? (
           <SkeletonHomeScreen />
         ) : (
-        <>
-        {/* Header Section */}
-        <Animated.View style={[styles.headerSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <View style={styles.headerTitleContainer}>
-            <ThemedText variant="heading" style={styles.headerTitle}>COMMAND CENTER</ThemedText>
-            <View style={[styles.headerUnderline, { backgroundColor: theme.accent }]} />
-            <View style={styles.compactStats}>
-              <View style={styles.compactStatItem}>
-                <FontAwesome5 name="fire" size={10} color={theme.warning} />
-                <Text style={[styles.compactStatValue, { color: theme.textSecondary }]}>{streak}</Text>
+          <>
+            {/* Integrated Tactical Header */}
+            <Animated.View style={[styles.headerSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+              <View style={styles.headerTitleContainer}>
+                <ThemedText variant="caption" style={[styles.unitLabel, { color: theme.accent }]}>
+                  SIGINT OPS // HQ
+                </ThemedText>
+                <ThemedText variant="heading" style={styles.headerTitle}>
+                  {`GREETINGS,\n${userSettings.soldierName || 'Soldier'}`}
+                </ThemedText>
+                <View style={[styles.headerUnderline, { backgroundColor: theme.accent }]} />
               </View>
-              <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
-              <View style={styles.compactStatItem}>
-                <FontAwesome5 name="coins" size={10} color={theme.accent} />
-                <Text style={[styles.compactStatValue, { color: theme.textSecondary }]}>{valorPoints}</Text>
-              </View>
-              <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
-              <View style={styles.compactStatItem}>
-                <FontAwesome5 name="cross" size={10} color={theme.success} />
-                <Text style={[styles.compactStatValue, { color: theme.textSecondary }]}>{verseCount}</Text>
-              </View>
-            </View>
-          </View>
-          
-          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} activeOpacity={0.8}>
-            <View style={[styles.avatarFrame, { borderColor: theme.accent }]}>
-              <SoldierAvatar size="small" showStats={false} style={styles.avatar} />
-            </View>
-            <View style={[styles.rankPlate, { backgroundColor: theme.warning, borderColor: theme.border }]}>
-              <Text style={styles.rankPlateText}>E-5</Text>
-            </View>
-          </TouchableOpacity>
-        </Animated.View>
 
-        {/* Tactical Briefing Deck */}
-        <Animated.View style={[styles.briefingDeck, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-          <View style={[
-            styles.briefingCard,
-            {
-              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.4)' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
-              borderLeftColor: theme.accent,
-            }
-          ]}>
-            <View style={styles.transmissionHeader}>
-              <View style={styles.transmissionIconBox}>
-                <View style={[styles.pingDot, { backgroundColor: theme.accent }]} />
-                <FontAwesome5 name="satellite-dish" size={10} color={theme.accent} />
-              </View>
-              <ThemedText variant="caption" style={[styles.transmissionLabel, { color: theme.accent }]}>
-                SECURE COMMS // {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </ThemedText>
-              {!isDark && (
-                <View style={[styles.classificationStamp, { borderColor: `${theme.error}60`, backgroundColor: `${theme.error}10` }]}>
-                  <Text style={[styles.classificationText, { color: theme.error }]}>CLASSIFIED</Text>
+              <TouchableOpacity
+                onPress={() => router.push('/(tabs)/profile')}
+                activeOpacity={0.8}
+                style={styles.avatarWrapper}
+              >
+                <View style={[styles.avatarFrame, { borderColor: theme.accent }]}>
+                  <SoldierAvatar size="small" showStats={false} style={styles.avatar} />
                 </View>
-              )}
-            </View>            <ThemedText variant="heading" style={styles.greetingTitle}>{ctaState.greeting}</ThemedText>
-            
-            <View style={styles.briefingTextContainer}>
-              <TypewriterText
-                text={`> ${ctaState.subtext}`}
-                style={styles.briefingText}
-                delay={300}
-                isDark={isDark}
-              />
-            </View>
+                <View style={[styles.rankPlate, { backgroundColor: theme.warning, borderColor: theme.border }]}>
+                  <Text style={[styles.rankPlateText, { color: theme.accentContrastText }]}>E-5</Text>
+                </View>
+              </TouchableOpacity>
+            </Animated.View>
 
-            {/* Daily Goal Integration */}
-            {dailyChallenge && (
-              <View style={styles.goalSection}>
-                <View style={styles.goalInfo}>
-                  <ThemedText variant="caption" style={styles.goalTitle}>{dailyChallenge.title.toUpperCase()}</ThemedText>
-                  <ThemedText variant="caption" style={[styles.goalProgress, { color: dailyChallenge.completed ? theme.success : theme.accent }]}>
-                    {dailyChallenge.currentValue} / {dailyChallenge.targetValue}
-                  </ThemedText>
-                </View>
-                <View style={[styles.goalProgressBarBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
-                  <View 
-                    style={[
-                      styles.goalProgressBar, 
-                      { 
-                        backgroundColor: dailyChallenge.completed ? theme.success : theme.accent,
-                        width: `${Math.min((dailyChallenge.currentValue / dailyChallenge.targetValue) * 100, 100)}%` 
-                      }
-                    ]} 
-                  />
-                </View>
-              </View>
-            )}
-          </View>
-        </Animated.View>
-        <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
-          <PulsingGlow color={ctaState.color} style={styles.ctaWrapper}>
-            <TouchableOpacity onPress={handleStartDrill} activeOpacity={0.9}>
+            {/* Tactical Briefing Deck */}
+            <Animated.View style={[styles.briefingDeck, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
               <View style={[
-                styles.ctaContainer,
+                styles.briefingCard,
                 {
-                  backgroundColor: isDark ? 'rgba(30, 41, 59, 0.6)' : '#FFFFFF',
-                  borderColor: isDark ? `${ctaState.color}40` : theme.border,
+                  backgroundColor: theme.surface,
+                  borderColor: theme.border,
+                  borderLeftColor: theme.accent,
                 }
               ]}>
-                <View style={styles.ctaInner}>
-                  <View style={[styles.ctaIconBox, { backgroundColor: `${ctaState.color}15` }]}>
-                    <FontAwesome5 name={ctaState.icon} size={22} color={ctaState.color} />
+                <View style={styles.transmissionHeader}>
+                  <View style={styles.transmissionIconBox}>
+                    <View style={[styles.pingDot, { backgroundColor: theme.accent }]} />
+                    <FontAwesome5 name="satellite-dish" size={10} color={theme.accent} />
                   </View>
-                  <View style={styles.ctaTextBox}>
-                    <ThemedText variant="heading" style={[styles.ctaTitle, { color: ctaState.color }]}>
-                      {ctaState.title}
-                    </ThemedText>
-                    <ThemedText variant="body" style={styles.ctaSubtitle}>
-                      {ctaState.subtitle}
-                    </ThemedText>
-                  </View>
-                  <View style={[styles.ctaArrow, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F5F0E1' }]}>
-                    <FontAwesome5 name="chevron-right" size={12} color={isDark ? theme.textSecondary : theme.primary} />
-                  </View>
-                </View>
-              </View>
-            </TouchableOpacity>
-          </PulsingGlow>
-        </Animated.View>
+                  <ThemedText variant="caption" style={[styles.transmissionLabel, { color: theme.accent }]}>
+                    INCOMING TRANSMISSION // {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </ThemedText>
+                  {!isDark && (
+                    <View style={[styles.classificationStamp, { borderColor: `${theme.error}60`, backgroundColor: `${theme.error}10` }]}>
+                      <Text style={[styles.classificationText, { color: theme.error }]}>CLASSIFIED</Text>
+                    </View>
+                  )}
+                </View>            <ThemedText variant="heading" style={styles.greetingTitle}>{ctaState.greeting}</ThemedText>
 
-        {/* Secondary Operations */}
-        <View style={styles.operationsHeader}>
-          <ThemedText variant="subheading" style={styles.operationsTitle}>RECENT OPERATIONS</ThemedText>
-          <TouchableOpacity onPress={() => router.push('/(tabs)/train')}>
-            <ThemedText variant="caption" style={{ color: theme.accent }}>VIEW ALL</ThemedText>
-          </TouchableOpacity>
-        </View>
-        </>
+                <View style={styles.briefingTextContainer}>
+                  <TypewriterText
+                    text={`> ${ctaState.subtext}`}
+                    style={styles.briefingText}
+                    delay={300}
+                    isDark={isDark}
+                    theme={theme}
+                  />
+                </View>
+
+                {/* Daily Goal Integration */}
+                {dailyChallenge && (
+                  <View style={styles.goalSection}>
+                    <View style={styles.goalInfo}>
+                      <ThemedText variant="caption" style={styles.goalTitle}>{dailyChallenge.title.toUpperCase()}</ThemedText>
+                      <ThemedText variant="caption" style={[styles.goalProgress, { color: dailyChallenge.completed ? theme.success : theme.accent }]}>
+                        {dailyChallenge.currentValue} / {dailyChallenge.targetValue}
+                      </ThemedText>
+                    </View>
+                    <View style={[styles.goalProgressBarBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+                      <View
+                        style={[
+                          styles.goalProgressBar,
+                          {
+                            backgroundColor: dailyChallenge.completed ? theme.success : theme.accent,
+                            width: `${Math.min((dailyChallenge.currentValue / dailyChallenge.targetValue) * 100, 100)}%`
+                          }
+                        ]}
+                      />
+                    </View>
+                  </View>
+                )}
+              </View>
+            </Animated.View>
+            <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
+              <PulsingGlow color={ctaState.color} style={styles.ctaWrapper}>
+                <TouchableOpacity onPress={handleStartDrill} activeOpacity={0.9}>
+                  <View style={[
+                    styles.ctaContainer,
+                    {
+                      backgroundColor: theme.surface,
+                      borderColor: isDark ? `${ctaState.color}40` : theme.border,
+                    }
+                  ]}>
+                    <View style={styles.ctaInner}>
+                      <View style={[styles.ctaIconBox, { backgroundColor: `${ctaState.color}15` }]}>
+                        <FontAwesome5 name={ctaState.icon} size={22} color={ctaState.color} />
+                      </View>
+                      <View style={styles.ctaTextBox}>
+                        <ThemedText variant="heading" style={[styles.ctaTitle, { color: ctaState.color }]}>
+                          {ctaState.title}
+                        </ThemedText>
+                        <ThemedText variant="body" style={styles.ctaSubtitle}>
+                          {ctaState.subtitle}
+                        </ThemedText>
+                      </View>
+                      <View style={[styles.ctaArrow, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : theme.accent + '20' }]}>
+                        <FontAwesome5 name="chevron-right" size={12} color={isDark ? theme.textSecondary : theme.primary} />
+                      </View>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </PulsingGlow>
+            </Animated.View>
+
+            {/* Secondary Operations */}
+            <View style={styles.operationsHeader}>
+              <ThemedText variant="subheading" style={styles.operationsTitle}>RECENT OPERATIONS</ThemedText>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/train')}>
+                <ThemedText variant="caption" style={{ color: theme.accent }}>VIEW ALL</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </>
         )}
       </ScrollView>
 
@@ -451,10 +446,12 @@ const styles = StyleSheet.create({
   compactStatItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   compactStatValue: { fontSize: 13, fontWeight: '800' },
   statDivider: { width: 1, height: 12, opacity: 0.3 },
+  avatarWrapper: { position: 'relative' },
   avatarFrame: { padding: 3, borderRadius: 30, borderWidth: 1.5, borderStyle: 'dashed' },
   avatar: { width: 48, height: 48, borderRadius: 24 },
-  rankPlate: { position: 'absolute', bottom: -4, right: -4, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
-  rankPlateText: { fontSize: 8, fontWeight: '900', color: '#000' },
+  rankPlate: { position: 'absolute', bottom: -4, right: -4, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4, borderWidth: 1 },
+  rankPlateText: { fontSize: 8, fontWeight: '900' },
+  unitLabel: { fontSize: 8, fontWeight: '900', letterSpacing: 2, marginBottom: 4 },
   briefingDeck: { marginBottom: 24 },
   briefingCard: {
     padding: 24,
