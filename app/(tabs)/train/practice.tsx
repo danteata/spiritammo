@@ -51,31 +51,36 @@ export default function TrainingPracticeScreen() {
         return raw.split(',').filter(Boolean)
     }, [params.chapterIds])
 
-    const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
-    const [showChapterSelector, setShowChapterSelector] = useState(false)
-
     const selectedCollection = useMemo(() => {
         const collectionId = params.collectionId as string
         if (!collectionId || !collections) return null
         return collections.find(c => c.id === collectionId) || null
     }, [params.collectionId, collections])
 
-    useEffect(() => {
-        if (!selectedCollection) {
-            setSelectedChapterIds([])
-            return
+    // Initialize selectedChapterIds directly from params or all chapters if collection is chapter-based
+    const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>(() => {
+        // If chapter IDs were explicitly passed, use them
+        if (initialChapterIds.length > 0) {
+            return initialChapterIds
         }
-
-        if (selectedCollection.isChapterBased && selectedCollection.chapters?.length) {
-            if (initialChapterIds.length > 0) {
-                setSelectedChapterIds(initialChapterIds)
-            } else {
-                setSelectedChapterIds(selectedCollection.chapters.map((ch) => ch.id))
+        // Otherwise, if we have a collection ID, try to get all chapter IDs
+        const collectionId = params.collectionId as string
+        if (collectionId && collections) {
+            const collection = collections.find(c => c.id === collectionId)
+            if (collection?.isChapterBased && collection.chapters) {
+                return collection.chapters.map((ch) => ch.id)
             }
-        } else {
-            setSelectedChapterIds([])
         }
-    }, [selectedCollection?.id, initialChapterIds.join(',')])
+        return []
+    })
+    
+    // Update selectedChapterIds when collection loads (for when no chapterIds were passed and collections weren't available at init)
+    useEffect(() => {
+        if (selectedChapterIds.length === 0 && selectedCollection?.isChapterBased && selectedCollection.chapters) {
+            setSelectedChapterIds(selectedCollection.chapters.map((ch) => ch.id))
+        }
+    }, [selectedCollection?.id])
+    const [showChapterSelector, setShowChapterSelector] = useState(false)
 
     // Determine working set of scriptures based on collection selection
     const scriptures = useMemo(() => {

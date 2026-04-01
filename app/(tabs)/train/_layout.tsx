@@ -5,6 +5,7 @@ export default function TrainLayout() {
         <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="practice" />
+            <Stack.Screen name="collection" />
             <Stack.Screen name="campaign" />
         </Stack>
     );

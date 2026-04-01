@@ -51,3 +51,4 @@ yarn-error.*
 debug-*.js
 test-*.js
 test_*.ts
+assets/sample-collections

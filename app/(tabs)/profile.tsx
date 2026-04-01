@@ -141,12 +141,12 @@ export default function ProfileScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Section Tabs - At the top for easy access */}
-                <View style={[styles.sectionTabs, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                <View style={[styles.sectionTabs, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'transparent' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
                     <TouchableOpacity
                         style={[
                             styles.sectionTab,
                             activeSection === 'journey' && styles.activeTab,
-                            activeSection === 'journey' && { backgroundColor: theme.accent }
+                            activeSection === 'journey' && { backgroundColor: isDark ? theme.accent : '#4A5D23' }
                         ]}
                         onPress={() => setActiveSection('journey')}
                         activeOpacity={0.8}
@@ -154,11 +154,11 @@ export default function ProfileScreen() {
                         <Ionicons
                             name="map"
                             size={16}
-                            color={activeSection === 'journey' ? (theme.accentContrastText || '#FFFFFF') : theme.textSecondary}
+                            color={activeSection === 'journey' ? (isDark ? '#FFFFFF' : '#F5F0E1') : (isDark ? theme.textSecondary : '#6B7B3A')}
                         />
                         <ThemedText
                             variant="caption"
-                            style={[styles.tabText, activeSection === 'journey' && { color: theme.accentContrastText || '#FFFFFF' }]}
+                            style={[styles.tabText, activeSection === 'journey' && { color: isDark ? '#FFFFFF' : '#F5F0E1' }]}
                         >
                             Journey
                         </ThemedText>
@@ -167,7 +167,7 @@ export default function ProfileScreen() {
                         style={[
                             styles.sectionTab,
                             activeSection === 'settings' && styles.activeTab,
-                            activeSection === 'settings' && { backgroundColor: theme.accent }
+                            activeSection === 'settings' && { backgroundColor: isDark ? theme.accent : '#4A5D23' }
                         ]}
                         onPress={() => setActiveSection('settings')}
                         activeOpacity={0.8}
@@ -175,11 +175,11 @@ export default function ProfileScreen() {
                         <Ionicons
                             name="settings"
                             size={16}
-                            color={activeSection === 'settings' ? (theme.accentContrastText || '#FFFFFF') : theme.textSecondary}
+                            color={activeSection === 'settings' ? (isDark ? '#FFFFFF' : '#F5F0E1') : (isDark ? theme.textSecondary : '#6B7B3A')}
                         />
                         <ThemedText
                             variant="caption"
-                            style={[styles.tabText, activeSection === 'settings' && { color: theme.accentContrastText || '#FFFFFF' }]}
+                            style={[styles.tabText, activeSection === 'settings' && { color: isDark ? '#FFFFFF' : '#F5F0E1' }]}
                         >
                             Settings
                         </ThemedText>
@@ -210,20 +210,23 @@ export default function ProfileScreen() {
 
                         {/* Quick Stats */}
                         <View style={styles.statsGrid}>
-                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                                <Ionicons name="flame" size={24} color="#FF6B35" />
-                                <ThemedText variant="heading" style={styles.statValue}>{userStats?.streak || 0}</ThemedText>
-                                <ThemedText variant="caption" style={styles.statLabel}>Day Streak</ThemedText>
+                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
+                                <View style={[styles.statsAccentBar, { backgroundColor: isDark ? '#FF6B35' : '#B45309' }]} />
+                                <Ionicons name="flame" size={22} color={isDark ? '#FF6B35' : '#B45309'} />
+                                <ThemedText variant="heading" style={[styles.statValue, { color: isDark ? '#F8FAFC' : '#1A2309' }]}>{userStats?.streak || 0}</ThemedText>
+                                <ThemedText variant="caption" style={[styles.statLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>Day Streak</ThemedText>
                             </View>
-                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                                <FontAwesome5 name="crosshairs" size={24} color={theme.accent} />
-                                <ThemedText variant="heading" style={styles.statValue}>{userStats?.totalPracticed || 0}</ThemedText>
-                                <ThemedText variant="caption" style={styles.statLabel}>Drills</ThemedText>
+                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
+                                <View style={[styles.statsAccentBar, { backgroundColor: isDark ? theme.accent : '#4A5D23' }]} />
+                                <FontAwesome5 name="crosshairs" size={22} color={isDark ? theme.accent : '#4A5D23'} />
+                                <ThemedText variant="heading" style={[styles.statValue, { color: isDark ? '#F8FAFC' : '#1A2309' }]}>{userStats?.totalPracticed || 0}</ThemedText>
+                                <ThemedText variant="caption" style={[styles.statLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>Drills</ThemedText>
                             </View>
-                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                                <FontAwesome name="star" size={24} color="#FFD700" />
-                                <ThemedText variant="heading" style={styles.statValue}>{userStats?.averageAccuracy ? Math.round(userStats.averageAccuracy) : 0}%</ThemedText>
-                                <ThemedText variant="caption" style={styles.statLabel}>Accuracy</ThemedText>
+                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
+                                <View style={[styles.statsAccentBar, { backgroundColor: isDark ? '#FFD700' : '#C8A951' }]} />
+                                <FontAwesome name="star" size={22} color={isDark ? '#FFD700' : '#C8A951'} />
+                                <ThemedText variant="heading" style={[styles.statValue, { color: isDark ? '#F8FAFC' : '#1A2309' }]}>{userStats?.averageAccuracy ? Math.round(userStats.averageAccuracy) : 0}%</ThemedText>
+                                <ThemedText variant="caption" style={[styles.statLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>Accuracy</ThemedText>
                             </View>
                         </View>
 
@@ -395,7 +398,7 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     },
     sectionTabs: {
         flexDirection: 'row',
-        borderRadius: 14,
+        borderRadius: 8,
         padding: 4,
         marginBottom: 20,
         marginTop: 8,
@@ -448,7 +451,7 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingVertical: 10,
-        borderRadius: 20,
+        borderRadius: 8,
         marginTop: 16,
         gap: 6,
     },
@@ -466,7 +469,16 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         paddingVertical: 16,
-        borderRadius: 12,
+        borderRadius: 8,
+        overflow: 'hidden',
+        position: 'relative',
+    },
+    statsAccentBar: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 3,
     },
     statValue: {
         fontSize: 20,
@@ -479,7 +491,10 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     weeklyActivityCard: {
         marginTop: 16,
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 8,
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        borderColor: '#D4CBAB',
     },
     weeklyHeader: {
         marginBottom: 12,
@@ -505,7 +520,7 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     },
     logItem: {
         padding: 12,
-        borderRadius: 10,
+        borderRadius: 8,
         borderWidth: 1,
     },
     logHeader: {
@@ -551,8 +566,8 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
         marginTop: 12,
         paddingVertical: 10,
         borderRadius: 8,
-        borderWidth: 1,
-        borderColor: theme.border,
+        borderWidth: 1.5,
+        borderColor: '#4A5D2340',
     },
     reportLinkText: {
         color: theme.accent,
@@ -588,10 +603,12 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     settingItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.surface,
+        backgroundColor: isDark ? theme.surface : '#FFFFFF',
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 8,
         marginBottom: 8,
+        borderWidth: isDark ? 0 : 1.5,
+        borderColor: isDark ? 'transparent' : '#D4CBAB',
     },
     settingIcon: {
         marginRight: 12,
@@ -606,7 +623,7 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     engineToggle: {
         paddingHorizontal: 12,
         paddingVertical: 6,
-        backgroundColor: theme.accent + '20',
+        backgroundColor: (isDark ? theme.accent : '#4A5D23') + '20',
         borderRadius: 6,
     },
     engineToggleText: {
@@ -615,10 +632,12 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.surface,
+        backgroundColor: isDark ? theme.surface : '#FFFFFF',
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 8,
         marginBottom: 8,
+        borderWidth: isDark ? 0 : 1.5,
+        borderColor: isDark ? 'transparent' : '#D4CBAB',
     },
     menuIcon: {
         marginRight: 12,

@@ -61,10 +61,16 @@ export default function CollectionDrillScreen() {
     // Preselect collection if provided via params
     useEffect(() => {
         const collectionId = params.collectionId as string | undefined
-        if (!collectionId || !collections) return
+        console.log('🟢 [CollectionDrill] useEffect for collectionId:', collectionId)
+        if (!collectionId || !collections) {
+            console.log('🟢 [CollectionDrill] No collectionId or collections not ready')
+            return
+        }
         const preselected = collections.find(c => c.id === collectionId) || null
+        console.log('🟢 [CollectionDrill] Found collection:', preselected?.name)
         if (preselected) {
             setSelectedCollection(preselected)
+            console.log('🟢 [CollectionDrill] Set selectedCollection')
         }
     }, [params.collectionId, collections])
 
@@ -316,6 +322,7 @@ export default function CollectionDrillScreen() {
                     actionLabel="APPLY SELECTION"
                     onStartPractice={(chapterIds) => {
                         setSelectedChapterIds(chapterIds)
+                        setShowChapterSelector(false)  // Close modal after selection
                         chapterIds.forEach((chapterId) => {
                             const chapter = selectedCollection.chapters?.find((ch) => ch.id === chapterId)
                             trackEvent(AnalyticsEventType.CHAPTER_SELECTED, {
