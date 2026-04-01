@@ -1039,7 +1039,7 @@ class AmplitudeProvider implements AnalyticsProvider {
         }
 
         try {
-            await amplitude.reset().promise
+            await amplitude.reset()
         } catch (error) {
             console.error('📊 Amplitude reset error:', error)
         }
@@ -1052,7 +1052,7 @@ class AmplitudeProvider implements AnalyticsProvider {
         }
 
         try {
-            await amplitude.setTrackingOptions({ disabled: !enabled }).promise
+            await amplitude.setTrackingOptions({ disabled: !enabled })
         } catch (error) {
             console.error('📊 Amplitude setEnabled error:', error)
         }

@@ -18,6 +18,7 @@ import CampaignCard from '@/components/CampaignCard'
 import TargetPractice from '@/components/TargetPractice'
 import MissionBriefingModal from '@/components/MissionBriefingModal'
 import StealthDrill from '@/components/StealthDrill'
+import { Toast } from '@/components/ui/Toast'
 import { Campaign, CampaignNode } from '@/types/campaign'
 import { Scripture } from '@/types/scripture'
 import useZustandStore from '@/hooks/zustandStore'
@@ -124,17 +125,9 @@ export default function TrainingCampaignScreen() {
 
         // In training mode, we don't track scores - just show feedback
         if (accuracy >= 70) {
-            Alert.alert(
-                'TRAINING COMPLETE',
-                `Good work! Accuracy: ${accuracy.toFixed(1)}%`,
-                [{ text: 'Continue Training' }]
-            )
+            Toast.missionSuccess(`Training Complete: ${accuracy.toFixed(1)}%`)
         } else {
-            Alert.alert(
-                'KEEP PRACTICING',
-                `Accuracy: ${accuracy.toFixed(1)}%. Practice makes perfect!`,
-                [{ text: 'Try Again' }]
-            )
+            Toast.warning('Keep Practicing', `Accuracy: ${accuracy.toFixed(1)}%`)
         }
     }
 
@@ -377,6 +370,14 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)',
         borderRadius: 24,
+    },
+    loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 10,
     },
     fullScreenPractice: {
         ...StyleSheet.absoluteFillObject,

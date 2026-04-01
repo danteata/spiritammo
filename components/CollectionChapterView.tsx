@@ -97,7 +97,7 @@ export default function CollectionChapterView({
             </Text>
           </View>
 
-          {chapter.isCustomSection && (
+          {!!chapter.isCustomSection && (
             <View style={styles.customBadge}>
               <Text
                 style={[styles.customBadgeText, MILITARY_TYPOGRAPHY.caption]}
@@ -107,13 +107,12 @@ export default function CollectionChapterView({
             </View>
           )}
         </View>
-
         <View style={styles.chapterStats}>
           <Text style={[styles.verseCount, MILITARY_TYPOGRAPHY.caption]}>
             {chapter.scriptures.length} verses
           </Text>
 
-          {chapter.averageAccuracy && (
+          {!!chapter.averageAccuracy && (
             <Text
               style={[
                 styles.accuracy,
@@ -127,14 +126,14 @@ export default function CollectionChapterView({
         </View>
       </View>
 
-      {chapter.description && (
+      {!!chapter.description && (
         <Text style={[styles.chapterDescription, MILITARY_TYPOGRAPHY.caption]}>
           {chapter.description}
         </Text>
       )}
 
       <View style={styles.chapterFooter}>
-        {chapter.lastPracticed && (
+        {!!chapter.lastPracticed && (
           <View style={styles.lastPracticed}>
             <FontAwesome name="calendar" size={12} color={theme.textSecondary} />
             <Text
@@ -145,7 +144,7 @@ export default function CollectionChapterView({
           </View>
         )}
 
-        {chapter.sectionRange && (
+        {!!chapter.sectionRange && (
           <Text style={[styles.sectionRange, MILITARY_TYPOGRAPHY.caption]}>
             Range: {chapter.sectionRange}
           </Text>
@@ -312,7 +311,7 @@ export default function CollectionChapterView({
                         >
                           {chapter.name}
                         </Text>
-                        {chapter.description && (
+                        {!!chapter.description && (
                           <Text
                             style={[
                               styles.managerChapterDesc,
@@ -334,7 +333,7 @@ export default function CollectionChapterView({
                       >
                         {chapter.scriptures.length}v
                       </Text>
-                      {chapter.averageAccuracy && (
+                      {!!chapter.averageAccuracy && (
                         <Text
                           style={[
                             styles.managerChapterAccuracy,

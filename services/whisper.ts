@@ -1,8 +1,5 @@
-import * as FS from 'react-native-fs';
-/*
-// Temporarily commented out expo-file-system until we can properly migrate
-// import * as FS from 'expo-file-system';
-*/
+import * as FileSystem from 'expo-file-system/legacy';
+import { Platform } from 'react-native';
 
 // Define types locally to avoid importing from the library at top level
 // These match the types from whisper.rn
@@ -32,7 +29,7 @@ export interface TranscriptionResult {
 // Model configuration
 const MODEL_NAME = 'ggml-base.en.bin';
 const MODEL_URL = `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${MODEL_NAME}`;
-const MODEL_PATH = `${FS.DocumentDirectoryPath}/${MODEL_NAME}`;
+const MODEL_PATH = `${FileSystem.documentDirectory}${MODEL_NAME}`;
 const WHISPER_ENABLED = process.env.EXPO_PUBLIC_ENABLE_WHISPER === 'true';
 
 class WhisperService {
@@ -83,31 +80,32 @@ class WhisperService {
         }
 
         // Check if model exists
-        const modelExists = await FS.exists(MODEL_PATH);
-        if (!modelExists) {
+        const modelInfo = await FileSystem.getInfoAsync(MODEL_PATH);
+        if (!modelInfo.exists) {
           console.log(`Model not found at ${MODEL_PATH}. Initiating download from ${MODEL_URL}...`);
           
-          // Ensure directory exists (DocumentDirectoryPath usually exists, but good to be safe)
+          // Ensure directory exists
           const dirPath = MODEL_PATH.substring(0, MODEL_PATH.lastIndexOf('/'));
-          const dirExists = await FS.exists(dirPath);
-          if (!dirExists) {
-            await FS.mkdir(dirPath);
+          const dirInfo = await FileSystem.getInfoAsync(dirPath);
+          if (!dirInfo.exists) {
+            await FileSystem.makeDirectoryAsync(dirPath, { intermediates: true });
           }
 
-          const download = FS.downloadFile({
-            fromUrl: MODEL_URL,
-            toFile: MODEL_PATH,
-            progress: (res) => {
-              const progress = (res.bytesWritten / res.contentLength) * 100;
+          const download = FileSystem.createDownloadResumable(
+            MODEL_URL,
+            MODEL_PATH,
+            {},
+            (res) => {
+              const progress = (res.totalBytesWritten / res.totalBytesExpectedToWrite) * 100;
               if (Math.round(progress) % 10 === 0) { // Log every 10%
                 console.log(`Downloading Whisper model: ${progress.toFixed(0)}%`);
               }
-            },
-          });
+            }
+          );
 
-          const result = await download.promise;
-          if (result.statusCode !== 200) {
-            throw new Error(`Failed to download Whisper model: Server returned status ${result.statusCode}`);
+          const result = await download.downloadAsync();
+          if (!result || result.status !== 200) {
+            throw new Error(`Failed to download Whisper model: Server returned status ${result?.status}`);
           }
           console.log('Whisper model downloaded successfully to:', MODEL_PATH);
         } else {

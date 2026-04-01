@@ -25,6 +25,7 @@ import { AccessDeniedModal } from '@/components/AccessDeniedModal'
 import { analytics, AnalyticsEventType } from '@/services/analytics'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import ValorPointsService from '@/services/valorPoints'
+import { Toast } from '@/components/ui/Toast'
 
 export default function CampaignScreen() {
     const {
@@ -132,24 +133,12 @@ export default function CampaignScreen() {
             const success = await completeNode(activeCampaign.id, selectedNode.id, accuracy)
 
             if (success) {
-                Alert.alert(
-                    'MISSION ACCOMPLISHED',
-                    `Sector Secured! Accuracy: ${accuracy.toFixed(1)}%\nValor Points Earned: ${vpEarned} VP`,
-                    [{ text: 'Hooah!' }]
-                )
+                Toast.missionSuccess(`Sector Secured! ${accuracy.toFixed(1)}% | ${vpEarned} VP Earned`)
             } else {
-                Alert.alert(
-                    'MISSION DEBRIEF',
-                    `Accuracy: ${accuracy.toFixed(1)}%. You've already conquered this or requirement met, but level up logic failed.`,
-                    [{ text: 'Dismiss' }]
-                )
+                Toast.info('MISSION DEBRIEF', `Accuracy: ${accuracy.toFixed(1)}%. Already conquered or level up failed.`)
             }
         } else {
-            Alert.alert(
-                'MISSION FAILED',
-                `Accuracy: ${accuracy.toFixed(1)}%. Required: ${selectedNode.requiredAccuracy}%. Return to base and practice.`,
-                [{ text: 'Retry', style: 'cancel' }]
-            )
+            Toast.missionFailed(`Required: ${selectedNode.requiredAccuracy}%. You got ${accuracy.toFixed(1)}%.`)
         }
 
         // Reset selection
@@ -401,6 +390,14 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.05)',
         borderRadius: 24,
+    },
+    loadingOverlay: {
+        ...StyleSheet.absoluteFillObject,
+        backgroundColor: 'rgba(0,0,0,0.8)',
+        borderRadius: 24,
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 10,
     },
     fullScreenPractice: {
         ...StyleSheet.absoluteFillObject,

@@ -103,6 +103,7 @@ interface VoiceRecorderProps {
   onRecordingComplete: (accuracy: number) => void;
   variant?: 'default' | 'embedded';
   onRecordingStateChange?: (isRecording: boolean) => void;
+  hideListen?: boolean;
 }
 
 export default function VoiceRecorder({
@@ -113,6 +114,7 @@ export default function VoiceRecorder({
   onRecordingComplete,
   variant = 'default',
   onRecordingStateChange,
+  hideListen = false,
 }: VoiceRecorderProps) {
   const { isDark, userSettings, theme } = useAppStore();
   const { trackEvent, trackVoiceRecordingStart, trackVoiceRecordingComplete, trackError } = useAnalytics();
@@ -191,6 +193,7 @@ export default function VoiceRecorder({
   const [whisperReady, setWhisperReady] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [ttsProgress, setTtsProgress] = useState(0); // Neural TTS download progress (0-100)
   const activeEngineRef = useRef<'native' | 'whisper' | 'audio' | null>(null);
   const keepListeningRef = useRef(false);
@@ -261,10 +264,10 @@ export default function VoiceRecorder({
           success: whisperAvailable
         });
 
-        setStatusMessage('Ready to record');
+        setStatusMessage('READY FOR DEPLOYMENT');
       } catch (error) {
         console.error('Failed to init services:', error);
-        setStatusMessage('Service initialization failed');
+        setStatusMessage('COMMS INITIALIZATION FAILED');
 
         // Track initialization failure
         trackError(error as Error, 'VoiceRecorder', {
@@ -289,41 +292,81 @@ export default function VoiceRecorder({
       setStatusMessage(`Recording... ${Math.floor(recordingDuration / 1000)}s`);
     } else if (showAccuracy) {
       setStatusMessage(`Accuracy: ${accuracy}%`);
-    } else if (!isInitializing) {
+    } else if (!isInitializing && !isProcessing) {
       // Idle state - check settings
       if (!hasPermission) {
-        setStatusMessage('Microphone permission needed');
+        setStatusMessage('MICROPHONE PERMISSION NEEDED');
       } else if (userSettings.voiceEngine === 'whisper' && whisperReady) {
-        setStatusMessage('Ready to record');
+        setStatusMessage('READY TO RECORD');
       } else if (isAvailable) {
-        setStatusMessage('Ready to listen');
+        setStatusMessage('READY TO LISTEN');
       } else {
-        setStatusMessage('Ready to listen');
+        setStatusMessage('IDLE');
       }
     }
-  }, [isRecognizing, audioIsRecording, recordingDuration, showAccuracy, accuracy, isInitializing, userSettings.voiceEngine, whisperReady, hasPermission, isAvailable]);
+  }, [isRecognizing, audioIsRecording, recordingDuration, showAccuracy, accuracy, isInitializing, isProcessing, userSettings.voiceEngine, whisperReady, hasPermission, isAvailable]);
 
-  // Speak the intel text using neural TTS for better quality
+  // Speak the verse text using neural TTS
+  const speakVerse = async () => {
+    try {
+      if (!scriptureText) return;
+      await Speech.stop();
+      await neuralTTSService.stop();
+      setStatusMessage('Preparing speech...');
+
+      await speakWithNeuralTTS(scriptureText, {
+        onProgress: (progress: TTSProgress) => {
+          setTtsProgress(progress.progress);
+          if (progress.status === 'downloading') {
+            setStatusMessage(`Downloading voice model: ${progress.progress.toFixed(0)}%`);
+          } else if (progress.status === 'initializing') {
+            setStatusMessage('Initializing speech engine...');
+          } else if (progress.status === 'playing') {
+            setStatusMessage('Listening to targets...');
+          }
+        },
+        onStart: () => {
+          setStatusMessage('Listening to targets...');
+          trackEvent(AnalyticsEventType.VOICE_PLAYBACK_START, {
+            recording_id: 'tts_verse',
+            playback_type: 'neural_tts',
+            text_length: scriptureText.length
+          });
+        },
+        onDone: () => {
+          setTtsProgress(0);
+          setStatusMessage('Ready to record');
+          trackEvent(AnalyticsEventType.VOICE_PLAYBACK_COMPLETE, {
+            recording_id: 'tts_verse',
+            playback_type: 'neural_tts',
+            duration: 0
+          });
+        },
+        onError: (error: Error) => {
+          setTtsProgress(0);
+          setStatusMessage('Error reading verse');
+          trackError(error, 'speakVerse_TTS_error');
+        }
+      });
+    } catch (error: any) {
+      console.error('Error in speakVerse:', error);
+      setStatusMessage('Speech engine error');
+    }
+  };
+
+  // Speak the intel text (mnemonic) using neural TTS
   const speakIntel = async () => {
     try {
-      // Track TTS usage
       trackEvent(AnalyticsEventType.TTS_VOICE_CHANGED, {
         old_voice: 'none',
         new_voice: userSettings.language || 'en-US',
         language: userSettings.language || 'en-US'
       });
-
-      // Stop any existing speech
       await Speech.stop();
       await neuralTTSService.stop();
-
       const textToSpeak = intelText || "No tactical intel available for this target.";
-
-      // Show progress for TTS initialization/download
       setStatusMessage('Preparing speech...');
 
-      // Use neural TTS for more natural-sounding speech
-      // Falls back to expo-speech if native module unavailable
       await speakWithNeuralTTS(textToSpeak, {
         onProgress: (progress: TTSProgress) => {
           setTtsProgress(progress.progress);
@@ -337,8 +380,6 @@ export default function VoiceRecorder({
         },
         onStart: () => {
           setStatusMessage('Reading intel...');
-
-          // Track TTS playback start
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_START, {
             recording_id: 'tts_intel',
             playback_type: 'neural_tts',
@@ -348,8 +389,6 @@ export default function VoiceRecorder({
         onDone: () => {
           setTtsProgress(0);
           setStatusMessage('Ready to record');
-
-          // Track TTS playback complete
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_COMPLETE, {
             recording_id: 'tts_intel',
             playback_type: 'neural_tts',
@@ -358,25 +397,13 @@ export default function VoiceRecorder({
         },
         onError: (error: Error) => {
           setTtsProgress(0);
-          console.error('Neural TTS error:', error);
-          setStatusMessage('Using standard voice');
-
-          // Track TTS error
-          trackError(error, 'VoiceRecorder', {
-            context: 'tts_playback',
-            error_type: 'speech_error',
-            text: textToSpeak.substring(0, 100)
-          });
+          setStatusMessage('Error reading intel');
+          trackError(error, 'speakIntel_TTS_error');
         }
       });
-    } catch (error) {
-      console.error('Failed to speak intel:', error);
-
-      // Track TTS initialization error
-      trackError(error as Error, 'VoiceRecorder', {
-        context: 'tts_initialization',
-        error_type: 'speech_initialization_error'
-      });
+    } catch (error: any) {
+      console.error('Error in speakIntel:', error);
+      setStatusMessage('Speech engine error');
     }
   };  // Start recording
   const startRecording = async () => {
@@ -394,6 +421,7 @@ export default function VoiceRecorder({
       setLocalTranscript('');
       setAccuracy(0);
       setShowAccuracy(false);
+      setIsProcessing(false);
       setAudioRecording(null);
       nativeTranscriptRef.current = '';
       manualStopRef.current = false;
@@ -548,6 +576,7 @@ export default function VoiceRecorder({
           setAudioRecording(audioResult);
           console.log('Audio recording stopped:', audioResult);
           // Process the audio file with whisper if available
+          setIsProcessing(true);
           await processAudioRecording(audioResult);
         }
       }
@@ -559,7 +588,17 @@ export default function VoiceRecorder({
   // Process audio recording with whisper service
   const processAudioRecording = async (audioResult: AudioRecordingResult) => {
     try {
-      setStatusMessage('Transcribing...');
+      // Varied military-themed transcription status messages
+      const statusMsgs = [
+        'DECODING TRANSMISSION...',
+        'ANALYZING BATTLEFIELD INTEL...',
+        'EXTRACTING VERSE FREQUENCIES...',
+        'RUNNING BALLISTICS ANALYSIS...',
+        'DECRYPTING COMMS...',
+        'FILTERING SIGNAL NOISE...'
+      ];
+      const randomMsg = statusMsgs[Math.floor(Math.random() * statusMsgs.length)];
+      setStatusMessage(randomMsg);
       console.log('🎙️ VoiceRecorder: Processing audio with Whisper:', audioResult.uri);
 
       const transcriptionStartTime = Date.now();
@@ -647,15 +686,8 @@ export default function VoiceRecorder({
           service: 'whisper'
         });
       }
-    } catch (error) {
-      console.error('Error processing audio recording:', error);
-      setStatusMessage('Error processing audio');
-
-      // Track audio processing error
-      trackError(error as Error, 'VoiceRecorder', {
-        context: 'audio_processing',
-        error_type: 'processing_error'
-      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -755,7 +787,7 @@ export default function VoiceRecorder({
     <View style={[styles.container, isEmbedded && styles.embeddedContainer]}>
       {/* Comms Panel Header */}
       <View style={styles.panelHeader}>
-        {isInitializing || statusMessage.includes('Transcribing') || statusMessage.includes('Initializing') ? (
+        {isInitializing || isProcessing ? (
           <ActivityIndicator size="small" color={textColor} style={{ marginRight: 8 }} />
         ) : (
           <StatusIndicator isActive={isRecording} isLoading={false} isError={false} />
@@ -817,11 +849,11 @@ export default function VoiceRecorder({
         {showAccuracy && <AccuracyBadge accuracy={accuracy} />}
 
         {/* Processing Overlay */}
-        {statusMessage.includes('Transcribing') && (
+        {(isProcessing || isInitializing) && (
           <View style={styles.processingOverlay}>
             <ActivityIndicator size="large" color={theme.accent} />
             <Text style={{ marginTop: 10, color: theme.accent, fontWeight: 'bold', fontSize: 12 }}>
-              ANALYZING BALLISTICS...
+              {statusMessage}
             </Text>
           </View>
         )}
@@ -840,12 +872,12 @@ export default function VoiceRecorder({
         </View>
       )}
 
-      {/* Controls */}
       <RecordingControls
         isRecording={audioIsRecording}
         isRecognizing={isRecognizing}
         isLoading={isInitializing}
-        onSpeakIntel={speakIntel}
+        isProcessing={isProcessing || isInitializing}
+        onListen={hideListen ? undefined : speakVerse}
         onToggleRecording={audioIsRecording || isRecognizing ? stopRecording : startRecording}
         textColor={textColor}
         hasRecording={!!recordingUri && showAccuracy}

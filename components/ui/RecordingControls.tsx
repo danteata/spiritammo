@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, StyleSheet, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { useAppStore } from '@/hooks/useAppStore';
 import { COLORS } from '@/constants/colors';
@@ -8,43 +8,47 @@ interface RecordingControlsProps {
     isRecording: boolean;
     isRecognizing: boolean;
     isLoading: boolean;
-    onSpeakIntel: () => void;
+    onListen?: () => void;
     onToggleRecording: () => void;
     textColor: string;
     hasRecording?: boolean;
     isPlaying?: boolean;
     onTogglePlayback?: () => void;
+    isProcessing?: boolean;
 }
 
 export const RecordingControls: React.FC<RecordingControlsProps> = ({
     isRecording,
     isRecognizing,
     isLoading,
-    onSpeakIntel,
+    onListen,
     onToggleRecording,
     textColor,
     hasRecording = false,
     isPlaying = false,
-    onTogglePlayback
+    onTogglePlayback,
+    isProcessing = false
 }) => {
     return (
         <View style={styles.controlsContainer}>
             <View style={styles.leftControls}>
-                <TouchableOpacity
-                    style={[styles.secondaryButton, { borderColor: textColor }]}
-                    onPress={onSpeakIntel}
-                    disabled={isLoading}
-                    testID="speak-intel-button"
-                >
-                    <FontAwesome name="volume-up" size={16} color={textColor} />
-                    <Text style={[styles.secondaryButtonText, { color: textColor }]}>PLAY INTEL</Text>
-                </TouchableOpacity>
+                {onListen && (
+                    <TouchableOpacity
+                        style={[styles.secondaryButton, { borderColor: textColor }]}
+                        onPress={onListen}
+                        disabled={isLoading || isProcessing}
+                        testID="listen-verse-button"
+                    >
+                        <Ionicons name="volume-high" size={18} color={textColor} />
+                        <Text style={[styles.secondaryButtonText, { color: textColor }]}>LISTEN</Text>
+                    </TouchableOpacity>
+                )}
 
                 {hasRecording && onTogglePlayback && (
                     <TouchableOpacity
                         style={[styles.secondaryButton, { borderColor: textColor, marginLeft: 8 }]}
                         onPress={onTogglePlayback}
-                        disabled={isLoading}
+                        disabled={isLoading || isProcessing}
                         testID="toggle-playback-button"
                     >
                         <FontAwesome name={isPlaying ? "pause" : "play"} size={14} color={textColor} />
@@ -59,17 +63,22 @@ export const RecordingControls: React.FC<RecordingControlsProps> = ({
                 style={[
                     styles.recordButton,
                     isRecording && styles.stopButton,
-                    isRecognizing && styles.listeningButton
+                    isRecognizing && styles.listeningButton,
+                    isProcessing && styles.processingButton
                 ]}
                 onPress={onToggleRecording}
-                disabled={isLoading}
+                disabled={isLoading || isProcessing}
                 testID={isRecording ? "stop-recording-button" : "start-recording-button"}
             >
-                <FontAwesome
-                    name={isRecording || isRecognizing ? "stop" : "microphone"}
-                    size={24}
-                    color="white"
-                />
+                {isProcessing ? (
+                    <ActivityIndicator size="small" color="white" />
+                ) : (
+                    <FontAwesome
+                        name={isRecording || isRecognizing ? "stop" : "microphone"}
+                        size={24}
+                        color="white"
+                    />
+                )}
             </TouchableOpacity>
         </View>
     );
@@ -121,5 +130,9 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: 'bold',
         letterSpacing: 0.5,
+    },
+    processingButton: {
+        backgroundColor: COLORS.warning,
+        opacity: 0.8,
     },
 });

@@ -34,20 +34,6 @@ export default function ScriptureActionRow({
 
   return (
     <View style={styles.container}>
-      {hasListen && (
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: subtleBg, borderColor: theme.accent }]}
-          onPress={onListen}
-          disabled={isListening}
-        >
-          {isListening ? (
-            <ActivityIndicator size="small" color={theme.accent} />
-          ) : (
-            <Ionicons name="volume-high" size={18} color={theme.accent} />
-          )}
-          <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.caption, { color: theme.text }]}>LISTEN</Text>
-        </TouchableOpacity>
-      )}
       {hasStealth && (
         <TouchableOpacity
           style={[styles.button, { backgroundColor: subtleBg, borderColor: theme.border }]}
@@ -69,6 +55,20 @@ export default function ScriptureActionRow({
             <FontAwesome5 name="brain" size={16} color={theme.accentContrastText} />
           )}
           <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.caption, { color: theme.accentContrastText }]}>INTEL</Text>
+        </TouchableOpacity>
+      )}
+      {hasListen && (
+        <TouchableOpacity
+          style={[styles.button, { backgroundColor: subtleBg, borderColor: theme.border }]}
+          onPress={onListen}
+          disabled={isListening}
+        >
+          {isListening ? (
+            <ActivityIndicator size="small" color={theme.text} />
+          ) : (
+            <Ionicons name="volume-high" size={18} color={theme.text} />
+          )}
+          <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.caption, { color: theme.text }]}>LISTEN</Text>
         </TouchableOpacity>
       )}
     </View>

@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
+import { COLORS } from '@/constants/colors'
 import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import StealthDrill from '@/components/StealthDrill'
@@ -25,6 +26,7 @@ import { practiceLogService } from '@/services/practiceLogService'
 import { generateBattleIntel } from '@/services/battleIntelligence'
 import { militaryRankingService } from '@/services/militaryRanking'
 import ValorPointsService from '@/services/valorPoints'
+import { Toast } from '@/components/ui/Toast'
 
 const AUTO_ADVANCE_DELAY = 3000 // ms delay between auto-pilot verses
 
@@ -397,21 +399,11 @@ export default function TrainingPracticeScreen() {
 
         // Single mode feedback
         if (accuracy >= 90) {
-            Alert.alert('Target Destroyed!', `Excellent marksmanship! ${accuracy}% accuracy`, [
-                { text: 'Engage Next Target', onPress: loadRandomScripture },
-                { text: 'Try Again', onPress: () => { } },
-                { text: 'Ready for Battle', onPress: () => router.push('/battle') },
-            ])
+            Toast.missionSuccess(`Target Destroyed! ${accuracy.toFixed(1)}% accuracy`)
         } else if (accuracy >= 70) {
-            Alert.alert('Good Progress!', `Keep practicing! ${accuracy}% accuracy`, [
-                { text: 'Next Target', onPress: loadRandomScripture },
-                { text: 'Try Again', onPress: () => { } },
-            ])
+            Toast.success('Good Progress!', `${accuracy.toFixed(1)}% accuracy. Keep practicing!`)
         } else {
-            Alert.alert('Missed Target!', `Recalibrate and fire again. ${accuracy}% accuracy`, [
-                { text: 'Retry Drill', onPress: () => { } },
-                { text: 'Next Target', onPress: loadRandomScripture },
-            ])
+            Toast.warning('Missed Target!', `${accuracy.toFixed(1)}% accuracy. Recalibrate and try again.`)
         }
     }
 
@@ -448,11 +440,11 @@ export default function TrainingPracticeScreen() {
     const getModeInfo = () => {
         switch (trainingMode) {
             case 'burst':
-                return { title: 'BURST FIRE', subtitle: 'RAPID-FIRE DRILL', icon: 'flash' as const, color: '#22C55E' }
+                return { title: 'BURST FIRE', subtitle: 'RAPID-FIRE DRILL', icon: 'flash' as const, color: COLORS.success }
             case 'automatic':
-                return { title: 'AUTO PILOT', subtitle: 'HANDS-FREE LEARNING', icon: 'infinite' as const, color: '#A855F7' }
+                return { title: 'AUTO PILOT', subtitle: 'HANDS-FREE LEARNING', icon: 'infinite' as const, color: theme.accent }
             default:
-                return { title: 'SINGLE FOCUS', subtitle: 'DEEP MEMORIZATION', icon: 'eye' as const, color: '#3B82F6' }
+                return { title: 'SINGLE FOCUS', subtitle: 'DEEP MEMORIZATION', icon: 'eye' as const, color: theme.textSecondary }
         }
     }
 
@@ -588,7 +580,7 @@ export default function TrainingPracticeScreen() {
                     <View style={styles.autoContainer}>
                         {!isAutoPlaying ? (
                             <TouchableOpacity
-                                style={[styles.startAutoButton, { backgroundColor: '#A855F7' }]}
+                                style={[styles.startAutoButton, { backgroundColor: theme.accent }]}
                                 onPress={handleStartAutoPilot}
                             >
                                 <Ionicons name="play" size={24} color="#FFF" />
@@ -601,14 +593,14 @@ export default function TrainingPracticeScreen() {
                                 <View style={styles.autoControlRow}>
                                     {isAutoPaused ? (
                                         <TouchableOpacity
-                                            style={[styles.autoControlButton, { backgroundColor: '#A855F7' }]}
+                                            style={[styles.autoControlButton, { backgroundColor: theme.accent }]}
                                             onPress={handleResumeAutoPilot}
                                         >
                                             <Ionicons name="play" size={24} color="#FFF" />
                                         </TouchableOpacity>
                                     ) : (
                                         <TouchableOpacity
-                                            style={[styles.autoControlButton, { backgroundColor: '#A855F7' }]}
+                                            style={[styles.autoControlButton, { backgroundColor: theme.accent }]}
                                             onPress={handlePauseAutoPilot}
                                         >
                                             <Ionicons name="pause" size={24} color="#FFF" />
@@ -634,8 +626,8 @@ export default function TrainingPracticeScreen() {
                                 </View>
                                 {isAutoReading && (
                                     <View style={styles.readingBadge}>
-                                        <Ionicons name="volume-high" size={14} color="#A855F7" />
-                                        <ThemedText variant="caption" style={{ color: '#A855F7', fontWeight: '600' }}>
+                                        <Ionicons name="volume-high" size={14} color={theme.textSecondary} />
+                                        <ThemedText variant="caption" style={{ color: theme.textSecondary, fontWeight: '600' }}>
                                             Reading aloud...
                                         </ThemedText>
                                     </View>
@@ -678,8 +670,6 @@ export default function TrainingPracticeScreen() {
                             onStealth={handleStartStealthPractice}
                             onIntel={handleShowIntel}
                             isLoadingIntel={isLoadingIntel}
-                            onListen={handleListenVerse}
-                            isListening={isListeningVerse}
                         />
                     </Animated.View>
                 )}

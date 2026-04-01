@@ -42,10 +42,11 @@ export default function UnifiedScriptureRecorderCard({
           scriptureText={scripture.text}
           scriptureId={scripture.id}
           scriptureRef={scripture.reference}
-          intelText={intelText || `Reference: ${scripture.reference}`}
+          intelText={intelText || scripture.mnemonic || `Reference: ${scripture.reference}`}
           onRecordingComplete={onRecordingComplete}
           onRecordingStateChange={setIsRecording}
           variant="embedded"
+          hideListen={true}
         />
       </View>
     </View>

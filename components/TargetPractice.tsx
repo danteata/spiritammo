@@ -24,6 +24,7 @@ import { ThemedText } from '@/components/Themed'
 import { StatusIndicator } from './ui/StatusIndicator'
 import { RecordingControls } from './ui/RecordingControls'
 import { AccuracyBadge } from './ui/AccuracyBadge'
+import ActionButton from './ActionButton'
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition'
 import { useAudioRecording, AudioRecordingResult } from '@/services/audioRecording'
 import { calculateTextAccuracy } from '@/utils/accuracyCalculator'
@@ -64,6 +65,7 @@ export default function TargetPractice({
   intelText,
   isVisible,
   onClose,
+  isAssaultMode = false,
 }: TargetPracticeProps) {
   const { theme, isDark } = useAppStore()
   const { userSettings } = useAppStore()
@@ -78,6 +80,11 @@ export default function TargetPractice({
   const [isRecordingMode, setIsRecordingMode] = useState(true)
   const [shots, setShots] = useState<BulletHole[]>([])
   const [isPlaying, setIsPlaying] = useState(false)
+
+  // TargetPractice UI state
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [isReviewing, setIsReviewing] = useState(false)
+  const [lastReviewData, setLastReviewData] = useState<{ transcript: string, accuracy: number, finalAccuracy: number } | null>(null)
 
   // VoiceRecorder state
   const [accuracy, setLocalAccuracy] = useState(0)
@@ -227,6 +234,47 @@ export default function TargetPractice({
     }
   }, [isRecognizing, audioIsRecording, recordingDuration, showAccuracy, accuracy, isInitializing, userSettings.voiceEngine, whisperReady, hasPermission, isAvailable])
 
+  // Speak the verse text
+  const speakVerse = async () => {
+    try {
+      if (!targetVerse) return
+      await Speech.stop()
+      await VoicePlaybackService.stopPlayback()
+      setStatusMessage('Preparing speech...')
+
+      await VoicePlaybackService.playTextToSpeech(targetVerse, {
+        rate: userSettings.voiceRate || 0.9,
+        pitch: userSettings.voicePitch || 1.0,
+        language: userSettings.language || 'en-US',
+        onStart: () => {
+          setStatusMessage('Listening to targets...')
+          trackEvent(AnalyticsEventType.VOICE_PLAYBACK_START, {
+            recording_id: 'tts_target_verse',
+            playback_type: 'tts',
+            text_length: targetVerse.length,
+            context: 'target_practice'
+          })
+        },
+        onDone: () => {
+          setStatusMessage('Ready to record')
+          trackEvent(AnalyticsEventType.VOICE_PLAYBACK_COMPLETE, {
+            recording_id: 'tts_target_verse',
+            playback_type: 'tts',
+            duration: 0,
+            context: 'target_practice'
+          })
+        },
+        onError: (error) => {
+          setStatusMessage('Error reading verse')
+          trackError(error, 'speakVerse_TTS_error')
+        }
+      })
+    } catch (error: any) {
+      console.error('Error in speakVerse:', error)
+      setStatusMessage('Speech engine error')
+    }
+  }
+
   // Speak the intel text
   const speakIntel = async () => {
     try {
@@ -241,7 +289,7 @@ export default function TargetPractice({
       // Stop any existing speech
       await VoicePlaybackService.stopPlayback()
 
-      const textToSpeak = intelText || "No tactical intel available for this target."
+      const textToSpeak = intelText || reference || "No tactical intel available for this target."
 
       // Start new speech with proper settings
       await VoicePlaybackService.playTextToSpeech(textToSpeak, {
@@ -266,31 +314,18 @@ export default function TargetPractice({
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_COMPLETE, {
             recording_id: 'tts_intel',
             playback_type: 'tts',
-            duration: 0, // Would need to calculate actual duration
+            duration: 0,
             context: 'target_practice'
           })
         },
         onError: (error) => {
-          console.error('Speech error:', error)
-
-          // Track TTS error
-          trackError(new Error('TTS playback failed'), 'TargetPractice', {
-            context: 'tts_playback',
-            error_type: 'speech_error',
-            text: textToSpeak.substring(0, 100), // Limit text length for privacy
-            component: 'target_practice'
-          })
+          setStatusMessage('Error reading intel')
+          trackError(error, 'speakIntel_TTS_error')
         }
       })
-    } catch (error) {
-      console.error('Failed to speak intel:', error)
-
-      // Track TTS initialization error
-      trackError(error as Error, 'TargetPractice', {
-        context: 'tts_initialization',
-        error_type: 'speech_initialization_error',
-        context: 'target_practice'
-      })
+    } catch (error: any) {
+      console.error('Error in speakIntel:', error)
+      setStatusMessage('Speech engine error')
     }
   }
 
@@ -380,19 +415,17 @@ export default function TargetPractice({
 
       // Track recording failure
       trackError(new Error('No recording method available'), 'TargetPractice', {
-        context: 'recording_start',
+        context: 'target_practice_recording_start',
         error_type: 'no_recording_method',
         platform: Platform.OS,
-        context: 'target_practice'
       })
     } catch (error) {
       console.error('Error starting recording:', error)
 
       // Track recording start error
       trackError(error as Error, 'TargetPractice', {
-        context: 'recording_start',
+        context: 'target_practice_recording_start',
         error_type: 'recording_initialization_error',
-        context: 'target_practice'
       })
     }
   }
@@ -421,9 +454,8 @@ export default function TargetPractice({
 
       // Track recording stop error
       trackError(error as Error, 'TargetPractice', {
-        context: 'recording_stop',
+        context: 'target_practice_recording_stop',
         error_type: 'recording_stop_error',
-        context: 'target_practice'
       })
     }
   }
@@ -431,7 +463,16 @@ export default function TargetPractice({
   // Process audio recording with whisper service
   const processAudioRecording = async (audioResult: AudioRecordingResult) => {
     try {
-      setStatusMessage('Transcribing...')
+      const statusMsgs = [
+        'ANALYZING AUDIO SIGNATURE...',
+        'PROCESSING BATTLEFIELD INTEL...',
+        'EXTRACTING VERSE FREQUENCIES...',
+        'RUNNING BALLISTICS ANALYSIS...',
+        'TRANSCRIBING COMMS...'
+      ]
+      const randomMsg = statusMsgs[Math.floor(Math.random() * statusMsgs.length)]
+      setIsProcessing(true)
+      setStatusMessage(randomMsg)
       console.log('🎙️ VoiceRecorder: Processing audio with Whisper:', audioResult.uri)
 
       const transcriptionStartTime = Date.now()
@@ -468,15 +509,15 @@ export default function TargetPractice({
 
           // Track transcription failure
           trackError(new Error('No transcription received'), 'TargetPractice', {
-            context: 'whisper_transcription',
+            context: 'target_practice_whisper_transcription',
             error_type: 'empty_result',
             service: 'whisper',
-            context: 'target_practice'
           })
         }
       } catch (err) {
         console.error('Whisper transcription failed:', err)
         setStatusMessage('Transcription error')
+        setIsProcessing(false)
 
         // Track transcription error
         trackError(err as Error, 'TargetPractice', {
@@ -488,6 +529,7 @@ export default function TargetPractice({
     } catch (error) {
       console.error('Error processing audio recording:', error)
       setStatusMessage('Error processing audio')
+      setIsProcessing(false)
 
       // Track audio processing error
       trackError(error as Error, 'TargetPractice', {
@@ -518,17 +560,18 @@ export default function TargetPractice({
         context: 'target_practice'
       })
 
-      console.log('🎙️ VoiceRecorder: Calling onRecordingComplete with accuracy:', calculatedAccuracy)
-      onRecordingComplete(finalTranscript, calculatedAccuracy)
+      console.log('🎙️ VoiceRecorder: Calling handleVoiceRecorderComplete with accuracy:', calculatedAccuracy)
+      setIsProcessing(false)
+      handleVoiceRecorderComplete(calculatedAccuracy, finalTranscript)
     } catch (error) {
       console.error('Error processing transcript:', error)
+      setIsProcessing(false)
 
       // Track transcript processing error
       trackError(error as Error, 'TargetPractice', {
-        context: 'transcript_processing',
+        context: 'target_practice_transcript_processing',
         error_type: 'processing_error',
         transcript_length: finalTranscript?.length || 0,
-        context: 'target_practice'
       })
     }
   }
@@ -539,7 +582,7 @@ export default function TargetPractice({
   const displayError = speechError || audioError
   const displayTranscript = transcript || localTranscript
 
-  const handleVoiceRecorderComplete = (accuracy: number) => {
+  const handleVoiceRecorderComplete = (accuracy: number, transcriptText: string = '') => {
     console.log('🎤 TargetPractice: handleVoiceRecorderComplete called with accuracy:', accuracy)
     // Apply wind condition modifier to accuracy
     let finalAccuracy = accuracy
@@ -559,7 +602,7 @@ export default function TargetPractice({
     const newResult: ShotResult = {
       accuracy: finalAccuracy,
       timestamp: new Date(),
-      transcript: '' // Transcript not available here but could be passed
+      transcript: transcriptText
     }
     setShotResults(prev => [...prev, newResult])
 
@@ -646,11 +689,31 @@ export default function TargetPractice({
       context: 'target_practice'
     })
 
+    if (isAssaultMode) {
+      console.log('🎤 TargetPractice: Assault Mode active, auto-advancing with accuracy:', finalAccuracy)
+      onRecordingComplete(transcriptText, finalAccuracy)
+    } else {
+      console.log('🎤 TargetPractice: Entering Review Mode')
+      setLastReviewData({ transcript: transcriptText, accuracy: accuracy, finalAccuracy })
+      setIsReviewing(true)
+    }
+  }
 
+  const handleNextTarget = () => {
+    if (lastReviewData) {
+      onRecordingComplete(lastReviewData.transcript, lastReviewData.finalAccuracy)
+    }
+    // ensure we clear review mode if the parent keeps it mounted
+    setIsReviewing(false)
+  }
 
-    // **FIX: Call the parent's onRecordingComplete to update stats**
-    console.log('🎤 TargetPractice: Calling parent onRecordingComplete with accuracy:', finalAccuracy)
-    onRecordingComplete('', finalAccuracy)
+  const handleRetry = () => {
+    setIsReviewing(false)
+    setLastReviewData(null)
+    resetTranscript()
+    setLocalTranscript('')
+    setLocalAccuracy(0)
+    setShowAccuracy(false)
   }
 
   const speakTarget = async () => {
@@ -829,11 +892,11 @@ export default function TargetPractice({
             {showAccuracy && <AccuracyBadge accuracy={accuracy} />}
 
             {/* Processing Overlay */}
-            {statusMessage.includes('Transcribing') && (
+            {(isProcessing || statusMessage.includes('ANALYZING') || statusMessage.includes('PROCESSING') || statusMessage.includes('EXTRACTING') || statusMessage.includes('RUNNING') || statusMessage.includes('TRANSCRIBING') || statusMessage.includes('Initializing')) && (
               <View style={styles.processingOverlay}>
                 <ActivityIndicator size="large" color={theme.accent} />
                 <ThemedText variant="caption" style={{ marginTop: 10, color: theme.accent, fontWeight: 'bold' }}>
-                  ANALYZING BALLISTICS...
+                  {statusMessage}
                 </ThemedText>
               </View>
             )}
@@ -844,7 +907,8 @@ export default function TargetPractice({
             isRecording={isRecording}
             isRecognizing={isRecognizing}
             isLoading={isInitializing}
-            onSpeakIntel={speakIntel}
+            isProcessing={isProcessing || statusMessage.includes('ANALYZING') || statusMessage.includes('PROCESSING') || statusMessage.includes('EXTRACTING') || statusMessage.includes('RUNNING') || statusMessage.includes('TRANSCRIBING') || statusMessage.includes('Initializing')}
+            onListen={speakVerse}
             onToggleRecording={isRecording || isRecognizing ? stopRecording : startRecording}
             textColor={textColor}
           />
@@ -952,37 +1016,56 @@ export default function TargetPractice({
 
       {/* Controls */}
       <View style={styles.controls}>
-        <TouchableOpacity
-          style={[styles.controlButton, styles.speakButton, { backgroundColor: isDark ? '#5D4037' : '#D7CCC8' }]}
-          onPress={speakTarget}
-          testID="speak-target-button"
-        >
-          <FontAwesome
-            name={isPlaying ? "volume-up" : "volume-off"}
-            size={20}
-            color={isPlaying ? theme.accent : (isDark ? 'white' : 'black')}
-          />
-          <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button, { color: isDark ? 'white' : 'black' }, isPlaying && { color: theme.accent }]}>
-            {isPlaying ? "PLAYING..." : "LISTEN"}
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.controlButton, styles.recordButton, isRecording && { backgroundColor: theme.error }]}
-          onPress={isRecording ? stopRecording : startRecording}
-          testID="start-recording"
-        >
-          <View style={styles.recordIconOuter}>
-            {isRecording ? (
-              <FontAwesome name="stop" size={20} color="white" />
-            ) : (
-              <View style={styles.recordIconInner} />
-            )}
-          </View>
-          <Text style={[styles.controlText, MILITARY_TYPOGRAPHY.button, { color: 'white' }]}>
-            {isRecording ? 'STOP' : 'ENGAGE'}
-          </Text>
-        </TouchableOpacity>
+        {isProcessing ? (
+           <ActionButton
+             title="ANALYZING INTEL..."
+             onPress={() => {}}
+             variant="ghost"
+             icon="microchip"
+             style={[styles.controlButton, { flex: 1, opacity: 0.8 }]}
+             isLoading={true}
+           />
+        ) : isReviewing ? (
+          <>
+            <ActionButton
+              title="RETRY"
+              onPress={handleRetry}
+              variant="ghost"
+              icon="redo"
+              style={[styles.controlButton, { flex: 1 }]}
+              testID="retry-recording"
+            />
+            <ActionButton
+              title="NEXT TARGET"
+              onPress={handleNextTarget}
+              variant="primary"
+              icon="arrow-right"
+              style={[styles.controlButton, { flex: 1 }]}
+              testID="next-target-recording"
+            />
+          </>
+        ) : (
+          <>
+            <ActionButton
+              title={isPlaying ? "PLAYING..." : "LISTEN"}
+              onPress={speakTarget}
+              variant="ghost"
+              icon={isPlaying ? "volume-up" : "volume-off"}
+              style={[styles.controlButton, { flex: 1, backgroundColor: isDark ? '#5D4037' : '#D7CCC8' }]}
+              textStyle={{ color: isDark ? 'white' : 'black' }}
+              testID="speak-target-button"
+            />
+            <ActionButton
+              title={isRecording ? 'STOP' : 'ENGAGE'}
+              onPress={isRecording ? stopRecording : startRecording}
+              variant={isRecording ? "danger" : "primary"}
+              icon={isRecording ? "stop" : "microphone"} 
+              style={[styles.controlButton, { flex: 1 }]}
+              isLoading={isInitializing}
+              testID="start-recording"
+            />
+          </>
+        )}
       </View>
 
       {/* Last shot result */}
@@ -1340,5 +1423,12 @@ const styles = StyleSheet.create({
   blurOverlay: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 10,
+  },
+  targetText: {
+    fontSize: 16,
+    textAlign: 'center',
+  },
+  blurredText: {
+    opacity: 0.8,
   },
 })

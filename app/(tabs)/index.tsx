@@ -246,7 +246,7 @@ export default function HomeScreen() {
         title: 'START FIRST DRILL',
         subtitle: 'Begin your scripture memorization journey',
         icon: 'rocket' as const,
-        color: isDark ? '#22C55E' : '#4A7C2E',
+        color: theme.success,
         greeting: 'Welcome, Recruit!',
         subtext: 'Your training begins now.'
       }
@@ -255,7 +255,7 @@ export default function HomeScreen() {
         title: 'EXTRA PRACTICE',
         subtitle: 'Daily mission complete! Keep sharp with bonus drills',
         icon: 'trophy' as const,
-        color: isDark ? '#FFD700' : '#C8A951',
+        color: theme.accent,
         greeting: 'Mission Complete!',
         subtext: 'Return tomorrow for your next mission.'
       }
@@ -264,7 +264,7 @@ export default function HomeScreen() {
         title: 'CONTINUE STREAK',
         subtitle: `${streak} day streak! Don't break the chain`,
         icon: 'fire' as const,
-        color: isDark ? '#FF6B35' : '#B45309',
+        color: isDark ? '#F59E0B' : theme.warning,
         greeting: timeGreeting.greeting,
         subtext: timeGreeting.subtext
       }
@@ -272,19 +272,16 @@ export default function HomeScreen() {
       return {
         title: 'START DAILY DRILL',
         subtitle: 'Practice your verses and build your streak',
-        icon: 'flash' as const,
-        color: isDark ? '#3B82F6' : '#4A5D23',
+        icon: 'bolt' as const,
+        color: isDark ? '#3B82F6' : theme.primary,
         greeting: timeGreeting.greeting,
         subtext: timeGreeting.subtext
       }
     }
-  }, [verseCount, streak, dailyCompleted, isDark])
+  }, [verseCount, streak, dailyCompleted, isDark, theme])
 
   // Light mode accent colors
-  const accentGold = isDark ? '#FFD700' : '#C8A951'
-  const accentRed = isDark ? '#EF4444' : '#B91C1C'
-  const accentGreen = isDark ? '#22C55E' : '#4A7C2E'
-  const accentOlive = isDark ? theme.accent : '#4A5D23'
+
   const bgSurface = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.92)'
   const borderColor = isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB'
 
@@ -301,50 +298,74 @@ export default function HomeScreen() {
           <SkeletonHomeScreen />
         ) : (
         <>
-        {/* Contextual Greeting Section - Military Briefing Card */}
-        <Animated.View style={StyleSheet.flatten([styles.briefingSection, {
+        {/* Top Header & Profile Section */}
+        <Animated.View style={[styles.profileHeader, {
           opacity: fadeAnim,
           transform: [{ translateY: slideAnim }]
-        }])}>
-          <View style={[
-            styles.briefingCard,
-            {
-              backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#D4CBAB',
-              borderLeftColor: isDark ? '#FFD700' : '#C8A951',
-            }
-          ]}>
-            {/* Classification stamp for light mode */}
-            {!isDark && (
-              <View style={styles.classificationStamp}>
-                <Text style={styles.classificationText}>CLASSIFIED</Text>
-              </View>
-            )}
-            <View style={styles.briefingHeader}>
-              <FontAwesome5 name="satellite-dish" size={14} color={accentGold} />
-              <ThemedText variant="caption" style={[styles.briefingLabel, { color: accentGold }]}>
-                INCOMING TRANSMISSION
-              </ThemedText>
-            </View>
-            <ThemedText variant="heading" style={[
-              styles.greetingText,
-              { color: isDark ? '#F8FAFC' : '#1A2309' }
+        }]}>
+          <View style={styles.profileInfo}>
+            <View style={[
+              styles.briefingCard,
+              {
+                backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF',
+                borderColor: isDark ? 'rgba(255,255,255,0.05)' : theme.border,
+                borderLeftColor: theme.accent,
+                flex: 1,
+              }
             ]}>
-              {ctaState.greeting}
-            </ThemedText>
-            <TypewriterText
-              text={`> ${ctaState.subtext}`}
-              style={styles.briefingText}
-              delay={300}
-              isDark={isDark}
-            />
+              {!isDark && (
+                <View style={[styles.classificationStamp, { borderColor: `${theme.error}40`, backgroundColor: `${theme.error}10` }]}>
+                  <Text style={[styles.classificationText, { color: theme.error }]}>CLASSIFIED</Text>
+                </View>
+              )}
+              <View style={styles.briefingHeader}>
+                <FontAwesome5 name="satellite-dish" size={14} color={theme.accent} />
+                <ThemedText variant="caption" style={[styles.briefingLabel, { color: theme.accent }]}>
+                  INCOMING TRANSMISSION
+                </ThemedText>
+              </View>
+              <ThemedText variant="heading" style={[
+                styles.greetingText,
+                { color: theme.text }
+              ]}>
+                {ctaState.greeting}
+              </ThemedText>
+              <TypewriterText
+                text={`> ${ctaState.subtext}`}
+                style={styles.briefingText}
+                delay={300}
+                isDark={isDark}
+              />
+
+              {/* Tactical Readout (Consolidated Stats) */}
+              <View style={styles.tacticalReadout}>
+                <View style={styles.readoutItem}>
+                  <FontAwesome5 name="fire" size={10} color={theme.warning} />
+                  <ThemedText variant="caption" style={styles.readoutValue}>{streak}D</ThemedText>
+                </View>
+                <View style={[styles.readoutDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} />
+                <View style={styles.readoutItem}>
+                  <FontAwesome5 name="coins" size={10} color={theme.accent} />
+                  <ThemedText variant="caption" style={styles.readoutValue}>{valorPoints}</ThemedText>
+                </View>
+                <View style={[styles.readoutDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} />
+                <View style={styles.readoutItem}>
+                  <FontAwesome5 name="book" size={10} color={theme.success} />
+                  <ThemedText variant="caption" style={styles.readoutValue}>{verseCount}V</ThemedText>
+                </View>
+              </View>
+            </View>
+          </View>
+          <View style={styles.avatarContainer}>
+            <SoldierAvatar size="small" showStats={false} />
           </View>
         </Animated.View>
 
-        {/* Single Primary CTA - Tactical Action Button */}
+        {/* Primary Mission Tool - Tactical Action Button */}
         <Animated.View style={{
           opacity: fadeAnim,
-          transform: [{ scale: scaleAnim }]
+          transform: [{ scale: scaleAnim }],
+          marginTop: 16
         }}>
           <PulsingGlow color={ctaState.color} style={styles.primaryCTA}>
             <TouchableOpacity
@@ -355,10 +376,9 @@ export default function HomeScreen() {
                 styles.primaryCTACard,
                 {
                   backgroundColor: isDark ? 'rgba(30, 41, 59, 0.6)' : '#FFFFFF',
-                  borderColor: isDark ? `${ctaState.color}40` : '#4A5D23',
+                  borderColor: isDark ? `${ctaState.color}40` : theme.border,
                 }
               ]}>
-                {/* Military diagonal stripe for light mode */}
                 {!isDark && (
                   <View style={[styles.ctaStripe, { backgroundColor: ctaState.color }]} />
                 )}
@@ -391,7 +411,7 @@ export default function HomeScreen() {
                         borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#D4CBAB',
                       }
                     ]}>
-                      <FontAwesome5 name="chevron-right" size={14} color={isDark ? theme.textSecondary : '#4A5D23'} />
+                      <FontAwesome5 name="chevron-right" size={14} color={isDark ? theme.textSecondary : theme.primary} />
                     </View>
                   </View>
                 </View>
@@ -400,101 +420,12 @@ export default function HomeScreen() {
           </PulsingGlow>
         </Animated.View>
 
-        {/* Stats Grid - Military Dashboard Style */}
-        <Animated.View style={StyleSheet.flatten([styles.statsGrid, {
+        {/* Streak Challenge - Replaces the redundant stats grid */}
+        <Animated.View style={[styles.challengeSection, {
           opacity: fadeAnim,
           transform: [{ translateY: slideAnim }]
-        }])}>
-          <View style={[
-            styles.statsCard,
-            {
-              backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB',
-            }
-          ]}>
-            <View style={[styles.statsAccentBar, { backgroundColor: isDark ? '#FF6B35' : '#B45309' }]} />
-            <View style={styles.statsCardHeader}>
-              <FontAwesome5 name="fire" size={16} color={isDark ? '#FF6B35' : '#B45309'} />
-              <ThemedText variant="caption" style={[styles.statsCardLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
-                STREAK
-              </ThemedText>
-            </View>
-            <ThemedText variant="heading" style={[
-              styles.statsCardValue,
-              { color: isDark ? '#F8FAFC' : '#1A2309' }
-            ]}>
-              {streak}
-            </ThemedText>
-            <ThemedText variant="caption" style={[styles.statsCardSub, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
-              days
-            </ThemedText>
-          </View>
-
-          <View style={[
-            styles.statsCard,
-            {
-              backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB',
-            }
-          ]}>
-            <View style={[styles.statsAccentBar, { backgroundColor: accentGold }]} />
-            <View style={styles.statsCardHeader}>
-              <FontAwesome5 name="coins" size={16} color={accentGold} />
-              <ThemedText variant="caption" style={[styles.statsCardLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
-                VALOR
-              </ThemedText>
-            </View>
-            <ThemedText variant="heading" style={[
-              styles.statsCardValue,
-              { color: isDark ? '#F8FAFC' : '#1A2309' }
-            ]}>
-              {valorPoints}
-            </ThemedText>
-            <ThemedText variant="caption" style={[styles.statsCardSub, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
-              points
-            </ThemedText>
-          </View>
-
-          <View style={[
-            styles.statsCard,
-            {
-              backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF',
-              borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB',
-            }
-          ]}>
-            <View style={[styles.statsAccentBar, { backgroundColor: accentOlive }]} />
-            <View style={styles.statsCardHeader}>
-              <FontAwesome5 name="book" size={16} color={accentOlive} />
-              <ThemedText variant="caption" style={[styles.statsCardLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
-                ARSENAL
-              </ThemedText>
-            </View>
-            <ThemedText variant="heading" style={[
-              styles.statsCardValue,
-              { color: isDark ? '#F8FAFC' : '#1A2309' }
-            ]}>
-              {verseCount}
-            </ThemedText>
-            <ThemedText variant="caption" style={[styles.statsCardSub, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
-              verses
-            </ThemedText>
-          </View>
-        </Animated.View>
-
-        {/* Avatar Section */}
-        <Animated.View style={StyleSheet.flatten([styles.avatarSection, {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }]
-        }])}>
-          <SoldierAvatar size="medium" showStats={false} />
-        </Animated.View>
-
-        {/* Streak Challenge */}
-        <Animated.View style={{
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }]
-        }}>
-          <StreakChallenge compact={true} />
+        }]}>
+          <StreakChallenge />
         </Animated.View>
         </>
         )}
@@ -535,9 +466,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 100,
   },
-  briefingSection: {
+  profileHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
     marginBottom: 16,
-    marginTop: 4,
+    marginTop: 8,
+  },
+  profileInfo: {
+    flex: 1,
+  },
+  avatarContainer: {
+    padding: 4,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.05)',
   },
   briefingCard: {
     padding: 16,
@@ -639,12 +583,40 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   arrowCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
+  },
+  tacticalReadout: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.05)',
+    gap: 12,
+  },
+  readoutItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  readoutValue: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  readoutDivider: {
+    width: 1,
+    height: 12,
+    opacity: 0.3,
+  },
+  challengeSection: {
+    marginTop: 8,
+    marginBottom: 20,
   },
   statsGrid: {
     flexDirection: 'row',
@@ -691,10 +663,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontWeight: '600',
   },
-  avatarSection: {
-    alignItems: 'center',
-    marginBottom: 20,
-  },
+
   battleSection: {
     marginBottom: 16,
   },

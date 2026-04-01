@@ -22,6 +22,7 @@ import { Collection } from '@/types/scripture'
 import { Scripture } from '@/types/scripture'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
+import { Toast } from '@/components/ui/Toast'
 
 export default function CollectionDrillScreen() {
     const {
@@ -139,30 +140,31 @@ export default function CollectionDrillScreen() {
             is_training: true
         })
 
-        // Show feedback
         const isLastScripture = scriptureIndex >= collectionScriptures.length - 1
 
         if (accuracy >= 80) {
-            Alert.alert(
-                'Great Work! 🎯',
-                `${accuracy}% accuracy on ${currentScripture.reference}`,
-                isLastScripture ? [
-                    { text: 'Restart Collection', onPress: () => setScriptureIndex(0) },
-                    { text: 'Choose Another', onPress: () => setSelectedCollection(null) }
-                ] : [
-                    { text: 'Next Verse', onPress: loadNextScripture },
-                    { text: 'Try Again', onPress: () => { } }
-                ]
-            )
+            Toast.missionSuccess(`${accuracy}% ACCURACY ON ${currentScripture.reference.toUpperCase()}`)
+            if (isLastScripture) {
+                Alert.alert(
+                    'COLLECTION COMPLETE 🎖️',
+                    'You have engaged all targets in this collection.',
+                    [
+                        { text: 'Restart', onPress: () => setScriptureIndex(0) },
+                        { text: 'Finish', onPress: () => router.back() }
+                    ]
+                )
+            } else {
+                // Auto-advance after 2 seconds if high accuracy
+                setTimeout(() => {
+                    loadNextScripture()
+                }, 2000)
+            }
         } else {
-            Alert.alert(
-                'Keep Practicing! 💪',
-                `${accuracy}% accuracy - you're getting there!`,
-                [
-                    { text: 'Try Again', onPress: () => { } },
-                    { text: 'Skip', onPress: loadNextScripture }
-                ]
-            )
+            Toast.show({
+                type: 'warning',
+                title: '⚡ LOW PRECISION',
+                message: `${accuracy}% accuracy - check your coordinates and try again.`,
+            })
         }
     }
 
@@ -200,6 +202,21 @@ export default function CollectionDrillScreen() {
                     language: userSettings.language || 'en-US',
                 }
             )
+        } finally {
+            setIsListeningVerse(false)
+        }
+    }
+
+    const handleIntelPress = async () => {
+        if (!currentScripture) return
+        const intelText = currentScripture.mnemonic || `Target reference: ${currentScripture.reference}`
+        setIsListeningVerse(true)
+        try {
+            await VoicePlaybackService.playTextToSpeech(intelText, {
+                rate: userSettings.voiceRate || 0.9,
+                pitch: userSettings.voicePitch || 1.0,
+                language: userSettings.language || 'en-US',
+            })
         } finally {
             setIsListeningVerse(false)
         }
@@ -295,6 +312,7 @@ export default function CollectionDrillScreen() {
                                 <ScriptureActionRow
                                     onStealth={handleStartStealthPractice}
                                     onListen={handleListenVerse}
+                                    onIntel={handleIntelPress}
                                     isListening={isListeningVerse}
                                 />
                             </>

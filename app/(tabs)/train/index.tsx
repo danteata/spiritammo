@@ -37,28 +37,6 @@ export default function TrainingScreen() {
     // Track screen view
     useScreenTracking('training')
 
-    // Defensive routing: if train root receives collection/chapter params,
-    // forward to the collection drill instead of showing general practice UI.
-    useEffect(() => {
-        const collectionId = params.collectionId
-        console.log('🔴 [TrainIndex] useEffect for collectionId:', collectionId)
-        console.log('🔴 [TrainIndex] params:', JSON.stringify(params))
-        if (!collectionId) {
-            console.log('🔴 [TrainIndex] No collectionId, staying on practice area')
-            return
-        }
-
-        console.log('🔴 [TrainIndex] Redirecting to collection drill')
-        router.replace({
-            pathname: '/train/collection',
-            params: {
-                collectionId: String(collectionId),
-                chapterIds: params.chapterIds ? String(params.chapterIds) : undefined,
-            },
-        })
-        console.log('🔴 [TrainIndex] router.replace executed')
-    }, [params.collectionId, params.chapterIds, router])
-
     const handleModeSelect = (mode: TrainingMode) => {
         trackEvent(AnalyticsEventType.PRACTICE_START, {
             practice_type: 'training_mode_selected',

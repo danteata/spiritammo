@@ -40,6 +40,7 @@ export default function ArsenalScreen() {
         addScripturesToCollection,
         updateCollection,
         theme,
+        isLoading,
     } = useAppStore()
     const router = useRouter()
     const { action } = useLocalSearchParams()
@@ -189,7 +190,9 @@ export default function ArsenalScreen() {
                                     </TouchableOpacity>
                                 </View>
                             </View>
-                            {(collections?.length || 0) === 0 ? (
+                            {isLoading ? (
+                                <SkeletonCollectionList />
+                            ) : (collections?.length || 0) === 0 ? (
                                 <View style={[styles.emptyState, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]}>
                                     <View style={[styles.emptyIconBg, { backgroundColor: theme.accent + '15' }]}>
                                         <Ionicons name="library-outline" size={32} color={theme.accent} />

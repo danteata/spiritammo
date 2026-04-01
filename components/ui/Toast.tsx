@@ -44,19 +44,19 @@ export const Toast = {
   },
 
   success(title: string, message?: string) {
-    this.show({ type: 'success', title, message, duration: 2500 })
+    this.show({ type: 'success', title, message, duration: 5000 })
   },
 
   error(title: string, message?: string) {
-    this.show({ type: 'error', title, message, duration: 4000 })
+    this.show({ type: 'error', title, message, duration: 5500 })
   },
 
   info(title: string, message?: string) {
-    this.show({ type: 'info', title, message, duration: 3000 })
+    this.show({ type: 'info', title, message, duration: 6000 })
   },
 
   warning(title: string, message?: string) {
-    this.show({ type: 'warning', title, message, duration: 3500 })
+    this.show({ type: 'warning', title, message, duration: 6500 })
   },
 
   /** Military-flavored success */
@@ -65,7 +65,7 @@ export const Toast = {
       type: 'success',
       title: '✅ MISSION ACCOMPLISHED',
       message,
-      duration: 2500,
+      duration: 7000,
     })
   },
 
@@ -75,7 +75,7 @@ export const Toast = {
       type: 'error',
       title: '⚠️ MISSION FAILED',
       message,
-      duration: 4000,
+      duration: 9000,
     })
   },
 }
