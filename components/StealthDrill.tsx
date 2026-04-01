@@ -8,6 +8,7 @@ import {
     StatusBar,
     ScrollView,
     Platform,
+    Modal,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
@@ -40,7 +41,7 @@ export default function StealthDrill({
     onComplete,
     targetVerse,
     reference,
-}: StealthDrillProps): React.ReactElement {
+}: StealthDrillProps) {
     type DifficultyLevel = 'RECRUIT' | 'SOLDIER' | 'SNIPER' | 'GHOST'
 
     const DIFFICULTIES: Record<DifficultyLevel, { label: string, percent: number, icon: keyof typeof MaterialCommunityIcons.glyphMap, color: string }> = {
@@ -382,33 +383,37 @@ export default function StealthDrill({
     if (!isVisible) return null
 
     return (
-        <View style={styles.inlineContainer}>
-            {isDark ? (
-                <LinearGradient
-                    colors={['#1a1f1a', '#0D0D0D']} // Darker, stealthier gradient
-                    style={styles.container}
-                >
-                    {renderContent()}
-                </LinearGradient>
-            ) : (
-                <View style={[styles.container, { backgroundColor: theme.background }]}>
-                    {renderContent()}
-                </View>
-            )}
-        </View>
+        <Modal
+            visible={isVisible}
+            animationType="slide"
+            transparent={false}
+            onRequestClose={onClose}
+        >
+            <View style={styles.modalContainer}>
+                {isDark ? (
+                    <LinearGradient
+                        colors={['#1a1f1a', '#0D0D0D']} // Darker, stealthier gradient
+                        style={styles.container}
+                    >
+                        {renderContent()}
+                    </LinearGradient>
+                ) : (
+                    <View style={[styles.container, { backgroundColor: theme.background }]}>
+                        {renderContent()}
+                    </View>
+                )}
+            </View>
+        </Modal>
     )
 }
 
 const styles = StyleSheet.create({
-    inlineContainer: {
-        height: 600, // Fixed height or minHeight
-        borderRadius: 16,
-        overflow: 'hidden',
-        borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
+    modalContainer: {
+        flex: 1,
     },
     container: {
         flex: 1,
+        paddingTop: Platform.OS === 'ios' ? 60 : 20,
     },
     header: {
         flexDirection: 'row',
