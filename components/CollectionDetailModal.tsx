@@ -33,12 +33,14 @@ interface CollectionDetailModalProps {
   collection: Collection
   isVisible: boolean
   onClose: () => void
+  onChapterNavigate?: (collectionId: string, chapterId: string) => void
 }
 
 const CollectionDetailModal = React.memo(({
   collection,
   isVisible,
   onClose,
+  onChapterNavigate,
 }: CollectionDetailModalProps) => {
   const router = useRouter()
   const {
@@ -453,7 +455,7 @@ const CollectionDetailModal = React.memo(({
   const handleGoToTraining = () => {
     onClose()
     router.push({
-      pathname: '/(tabs)/training',
+      pathname: '/(tabs)/train',
       params: { collectionId: collection.id }
     })
   }
@@ -464,15 +466,30 @@ const CollectionDetailModal = React.memo(({
   }
 
   const handleChapterSelect = (chapterId: string) => {
+    console.log('🔵 [CollectionDetailModal] Chapter selected:', chapterId)
+    console.log('🔵 [CollectionDetailModal] Collection ID:', collection.id)
     setSelectedChapterId(chapterId)
-    onClose()
-    router.push({
-      pathname: '/train/collection',
-      params: {
-        collectionId: collection.id,
-        chapterIds: chapterId,
-      }
-    })
+    // Set processing state to show loading feedback
+    setIsProcessing(true)
+    console.log('🔵 [CollectionDetailModal] Set isProcessing=true, navigating...')
+    
+    // Navigate directly without closing the modal first
+    // The modal will close automatically when navigation happens
+    if (onChapterNavigate) {
+      console.log('🔵 [CollectionDetailModal] Using onChapterNavigate callback')
+      onChapterNavigate(collection.id, chapterId)
+    } else {
+      console.log('🔵 [CollectionDetailModal] Using router.push directly')
+      router.push({
+        pathname: '/(tabs)/train/collection',
+        params: {
+          collectionId: collection.id,
+          chapterIds: chapterId,
+        }
+      })
+    }
+    setIsProcessing(false)
+    console.log('🔵 [CollectionDetailModal] Navigation complete, isProcessing=false')
   }
 
   const handleLongPressScripture = (scriptureId: string) => {
@@ -729,6 +746,34 @@ const CollectionDetailModal = React.memo(({
 
           {/* Chapter Selection & Progress - Prominent Position */}
           <View style={styles.chaptersSection}>
+            {/* Show chapter info when collection is chapter-based */}
+            {collection.isChapterBased && collection.chapters && collection.chapters.length > 0 && (
+              <>
+                <View style={[styles.chapterInfoCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  <View style={styles.chapterInfoHeader}>
+                    <MaterialCommunityIcons name="book-open-page-variant" size={20} color={theme.accent} />
+                    <Text style={[styles.chapterInfoTitle, { color: theme.text }]}>
+                      Book Chapters
+                    </Text>
+                  </View>
+                  <Text style={[styles.chapterInfoText, { color: theme.textSecondary }]}>
+                    This collection is organized by {collection.chapters.length} chapters from the table of contents.
+                  </Text>
+                </View>
+                <CollectionChapterView
+                  collection={collection}
+                  onChapterSelect={handleChapterSelect}
+                  onCollectionUpdate={updateCollection}
+                  selectedChapterId={selectedChapterId}
+                  showProgress={true}
+                />
+                <Text style={[styles.chapterHint, { color: theme.textSecondary }]}>
+                  Tap a chapter to launch a focused drill.
+                </Text>
+              </>
+            )}
+            
+            {/* Show enable chapters option if not yet enabled but possible */}
             {!collection.isChapterBased && chapterAnalysis.canBeChapterBased && (
               <View style={[styles.chapterEnableCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                 <View style={styles.chapterEnableHeader}>
@@ -749,21 +794,6 @@ const CollectionDetailModal = React.memo(({
                   </Text>
                 </TouchableOpacity>
               </View>
-            )}
-
-            {collection.isChapterBased && collection.chapters && (
-              <>
-                <CollectionChapterView
-                  collection={collection}
-                  onChapterSelect={handleChapterSelect}
-                  onCollectionUpdate={updateCollection}
-                  selectedChapterId={selectedChapterId}
-                  showProgress={true}
-                />
-                <Text style={[styles.chapterHint, { color: theme.textSecondary }]}>
-                  Tap a chapter to launch a focused drill.
-                </Text>
-              </>
             )}
           </View>
 
@@ -1205,6 +1235,27 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   chaptersSection: {
     marginBottom: 24,
+  },
+  chapterInfoCard: {
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  chapterInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  chapterInfoTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  chapterInfoText: {
+    fontSize: 12,
+    lineHeight: 18,
   },
   chapterEnableCard: {
     borderRadius: 12,
