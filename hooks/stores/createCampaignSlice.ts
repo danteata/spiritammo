@@ -2,6 +2,7 @@ import { StateCreator } from 'zustand'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Campaign, CampaignNode, NodeStatus } from '@/types/campaign'
 import { INITIAL_CAMPAIGNS } from '@/data/campaigns'
+import { bibleApiService } from '@/services/bibleApi'
 
 export interface CampaignSlice {
     campaigns: Campaign[]
@@ -11,11 +12,12 @@ export interface CampaignSlice {
     loadCampaigns: () => Promise<void>
     startCampaign: (campaignId: string | null) => void
     unlockNode: (campaignId: string, nodeId: string) => void
-    completeNode: (campaignId: string, nodeId: string, accuracy: number) => Promise<boolean> // Returns true if leveled up/unlocked next
+    completeNode: (campaignId: string, nodeId: string, accuracy: number) => Promise<boolean>
     resetCampaignProgress: (campaignId: string) => void
+    provisionCampaignScripture: (node: any) => Promise<any | null>
 }
 
-export const createCampaignSlice: StateCreator<CampaignSlice> = (set, get) => ({
+export const createCampaignSlice: StateCreator<CampaignSlice & { scriptures: any[]; addScriptures: any }, [], [], CampaignSlice> = (set, get) => ({
     campaigns: [],
     activeCampaignId: null,
 
@@ -154,8 +156,6 @@ export const createCampaignSlice: StateCreator<CampaignSlice> = (set, get) => ({
 
     resetCampaignProgress: (campaignId: string) => {
         const { campaigns } = get()
-        // Reset to initial state from data/campaigns but keep the structure
-        // Actually, safer to find the initial template and restore it
         const template = INITIAL_CAMPAIGNS.find(c => c.id === campaignId)
         if (!template) return
 
@@ -165,5 +165,49 @@ export const createCampaignSlice: StateCreator<CampaignSlice> = (set, get) => ({
 
         set({ campaigns: updatedCampaigns })
         AsyncStorage.setItem('user_campaigns', JSON.stringify(updatedCampaigns))
-    }
+    },
+
+    provisionCampaignScripture: async (node: any) => {
+        try {
+            if (node.status === 'LOCKED') {
+                console.log(`Node ${node.id} is locked - denying access`)
+                return null
+            }
+
+            const { book, chapter, verse } = node.scriptureReference
+
+            // Try local cache first
+            const scriptures = (get() as any).scriptures || []
+            let scripture = scriptures.find((s: any) =>
+                s.book.toLowerCase() === book.toLowerCase() &&
+                s.chapter === chapter &&
+                s.verse === verse
+            )
+
+            if (scripture) return scripture
+
+            // Try offline bible
+            try {
+                const chapterData = await bibleApiService.getChapter(book, chapter)
+                if (chapterData && chapterData.verses) {
+                    const targetVerse = chapterData.verses.find((v: any) => v.verse === verse)
+                    if (targetVerse) {
+                        scripture = bibleApiService.bibleVerseToScripture(targetVerse)
+                        // Cache in store
+                        if (scripture && (get() as any).addScriptures) {
+                            await (get() as any).addScriptures([scripture])
+                        }
+                        return scripture
+                    }
+                }
+            } catch (bibleError) {
+                console.warn(`Offline bible lookup failed for ${book} ${chapter}:${verse}`)
+            }
+
+            return null
+        } catch (error) {
+            console.error('Failed to provision campaign scripture:', error)
+            return null
+        }
+    },
 })

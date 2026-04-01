@@ -7,7 +7,6 @@ import {
 } from '@/db/schema'
 import { Collection, Scripture } from '@/types/scripture'
 import { errorHandler } from '@/services/errorHandler'
-import { COLLECTIONS } from '@/mocks/collections'
 import { ScriptureSlice } from './createScriptureSlice'
 
 export interface CollectionSlice {
@@ -22,7 +21,7 @@ export interface CollectionSlice {
 }
 
 export const createCollectionSlice: StateCreator<CollectionSlice & ScriptureSlice, [], [], CollectionSlice> = (set, get) => ({
-    collections: COLLECTIONS.filter(c => c.isSystem), // Initialize with system collections
+    collections: [], // Populated by initializeAppData
 
     getScripturesByCollection: (collectionId) => {
         const collection = get().collections.find((c) => c.id === collectionId)
