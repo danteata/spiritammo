@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Scripture } from '@/types/scripture'
 import { useAppStore } from '@/hooks/useAppStore'
@@ -11,6 +12,8 @@ interface UnifiedScriptureRecorderCardProps {
   isBattleMode?: boolean
   onRecordingComplete: (accuracy: number) => void
   intelText?: string
+  onListen?: () => void
+  isListening?: boolean
 }
 
 export default function UnifiedScriptureRecorderCard({
@@ -18,6 +21,8 @@ export default function UnifiedScriptureRecorderCard({
   isBattleMode = false,
   onRecordingComplete,
   intelText,
+  onListen,
+  isListening = false,
 }: UnifiedScriptureRecorderCardProps) {
   const { theme } = useAppStore()
   const [isRecording, setIsRecording] = useState(false)
@@ -36,6 +41,22 @@ export default function UnifiedScriptureRecorderCard({
           <Text style={[styles.recorderTitle, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>
             LIVE RECORDING
           </Text>
+          {onListen && (
+            <TouchableOpacity 
+              style={[styles.listenBtn, { borderColor: theme.border }]} 
+              onPress={onListen}
+              disabled={isListening}
+            >
+              <Ionicons 
+                name={isListening ? "radio" : "volume-high"} 
+                size={14} 
+                color={isListening ? theme.accent : theme.textSecondary} 
+              />
+              <Text style={[styles.listenBtnText, MILITARY_TYPOGRAPHY.caption, { color: isListening ? theme.accent : theme.textSecondary }]}>
+                {isListening ? 'RECEIVING...' : 'LISTEN'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <VoiceRecorder
@@ -75,5 +96,19 @@ const styles = StyleSheet.create({
   },
   recorderTitle: {
     letterSpacing: 1,
+  },
+  listenBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  listenBtnText: {
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 })

@@ -177,7 +177,7 @@ const CollectionDetailModal = React.memo(({
           styles.scriptureItem,
           { backgroundColor: cardBackground, borderWidth: 1, borderColor },
           isBulkSelecting && isSelected && {
-            backgroundColor: isDark ? 'rgba(255, 107, 53, 0.15)' : 'rgba(255, 107, 53, 0.08)',
+            backgroundColor: isDark ? `${theme.accent}25` : `${theme.accent}15`,
             borderColor: theme.accent
           }
         ]}
@@ -483,9 +483,9 @@ const CollectionDetailModal = React.memo(({
       console.log('🔵 [CollectionDetailModal] Using onChapterNavigate callback')
       onChapterNavigate(collection.id, chapterId)
     } else {
-      console.log('🔵 [CollectionDetailModal] Using router.push directly')
+      console.log('🔵 [CollectionDetailModal] Navigating to /train/collection with:', collection.id, chapterId)
       router.push({
-        pathname: '/(tabs)/train/collection',
+        pathname: '/train/collection',
         params: {
           collectionId: collection.id,
           chapterIds: chapterId,

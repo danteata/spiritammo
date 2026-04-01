@@ -969,7 +969,7 @@ class AmplitudeProvider implements AnalyticsProvider {
         }
 
         try {
-            await amplitude.track(event.name, event.properties).promise
+            await amplitude.track(event.name, event.properties)
         } catch (error) {
             console.error('📊 Amplitude track error:', error)
         }
@@ -1000,7 +1000,7 @@ class AmplitudeProvider implements AnalyticsProvider {
         }
 
         try {
-            await amplitude.setUserId(userId).promise
+            await amplitude.setUserId(userId)
         } catch (error) {
             console.error('📊 Amplitude setUserId error:', error)
         }
@@ -1013,7 +1013,7 @@ class AmplitudeProvider implements AnalyticsProvider {
         }
 
         try {
-            await amplitude.track('Viewed Screen', { screen_name: screenName, ...properties }).promise
+            await amplitude.track('Viewed Screen', { screen_name: screenName, ...properties })
         } catch (error) {
             console.error('📊 Amplitude trackScreen error:', error)
         }
@@ -1026,7 +1026,7 @@ class AmplitudeProvider implements AnalyticsProvider {
         }
 
         try {
-            await amplitude.track('Timing', { name, value, ...properties }).promise
+            await amplitude.track('Timing', { name, value, ...properties })
         } catch (error) {
             console.error('📊 Amplitude trackTiming error:', error)
         }

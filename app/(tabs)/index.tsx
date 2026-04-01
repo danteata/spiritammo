@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { StyleSheet, Text, ScrollView, View, TouchableOpacity, Dimensions, Animated } from 'react-native'
-import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
+import { FontAwesome5 } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { useRouter, Link } from 'expo-router'
+import { useRouter } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import { useAppStore } from '@/hooks/useAppStore'
-import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
+import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { SkeletonHomeScreen } from '@/components/ui/Skeleton'
-import StreakChallenge from '@/components/StreakChallenge'
 import SoldierAvatar from '@/components/SoldierAvatar'
 import WelcomeModal from '@/components/WelcomeModal'
 import TutorialOverlay, { TutorialStep } from '@/components/TutorialOverlay'
-import { analytics, Analytics, AnalyticsEventType } from '@/services/analytics'
+import { AnalyticsEventType } from '@/services/analytics'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
+import { streakManager, DailyChallenge } from '@/services/streakManager'
 
 const { width } = Dimensions.get('window')
 
@@ -129,6 +129,7 @@ export default function HomeScreen() {
   const [showTutorial, setShowTutorial] = useState(false)
   const [tutorialStep, setTutorialStep] = useState(0)
   const [dailyCompleted, setDailyCompleted] = useState(false)
+  const [dailyChallenge, setDailyChallenge] = useState<DailyChallenge | null>(null)
   const { trackEvent } = useAnalytics()
 
   // Animation refs
@@ -142,7 +143,17 @@ export default function HomeScreen() {
   useEffect(() => {
     checkFirstLaunch()
     checkDailyCompletion()
+    loadDailyChallenge()
   }, [])
+
+  const loadDailyChallenge = async () => {
+    try {
+      const challenge = await streakManager.getDailyChallenge()
+      setDailyChallenge(challenge)
+    } catch (error) {
+      console.error('Failed to load challenge:', error)
+    }
+  }
 
   const checkDailyCompletion = async () => {
     try {
@@ -188,27 +199,11 @@ export default function HomeScreen() {
     ]).start()
   }
 
-  useEffect(() => {
-    if (showWelcome) {
-      trackEvent(AnalyticsEventType.SCREEN_VIEW, { screen_name: 'welcome_modal' })
-    }
-  }, [showWelcome, trackEvent])
-
-  useEffect(() => {
-    if (showTutorial) {
-      trackEvent(AnalyticsEventType.SCREEN_VIEW, { screen_name: 'tutorial_overlay', step: tutorialStep })
-    }
-  }, [showTutorial, tutorialStep, trackEvent])
-
-  const tutorialSteps: TutorialStep[] = [
-    {
-      id: 'start-drill',
-      title: 'Start Your First Drill',
-      description: 'Tap the button below to begin practicing your first verse.',
-      position: 'center',
-      canSkip: true,
-    },
-  ]
+  const handleStartDrill = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { })
+    trackEvent(AnalyticsEventType.PRACTICE_START, { source: 'home_quick_start' })
+    router.push('/train')
+  }
 
   const checkFirstLaunch = async () => {
     try {
@@ -221,19 +216,7 @@ export default function HomeScreen() {
     }
   }
 
-  const handleStartDrill = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { })
-    trackEvent(AnalyticsEventType.PRACTICE_START, { source: 'home_quick_start' })
-    router.push('/train')
-  }
-
-  const handleNavigateToBattle = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { })
-    router.push('/battle')
-  }
-
   const verseCount = scriptures?.length || 0
-  const collectionCount = collections?.length || 0
   const streak = userStats?.streak || 0
   const valorPoints = (userStats as any)?.valorPoints || 0
 
@@ -273,17 +256,22 @@ export default function HomeScreen() {
         title: 'START DAILY DRILL',
         subtitle: 'Practice your verses and build your streak',
         icon: 'bolt' as const,
-        color: isDark ? '#3B82F6' : theme.primary,
+        color: theme.accent,
         greeting: timeGreeting.greeting,
         subtext: timeGreeting.subtext
       }
     }
   }, [verseCount, streak, dailyCompleted, isDark, theme])
 
-  // Light mode accent colors
-
-  const bgSurface = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(255,255,255,0.92)'
-  const borderColor = isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB'
+  const tutorialSteps: TutorialStep[] = [
+    {
+      id: 'start-drill',
+      title: 'Start Your First Drill',
+      description: 'Tap the button below to begin practicing your first verse.',
+      position: 'center',
+      canSkip: true,
+    },
+  ]
 
   return (
     <ThemedContainer style={styles.container}>
@@ -293,126 +281,125 @@ export default function HomeScreen() {
       />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        {/* Show skeleton while loading */}
         {isLoading ? (
           <SkeletonHomeScreen />
         ) : (
         <>
-        {/* Top Header & Profile Section */}
-        <Animated.View style={[styles.profileHeader, {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }]
-        }]}>
-          <View style={styles.profileInfo}>
-            <View style={[
-              styles.briefingCard,
-              {
-                backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF',
-                borderColor: isDark ? 'rgba(255,255,255,0.05)' : theme.border,
-                borderLeftColor: theme.accent,
-                flex: 1,
-              }
-            ]}>
+        {/* Header Section */}
+        <Animated.View style={[styles.headerSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <View style={styles.headerTitleContainer}>
+            <ThemedText variant="heading" style={styles.headerTitle}>COMMAND CENTER</ThemedText>
+            <View style={[styles.headerUnderline, { backgroundColor: theme.accent }]} />
+            <View style={styles.compactStats}>
+              <View style={styles.compactStatItem}>
+                <FontAwesome5 name="fire" size={10} color={theme.warning} />
+                <Text style={[styles.compactStatValue, { color: theme.textSecondary }]}>{streak}</Text>
+              </View>
+              <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.compactStatItem}>
+                <FontAwesome5 name="coins" size={10} color={theme.accent} />
+                <Text style={[styles.compactStatValue, { color: theme.textSecondary }]}>{valorPoints}</Text>
+              </View>
+              <View style={[styles.statDivider, { backgroundColor: theme.border }]} />
+              <View style={styles.compactStatItem}>
+                <FontAwesome5 name="cross" size={10} color={theme.success} />
+                <Text style={[styles.compactStatValue, { color: theme.textSecondary }]}>{verseCount}</Text>
+              </View>
+            </View>
+          </View>
+          
+          <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} activeOpacity={0.8}>
+            <View style={[styles.avatarFrame, { borderColor: theme.accent }]}>
+              <SoldierAvatar size="small" showStats={false} style={styles.avatar} />
+            </View>
+            <View style={[styles.rankPlate, { backgroundColor: theme.warning, borderColor: theme.border }]}>
+              <Text style={styles.rankPlateText}>E-5</Text>
+            </View>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Tactical Briefing Deck */}
+        <Animated.View style={[styles.briefingDeck, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <View style={[
+            styles.briefingCard,
+            {
+              backgroundColor: isDark ? 'rgba(30, 41, 59, 0.4)' : '#FFFFFF',
+              borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : theme.border,
+              borderLeftColor: theme.accent,
+            }
+          ]}>
+            <View style={styles.transmissionHeader}>
+              <View style={styles.transmissionIconBox}>
+                <View style={[styles.pingDot, { backgroundColor: theme.accent }]} />
+                <FontAwesome5 name="satellite-dish" size={10} color={theme.accent} />
+              </View>
+              <ThemedText variant="caption" style={[styles.transmissionLabel, { color: theme.accent }]}>
+                SECURE COMMS // {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </ThemedText>
               {!isDark && (
-                <View style={[styles.classificationStamp, { borderColor: `${theme.error}40`, backgroundColor: `${theme.error}10` }]}>
+                <View style={[styles.classificationStamp, { borderColor: `${theme.error}60`, backgroundColor: `${theme.error}10` }]}>
                   <Text style={[styles.classificationText, { color: theme.error }]}>CLASSIFIED</Text>
                 </View>
               )}
-              <View style={styles.briefingHeader}>
-                <FontAwesome5 name="satellite-dish" size={14} color={theme.accent} />
-                <ThemedText variant="caption" style={[styles.briefingLabel, { color: theme.accent }]}>
-                  INCOMING TRANSMISSION
-                </ThemedText>
-              </View>
-              <ThemedText variant="heading" style={[
-                styles.greetingText,
-                { color: theme.text }
-              ]}>
-                {ctaState.greeting}
-              </ThemedText>
+            </View>            <ThemedText variant="heading" style={styles.greetingTitle}>{ctaState.greeting}</ThemedText>
+            
+            <View style={styles.briefingTextContainer}>
               <TypewriterText
                 text={`> ${ctaState.subtext}`}
                 style={styles.briefingText}
                 delay={300}
                 isDark={isDark}
               />
+            </View>
 
-              {/* Tactical Readout (Consolidated Stats) */}
-              <View style={styles.tacticalReadout}>
-                <View style={styles.readoutItem}>
-                  <FontAwesome5 name="fire" size={10} color={theme.warning} />
-                  <ThemedText variant="caption" style={styles.readoutValue}>{streak}D</ThemedText>
+            {/* Daily Goal Integration */}
+            {dailyChallenge && (
+              <View style={styles.goalSection}>
+                <View style={styles.goalInfo}>
+                  <ThemedText variant="caption" style={styles.goalTitle}>{dailyChallenge.title.toUpperCase()}</ThemedText>
+                  <ThemedText variant="caption" style={[styles.goalProgress, { color: dailyChallenge.completed ? theme.success : theme.accent }]}>
+                    {dailyChallenge.currentValue} / {dailyChallenge.targetValue}
+                  </ThemedText>
                 </View>
-                <View style={[styles.readoutDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} />
-                <View style={styles.readoutItem}>
-                  <FontAwesome5 name="coins" size={10} color={theme.accent} />
-                  <ThemedText variant="caption" style={styles.readoutValue}>{valorPoints}</ThemedText>
-                </View>
-                <View style={[styles.readoutDivider, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]} />
-                <View style={styles.readoutItem}>
-                  <FontAwesome5 name="book" size={10} color={theme.success} />
-                  <ThemedText variant="caption" style={styles.readoutValue}>{verseCount}V</ThemedText>
+                <View style={[styles.goalProgressBarBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }]}>
+                  <View 
+                    style={[
+                      styles.goalProgressBar, 
+                      { 
+                        backgroundColor: dailyChallenge.completed ? theme.success : theme.accent,
+                        width: `${Math.min((dailyChallenge.currentValue / dailyChallenge.targetValue) * 100, 100)}%` 
+                      }
+                    ]} 
+                  />
                 </View>
               </View>
-            </View>
-          </View>
-          <View style={styles.avatarContainer}>
-            <SoldierAvatar size="small" showStats={false} />
+            )}
           </View>
         </Animated.View>
-
-        {/* Primary Mission Tool - Tactical Action Button */}
-        <Animated.View style={{
-          opacity: fadeAnim,
-          transform: [{ scale: scaleAnim }],
-          marginTop: 16
-        }}>
-          <PulsingGlow color={ctaState.color} style={styles.primaryCTA}>
-            <TouchableOpacity
-              onPress={handleStartDrill}
-              activeOpacity={0.9}
-            >
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ scale: scaleAnim }] }}>
+          <PulsingGlow color={ctaState.color} style={styles.ctaWrapper}>
+            <TouchableOpacity onPress={handleStartDrill} activeOpacity={0.9}>
               <View style={[
-                styles.primaryCTACard,
+                styles.ctaContainer,
                 {
                   backgroundColor: isDark ? 'rgba(30, 41, 59, 0.6)' : '#FFFFFF',
                   borderColor: isDark ? `${ctaState.color}40` : theme.border,
                 }
               ]}>
-                {!isDark && (
-                  <View style={[styles.ctaStripe, { backgroundColor: ctaState.color }]} />
-                )}
-                <View style={styles.primaryCTAContent}>
-                  <View style={[
-                    styles.primaryCTAIcon,
-                    { backgroundColor: isDark ? `${ctaState.color}20` : `${ctaState.color}15` }
-                  ]}>
-                    <FontAwesome5 name={ctaState.icon} size={28} color={ctaState.color} />
+                <View style={styles.ctaInner}>
+                  <View style={[styles.ctaIconBox, { backgroundColor: `${ctaState.color}15` }]}>
+                    <FontAwesome5 name={ctaState.icon} size={22} color={ctaState.color} />
                   </View>
-                  <View style={styles.primaryCTAText}>
-                    <ThemedText variant="heading" style={[
-                      styles.primaryCTATitle,
-                      { color: ctaState.color, letterSpacing: 2 }
-                    ]}>
+                  <View style={styles.ctaTextBox}>
+                    <ThemedText variant="heading" style={[styles.ctaTitle, { color: ctaState.color }]}>
                       {ctaState.title}
                     </ThemedText>
-                    <ThemedText variant="body" style={[
-                      styles.primaryCTASubtitle,
-                      { color: isDark ? theme.textSecondary : '#6B7B3A' }
-                    ]}>
+                    <ThemedText variant="body" style={styles.ctaSubtitle}>
                       {ctaState.subtitle}
                     </ThemedText>
                   </View>
-                  <View style={styles.primaryCTAArrow}>
-                    <View style={[
-                      styles.arrowCircle,
-                      {
-                        backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#F5F0E1',
-                        borderColor: isDark ? 'rgba(255,255,255,0.15)' : '#D4CBAB',
-                      }
-                    ]}>
-                      <FontAwesome5 name="chevron-right" size={14} color={isDark ? theme.textSecondary : theme.primary} />
-                    </View>
+                  <View style={[styles.ctaArrow, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F5F0E1' }]}>
+                    <FontAwesome5 name="chevron-right" size={12} color={isDark ? theme.textSecondary : theme.primary} />
                   </View>
                 </View>
               </View>
@@ -420,26 +407,18 @@ export default function HomeScreen() {
           </PulsingGlow>
         </Animated.View>
 
-        {/* Streak Challenge - Replaces the redundant stats grid */}
-        <Animated.View style={[styles.challengeSection, {
-          opacity: fadeAnim,
-          transform: [{ translateY: slideAnim }]
-        }]}>
-          <StreakChallenge />
-        </Animated.View>
+        {/* Secondary Operations */}
+        <View style={styles.operationsHeader}>
+          <ThemedText variant="subheading" style={styles.operationsTitle}>RECENT OPERATIONS</ThemedText>
+          <TouchableOpacity onPress={() => router.push('/(tabs)/train')}>
+            <ThemedText variant="caption" style={{ color: theme.accent }}>VIEW ALL</ThemedText>
+          </TouchableOpacity>
+        </View>
         </>
         )}
       </ScrollView>
 
-      {/* Welcome Modal */}
-      <WelcomeModal
-        isVisible={showWelcome}
-        onClose={() => {
-          setShowWelcome(false)
-          setTimeout(() => setShowTutorial(true), 500)
-        }}
-      />
-
+      <WelcomeModal isVisible={showWelcome} onClose={() => { setShowWelcome(false); setTimeout(() => setShowTutorial(true), 500); }} />
       <TutorialOverlay
         isVisible={showTutorial}
         steps={tutorialSteps}
@@ -449,252 +428,74 @@ export default function HomeScreen() {
         onSkip={() => setShowTutorial(false)}
         theme="military"
       />
-
       <LoadingOverlay visible={isLoading} message="Mobilizing forces..." />
     </ThemedContainer>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 100,
-  },
-  profileHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    marginBottom: 16,
-    marginTop: 8,
-  },
-  profileInfo: {
-    flex: 1,
-  },
-  avatarContainer: {
-    padding: 4,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.05)',
-  },
-  briefingCard: {
-    padding: 16,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderLeftWidth: 4,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  classificationStamp: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: '#B91C1C40',
-    backgroundColor: '#B91C1C10',
-  },
-  classificationText: {
-    fontSize: 8,
-    fontWeight: '900',
-    letterSpacing: 2,
-    color: '#B91C1C',
-    fontFamily: 'monospace',
-  },
-  briefingHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  briefingLabel: {
-    letterSpacing: 1.5,
-    fontWeight: '700',
-    fontSize: 9,
-  },
-  greetingText: {
-    fontSize: 20,
-    fontWeight: '800',
-    marginBottom: 6,
-    letterSpacing: 0.5,
-  },
-  subtextText: {
-    fontSize: 14,
-    opacity: 0.8,
-  },
-  briefingText: {
-    fontSize: 13,
-    lineHeight: 20,
-  },
-  primaryCTA: {
-    marginBottom: 20,
-    borderRadius: 8,
-  },
-  primaryCTACard: {
-    borderRadius: 8,
-    padding: 20,
-    borderWidth: 2,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  ctaStripe: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    width: 6,
-    height: '100%',
-  },
-  primaryCTAContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  primaryCTAIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
-  primaryCTAText: {
-    flex: 1,
-    marginLeft: 14,
-  },
-  primaryCTATitle: {
-    fontSize: 16,
-    marginBottom: 4,
-    fontWeight: '800',
-  },
-  primaryCTASubtitle: {
-    fontSize: 12,
-    opacity: 0.8,
-    lineHeight: 17,
-  },
-  primaryCTAArrow: {
-    marginLeft: 8,
-  },
-  arrowCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-  },
-  tacticalReadout: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.05)',
-    gap: 12,
-  },
-  readoutItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  readoutValue: {
-    fontSize: 12,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  readoutDivider: {
-    width: 1,
-    height: 12,
-    opacity: 0.3,
-  },
-  challengeSection: {
-    marginTop: 8,
-    marginBottom: 20,
-  },
-  statsGrid: {
+  container: { flex: 1 },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: 16, paddingBottom: 100 },
+  headerSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
-    gap: 8,
-  },
-  statsCard: {
-    flex: 1,
-    padding: 14,
-    borderRadius: 8,
     alignItems: 'center',
-    borderWidth: 1.5,
-    overflow: 'hidden',
-    position: 'relative',
+    marginTop: 20,
+    marginBottom: 24,
   },
-  statsAccentBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
+  headerTitleContainer: { flex: 1 },
+  headerTitle: { fontSize: 24, fontWeight: '900', letterSpacing: 1.5 },
+  headerUnderline: { height: 3, width: 30, marginTop: 4, borderRadius: 2 },
+  compactStats: { flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 8 },
+  compactStatItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  compactStatValue: { fontSize: 13, fontWeight: '800' },
+  statDivider: { width: 1, height: 12, opacity: 0.3 },
+  avatarFrame: { padding: 3, borderRadius: 30, borderWidth: 1.5, borderStyle: 'dashed' },
+  avatar: { width: 48, height: 48, borderRadius: 24 },
+  rankPlate: { position: 'absolute', bottom: -4, right: -4, paddingHorizontal: 5, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: 'rgba(0,0,0,0.1)' },
+  rankPlateText: { fontSize: 8, fontWeight: '900', color: '#000' },
+  briefingDeck: { marginBottom: 24 },
+  briefingCard: {
+    padding: 24,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderLeftWidth: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
-  statsCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 8,
-    marginTop: 4,
-  },
-  statsCardLabel: {
-    fontSize: 9,
-    letterSpacing: 1.5,
-    fontWeight: '700',
-  },
-  statsCardValue: {
-    fontSize: 22,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-  },
-  statsCardSub: {
-    fontSize: 10,
-    opacity: 0.6,
-    marginTop: 2,
-    fontWeight: '600',
-  },
-
-  battleSection: {
-    marginBottom: 16,
-  },
-  battleCard: {
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  battleCardInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    gap: 16,
-  },
-  battleIconContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 8,
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  battleContent: {
-    flex: 1,
-  },
-  battleTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 4,
-    letterSpacing: 1.5,
-  },
-  battleSubtitle: {
-    opacity: 0.7,
-  },
+  transmissionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 16, justifyContent: 'space-between' },
+  transmissionIconBox: { width: 24, height: 24, alignItems: 'center', justifyContent: 'center', position: 'relative' },
+  pingDot: { position: 'absolute', width: 6, height: 6, borderRadius: 3, opacity: 0.4 },
+  transmissionLabel: { letterSpacing: 1.5, fontWeight: '900', fontSize: 10, flex: 1, marginLeft: 8 },
+  classificationStamp: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 2, borderWidth: 1, transform: [{ rotate: '-12deg' }] },
+  classificationText: { fontSize: 9, fontWeight: '900', letterSpacing: 2, fontFamily: 'monospace' },
+  greetingTitle: { fontSize: 24, fontWeight: '900', marginBottom: 12, letterSpacing: -0.5 },
+  briefingTextContainer: { minHeight: 45, marginBottom: 24 },
+  briefingText: { fontSize: 14, lineHeight: 22, fontWeight: '500' },
+  goalSection: { marginBottom: 24 },
+  goalInfo: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  goalTitle: { fontSize: 10, fontWeight: '900', letterSpacing: 1, opacity: 0.6 },
+  goalProgress: { fontSize: 11, fontWeight: '900' },
+  goalProgressBarBg: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  goalProgressBar: { height: '100%', borderRadius: 3 },
+  readoutFootnote: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 16, borderTopWidth: 1 },
+  readoutBox: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  readoutIconFrame: { width: 28, height: 28, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  readoutValue: { fontSize: 15, fontWeight: '900' },
+  readoutLabel: { fontSize: 8, fontWeight: '800', opacity: 0.5, letterSpacing: 0.5 },
+  readoutDivider: { width: 1, height: 24 },
+  ctaWrapper: { marginBottom: 32, borderRadius: 16 },
+  ctaContainer: { borderRadius: 16, padding: 18, borderWidth: 2 },
+  ctaInner: { flexDirection: 'row', alignItems: 'center' },
+  ctaIconBox: { width: 52, height: 52, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  ctaTextBox: { flex: 1, marginLeft: 16 },
+  ctaTitle: { fontSize: 16, marginBottom: 3, fontWeight: '900', letterSpacing: 1 },
+  ctaSubtitle: { fontSize: 12, opacity: 0.7, lineHeight: 18 },
+  ctaArrow: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.05)' },
+  operationsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingHorizontal: 4 },
+  operationsTitle: { fontSize: 14, fontWeight: '900', letterSpacing: 1.5 },
 })

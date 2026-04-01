@@ -278,14 +278,14 @@ export default function ArsenalScreen() {
                         console.log('🟡 [Arsenal] onChapterNavigate called:', collectionId, chapterId)
                         // Don't clear collection when navigating - let the navigation handle it
                         setShowCollectionDetail(false)
+                        console.log('🟡 [Arsenal] Navigating to /train/collection with:', collectionId, chapterId)
                         router.push({
-                            pathname: '/(tabs)/train/collection',
+                            pathname: '/train/collection',
                             params: {
                                 collectionId,
                                 chapterIds: chapterId,
                             }
                         })
-                        console.log('🟡 [Arsenal] router.push executed')
                     }}
                 />
             )}

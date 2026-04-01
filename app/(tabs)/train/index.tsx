@@ -139,19 +139,19 @@ export default function TrainingScreen() {
                         onPress={() => handleModeSelect('single')}
                         activeOpacity={0.9}
                     >
-                        <ThemedCard variant="glass" style={[styles.modeCardInner, styles.primaryMode, !isDark && { borderColor: '#4A5D23' }]}>
+                        <ThemedCard variant="glass" style={[styles.modeCardInner, styles.primaryMode, !isDark && { borderColor: theme.accent }]}>
                             <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(74, 93, 35, 0.1)' }]}>
-                                    <Ionicons name="eye" size={28} color={isDark ? '#3B82F6' : '#4A5D23'} />
+                                <View style={[styles.modeIcon, { backgroundColor: `${theme.accent}15` }]}>
+                                    <Ionicons name="eye" size={28} color={theme.accent} />
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5 }]}>SINGLE FOCUS</ThemedText>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.accent }]}>SINGLE FOCUS</ThemedText>
                                 <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
                                     Deep memorization drill. Master one target verse at a time before advancing.
                                 </ThemedText>
-                                <View style={[styles.modeTag, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(74, 93, 35, 0.1)' }]}>
-                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: isDark ? '#3B82F6' : '#4A5D23' }]}>Deep Focus</ThemedText>
+                                <View style={[styles.modeTag, { backgroundColor: `${theme.accent}15` }]}>
+                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.accent }]}>Deep Focus</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
@@ -166,19 +166,19 @@ export default function TrainingScreen() {
                         onPress={() => handleModeSelect('burst')}
                         activeOpacity={0.9}
                     >
-                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: '#D4CBAB' }]}>
+                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.success }]}>
                             <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(74, 124, 46, 0.1)' }]}>
-                                    <Ionicons name="flash" size={28} color={isDark ? '#22C55E' : '#4A7C2E'} />
+                                <View style={[styles.modeIcon, { backgroundColor: `${theme.success}15` }]}>
+                                    <Ionicons name="flash" size={28} color={theme.success} />
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5 }]}>BURST FIRE</ThemedText>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.success }]}>BURST FIRE</ThemedText>
                                 <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
                                     Rapid-fire tactical drill for quick recall. Engage multiple familiar verses in succession.
                                 </ThemedText>
-                                <View style={[styles.modeTag, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(74, 124, 46, 0.1)' }]}>
-                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: isDark ? '#22C55E' : '#4A7C2E' }]}>Quick Review</ThemedText>
+                                <View style={[styles.modeTag, { backgroundColor: `${theme.success}15` }]}>
+                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.success }]}>Quick Review</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
@@ -193,19 +193,19 @@ export default function TrainingScreen() {
                         onPress={() => handleModeSelect('automatic')}
                         activeOpacity={0.9}
                     >
-                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: '#D4CBAB' }]}>
+                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.warning }]}>
                             <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.08)' }]}>
-                                    <Ionicons name="infinite" size={28} color="#A855F7" />
+                                <View style={[styles.modeIcon, { backgroundColor: `${theme.warning}15` }]}>
+                                    <Ionicons name="infinite" size={28} color={theme.warning} />
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5 }]}>AUTO PILOT</ThemedText>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.warning }]}>AUTO PILOT</ThemedText>
                                 <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
                                     Verses read aloud automatically, one after another. Just listen and absorb.
                                 </ThemedText>
-                                <View style={[styles.modeTag, { backgroundColor: isDark ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.08)' }]}>
-                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: '#A855F7' }]}>Passive Learning</ThemedText>
+                                <View style={[styles.modeTag, { backgroundColor: `${theme.warning}15` }]}>
+                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.warning }]}>Passive Learning</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>

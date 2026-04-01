@@ -595,7 +595,11 @@ export default function VoiceRecorder({
         'EXTRACTING VERSE FREQUENCIES...',
         'RUNNING BALLISTICS ANALYSIS...',
         'DECRYPTING COMMS...',
-        'FILTERING SIGNAL NOISE...'
+        'FILTERING SIGNAL NOISE...',
+        'ESTABLISHING SECURE UPLINK...',
+        'CALIBRATING TACTICAL DATA...',
+        'TRIANGULATING SCRIPTURE...',
+        'FINALIZING MISSION BRIEF...'
       ];
       const randomMsg = statusMsgs[Math.floor(Math.random() * statusMsgs.length)];
       setStatusMessage(randomMsg);

@@ -41,6 +41,11 @@ export default function CollectionDrillScreen() {
     // Track screen view
     useScreenTracking('collection_drill')
 
+    useEffect(() => {
+        console.log('🔵 [CollectionDrill] Component mounted')
+        return () => console.log('🔴 [CollectionDrill] Component UNMOUNTING')
+    }, [])
+
     const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
     const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
     const [showChapterSelector, setShowChapterSelector] = useState(false)
@@ -52,11 +57,16 @@ export default function CollectionDrillScreen() {
 
     const initialChapterIds = useMemo(() => {
         const raw = params.chapterIds
+        console.log('🔵 [CollectionDrill] params.chapterIds raw:', raw)
         if (!raw) return []
         if (Array.isArray(raw)) {
-            return raw.flatMap((id) => id.split(',')).filter(Boolean)
+            const result = raw.flatMap((id) => id.split(',')).filter(Boolean)
+            console.log('🔵 [CollectionDrill] parsed chapterIds (array):', result)
+            return result
         }
-        return raw.split(',').filter(Boolean)
+        const result = raw.split(',').filter(Boolean)
+        console.log('🔵 [CollectionDrill] parsed chapterIds (string):', result)
+        return result
     }, [params.chapterIds])
 
     // Preselect collection if provided via params
@@ -308,12 +318,12 @@ export default function CollectionDrillScreen() {
                                 <UnifiedScriptureRecorderCard
                                     scripture={currentScripture}
                                     onRecordingComplete={handleRecordingComplete}
+                                    onListen={handleListenVerse}
+                                    isListening={isListeningVerse}
                                 />
                                 <ScriptureActionRow
                                     onStealth={handleStartStealthPractice}
-                                    onListen={handleListenVerse}
                                     onIntel={handleIntelPress}
-                                    isListening={isListeningVerse}
                                 />
                             </>
                         )}
