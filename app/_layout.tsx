@@ -11,6 +11,7 @@ import * as Linking from 'expo-linking'
 import { useZustandStore } from '@/hooks/zustandStore'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
 import { ConvexClientProvider } from '@/providers/ConvexProvider';
+import { ToastContainer } from '@/components/ui/Toast';
 import { Stack } from 'expo-router';
 import "../global.css";
 
@@ -90,6 +91,7 @@ export default function RootLayout() {
                         <Stack.Screen name="(tabs)" />
                         <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
                       </Stack>
+                      <ToastContainer />
                     </RorkErrorBoundary>
                   </BundleInspector>
                 </GestureHandlerRootView>

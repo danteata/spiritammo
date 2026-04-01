@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
   StyleSheet,
   Text,
@@ -6,15 +6,17 @@ import {
   View,
   Animated,
   Platform,
+  ActivityIndicator,
 } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons'
+import * as Haptics from 'expo-haptics'
 import { COLORS } from '@/constants/colors'
 import { useAppStore } from '@/hooks/useAppStore'
 
 interface ActionButtonProps {
   title: string
   subtitle?: string
-  onPress: () => void
+  onPress: () => void | Promise<void>
   testID?: string
   size?: 'small' | 'medium' | 'large'
   animated?: boolean
@@ -22,6 +24,18 @@ interface ActionButtonProps {
   style?: any
   accessibilityRole?: 'button' | 'link' | 'image' | 'text' | 'none'
   accessibilityLabel?: string
+  /** Show loading spinner and disable the button */
+  isLoading?: boolean
+  /** Disable the button without loading spinner */
+  disabled?: boolean
+  /** Debounce interval in ms to prevent double-taps (default: 400) */
+  debounceMs?: number
+  /** Custom loading text (replaces title while loading) */
+  loadingText?: string
+  /** Icon name from FontAwesome (default: crosshairs) */
+  icon?: string
+  /** Variant style */
+  variant?: 'primary' | 'success' | 'danger' | 'ghost'
 }
 
 export default function ActionButton({
@@ -35,32 +49,112 @@ export default function ActionButton({
   textStyle,
   accessibilityRole = 'button',
   accessibilityLabel,
+  isLoading = false,
+  disabled = false,
+  debounceMs = 400,
+  loadingText,
+  icon = 'crosshairs',
+  variant = 'primary',
 }: ActionButtonProps) {
-  const { isDark } = useAppStore()
+  const { isDark, theme } = useAppStore()
   const [pulseAnimation] = useState(new Animated.Value(1))
+  const scaleAnim = useRef(new Animated.Value(1)).current
+  const lastPressTime = useRef(0)
+  const isProcessing = useRef(false)
 
-  const backgroundColor = isDark ? COLORS.primary.dark : COLORS.primary.main
-  const textColor = 'white'
+  const isDisabled = disabled || isLoading
+
+  // Variant colors
+  const getVariantColors = () => {
+    switch (variant) {
+      case 'success':
+        return {
+          bg: isDark ? theme.success : '#4A7C2E',
+          text: '#FFFFFF',
+        }
+      case 'danger':
+        return {
+          bg: isDark ? theme.error : '#B91C1C',
+          text: '#FFFFFF',
+        }
+      case 'ghost':
+        return {
+          bg: 'transparent',
+          text: isDark ? theme.textSecondary : '#6B7B3A',
+        }
+      default:
+        return {
+          bg: isDark ? theme.accent : '#4A5D23',
+          text: '#FFFFFF',
+        }
+    }
+  }
+
+  const variantColors = getVariantColors()
 
   useEffect(() => {
-    if (animated) {
-      // Start pulsing animation
+    if (animated && !isDisabled) {
       Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnimation, {
-            toValue: 1.05,
-            duration: 1000,
+            toValue: 1.03,
+            duration: 1200,
             useNativeDriver: true,
           }),
           Animated.timing(pulseAnimation, {
             toValue: 1,
-            duration: 1000,
+            duration: 1200,
             useNativeDriver: true,
           }),
         ])
       ).start()
     }
-  }, [animated])
+  }, [animated, isDisabled])
+
+  // Press animation
+  const handlePressIn = useCallback(() => {
+    if (isDisabled) return
+    Animated.spring(scaleAnim, {
+      toValue: 0.96,
+      tension: 100,
+      friction: 8,
+      useNativeDriver: true,
+    }).start()
+  }, [isDisabled])
+
+  const handlePressOut = useCallback(() => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      tension: 100,
+      friction: 8,
+      useNativeDriver: true,
+    }).start()
+  }, [])
+
+  const handlePress = useCallback(async () => {
+    // Debounce check
+    const now = Date.now()
+    if (now - lastPressTime.current < debounceMs || isProcessing.current) {
+      return
+    }
+    lastPressTime.current = now
+
+    // Haptic feedback
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(
+        size === 'large'
+          ? Haptics.ImpactFeedbackStyle.Heavy
+          : Haptics.ImpactFeedbackStyle.Medium
+      ).catch(() => {})
+    }
+
+    try {
+      isProcessing.current = true
+      await onPress()
+    } finally {
+      isProcessing.current = false
+    }
+  }, [onPress, debounceMs, size])
 
   const getSizeStyles = () => {
     switch (size) {
@@ -88,7 +182,7 @@ export default function ActionButton({
           subtitle: { fontSize: 16 },
           iconSize: 24,
         }
-      default: // medium
+      default:
         return {
           button: {
             paddingVertical: 12,
@@ -106,41 +200,93 @@ export default function ActionButton({
 
   const buttonContent = (
     <TouchableOpacity
-      style={[styles.button, sizeStyles.button, { backgroundColor }, style]}
-      onPress={onPress}
+      style={[
+        styles.button,
+        sizeStyles.button,
+        {
+          backgroundColor: variantColors.bg,
+          opacity: isDisabled ? 0.55 : 1,
+          borderWidth: variant === 'ghost' ? 1.5 : 0,
+          borderColor: variant === 'ghost' ? (isDark ? 'rgba(255,255,255,0.12)' : '#D4CBAB') : 'transparent',
+        },
+        style,
+      ]}
+      onPress={handlePress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      disabled={isDisabled}
       testID={testID}
       accessibilityRole={accessibilityRole as any}
       accessibilityLabel={accessibilityLabel || title}
+      accessibilityState={{ disabled: isDisabled, busy: isLoading }}
+      activeOpacity={0.8}
     >
       <View style={styles.textContainer}>
-        {size !== 'small' && (
-          <FontAwesome
-            name="crosshairs"
-            size={sizeStyles.iconSize}
-            color={textColor}
-            style={{ marginBottom: 4 }}
-          />
-        )}
-        <Text style={[styles.title, sizeStyles.title, { color: textColor }, textStyle]}>
-          {title}
-        </Text>
-        {subtitle && (
-          <Text
-            style={[styles.subtitle, sizeStyles.subtitle, { color: textColor }]}
-          >
-            {subtitle}
-          </Text>
+        {isLoading ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator
+              size="small"
+              color={variantColors.text}
+              style={{ marginRight: 8 }}
+            />
+            <Text
+              style={[
+                styles.title,
+                sizeStyles.title,
+                { color: variantColors.text },
+                textStyle,
+              ]}
+            >
+              {loadingText || title}
+            </Text>
+          </View>
+        ) : (
+          <>
+            {size !== 'small' && (
+              <FontAwesome
+                name={icon as any}
+                size={sizeStyles.iconSize}
+                color={variantColors.text}
+                style={{ marginBottom: 4 }}
+              />
+            )}
+            <Text
+              style={[
+                styles.title,
+                sizeStyles.title,
+                { color: variantColors.text },
+                textStyle,
+              ]}
+            >
+              {title}
+            </Text>
+            {subtitle && (
+              <Text
+                style={[
+                  styles.subtitle,
+                  sizeStyles.subtitle,
+                  { color: variantColors.text },
+                ]}
+              >
+                {subtitle}
+              </Text>
+            )}
+          </>
         )}
       </View>
     </TouchableOpacity>
   )
 
-  return animated ? (
-    <Animated.View style={{ transform: [{ scale: pulseAnimation }] }}>
+  return (
+    <Animated.View
+      style={{
+        transform: [
+          { scale: animated && !isDisabled ? pulseAnimation : scaleAnim },
+        ],
+      }}
+    >
       {buttonContent}
     </Animated.View>
-  ) : (
-    buttonContent
   )
 }
 
@@ -157,8 +303,8 @@ const styles = StyleSheet.create({
       ios: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 5,
+        shadowOpacity: 0.25,
+        shadowRadius: 6,
       },
       android: {
         elevation: 8,
@@ -170,6 +316,11 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     alignItems: 'center',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontSize: 20,

@@ -8,6 +8,7 @@ import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
+import { SkeletonHomeScreen } from '@/components/ui/Skeleton'
 import StreakChallenge from '@/components/StreakChallenge'
 import SoldierAvatar from '@/components/SoldierAvatar'
 import WelcomeModal from '@/components/WelcomeModal'
@@ -295,6 +296,11 @@ export default function HomeScreen() {
       />
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        {/* Show skeleton while loading */}
+        {isLoading ? (
+          <SkeletonHomeScreen />
+        ) : (
+        <>
         {/* Contextual Greeting Section - Military Briefing Card */}
         <Animated.View style={StyleSheet.flatten([styles.briefingSection, {
           opacity: fadeAnim,
@@ -490,6 +496,8 @@ export default function HomeScreen() {
         }}>
           <StreakChallenge compact={true} />
         </Animated.View>
+        </>
+        )}
       </ScrollView>
 
       {/* Welcome Modal */}

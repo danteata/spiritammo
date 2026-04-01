@@ -26,6 +26,7 @@ import CollectionChapterView from './CollectionChapterView'
 import { CollectionChapterService } from '@/services/collectionChapters'
 import { LoadingOverlay } from './LoadingOverlay'
 import { errorHandler } from '@/services/errorHandler'
+import { Toast } from './ui/Toast'
 
 const { width } = Dimensions.get('window')
 
@@ -154,12 +155,15 @@ const CollectionDetailModal = React.memo(({
             text: 'Remove',
             style: 'destructive',
             onPress: async () => {
+              // Optimistic: remove from local state immediately
+              setLocalScriptures(prev => prev.filter(s => s.id !== item.id))
               const success = await removeScriptureFromCollection(collection.id, item.id)
               if (success) {
-                setLocalScriptures(prev => prev.filter(s => s.id !== item.id))
-                Alert.alert('Success', 'Round removed from arsenal')
+                Toast.missionSuccess('Round removed from arsenal')
               } else {
-                Alert.alert('Error', 'Failed to remove round')
+                // Rollback on failure
+                setLocalScriptures(getScripturesByCollection(collection.id))
+                Toast.missionFailed('Failed to remove round')
               }
             }
           }
@@ -295,7 +299,7 @@ const CollectionDetailModal = React.memo(({
 
   const handleSaveInfo = async () => {
     if (!editedName.trim()) {
-      Alert.alert('Invalid Input', 'Arsenal designation cannot be empty')
+      Toast.warning('Invalid Input', 'Arsenal designation cannot be empty')
       return
     }
 
@@ -309,10 +313,7 @@ const CollectionDetailModal = React.memo(({
 
       if (success) {
         setIsEditingInfo(false)
-        errorHandler.showSuccess(
-          'Arsenal information updated successfully!',
-          'Update Complete'
-        )
+        Toast.missionSuccess('Arsenal information updated')
       } else {
         throw new Error('Update failed')
       }
@@ -346,13 +347,15 @@ const CollectionDetailModal = React.memo(({
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
+            // Optimistic: remove immediately
+            setLocalScriptures(prev => prev.filter(s => s.id !== scriptureId))
             const success = await removeScriptureFromCollection(collection.id, scriptureId)
             if (success) {
-              // Immediately update local state to reflect the deletion
-              setLocalScriptures(prev => prev.filter(s => s.id !== scriptureId))
-              Alert.alert('Success', 'Round removed from arsenal')
+              Toast.missionSuccess('Round removed from arsenal')
             } else {
-              Alert.alert('Error', 'Failed to remove round')
+              // Rollback
+              setLocalScriptures(getScripturesByCollection(collection.id))
+              Toast.missionFailed('Failed to remove round')
             }
           }
         }
@@ -387,21 +390,25 @@ const CollectionDetailModal = React.memo(({
     try {
       setIsProcessing(true)
       const ids = Array.from(selectedScriptureIds)
+
+      // Optimistic: remove from local state immediately
+      const previousScriptures = [...localScriptures]
+      setLocalScriptures(prev => prev.filter(s => !ids.includes(s.id)))
+      setIsBulkSelecting(false)
+      setSelectedScriptureIds(new Set())
+
       const success = await bulkRemoveScripturesFromCollection(collection.id, ids)
 
       if (success) {
-        // Immediately update local state to reflect the deletions
-        setLocalScriptures(prev => prev.filter(s => !ids.includes(s.id)))
-        setIsBulkSelecting(false)
-        setSelectedScriptureIds(new Set())
-        errorHandler.showSuccess(
-          `Removed ${count} round${count !== 1 ? 's' : ''} from arsenal.`,
-          'Rounds Removed'
-        )
+        Toast.missionSuccess(`Removed ${count} round${count !== 1 ? 's' : ''} from arsenal`)
       } else {
-        throw new Error('Bulk delete failed')
+        // Rollback
+        setLocalScriptures(previousScriptures)
+        Toast.missionFailed('Failed to remove rounds')
       }
     } catch (error) {
+      // Rollback on error
+      setLocalScriptures(getScripturesByCollection(collection.id))
       await errorHandler.handleError(
         error,
         'Remove Rounds',
@@ -430,10 +437,7 @@ const CollectionDetailModal = React.memo(({
       const success = await deleteCollection(collection.id)
 
       if (success) {
-        errorHandler.showSuccess(
-          `Arsenal "${collection.name}" dismantled successfully.`,
-          'Arsenal Deleted'
-        )
+        Toast.missionSuccess(`Arsenal "${collection.name}" dismantled`)
         onClose()
       } else {
         throw new Error('Delete collection failed')
@@ -518,10 +522,7 @@ const CollectionDetailModal = React.memo(({
 
       const success = await updateCollection(updatedCollection)
       if (success) {
-        errorHandler.showSuccess(
-          'Chapters enabled successfully.',
-          'Chapter Organization'
-        )
+        Toast.missionSuccess('Chapters enabled successfully')
       } else {
         throw new Error('Chapter update failed')
       }

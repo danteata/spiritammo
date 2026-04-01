@@ -17,6 +17,8 @@ import { useAppStore } from '@/hooks/useAppStore'
 import { Collection, Scripture } from '@/types/scripture'
 import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
+import { SkeletonCollectionList } from '@/components/ui/Skeleton'
+import { Toast } from '@/components/ui/Toast'
 import FileUploader from '@/components/FileUploader'
 import CollectionDetailModal from '@/components/CollectionDetailModal'
 import AddVersesModal from '@/components/AddVersesModal'
@@ -298,10 +300,10 @@ export default function ArsenalScreen() {
                                     // 2. Link them to the selected collection
                                     await addScripturesToCollection(targetCollectionId, verses.map(v => v.id))
                                 }
-                                console.log('✅ Successfully persisted extracted verses')
+                                Toast.missionSuccess(`${verses.length} verse${verses.length !== 1 ? 's' : ''} imported to arsenal`)
                             } catch (error) {
                                 console.error('❌ Failed to persist extracted verses:', error)
-                                Alert.alert('Persistence Failed', 'Failed to save extracted verses to your arsenal.')
+                                Toast.missionFailed('Failed to save extracted verses to your arsenal')
                             }
                         }
                         setShowFileUploader(false)

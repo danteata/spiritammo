@@ -176,9 +176,6 @@ export const createAvatarSlice: AvatarSliceCreator = (set, get) => ({
 
             set({ avatarInventory: updatedInventory, avatarStats: updatedStats })
             await saveAvatarData()
-
-            console.log(`🏆 VP Reward: +${points} VP from ${source}`)
-
         } catch (error) {
             console.error('Failed to add Valor Points:', error)
         }

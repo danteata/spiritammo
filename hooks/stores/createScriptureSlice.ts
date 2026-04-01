@@ -72,7 +72,6 @@ export const createScriptureSlice: StateCreator<ScriptureSlice & { updateUserSta
 
     updateScriptureAccuracy: async (scriptureId, accuracy) => {
         try {
-            console.log('🎯 updateScriptureAccuracy called:', { scriptureId, accuracy })
             const timestamp = new Date().toISOString();
             const db = await getDb();
 
@@ -89,7 +88,6 @@ export const createScriptureSlice: StateCreator<ScriptureSlice & { updateUserSta
             const newAccuracy = currentScripture.accuracy ? (currentScripture.accuracy + accuracy) / 2 : accuracy;
             const newCount = (currentScripture.practiceCount || 0) + 1;
 
-            console.log('🎯 Updating scripture in DB:', { newAccuracy, newCount });
             await db.update(scripturesTable)
                 .set({
                     accuracy: newAccuracy,
@@ -99,7 +97,6 @@ export const createScriptureSlice: StateCreator<ScriptureSlice & { updateUserSta
                 .where(eq(scripturesTable.id, scriptureId));
 
             // 2. Log practice
-            console.log('🎯 Logging practice to database');
             await db.insert(practiceLogsTable).values({
                 id: generateUUID(),
                 scriptureId,
@@ -126,10 +123,8 @@ export const createScriptureSlice: StateCreator<ScriptureSlice & { updateUserSta
                 set({ currentScripture: (updatedScriptures.find((s) => s.id === scriptureId) as Scripture) || null })
             }
 
-            console.log('🎯 Calling updateUserStats with accuracy:', accuracy);
             // Note: updateUserStats is expected to be in the merged store
             await get().updateUserStats(accuracy)
-            console.log('🎯 updateScriptureAccuracy completed successfully');
             return true
         } catch (error) {
             await errorHandler.handleError(
@@ -146,7 +141,6 @@ export const createScriptureSlice: StateCreator<ScriptureSlice & { updateUserSta
 
     updateScriptureMnemonic: async (scriptureId, mnemonic) => {
         try {
-            console.log('🧠 updateScriptureMnemonic called:', { scriptureId })
             const db = await getDb();
 
             if (!db) {
@@ -171,7 +165,6 @@ export const createScriptureSlice: StateCreator<ScriptureSlice & { updateUserSta
                 set({ currentScripture: { ...get().currentScripture!, mnemonic } })
             }
 
-            console.log('🧠 Mnemonic updated in DB and State');
             return true
         } catch (error) {
             await errorHandler.handleError(

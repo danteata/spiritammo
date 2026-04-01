@@ -81,8 +81,11 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
         await initializeDatabase()
         await get().loadAvatarData()
 
+        // Batch all AsyncStorage reads into a single call (perf: 3 round-trips → 1)
+        const [[, storedSettings], [, storedCampaigns], [, storedStats]] =
+          await AsyncStorage.multiGet(['user_settings', 'user_campaigns', 'user_stats'])
+
         // Load user settings
-        const storedSettings = await AsyncStorage.getItem('user_settings')
         if (storedSettings) {
           set({ userSettings: JSON.parse(storedSettings) })
         } else {
@@ -90,7 +93,6 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
         }
 
         // Load campaigns
-        const storedCampaigns = await AsyncStorage.getItem('user_campaigns')
         if (storedCampaigns) {
           try {
             set({ campaigns: JSON.parse(storedCampaigns) })
@@ -101,9 +103,6 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
         } else {
           set({ campaigns: INITIAL_CAMPAIGNS })
         }
-
-        // Load user stats
-        const storedStats = await AsyncStorage.getItem('user_stats')
         if (storedStats) {
           set({ userStats: JSON.parse(storedStats) })
         } else {

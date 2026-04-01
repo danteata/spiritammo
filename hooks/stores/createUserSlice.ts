@@ -76,9 +76,7 @@ export const createUserSlice: StateCreator<UserSlice & ScriptureSlice, [], [], U
 
     updateUserStats: async (accuracy) => {
         try {
-            console.log('📊 updateUserStats called with accuracy:', accuracy)
             const updatedStats = { ...get().userStats }
-            console.log('📊 Current stats before update:', updatedStats)
 
             updatedStats.totalPracticed += 1
 
@@ -101,8 +99,6 @@ export const createUserSlice: StateCreator<UserSlice & ScriptureSlice, [], [], U
 
             // Sync with Military Ranking Service
             try {
-                console.log('🎖 Syncing with Military Ranking Service...')
-                console.log('🎖 Current Rank:', updatedStats.rank)
                 const rankingResult = await militaryRankingService.updateProfile({
                     versesMemorized: updatedStats.totalPracticed,
                     averageAccuracy: updatedStats.averageAccuracy,
@@ -110,10 +106,8 @@ export const createUserSlice: StateCreator<UserSlice & ScriptureSlice, [], [], U
                     lastSessionAccuracy: accuracy,
                     lastSessionWordCount: get().currentScripture?.text ? get().currentScripture!.text.split(/\s+/).length : 0
                 })
-                console.log('🎖 Ranking Service Result:', rankingResult)
 
                 if (rankingResult.newRank && rankingResult.newRank !== updatedStats.rank) {
-                    console.log('🎖 Rank updated from service:', rankingResult.newRank)
                     updatedStats.rank = rankingResult.newRank
                 }
             } catch (rankError) {
@@ -121,12 +115,8 @@ export const createUserSlice: StateCreator<UserSlice & ScriptureSlice, [], [], U
                 // Don't fail the whole operation if ranking sync fails
             }
 
-            console.log('📊 Updated stats:', updatedStats)
             await AsyncStorage.setItem(USER_STATS_KEY, JSON.stringify(updatedStats))
-            console.log('📊 Stats saved to AsyncStorage')
-
             set({ userStats: updatedStats })
-            console.log('📊 Stats updated in state')
             return true
         } catch (error) {
             await errorHandler.handleError(
