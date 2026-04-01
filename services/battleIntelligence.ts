@@ -3,16 +3,33 @@ import { Scripture } from '@/types/scripture'
 import { OpenAI } from 'openai'
 import { errorHandler } from './errorHandler'
 
+const buildGeminiBaseUrl = (rawBaseUrl?: string, version: string = 'v1beta') => {
+  const base = (rawBaseUrl || 'https://generativelanguage.googleapis.com').replace(/\/+$/, '')
+  if (base.includes('/openai')) return `${base}/`
+  if (base.match(/\/v\d/)) return `${base}/openai/`
+  return `${base}/${version}/openai/`
+}
+
+const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY
+const GEMINI_API_VERSION = process.env.EXPO_PUBLIC_GEMINI_API_VERSION || 'v1beta'
+const GEMINI_API_BASE_URL = buildGeminiBaseUrl(process.env.EXPO_PUBLIC_GEMINI_API_BASE_URL, GEMINI_API_VERSION)
+const GEMINI_MODEL = process.env.EXPO_PUBLIC_GEMINI_API_MODEL || 'gemini-2.5-flash'
+
+const getGeminiConfigSnapshot = () => ({
+  baseURL: GEMINI_API_BASE_URL,
+  version: GEMINI_API_VERSION,
+  model: GEMINI_MODEL,
+  keyPresent: !!(GEMINI_API_KEY && GEMINI_API_KEY !== 'fake-key-for-dev'),
+  keyLength: GEMINI_API_KEY?.length || 0,
+})
+
 // Initialize OpenAI client for Gemini compatibility
 const openai = new OpenAI({
-  apiKey: process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'fake-key-for-dev',
+  apiKey: GEMINI_API_KEY || 'fake-key-for-dev',
   dangerouslyAllowBrowser: true,
-  baseURL: `${process.env.EXPO_PUBLIC_GEMINI_API_BASE_URL ||
-    'https://generativelanguage.googleapis.com'
-    }/${process.env.EXPO_PUBLIC_GEMINI_API_VERSION || 'v1beta'}/openai/`,
+  baseURL: GEMINI_API_BASE_URL,
   defaultHeaders: {
-    'x-goog-api-key':
-      process.env.EXPO_PUBLIC_GEMINI_API_KEY || 'fake-key-for-dev',
+    'x-goog-api-key': GEMINI_API_KEY || 'fake-key-for-dev',
   },
 })
 
@@ -154,11 +171,46 @@ export const generateBattleIntel = async (
       "reliability": 95
     }`
 
-    const completion = await openai.chat.completions.create({
-      model: process.env.EXPO_PUBLIC_GEMINI_API_MODEL || 'gemini-2.5-flash',
-      messages: [{ role: 'user', content: prompt }],
-      temperature: parseFloat(process.env.EXPO_PUBLIC_GEMINI_API_TEMPERATURE || '0.7'),
-    })
+    const keyReady = GEMINI_API_KEY && GEMINI_API_KEY !== 'fake-key-for-dev'
+    if (!keyReady) {
+      console.error('Gemini configuration missing API key:', getGeminiConfigSnapshot())
+      throw new Error('Gemini API key missing. Set EXPO_PUBLIC_GEMINI_API_KEY.')
+    }
+
+    const temperature = parseFloat(process.env.EXPO_PUBLIC_GEMINI_API_TEMPERATURE || '0.7')
+    const fallbackModel = 'gemini-1.5-flash'
+    let completion
+
+    try {
+      completion = await openai.chat.completions.create({
+        model: GEMINI_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        temperature,
+      })
+    } catch (err: any) {
+      const status = err?.status
+      console.error('Gemini request failed:', {
+        status,
+        message: err?.message,
+        ...getGeminiConfigSnapshot(),
+      })
+
+      if (status === 404 && GEMINI_MODEL !== fallbackModel) {
+        console.warn(`Retrying Gemini request with fallback model: ${fallbackModel}`)
+        try {
+          completion = await openai.chat.completions.create({
+            model: fallbackModel,
+            messages: [{ role: 'user', content: prompt }],
+            temperature,
+          })
+        } catch (fallbackError) {
+          console.error('Fallback model request also failed:', fallbackError)
+          throw new Error(`Gemini API failed with both primary model (${GEMINI_MODEL}) and fallback model (${fallbackModel}): ${fallbackError}`)
+        }
+      } else {
+        throw err
+      }
+    }
 
     const responseContent = completion.choices[0]?.message?.content || '{}'
     console.log('🎯 Gemini Response:', responseContent)
@@ -201,7 +253,7 @@ export const generateBattleIntel = async (
     await errorHandler.handleError(
       error,
       'Generate Battle Intelligence',
-      { 
+      {
         customMessage: 'Intel generation failed. Deploying standard tactical pattern.',
         silent: true // Don't show alert, just use fallback
       }

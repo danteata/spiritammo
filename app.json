@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "SpiritAmmo",
-    "slug": "spiritammo-scripture-mobile-app",
+    "slug": "spiritammo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.rork.spiritammo-scripture-mobile-app",
+      "bundleIdentifier": "com.danteata.spiritammo",
       "infoPlist": {
         "NSMicrophoneUsageDescription": "Recording is required for target practice transcription."
       }
@@ -25,11 +25,10 @@
         "backgroundColor": "#ffffff",
         "backgroundImage": "./assets/images/adaptive-icon/background.png"
       },
-      "package": "com.danteata.spiritammoscripturemobileapp",
+      "package": "com.danteata.spiritammo",
       "permissions": [
         "RECORD_AUDIO"
-      ],
-      "newArchEnabled": false
+      ]
     },
     "web": {
       "favicon": "./assets/images/favicon.png",

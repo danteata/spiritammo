@@ -16,8 +16,11 @@ import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import {
   fileExtractionService,
   ExtractedDocument,
+  ExtractedVerse,
   ExtractionProgress,
 } from '@/services/fileExtraction'
+import { CollectionChapterService } from '@/services/collectionChapters'
+import { Scripture } from '@/types/scripture'
 import CollectionSelector from './CollectionSelector'
 import { Collection } from '@/types/scripture'
 import { PDFExtractor } from './PDFExtractor';
@@ -49,6 +52,34 @@ export default function FileUploader({
   const [selectedVerses, setSelectedVerses] = useState<string[]>([])
   const [pdfFile, setPdfFile] = useState<{ uri: string; name: string; size: number } | null>(null)
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
+  const [isLoadingDocument, setIsLoadingDocument] = useState(false)
+  const [isSelectingAll, setIsSelectingAll] = useState(false)
+  const [isImporting, setIsImporting] = useState(false)
+  const [documentChapterCounts, setDocumentChapterCounts] = useState<Record<string, number>>({})
+
+  // Compute collection chapter counts when documents change
+  useEffect(() => {
+    const computeChapterCounts = () => {
+      const counts: Record<string, number> = {}
+      extractedDocuments.forEach(doc => {
+        if (doc.verses.length > 0) {
+          // Count unique collection chapters (exclude 0 as it's the default)
+          const chapters = new Set(doc.verses.map(v => (v as any).collectionChapter).filter(c => c && c > 0))
+          counts[doc.id] = chapters.size || 1 // At least 1 chapter if there are verses
+        }
+      })
+      setDocumentChapterCounts(counts)
+    }
+    
+    if (extractedDocuments.length > 0) {
+      computeChapterCounts()
+    }
+  }, [extractedDocuments])
+
+  // Helper to get collection chapter count for a document
+  const getCollectionChapterCount = (docId: string): number => {
+    return documentChapterCounts[docId] || 0
+  }
 
   React.useEffect(() => {
     if (isVisible) {
@@ -105,7 +136,7 @@ export default function FileUploader({
           fileType,
           (progress) => setExtractionProgress(progress)
         )
-        await processExtractedText(text, file.name, fileType, file.size || 0)
+        await processExtractedText(text, file.name, fileType, file.size || 0, file.uri)
       }
     } catch (error) {
       Alert.alert('Extraction Failed', (error as any)?.message || String(error))
@@ -117,7 +148,8 @@ export default function FileUploader({
     text: string,
     name: string,
     type: 'pdf' | 'epub' | 'txt',
-    size: number
+    size: number,
+    fileUri?: string
   ) => {
     try {
       const result = await fileExtractionService.processExtractedText(
@@ -126,7 +158,7 @@ export default function FileUploader({
         type,
         size,
         (progress) => setExtractionProgress(progress),
-        { useInternalBible }
+        { useInternalBible, fileUri }
       )
 
       loadExtractedDocuments()
@@ -156,9 +188,13 @@ export default function FileUploader({
     setPdfFile(null)
   }
 
-  const handleDocumentSelect = (document: ExtractedDocument) => {
+  const handleDocumentSelect = async (document: ExtractedDocument) => {
+    setIsLoadingDocument(true)
+    // Yield to UI thread so loading indicator renders before heavy state update
+    await new Promise(resolve => setTimeout(resolve, 50))
     setSelectedDocument(document)
     setSelectedVerses([])
+    setIsLoadingDocument(false)
   }
 
   const handleVerseToggle = (verseId: string) => {
@@ -169,33 +205,42 @@ export default function FileUploader({
     )
   }
 
-  const handleSelectAll = () => {
+  const handleSelectAll = async () => {
     if (!selectedDocument) return
 
     if (selectedVerses.length === selectedDocument.verses.length) {
       setSelectedVerses([])
     } else {
+      setIsSelectingAll(true)
+      // Yield to UI thread so loading indicator renders
+      await new Promise(resolve => setTimeout(resolve, 50))
       setSelectedVerses(selectedDocument.verses.map((v) => v.id))
+      setIsSelectingAll(false)
     }
   }
 
-  const handleImportSelected = () => {
+  const handleImportSelected = async () => {
     if (!selectedDocument || selectedVerses.length === 0) {
       Alert.alert('No Verses Selected', 'Please select verses to import.')
       return
     }
 
-    const scriptures = fileExtractionService.convertToScriptures(
-      selectedDocument,
-      selectedVerses
-    )
-    onVersesExtracted(scriptures, selectedCollection?.id)
+    setIsImporting(true)
+    try {
+      const scriptures = fileExtractionService.convertToScriptures(
+        selectedDocument,
+        selectedVerses
+      )
+      await onVersesExtracted(scriptures, selectedCollection?.id)
 
-    Alert.alert(
-      'Import Successful!',
-      `Imported ${scriptures.length} verses to ${selectedCollection ? selectedCollection.name : 'new arsenal'}.`,
-      [{ text: 'OK', onPress: onClose }]
-    )
+      Alert.alert(
+        'Import Successful!',
+        `Imported ${scriptures.length} verses to ${selectedCollection ? selectedCollection.name : 'new arsenal'}.`,
+        [{ text: 'OK', onPress: onClose }]
+      )
+    } finally {
+      setIsImporting(false)
+    }
   }
 
   const handleDeleteDocument = (documentId: string) => {
@@ -278,6 +323,18 @@ export default function FileUploader({
         EXTRACTED DOCUMENTS
       </Text>
 
+      {/* Loading overlay when selecting a document */}
+      {isLoadingDocument && (
+        <View style={styles.loadingOverlay}>
+          <View style={[styles.loadingCard, { backgroundColor: theme.surface }]}>
+            <ActivityIndicator size="large" color={theme.accent} />
+            <Text style={[styles.loadingText, MILITARY_TYPOGRAPHY.body]}>
+              LOADING VERSES...
+            </Text>
+          </View>
+        </View>
+      )}
+
       {!isExtracting && extractedDocuments.length === 0 ? (
         <View style={styles.emptyState}>
           <View style={styles.emptyIconContainer}>
@@ -298,14 +355,20 @@ export default function FileUploader({
               style={[
                 styles.documentCard,
                 selectedDocument?.id === doc.id && styles.selectedDocument,
+                isLoadingDocument && styles.disabledCard,
               ]}
-              onPress={() => handleDocumentSelect(doc)}
+              onPress={() => !isLoadingDocument && handleDocumentSelect(doc)}
               activeOpacity={0.7}
+              disabled={isLoadingDocument}
             >
               <View style={styles.documentHeader}>
                 <View style={styles.documentInfo}>
                   <View style={[styles.documentIconBadge, selectedDocument?.id === doc.id && { backgroundColor: theme.accent }]}>
-                    <FontAwesome name="file-text-o" size={18} color={selectedDocument?.id === doc.id ? '#FFF' : theme.textSecondary} />
+                    {isLoadingDocument && selectedDocument?.id === doc.id ? (
+                      <ActivityIndicator size="small" color={theme.accent} />
+                    ) : (
+                      <FontAwesome name="file-text-o" size={18} color={selectedDocument?.id === doc.id ? '#FFF' : theme.textSecondary} />
+                    )}
                   </View>
                   <View style={styles.documentDetails}>
                     <Text
@@ -316,7 +379,7 @@ export default function FileUploader({
                     <Text
                       style={[styles.documentMeta, MILITARY_TYPOGRAPHY.caption]}
                     >
-                      {doc.totalVerses} VERSES • {doc.type.toUpperCase()} •{' '}
+                      {doc.totalVerses} VERSES{getCollectionChapterCount(doc.id) > 0 ? ` • FROM ${getCollectionChapterCount(doc.id)} COLLECTION ${getCollectionChapterCount(doc.id) === 1 ? 'CHAPTER' : 'CHAPTERS'}` : ''} • {doc.type.toUpperCase()} •{' '}
                       {(doc.size / 1024).toFixed(1)}KB
                     </Text>
                   </View>
@@ -325,6 +388,7 @@ export default function FileUploader({
                 <TouchableOpacity
                   style={styles.deleteButton}
                   onPress={() => handleDeleteDocument(doc.id)}
+                  disabled={isLoadingDocument}
                 >
                   <FontAwesome name="trash-o" size={16} color={theme.textSecondary} />
                 </TouchableOpacity>
@@ -350,11 +414,40 @@ export default function FileUploader({
   const renderVerseSelection = () => {
     if (!selectedDocument) return null
 
+    // Group verses by collection chapter
+    const versesByChapter: Record<number, ExtractedVerse[]> = {}
+    selectedDocument.verses.forEach(verse => {
+      const chapter = (verse as any).collectionChapter || 0
+      if (!versesByChapter[chapter]) {
+        versesByChapter[chapter] = []
+      }
+      versesByChapter[chapter].push(verse)
+    })
+
+    const sortedChapters = Object.keys(versesByChapter)
+      .map(Number)
+      .sort((a, b) => a - b)
+
     return (
       <View style={styles.verseSelection}>
+        {/* Import loading overlay */}
+        {isImporting && (
+          <View style={styles.loadingOverlay}>
+            <View style={[styles.loadingCard, { backgroundColor: theme.surface }]}>
+              <ActivityIndicator size="large" color={theme.success} />
+              <Text style={[styles.loadingText, MILITARY_TYPOGRAPHY.body]}>
+                IMPORTING {selectedVerses.length} VERSES...
+              </Text>
+              <Text style={[styles.loadingSubtext, MILITARY_TYPOGRAPHY.caption]}>
+                Adding to {selectedCollection ? selectedCollection.name : 'arsenal'}
+              </Text>
+            </View>
+          </View>
+        )}
+
         <View style={styles.selectionHeader}>
           <Text style={[styles.sectionTitle, MILITARY_TYPOGRAPHY.subheading]}>
-            SELECT VERSES TO IMPORT
+            SELECT VERSES BY CHAPTER
           </Text>
 
           <View style={{ marginBottom: 16 }}>
@@ -366,88 +459,147 @@ export default function FileUploader({
 
           <View style={styles.selectionActions}>
             <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: theme.surface }]}
+              style={[styles.actionButton, { backgroundColor: theme.surface }, isSelectingAll && styles.disabledButton]}
               onPress={handleSelectAll}
+              disabled={isSelectingAll}
             >
-              <FontAwesome name="check-square-o" size={16} color={theme.text} />
+              {isSelectingAll ? (
+                <ActivityIndicator size="small" color={theme.text} />
+              ) : (
+                <FontAwesome name="check-square-o" size={16} color={theme.text} />
+              )}
               <Text style={[styles.actionText, MILITARY_TYPOGRAPHY.caption]}>
-                {selectedVerses.length === selectedDocument.verses.length
-                  ? 'DESELECT ALL'
-                  : 'SELECT ALL'}
+                {isSelectingAll
+                  ? 'SELECTING...'
+                  : selectedVerses.length === selectedDocument.verses.length
+                    ? 'DESELECT ALL'
+                    : 'SELECT ALL'}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.actionButton, styles.importButton]}
+              style={[styles.actionButton, styles.importButton, (selectedVerses.length === 0 || isImporting) && styles.disabledButton]}
               onPress={handleImportSelected}
-              disabled={selectedVerses.length === 0}
+              disabled={selectedVerses.length === 0 || isImporting}
             >
-              <FontAwesome name="download" size={16} color={theme.text} />
+              {isImporting ? (
+                <ActivityIndicator size="small" color={theme.text} />
+              ) : (
+                <FontAwesome name="download" size={16} color={theme.text} />
+              )}
               <Text style={[styles.actionText, MILITARY_TYPOGRAPHY.caption]}>
-                IMPORT ({selectedVerses.length})
+                {isImporting ? 'IMPORTING...' : `IMPORT (${selectedVerses.length})`}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
 
         <ScrollView style={styles.verseScroll}>
-          {selectedDocument.verses.map((verse) => (
-            <TouchableOpacity
-              key={verse.id}
-              style={[
-                styles.verseCard,
-                selectedVerses.includes(verse.id) && styles.selectedVerse,
-              ]}
-              onPress={() => handleVerseToggle(verse.id)}
-            >
-              <View style={styles.verseHeader}>
-                <View style={styles.verseInfo}>
-                  {verse.reference && (
-                    <Text
-                      style={[
-                        styles.verseReference,
-                        MILITARY_TYPOGRAPHY.caption,
-                      ]}
-                    >
-                      {verse.reference}
-                    </Text>
-                  )}
-
-                  <View style={styles.confidenceIndicator}>
-                    <View
-                      style={[
-                        styles.confidenceDot,
-                        {
-                          backgroundColor: getConfidenceColor(verse.confidence),
-                        },
-                      ]}
+          {sortedChapters.map(chapterNum => {
+            const chapterVerses = versesByChapter[chapterNum]
+            const allSelected = chapterVerses.every(v => selectedVerses.includes(v.id))
+            const someSelected = chapterVerses.some(v => selectedVerses.includes(v.id))
+            
+            return (
+              <View key={chapterNum} style={styles.chapterSection}>
+                <TouchableOpacity
+                  style={[
+                    styles.chapterHeader,
+                    { backgroundColor: allSelected ? theme.success : someSelected ? theme.warning : theme.surface }
+                  ]}
+                  onPress={() => {
+                    // Toggle all verses in this chapter
+                    if (allSelected) {
+                      setSelectedVerses(prev => prev.filter(id => !chapterVerses.find(v => v.id === id)))
+                    } else {
+                      setSelectedVerses(prev => [...new Set([...prev, ...chapterVerses.map(v => v.id)])])
+                    }
+                  }}
+                >
+                  <View style={styles.chapterHeaderLeft}>
+                    <FontAwesome 
+                      name={allSelected ? "check-square-o" : someSelected ? "minus-square-o" : "square-o"} 
+                      size={18} 
+                      color={allSelected ? '#FFF' : theme.text} 
                     />
-                    <Text
-                      style={[
-                        styles.confidenceText,
-                        MILITARY_TYPOGRAPHY.caption,
-                        { color: getConfidenceColor(verse.confidence) },
-                      ]}
-                    >
-                      {getConfidenceLabel(verse.confidence)}
+                    <Text style={[
+                      styles.chapterTitle,
+                      MILITARY_TYPOGRAPHY.subheading,
+                      { color: allSelected ? '#FFF' : theme.text }
+                    ]}>
+                      Chapter {chapterNum}
                     </Text>
                   </View>
-                </View>
+                  <Text style={[
+                    styles.chapterCount,
+                    MILITARY_TYPOGRAPHY.caption,
+                    { color: allSelected ? '#FFF' : theme.textSecondary }
+                  ]}>
+                    {chapterVerses.length} verses
+                  </Text>
+                </TouchableOpacity>
 
-                <View style={styles.selectionIndicator}>
-                  {selectedVerses.includes(verse.id) ? (
-                    <FontAwesome name="check-circle" size={20} color={theme.success} />
-                  ) : (
-                    <View style={styles.unselectedCircle} />
-                  )}
-                </View>
+                {chapterVerses.map((verse) => (
+                  <TouchableOpacity
+                    key={verse.id}
+                    style={[
+                      styles.verseCard,
+                      selectedVerses.includes(verse.id) && styles.selectedVerse,
+                    ]}
+                    onPress={() => !isImporting && !isSelectingAll && handleVerseToggle(verse.id)}
+                    disabled={isImporting || isSelectingAll}
+                  >
+                    <View style={styles.verseHeader}>
+                      <View style={styles.verseInfo}>
+                        {verse.reference && (
+                          <Text
+                            style={[
+                              styles.verseReference,
+                              MILITARY_TYPOGRAPHY.caption,
+                            ]}
+                          >
+                            {verse.reference}
+                          </Text>
+                        )}
+
+                        <View style={styles.confidenceIndicator}>
+                          <View
+                            style={[
+                              styles.confidenceDot,
+                              {
+                                backgroundColor: getConfidenceColor(verse.confidence),
+                              },
+                            ]}
+                          />
+                          <Text
+                            style={[
+                              styles.confidenceText,
+                              MILITARY_TYPOGRAPHY.caption,
+                              { color: getConfidenceColor(verse.confidence) },
+                            ]}
+                          >
+                            {getConfidenceLabel(verse.confidence)}
+                          </Text>
+                        </View>
+                      </View>
+
+                      <View style={styles.selectionIndicator}>
+                        {selectedVerses.includes(verse.id) ? (
+                          <FontAwesome name="check-circle" size={20} color={theme.success} />
+                        ) : (
+                          <View style={styles.unselectedCircle} />
+                        )}
+                      </View>
+                    </View>
+
+                    <Text style={[styles.verseText, MILITARY_TYPOGRAPHY.body]}>
+                      {verse.text}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
-
-              <Text style={[styles.verseText, MILITARY_TYPOGRAPHY.body]}>
-                {verse.text}
-              </Text>
-            </TouchableOpacity>
-          ))}
+            )
+          })}
         </ScrollView>
       </View>
     )
@@ -525,8 +677,9 @@ export default function FileUploader({
         {/* Back button when viewing verses */}
         {selectedDocument && (
           <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => setSelectedDocument(null)}
+            style={[styles.backButton, (isImporting || isSelectingAll) && { opacity: 0.5 }]}
+            onPress={() => !isImporting && setSelectedDocument(null)}
+            disabled={isImporting}
           >
             <Text style={[styles.backText, MILITARY_TYPOGRAPHY.button]}>
               ← BACK TO DOCUMENTS
@@ -855,5 +1008,59 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   backText: {
     color: theme.text,
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  loadingCard: {
+    borderRadius: 16,
+    padding: 32,
+    alignItems: 'center',
+    gap: 16,
+    minWidth: 180,
+  },
+  loadingText: {
+    color: theme.text,
+    fontSize: 13,
+    letterSpacing: 1,
+  },
+  loadingSubtext: {
+    color: theme.textSecondary,
+    fontSize: 11,
+    opacity: 0.7,
+  },
+  disabledCard: {
+    opacity: 0.5,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  chapterSection: {
+    marginBottom: 16,
+  },
+  chapterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  chapterHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  chapterTitle: {
+    color: theme.text,
+  },
+  chapterCount: {
+    color: theme.textSecondary,
   },
 })

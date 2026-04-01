@@ -6,6 +6,7 @@ import {
     TouchableOpacity,
     Alert,
     ActivityIndicator,
+    Animated,
 } from 'react-native'
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
@@ -23,9 +24,8 @@ import useZustandStore from '@/hooks/zustandStore'
 import { AccessDeniedModal } from '@/components/AccessDeniedModal'
 import { analytics, AnalyticsEventType } from '@/services/analytics'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
-import ValorPointsService from '@/services/valorPoints'
 
-export default function CampaignScreen() {
+export default function TrainingCampaignScreen() {
     const {
         campaigns,
         activeCampaignId,
@@ -37,10 +37,10 @@ export default function CampaignScreen() {
     } = useAppStore()
 
     const router = useRouter()
-    const { trackCampaignStart, trackCampaignComplete } = useAnalytics()
+    const { trackCampaignStart } = useAnalytics()
 
     // Track screen view
-    useScreenTracking('campaign')
+    useScreenTracking('training_campaign')
 
     const [activeCampaign, setActiveCampaign] = useState<Campaign | null>(null)
     const [selectedNode, setSelectedNode] = useState<CampaignNode | null>(null)
@@ -76,7 +76,8 @@ export default function CampaignScreen() {
                 campaign_theme: campaign?.theme,
                 total_nodes: campaign?.nodes.length,
                 user_rank: userStats.rank,
-                user_streak: userStats.streak
+                user_streak: userStats.streak,
+                is_training: true
             }
         })
         startCampaign(campaignId)
@@ -93,7 +94,7 @@ export default function CampaignScreen() {
             return
         }
 
-        // 1. Try to provision (find or fetch) the scripture
+        // Try to provision the scripture
         setIsLoadingScripture(true)
         const scripture = await useZustandStore.getState().provisionCampaignScripture(node)
         setIsLoadingScripture(false)
@@ -101,9 +102,8 @@ export default function CampaignScreen() {
         if (scripture) {
             setTargetScripture(scripture)
             setSelectedNode(node)
-            setShowBriefing(true) // Show custom briefing instead of Alert
+            setShowBriefing(true)
         } else {
-            // This shouldn't happen for non-locked nodes, but just in case
             setDeniedModal({
                 visible: true,
                 type: 'operation',
@@ -118,42 +118,24 @@ export default function CampaignScreen() {
         // Close practice mode
         setPracticeMode(null)
 
-        // Check pass/fail logic locally for immediate feedback
-        if (accuracy >= selectedNode.requiredAccuracy) {
-            // Award Valor Points for successful mission
-            const vpEarned = await ValorPointsService.awardTargetPracticeVP(
-                accuracy,
-                0, // No streak bonus for campaign missions
-                'recruit' // Default rank for now
-            )
-
-            // Update Store
-            const success = await completeNode(activeCampaign.id, selectedNode.id, accuracy)
-
-            if (success) {
-                Alert.alert(
-                    'MISSION ACCOMPLISHED',
-                    `Sector Secured! Accuracy: ${accuracy.toFixed(1)}%\nValor Points Earned: ${vpEarned} VP`,
-                    [{ text: 'Hooah!' }]
-                )
-            } else {
-                Alert.alert(
-                    'MISSION DEBRIEF',
-                    `Accuracy: ${accuracy.toFixed(1)}%. You've already conquered this or requirement met, but level up logic failed.`,
-                    [{ text: 'Dismiss' }]
-                )
-            }
-        } else {
-            Alert.alert(
-                'MISSION FAILED',
-                `Accuracy: ${accuracy.toFixed(1)}%. Required: ${selectedNode.requiredAccuracy}%. Return to base and practice.`,
-                [{ text: 'Retry', style: 'cancel' }]
-            )
-        }
-
         // Reset selection
         setSelectedNode(null)
         setTargetScripture(null)
+
+        // In training mode, we don't track scores - just show feedback
+        if (accuracy >= 70) {
+            Alert.alert(
+                'TRAINING COMPLETE',
+                `Good work! Accuracy: ${accuracy.toFixed(1)}%`,
+                [{ text: 'Continue Training' }]
+            )
+        } else {
+            Alert.alert(
+                'KEEP PRACTICING',
+                `Accuracy: ${accuracy.toFixed(1)}%. Practice makes perfect!`,
+                [{ text: 'Try Again' }]
+            )
+        }
     }
 
     const renderBriefingCard = () => {
@@ -164,7 +146,7 @@ export default function CampaignScreen() {
                 <View style={styles.briefingHeader}>
                     <View style={styles.briefingTitleRow}>
                         <View style={[styles.briefingIndicator, { backgroundColor: theme.accent }]} />
-                        <ThemedText variant="heading" style={styles.briefingTitle}>BATTLE INTEL</ThemedText>
+                        <ThemedText variant="heading" style={styles.briefingTitle}>MISSION INTEL</ThemedText>
                     </View>
                     <TouchableOpacity onPress={() => setSelectedNode(null)}>
                         <Ionicons name="close-circle" size={24} color={theme.textSecondary} />
@@ -208,20 +190,20 @@ export default function CampaignScreen() {
         <ThemedContainer style={styles.container}>
             <ScreenHeader
                 title="CAMPAIGNS"
-                subtitle="CONQUEST MODE"
+                subtitle="TRAINING MODE"
             />
 
             <View style={styles.content}>
+                {/* Info Banner */}
+                <View style={[styles.infoBanner, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
+                    <Ionicons name="information-circle" size={20} color="#3B82F6" />
+                    <ThemedText variant="caption" style={styles.infoText}>
+                        Training mode: No scores recorded, no VP at stake. Practice freely!
+                    </ThemedText>
+                </View>
+
                 {!activeCampaign ? (
                     <ScrollView contentContainerStyle={styles.campaignList} showsVerticalScrollIndicator={false}>
-                        {/* Warning Banner */}
-                        <View style={[styles.warningBanner, { backgroundColor: isDark ? 'rgba(255, 107, 53, 0.15)' : 'rgba(255, 107, 53, 0.1)' }]}>
-                            <Ionicons name="warning" size={20} color="#FF6B35" />
-                            <ThemedText variant="caption" style={styles.warningText}>
-                                Campaign missions affect your score & earn Valor Points
-                            </ThemedText>
-                        </View>
-
                         <View style={styles.sectionHeader}>
                             <FontAwesome5 name="globe" size={12} color={theme.accent} style={{ opacity: 0.7 }} />
                             <ThemedText variant="caption" style={{ letterSpacing: 2, marginLeft: 8, opacity: 0.7 }}>AVAILABLE THEATERS</ThemedText>
@@ -242,7 +224,7 @@ export default function CampaignScreen() {
                                     No campaigns available yet.
                                 </ThemedText>
                                 <ThemedText variant="caption" style={styles.emptySubtext}>
-                                    Complete training exercises to unlock campaigns.
+                                    Add verses to your arsenal to unlock campaigns.
                                 </ThemedText>
                             </ThemedCard>
                         )}
@@ -251,7 +233,7 @@ export default function CampaignScreen() {
                     <View style={styles.activeCampaignContainer}>
                         <TouchableOpacity
                             style={styles.backButton}
-                            onPress={() => router.push('/battle')}
+                            onPress={() => router.push('/train')}
                             activeOpacity={0.7}
                         >
                             <View style={styles.backButtonIcon}>
@@ -265,21 +247,18 @@ export default function CampaignScreen() {
                                 campaign={activeCampaign}
                                 onNodeSelect={handleNodeSelect}
                             />
-                            {/* Glass Overlay Border for Map */}
                             <View style={styles.mapBorder} pointerEvents="none" />
                         </View>
 
-                        {/* Loading Overlay */}
                         {isLoadingScripture && (
                             <View style={styles.loadingOverlay}>
                                 <ActivityIndicator size="large" color={theme.accent} />
-                                <ThemedText style={{ marginTop: 16, letterSpacing: 2 }}>DECRYPTING DATA...</ThemedText>
+                                <ThemedText style={{ marginTop: 16, letterSpacing: 2 }}>LOADING...</ThemedText>
                             </View>
                         )}
                     </View>
                 )}
 
-                {/* Access Denied Modal for Campaigns */}
                 <AccessDeniedModal
                     visible={deniedModal.visible}
                     onClose={() => setDeniedModal(prev => ({ ...prev, visible: false }))}
@@ -328,7 +307,7 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: 16,
     },
-    warningBanner: {
+    infoBanner: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 12,
@@ -336,13 +315,12 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         gap: 10,
     },
-    warningText: {
+    infoText: {
         flex: 1,
         opacity: 0.8,
-        color: '#FF6B35',
     },
     campaignList: {
-        paddingBottom: 100, // Space for tab bar
+        paddingBottom: 100,
         paddingTop: 8,
     },
     sectionHeader: {
@@ -366,7 +344,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         opacity: 0.5,
     },
-
     activeCampaignContainer: {
         flex: 1,
     },
@@ -393,7 +370,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
-        marginBottom: 80, // Space for tab bar
+        marginBottom: 80,
     },
     mapBorder: {
         ...StyleSheet.absoluteFillObject,

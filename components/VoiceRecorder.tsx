@@ -1,18 +1,20 @@
 import * as React from 'react';
 import { useState, useEffect, useRef } from 'react';
-import { StyleSheet, Text, View, Platform, ActivityIndicator, TouchableOpacity, Animated } from 'react-native';
+import { StyleSheet, Text, View, Platform, ActivityIndicator, Animated } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import { COLORS } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
 import * as Speech from 'expo-speech';
 import whisperService from '@/services/whisper';
+import neuralTTSService, { speakWithNeuralTTS, TTSProgress } from '@/services/neuralTTS';
 import Constants from 'expo-constants';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useAudioRecording, AudioRecordingResult } from '@/services/audioRecording';
 import { StatusIndicator } from './ui/StatusIndicator';
 import { RecordingControls } from './ui/RecordingControls';
 import { AccuracyBadge } from './ui/AccuracyBadge';
+import AccuracyTarget from './ui/AccuracyTarget';
 import { calculateTextAccuracy } from '@/utils/accuracyCalculator';
 import VoiceRecordingService from '@/services/voiceRecording';
 import VoicePlaybackService from '@/services/voicePlayback';
@@ -99,9 +101,19 @@ interface VoiceRecorderProps {
   scriptureRef?: string;
   intelText?: string;
   onRecordingComplete: (accuracy: number) => void;
+  variant?: 'default' | 'embedded';
+  onRecordingStateChange?: (isRecording: boolean) => void;
 }
 
-export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef, intelText, onRecordingComplete }: VoiceRecorderProps) {
+export default function VoiceRecorder({
+  scriptureText,
+  scriptureId,
+  scriptureRef,
+  intelText,
+  onRecordingComplete,
+  variant = 'default',
+  onRecordingStateChange,
+}: VoiceRecorderProps) {
   const { isDark, userSettings, theme } = useAppStore();
   const { trackEvent, trackVoiceRecordingStart, trackVoiceRecordingComplete, trackError } = useAnalytics();
 
@@ -130,14 +142,43 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
   } = useSpeechRecognition({
     lang: userSettings.language || 'en-US',
     interimResults: true,
-    continuous: false,
+    continuous: true,
     onResult: (resultTranscript, isFinal) => {
+      if (activeEngineRef.current === 'native') {
+        if (isFinal) {
+          const combined = [nativeTranscriptRef.current, resultTranscript].filter(Boolean).join(' ').trim();
+          nativeTranscriptRef.current = combined;
+          setLocalTranscript(combined);
+        } else {
+          const combined = [nativeTranscriptRef.current, resultTranscript].filter(Boolean).join(' ').trim();
+          setLocalTranscript(combined);
+        }
+        return;
+      }
+
       if (isFinal) {
         processTranscript(resultTranscript);
       }
     },
     onError: (errorMessage) => {
       console.error('Speech recognition error:', errorMessage);
+    },
+    onEnd: () => {
+      // Debounce restart to prevent rapid restarts on short pauses
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+      }
+
+      if (!manualStopRef.current && keepListeningRef.current && activeEngineRef.current === 'native') {
+        restartTimeoutRef.current = setTimeout(async () => {
+          try {
+            await startSpeechRecognition();
+          } catch (error) {
+            console.warn('Failed to restart speech recognition:', error);
+            keepListeningRef.current = false;
+          }
+        }, 500); // Small delay to prevent rapid restarts
+      }
     },
   });
 
@@ -150,9 +191,25 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
   const [whisperReady, setWhisperReady] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [ttsProgress, setTtsProgress] = useState(0); // Neural TTS download progress (0-100)
+  const activeEngineRef = useRef<'native' | 'whisper' | 'audio' | null>(null);
+  const keepListeningRef = useRef(false);
+  const manualStopRef = useRef(false);
+  const nativeTranscriptRef = useRef('');
+  const restartTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const maxDurationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Maximum recording duration (90 seconds to prevent runaway recordings)
+  const MAX_RECORDING_DURATION = 90000;
 
   // Audio player for playback - use recordingUri from the audio recording hook
   const player = useAudioPlayer(recordingUri ? { uri: recordingUri } : undefined);
+
+  const isRecording = isRecognizing || audioIsRecording;
+
+  useEffect(() => {
+    onRecordingStateChange?.(isRecording);
+  }, [isRecording, onRecordingStateChange]);
 
   // Clear transcript when scripture changes
   useEffect(() => {
@@ -189,14 +246,19 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
         const startTime = Date.now();
         await whisperService.init();
         const loadTime = Date.now() - startTime;
-        console.log('Whisper initialized');
-        setWhisperReady(true);
+        const whisperAvailable = whisperService.isAvailable();
+        if (whisperAvailable) {
+          console.log('Whisper initialized');
+        } else {
+          console.warn('Whisper unavailable, falling back to native');
+        }
+        setWhisperReady(whisperAvailable);
 
         // Track successful initialization
         trackEvent(AnalyticsEventType.WHISPER_MODEL_LOADED, {
           model_version: 'whisper',
           load_time: loadTime,
-          success: true
+          success: whisperAvailable
         });
 
         setStatusMessage('Ready to record');
@@ -241,7 +303,7 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
     }
   }, [isRecognizing, audioIsRecording, recordingDuration, showAccuracy, accuracy, isInitializing, userSettings.voiceEngine, whisperReady, hasPermission, isAvailable]);
 
-  // Speak the intel text
+  // Speak the intel text using neural TTS for better quality
   const speakIntel = async () => {
     try {
       // Track TTS usage
@@ -253,42 +315,57 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
 
       // Stop any existing speech
       await Speech.stop();
+      await neuralTTSService.stop();
 
       const textToSpeak = intelText || "No tactical intel available for this target.";
 
-      // Start new speech with proper settings
-      await Speech.speak(textToSpeak, {
-        rate: userSettings.voiceRate || 0.9,
-        pitch: userSettings.voicePitch || 1.0,
-        language: userSettings.language || 'en-US',
+      // Show progress for TTS initialization/download
+      setStatusMessage('Preparing speech...');
+
+      // Use neural TTS for more natural-sounding speech
+      // Falls back to expo-speech if native module unavailable
+      await speakWithNeuralTTS(textToSpeak, {
+        onProgress: (progress: TTSProgress) => {
+          setTtsProgress(progress.progress);
+          if (progress.status === 'downloading') {
+            setStatusMessage(`Downloading voice model: ${progress.progress.toFixed(0)}%`);
+          } else if (progress.status === 'initializing') {
+            setStatusMessage('Initializing speech engine...');
+          } else if (progress.status === 'playing') {
+            setStatusMessage('Reading intel...');
+          }
+        },
         onStart: () => {
           setStatusMessage('Reading intel...');
 
           // Track TTS playback start
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_START, {
             recording_id: 'tts_intel',
-            playback_type: 'tts',
+            playback_type: 'neural_tts',
             text_length: textToSpeak.length
           });
         },
         onDone: () => {
+          setTtsProgress(0);
           setStatusMessage('Ready to record');
 
           // Track TTS playback complete
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_COMPLETE, {
             recording_id: 'tts_intel',
-            playback_type: 'tts',
-            duration: 0 // Would need to calculate actual duration
+            playback_type: 'neural_tts',
+            duration: 0
           });
         },
-        onError: (error) => {
-          console.error('Speech error:', error);
+        onError: (error: Error) => {
+          setTtsProgress(0);
+          console.error('Neural TTS error:', error);
+          setStatusMessage('Using standard voice');
 
           // Track TTS error
-          trackError(new Error('TTS playback failed'), 'VoiceRecorder', {
+          trackError(error, 'VoiceRecorder', {
             context: 'tts_playback',
             error_type: 'speech_error',
-            text: textToSpeak.substring(0, 100) // Limit text length for privacy
+            text: textToSpeak.substring(0, 100)
           });
         }
       });
@@ -304,12 +381,34 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
   };  // Start recording
   const startRecording = async () => {
     try {
+      await VoicePlaybackService.stopPlayback()
+      await Speech.stop()
+      await neuralTTSService.stop()
+      if (isPlaying) {
+        player.pause()
+        setIsPlaying(false)
+      }
+
       // Clear previous results
       resetTranscript();
       setLocalTranscript('');
       setAccuracy(0);
       setShowAccuracy(false);
       setAudioRecording(null);
+      nativeTranscriptRef.current = '';
+      manualStopRef.current = false;
+      keepListeningRef.current = false;
+      activeEngineRef.current = null;
+
+      // Clear any pending timeouts
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = null;
+      }
+      if (maxDurationTimeoutRef.current) {
+        clearTimeout(maxDurationTimeoutRef.current);
+        maxDurationTimeoutRef.current = null;
+      }
 
       // Check if we should use Whisper based on settings and availability
       console.log('🎤 VoiceRecorder: userSettings.voiceEngine:', userSettings.voiceEngine)
@@ -322,6 +421,7 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
           if (Platform.OS !== 'web') {
             const audioSuccess = await startAudioRecording();
             if (audioSuccess) {
+              activeEngineRef.current = 'whisper';
               console.log('Audio recording started (Whisper mode)');
               setStatusMessage('Recording... (Whisper)');
               return;
@@ -332,22 +432,60 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
           // Fallback to native if Whisper fails
           // 2. Fallback to Native Speech Recognition
           if (isAvailable) {
-            const success = await startSpeechRecognition();
-            if (success) {
-              setStatusMessage('Speech recognition active');
-              return;
+            try {
+              activeEngineRef.current = 'native';
+              keepListeningRef.current = true;
+              const success = await startSpeechRecognition();
+              if (success) {
+                setStatusMessage('Speech recognition active');
+
+                // Set max recording duration timeout
+                maxDurationTimeoutRef.current = setTimeout(() => {
+                  console.log('Max recording duration reached, auto-stopping');
+                  stopRecording();
+                }, MAX_RECORDING_DURATION);
+
+                return;
+              }
+            } catch (nativeError) {
+              console.error('Native speech recognition fallback failed:', nativeError);
+              trackError(new Error(`Native speech recognition fallback failed: ${nativeError}`), 'VoiceRecorder', {
+                context: 'tts_native_fallback',
+                error_type: 'speech_recognition_fallback_failed'
+              });
             }
+            keepListeningRef.current = false;
+            activeEngineRef.current = null;
           }
         }
       } else {
         console.log('🎤 Starting Native recording (Preference: ' + userSettings.voiceEngine + ')')
         // 2. Fallback to Native Speech Recognition
         if (isAvailable) {
-          const success = await startSpeechRecognition();
-          if (success) {
-            setStatusMessage('Speech recognition active');
-            return;
+          try {
+            activeEngineRef.current = 'native';
+            keepListeningRef.current = true;
+            const success = await startSpeechRecognition();
+            if (success) {
+              setStatusMessage('Speech recognition active');
+
+              // Set max recording duration timeout
+              maxDurationTimeoutRef.current = setTimeout(() => {
+                console.log('Max recording duration reached, auto-stopping');
+                stopRecording();
+              }, MAX_RECORDING_DURATION);
+
+              return;
+            }
+          } catch (error) {
+            console.error('Native speech recognition failed:', error);
+            trackError(new Error(`Speech recognition start failed: ${error}`), 'VoiceRecorder', {
+              context: 'tts_native_start',
+              error_type: 'speech_recognition_start_failed'
+            });
           }
+          keepListeningRef.current = false;
+          activeEngineRef.current = null;
         }
       }
 
@@ -355,6 +493,7 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
       if (Platform.OS !== 'web') {
         const audioSuccess = await startAudioRecording();
         if (audioSuccess) {
+          activeEngineRef.current = whisperReady ? 'whisper' : 'audio';
           console.log('Audio recording started as fallback');
           setStatusMessage('Audio recording active - using transcription');
           return;
@@ -371,9 +510,34 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
   // Stop recording
   const stopRecording = async () => {
     try {
+      // Clear max duration timeout
+      if (maxDurationTimeoutRef.current) {
+        clearTimeout(maxDurationTimeoutRef.current);
+        maxDurationTimeoutRef.current = null;
+      }
+
+      // Clear restart timeout
+      if (restartTimeoutRef.current) {
+        clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = null;
+      }
+
       if (isRecognizing) {
         // Stop speech recognition
+        manualStopRef.current = true;
+        keepListeningRef.current = false;
         stopSpeechRecognition();
+
+        if (activeEngineRef.current === 'native') {
+          const finalTranscript = nativeTranscriptRef.current || transcript || localTranscript;
+          if (finalTranscript) {
+            processTranscript(finalTranscript.trim());
+          } else {
+            setStatusMessage('No speech detected');
+          }
+          nativeTranscriptRef.current = '';
+        }
+
         return;
       }
 
@@ -582,12 +746,13 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
   };
 
   const textColor = isDark ? COLORS.text.dark : COLORS.text.light;
-  const isRecording = isRecognizing || audioIsRecording;
   const displayError = speechError || audioError;
-  const displayTranscript = transcript || localTranscript;
+  const displayTranscript = localTranscript || transcript;
+
+  const isEmbedded = variant === 'embedded';
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isEmbedded && styles.embeddedContainer]}>
       {/* Comms Panel Header */}
       <View style={styles.panelHeader}>
         {isInitializing || statusMessage.includes('Transcribing') || statusMessage.includes('Initializing') ? (
@@ -601,7 +766,7 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
       </View>
 
       {/* Main Comms Display */}
-      <View style={styles.commsDisplay}>
+      <View style={[styles.commsDisplay, isEmbedded && styles.embeddedCommsDisplay]}>
         {displayError ? (
           <Text style={[styles.displayText, { color: COLORS.error }]}>{displayError}</Text>
         ) : displayTranscript ? (
@@ -609,26 +774,31 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
         ) : interimTranscript ? (
           <Text style={[styles.displayText, { color: textColor, opacity: 0.7 }]}>{interimTranscript}...</Text>
         ) : (
-          <View style={styles.waveformContainer}>
-            {/* Animated waveform bars for recording feedback */}
-            {isRecording ? (
-              <>
-                <AnimatedWaveformBar key="1" isActive={true} delay={0} />
-                <AnimatedWaveformBar key="2" isActive={true} delay={100} />
-                <AnimatedWaveformBar key="3" isActive={true} delay={200} />
-                <AnimatedWaveformBar key="4" isActive={true} delay={100} />
-                <AnimatedWaveformBar key="5" isActive={true} delay={0} />
-              </>
-            ) : (
-              <>
-                <View style={[styles.waveformBar, { height: 10, opacity: 0.3 }]} />
-                <View style={[styles.waveformBar, { height: 16, opacity: 0.5 }]} />
-                <View style={[styles.waveformBar, { height: 24, opacity: 0.7 }]} />
-                <View style={[styles.waveformBar, { height: 16, opacity: 0.5 }]} />
-                <View style={[styles.waveformBar, { height: 10, opacity: 0.3 }]} />
-              </>
+          <>
+            <View style={styles.waveformContainer}>
+              {/* Animated waveform bars for recording feedback */}
+              {isRecording ? (
+                <>
+                  <AnimatedWaveformBar key="1" isActive={true} delay={0} />
+                  <AnimatedWaveformBar key="2" isActive={true} delay={100} />
+                  <AnimatedWaveformBar key="3" isActive={true} delay={200} />
+                  <AnimatedWaveformBar key="4" isActive={true} delay={100} />
+                  <AnimatedWaveformBar key="5" isActive={true} delay={0} />
+                </>
+              ) : (
+                <>
+                  <View style={[styles.waveformBar, { height: 10, opacity: 0.3 }]} />
+                  <View style={[styles.waveformBar, { height: 16, opacity: 0.5 }]} />
+                  <View style={[styles.waveformBar, { height: 24, opacity: 0.7 }]} />
+                  <View style={[styles.waveformBar, { height: 16, opacity: 0.5 }]} />
+                  <View style={[styles.waveformBar, { height: 10, opacity: 0.3 }]} />
+                </>
+              )}
+            </View>
+            {!isRecording && !showAccuracy && (
+              <Text style={[styles.idleHint, { color: textColor }]}>Tap the mic to begin</Text>
             )}
-          </View>
+          </>
         )}
 
         {/* Recording Duration Timer */}
@@ -657,6 +827,19 @@ export default function VoiceRecorder({ scriptureText, scriptureId, scriptureRef
         )}
       </View>
 
+      {showAccuracy && (
+        <View style={styles.accuracyTargetRow}>
+          <AccuracyTarget accuracy={accuracy} size={isEmbedded ? 110 : 140} />
+          <View style={styles.accuracyMeta}>
+            <Text style={[styles.accuracyLabel, { color: textColor }]}>SHOT PLACEMENT</Text>
+            <Text style={[styles.accuracyValue, { color: theme.accent }]}>{accuracy.toFixed(1)}%</Text>
+            <Text style={[styles.accuracyHint, { color: textColor }]}>
+              Closer to the bullseye means higher accuracy
+            </Text>
+          </View>
+        </View>
+      )}
+
       {/* Controls */}
       <RecordingControls
         isRecording={audioIsRecording}
@@ -682,6 +865,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
+  },
+  embeddedContainer: {
+    marginVertical: 0,
+    marginHorizontal: 0,
+    padding: 0,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
   panelHeader: {
     flexDirection: 'row',
@@ -716,6 +906,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     position: 'relative',
   },
+  embeddedCommsDisplay: {
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
   processingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.7)',
@@ -728,6 +921,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  idleHint: {
+    marginTop: 8,
+    fontSize: 12,
+    opacity: 0.6,
+    letterSpacing: 0.5,
   },
   waveformContainer: {
     flexDirection: 'row',
@@ -761,6 +960,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     fontVariant: ['tabular-nums'],
+  },
+  accuracyTargetRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  accuracyMeta: {
+    flex: 1,
+    gap: 6,
+  },
+  accuracyLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1,
+    opacity: 0.7,
+  },
+  accuracyValue: {
+    fontSize: 24,
+    fontWeight: '700',
+  },
+  accuracyHint: {
+    fontSize: 12,
+    opacity: 0.6,
   },
   accuracyBadge: {
     marginTop: 4,

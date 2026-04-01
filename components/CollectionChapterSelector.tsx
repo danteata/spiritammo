@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   StyleSheet,
   Text,
@@ -19,6 +19,10 @@ interface CollectionChapterSelectorProps {
   isVisible: boolean
   onClose: () => void
   onStartPractice: (selectedChapterIds: string[]) => void
+  initialSelectedChapterIds?: string[]
+  actionLabel?: string
+  title?: string
+  subtitle?: string
 }
 
 export default function CollectionChapterSelector({
@@ -26,12 +30,26 @@ export default function CollectionChapterSelector({
   isVisible,
   onClose,
   onStartPractice,
+  initialSelectedChapterIds = [],
+  actionLabel = 'APPLY SELECTION',
+  title = 'SELECT CHAPTERS',
+  subtitle,
 }: CollectionChapterSelectorProps) {
-  const { theme } = useAppStore()
+  const { theme, gradients } = useAppStore()
   const styles = getStyles(theme)
+  const gradientColors = Array.isArray(gradients?.primary)
+    ? gradients.primary
+    : [theme.background, theme.surface]
   const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
+  const accentContrast = theme.accentContrastText || theme.text
 
   const chapters = collection.chapters || []
+
+  useEffect(() => {
+    if (isVisible) {
+      setSelectedChapterIds(initialSelectedChapterIds)
+    }
+  }, [isVisible, collection.id, initialSelectedChapterIds.join(',')])
 
   const toggleChapter = (chapterId: string) => {
     setSelectedChapterIds((prev) =>
@@ -137,7 +155,7 @@ export default function CollectionChapterSelector({
       onRequestClose={onClose}
     >
       <LinearGradient
-        colors={['#1a2f0a', '#2D5016', '#0f1a05']}
+        colors={gradientColors}
         style={styles.container}
       >
         {/* Header */}
@@ -146,7 +164,7 @@ export default function CollectionChapterSelector({
             <View style={styles.titleSection}>
               <FontAwesome name="bullseye" size={24} color={theme.accent} />
               <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading]}>
-                SELECT CHAPTERS
+                {title}
               </Text>
             </View>
 
@@ -156,7 +174,7 @@ export default function CollectionChapterSelector({
           </View>
 
           <Text style={[styles.subtitle, MILITARY_TYPOGRAPHY.body]}>
-            {collection.abbreviation || collection.name}
+            {subtitle || collection.abbreviation || collection.name}
           </Text>
         </View>
 
@@ -210,15 +228,34 @@ export default function CollectionChapterSelector({
             onPress={handleStartPractice}
             disabled={selectedCount === 0}
           >
-            <FontAwesome name="play" size={20} color={theme.text} />
-            <Text style={[styles.startButtonText, MILITARY_TYPOGRAPHY.button]}>
-              START PRACTICE
+            <FontAwesome
+              name="play"
+              size={20}
+              color={selectedCount === 0 ? theme.textSecondary : accentContrast}
+            />
+            <Text
+              style={[
+                styles.startButtonText,
+                MILITARY_TYPOGRAPHY.button,
+                { color: selectedCount === 0 ? theme.textSecondary : accentContrast },
+              ]}
+            >
+              {actionLabel}
             </Text>
           </TouchableOpacity>
         </View>
       </LinearGradient>
     </Modal>
   )
+}
+
+const withAlpha = (hex: string, alpha: number) => {
+  const normalized = hex.replace('#', '')
+  if (normalized.length !== 6) return `rgba(255,255,255,${alpha})`
+  const r = parseInt(normalized.slice(0, 2), 16)
+  const g = parseInt(normalized.slice(2, 4), 16)
+  const b = parseInt(normalized.slice(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
 const getStyles = (theme: any) => StyleSheet.create({
@@ -291,7 +328,7 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   selectedChapterItem: {
     borderColor: theme.accent,
-    backgroundColor: 'rgba(255, 165, 0, 0.1)',
+    backgroundColor: withAlpha(theme.accent, 0.12),
   },
   chapterContent: {
     padding: 16,
@@ -368,7 +405,6 @@ const getStyles = (theme: any) => StyleSheet.create({
     opacity: 0.5,
   },
   startButtonText: {
-    color: theme.text,
     fontWeight: 'bold',
   },
 })

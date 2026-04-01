@@ -1,7 +1,8 @@
 import { getDb } from '@/db/client'
+import { initializeDatabase } from '@/db/init'
 import { practiceLogs } from '@/db/schema'
-import { v4 as uuidv4 } from 'uuid'
-// import 'react-native-get-random-values'
+const createLocalId = () =>
+    `log_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
 
 export interface PracticeLogRequest {
     scriptureId: string
@@ -13,11 +14,12 @@ export interface PracticeLogRequest {
 export const practiceLogService = {
     async saveLog(request: PracticeLogRequest) {
         try {
+            await initializeDatabase()
             const db = await getDb()
             if (!db) return false
 
             const newLog = {
-                id: uuidv4(),
+                id: createLocalId(),
                 scriptureId: request.scriptureId,
                 date: new Date().toISOString(),
                 accuracy: request.accuracy,

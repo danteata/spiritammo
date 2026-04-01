@@ -73,7 +73,7 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0,
                 setIsComplete(true)
                 onComplete?.()
             }
-        }, 30) // Typing speed
+        }, 45) // Slightly slower typing pace
 
         return () => clearInterval(interval)
     }, [started, text])

@@ -201,8 +201,10 @@ export default function CollectionChapterView({
 
       {/* Chapter list */}
       <ScrollView
-        style={styles.chapterList}
-        showsVerticalScrollIndicator={false}
+        style={[styles.chapterList, { maxHeight: 300 }]}
+        contentContainerStyle={styles.chapterListContent}
+        showsVerticalScrollIndicator={true}
+        nestedScrollEnabled={true}
       >
         {collection.chapters.map(renderChapterCard)}
       </ScrollView>
@@ -418,7 +420,10 @@ const getStyles = (theme: any) => StyleSheet.create({
     minWidth: 35,
   },
   chapterList: {
-    maxHeight: 300,
+    // Removed maxHeight to allow scrolling within parent ScrollView
+  },
+  chapterListContent: {
+    paddingBottom: 8,
   },
   chapterCard: {
     backgroundColor: theme.background,

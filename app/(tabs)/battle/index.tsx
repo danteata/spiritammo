@@ -81,27 +81,30 @@ export default function BattleScreen() {
             >
                 {/* Valor Points & Rank Display */}
                 <View style={styles.statsRow}>
-                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                        <FontAwesome5 name="medal" size={20} color="#FFD700" />
-                        <ThemedText variant="heading" style={styles.statNumber}>{rank}</ThemedText>
-                        <ThemedText variant="caption" style={styles.statLabel}>Rank</ThemedText>
+                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
+                        <View style={[styles.statsAccentBar, { backgroundColor: isDark ? '#FFD700' : '#C8A951' }]} />
+                        <FontAwesome5 name="medal" size={18} color={isDark ? '#FFD700' : '#C8A951'} />
+                        <ThemedText variant="heading" style={[styles.statNumber, { color: isDark ? '#F8FAFC' : '#1A2309' }]}>{rank}</ThemedText>
+                        <ThemedText variant="caption" style={[styles.statLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>Rank</ThemedText>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                        <FontAwesome5 name="coins" size={20} color="#FFD700" />
-                        <ThemedText variant="heading" style={styles.statNumber}>{valorPoints}</ThemedText>
-                        <ThemedText variant="caption" style={styles.statLabel}>Valor Points</ThemedText>
+                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
+                        <View style={[styles.statsAccentBar, { backgroundColor: isDark ? '#FFD700' : '#C8A951' }]} />
+                        <FontAwesome5 name="coins" size={18} color={isDark ? '#FFD700' : '#C8A951'} />
+                        <ThemedText variant="heading" style={[styles.statNumber, { color: isDark ? '#F8FAFC' : '#1A2309' }]}>{valorPoints}</ThemedText>
+                        <ThemedText variant="caption" style={[styles.statLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>Valor Points</ThemedText>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                        <Ionicons name="flame" size={20} color="#FF6B35" />
-                        <ThemedText variant="heading" style={styles.statNumber}>{streak}</ThemedText>
-                        <ThemedText variant="caption" style={styles.statLabel}>Day Streak</ThemedText>
+                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
+                        <View style={[styles.statsAccentBar, { backgroundColor: isDark ? '#FF6B35' : '#B45309' }]} />
+                        <Ionicons name="flame" size={18} color={isDark ? '#FF6B35' : '#B45309'} />
+                        <ThemedText variant="heading" style={[styles.statNumber, { color: isDark ? '#F8FAFC' : '#1A2309' }]}>{streak}</ThemedText>
+                        <ThemedText variant="caption" style={[styles.statLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>Day Streak</ThemedText>
                     </View>
                 </View>
 
                 {/* Warning Banner */}
-                <View style={[styles.warningBanner, { backgroundColor: isDark ? 'rgba(255, 107, 53, 0.15)' : 'rgba(255, 107, 53, 0.1)' }]}>
-                    <Ionicons name="warning" size={20} color="#FF6B35" />
-                    <ThemedText variant="caption" style={styles.warningText}>
+                <View style={[styles.warningBanner, { backgroundColor: isDark ? 'rgba(255, 107, 53, 0.15)' : '#FFFFFF', borderColor: isDark ? 'transparent' : '#B91C1C40', borderWidth: isDark ? 0 : 1.5 }]}>
+                    <Ionicons name="warning" size={18} color={isDark ? '#FF6B35' : '#B91C1C'} />
+                    <ThemedText variant="caption" style={[styles.warningText, { color: isDark ? '#FF6B35' : '#B91C1C' }]}>
                         Battles affect your score & earn Valor Points
                     </ThemedText>
                 </View>
@@ -118,24 +121,24 @@ export default function BattleScreen() {
                         onPress={handleQuickBattle}
                         activeOpacity={0.9}
                     >
-                        <ThemedCard variant="glass" style={[styles.modeCardInner, styles.primaryMode]}>
+                        <ThemedCard variant="glass" style={[styles.modeCardInner, styles.primaryMode, !isDark && { borderColor: '#B91C1C' }]}>
                             <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
-                                    <Ionicons name="flash" size={32} color="#EF4444" />
+                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(185, 28, 28, 0.08)' }]}>
+                                    <Ionicons name="flash" size={28} color={isDark ? '#EF4444' : '#B91C1C'} />
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={styles.modeTitle}>QUICK SKIRMISH</ThemedText>
-                                <ThemedText variant="body" style={styles.modeDescription}>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5 }]}>QUICK SKIRMISH</ThemedText>
+                                <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
                                     Random verse battle. Earn VP based on accuracy. No preparation needed.
                                 </ThemedText>
                                 <View style={styles.rewardBadge}>
-                                    <FontAwesome5 name="coins" size={12} color="#FFD700" />
-                                    <ThemedText variant="caption" style={styles.rewardText}>+5-25 VP</ThemedText>
+                                    <FontAwesome5 name="coins" size={12} color={isDark ? '#FFD700' : '#C8A951'} />
+                                    <ThemedText variant="caption" style={[styles.rewardText, { color: isDark ? '#FFD700' : '#C8A951' }]}>+5-25 VP</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
-                                <FontAwesome5 name="chevron-right" size={16} color={theme.textSecondary} />
+                                <FontAwesome5 name="chevron-right" size={14} color={isDark ? theme.textSecondary : '#6B7B3A'} />
                             </View>
                         </ThemedCard>
                     </TouchableOpacity>
@@ -146,24 +149,24 @@ export default function BattleScreen() {
                         onPress={handleCollectionBattle}
                         activeOpacity={0.9}
                     >
-                        <ThemedCard variant="glass" style={styles.modeCardInner}>
+                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: '#D4CBAB' }]}>
                             <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
-                                    <FontAwesome name="folder-open" size={28} color="#22C55E" />
+                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(74, 124, 46, 0.08)' }]}>
+                                    <FontAwesome name="folder-open" size={24} color={isDark ? '#22C55E' : '#4A7C2E'} />
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={styles.modeTitle}>COLLECTION ASSAULT</ThemedText>
-                                <ThemedText variant="body" style={styles.modeDescription}>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5 }]}>COLLECTION ASSAULT</ThemedText>
+                                <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
                                     Battle through your collections. Higher accuracy = more Valor Points.
                                 </ThemedText>
                                 <View style={styles.rewardBadge}>
-                                    <FontAwesome5 name="coins" size={12} color="#FFD700" />
-                                    <ThemedText variant="caption" style={styles.rewardText}>+10-50 VP</ThemedText>
+                                    <FontAwesome5 name="coins" size={12} color={isDark ? '#FFD700' : '#C8A951'} />
+                                    <ThemedText variant="caption" style={[styles.rewardText, { color: isDark ? '#FFD700' : '#C8A951' }]}>+10-50 VP</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
-                                <FontAwesome5 name="chevron-right" size={16} color={theme.textSecondary} />
+                                <FontAwesome5 name="chevron-right" size={14} color={isDark ? theme.textSecondary : '#6B7B3A'} />
                             </View>
                         </ThemedCard>
                     </TouchableOpacity>
@@ -244,17 +247,28 @@ const styles = StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         padding: 12,
-        borderRadius: 12,
+        borderRadius: 8,
         marginHorizontal: 4,
+        overflow: 'hidden',
+        position: 'relative',
+    },
+    statsAccentBar: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 3,
     },
     statNumber: {
         fontSize: 20,
         marginTop: 4,
+        fontWeight: '800',
     },
     statLabel: {
         fontSize: 10,
         opacity: 0.7,
         marginTop: 2,
+        fontWeight: '600',
     },
     warningBanner: {
         flexDirection: 'row',
@@ -272,19 +286,20 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     sectionTitle: {
-        fontSize: 12,
-        letterSpacing: 1.5,
+        fontSize: 11,
+        letterSpacing: 2,
         opacity: 0.7,
         marginBottom: 12,
+        fontWeight: '700',
     },
     modeCard: {
-        marginBottom: 12,
+        marginBottom: 10,
     },
     modeCardInner: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        borderRadius: 16,
+        borderRadius: 8,
     },
     primaryMode: {
         borderWidth: 2,
@@ -294,9 +309,9 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     modeIcon: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: 52,
+        height: 52,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -328,6 +343,7 @@ const styles = StyleSheet.create({
     emptyCard: {
         alignItems: 'center',
         padding: 32,
+        borderRadius: 8,
     },
     emptyText: {
         textAlign: 'center',

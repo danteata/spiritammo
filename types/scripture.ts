@@ -12,6 +12,9 @@ export interface Scripture {
   practiceCount?: number
   isJesusWords?: boolean // Flag to indicate if this verse contains words of Jesus
   masteryLevel?: number
+  // Collection chapter info for EPUB-based collections
+  collectionChapter?: number // Which chapter in the collection this verse came from
+  collectionChapterName?: string // Name of the chapter from the table of contents
 }
 
 export interface Book {

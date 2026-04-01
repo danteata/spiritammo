@@ -3,9 +3,9 @@ const { withNativeWind } = require("nativewind/metro");
 
 const config = getDefaultConfig(__dirname);
 
-// Ensure XML files are treated as assets, not source files
+// Ensure XML and EPUB files are treated as assets, not source files
 const { assetExts, sourceExts } = config.resolver;
-config.resolver.assetExts = [...assetExts, 'xml', 'wasm'];
+config.resolver.assetExts = [...assetExts, 'xml', 'wasm', 'epub'];
 config.resolver.sourceExts = sourceExts.filter(ext => ext !== 'xml');
 
 // Enable package exports resolution for packages like convex

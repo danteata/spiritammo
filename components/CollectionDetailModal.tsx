@@ -22,6 +22,8 @@ import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection, Scripture } from '@/types/scripture'
 import { useAppStore } from '@/hooks/useAppStore'
 import AddVersesModal from './AddVersesModal'
+import CollectionChapterView from './CollectionChapterView'
+import { CollectionChapterService } from '@/services/collectionChapters'
 import { LoadingOverlay } from './LoadingOverlay'
 import { errorHandler } from '@/services/errorHandler'
 
@@ -31,12 +33,14 @@ interface CollectionDetailModalProps {
   collection: Collection
   isVisible: boolean
   onClose: () => void
+  onChapterNavigate?: (collectionId: string, chapterId: string) => void
 }
 
 const CollectionDetailModal = React.memo(({
   collection,
   isVisible,
   onClose,
+  onChapterNavigate,
 }: CollectionDetailModalProps) => {
   const router = useRouter()
   const {
@@ -60,6 +64,20 @@ const CollectionDetailModal = React.memo(({
   const [showAddVersesModal, setShowAddVersesModal] = useState(false)
   const [expandedScriptureIds, setExpandedScriptureIds] = useState<Set<string>>(new Set())
   const [isProcessing, setIsProcessing] = useState(false)
+  const [selectedChapterId, setSelectedChapterId] = useState<string | undefined>(undefined)
+  const [isVersesExpanded, setIsVersesExpanded] = useState(true)
+
+  const chapterAnalysis = React.useMemo(() => {
+    if (!localScriptures || localScriptures.length === 0) {
+      return {
+        canBeChapterBased: false,
+        suggestedChapters: [],
+        sourceBook: undefined,
+        stats: { totalBooks: 0, totalChapters: 0, consecutiveChapters: false, singleBook: false },
+      }
+    }
+    return CollectionChapterService.analyzeScripturesForChapters(localScriptures)
+  }, [localScriptures])
 
   // Memoized callbacks for better performance
   const toggleExpand = React.useCallback((id: string) => {
@@ -264,6 +282,7 @@ const CollectionDetailModal = React.memo(({
       setIsBulkSelecting(false)
       setSelectedScriptureIds(new Set())
       setExpandedScriptureIds(new Set())
+      setSelectedChapterId(undefined)
     }
   }, [isVisible, collection])
 
@@ -436,7 +455,7 @@ const CollectionDetailModal = React.memo(({
   const handleGoToTraining = () => {
     onClose()
     router.push({
-      pathname: '/(tabs)/training',
+      pathname: '/(tabs)/train',
       params: { collectionId: collection.id }
     })
   }
@@ -444,6 +463,33 @@ const CollectionDetailModal = React.memo(({
   const handleVersesAdded = () => {
     // Immediately refresh the local scriptures when verses are added
     setLocalScriptures(getScripturesByCollection(collection.id))
+  }
+
+  const handleChapterSelect = (chapterId: string) => {
+    console.log('🔵 [CollectionDetailModal] Chapter selected:', chapterId)
+    console.log('🔵 [CollectionDetailModal] Collection ID:', collection.id)
+    setSelectedChapterId(chapterId)
+    // Set processing state to show loading feedback
+    setIsProcessing(true)
+    console.log('🔵 [CollectionDetailModal] Set isProcessing=true, navigating...')
+    
+    // Navigate directly without closing the modal first
+    // The modal will close automatically when navigation happens
+    if (onChapterNavigate) {
+      console.log('🔵 [CollectionDetailModal] Using onChapterNavigate callback')
+      onChapterNavigate(collection.id, chapterId)
+    } else {
+      console.log('🔵 [CollectionDetailModal] Using router.push directly')
+      router.push({
+        pathname: '/(tabs)/train/collection',
+        params: {
+          collectionId: collection.id,
+          chapterIds: chapterId,
+        }
+      })
+    }
+    setIsProcessing(false)
+    console.log('🔵 [CollectionDetailModal] Navigation complete, isProcessing=false')
   }
 
   const handleLongPressScripture = (scriptureId: string) => {
@@ -457,6 +503,39 @@ const CollectionDetailModal = React.memo(({
   const handlePressScripture = (scriptureId: string) => {
     if (isBulkSelecting) {
       toggleScriptureSelection(scriptureId)
+    }
+  }
+
+  const handleEnableChapters = async () => {
+    if (!chapterAnalysis.canBeChapterBased) return
+
+    try {
+      setIsProcessing(true)
+      const updatedCollection = await CollectionChapterService.convertToChapterBased(
+        collection,
+        localScriptures
+      )
+
+      const success = await updateCollection(updatedCollection)
+      if (success) {
+        errorHandler.showSuccess(
+          'Chapters enabled successfully.',
+          'Chapter Organization'
+        )
+      } else {
+        throw new Error('Chapter update failed')
+      }
+    } catch (error) {
+      await errorHandler.handleError(
+        error,
+        'Enable Chapters',
+        {
+          customMessage: 'Failed to enable chapters. Please retry operation.',
+          retry: () => handleEnableChapters()
+        }
+      )
+    } finally {
+      setIsProcessing(false)
     }
   }
 
@@ -624,9 +703,8 @@ const CollectionDetailModal = React.memo(({
           contentContainerStyle={styles.contentContainer}
           showsVerticalScrollIndicator={false}
         >
-          {/* Stats Grid - Match Mission Report Style */}
+          {/* Stats Grid - Compact Overview */}
           <View style={styles.statsSection}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>STATISTICS</Text>
             <View style={styles.statsGrid}>
               <View style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}>
                 <Feather name="target" size={16} color={theme.accent} />
@@ -647,99 +725,76 @@ const CollectionDetailModal = React.memo(({
                 </Text>
                 <Text style={[styles.statLabel, { color: theme.textSecondary }]}>TRAINING</Text>
               </View>
-            </View>
-          </View>
-
-          {/* Verses List */}
-          <View style={styles.versesSection}>
-            <View style={styles.versesSectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0 }]}>AMMUNITION INVENTORY</Text>
-            </View>
-
-            {localScriptures.length > 0 ? (
-              <FlatList
-                data={localScriptures}
-                renderItem={renderScriptureItem}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-                initialNumToRender={8}
-                maxToRenderPerBatch={8}
-                windowSize={3}
-                removeClippedSubviews={true}
-                updateCellsBatchingPeriod={50}
-              />
-            ) : (
-              <View style={[styles.emptyVerses, { backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
-                <Feather name="inbox" size={32} color={theme.textSecondary} style={{ opacity: 0.5 }} />
-                <Text style={[styles.emptyVersesText, { color: theme.textSecondary }]}>No ammunition loaded yet.</Text>
-              </View>
-            )}
-          </View>
-
-          {/* Stats Section */}
-          <View style={styles.statsSection}>
-            <Text style={[styles.sectionTitle, { color: theme.text, ...MILITARY_TYPOGRAPHY.subheading }]}>
-              AMMUNITION STATS
-            </Text>
-
-            <View style={styles.statsGrid}>
-              <View
-                style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
-              >
-                <MaterialCommunityIcons name="ammunition" size={24} color={theme.accent} />
-                <Text style={[styles.statValue, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]}>
-                  {localScriptures.length}
-                </Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}>
-                  ROUNDS
-                </Text>
-              </View>
-
               {collection.isChapterBased && collection.chapters && (
-                <View
-                  style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
-                >
-                  <MaterialCommunityIcons name="book-open-variant" size={24} color={theme.accent} />
-                  <Text style={[styles.statValue, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]}>
-                    {collection.chapters.length}
-                  </Text>
-                  <Text style={[styles.statLabel, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}>
-                    CHAPTERS
-                  </Text>
+                <View style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}>
+                  <MaterialCommunityIcons name="book-open-variant" size={16} color={theme.accent} />
+                  <Text style={[styles.statValue, { color: theme.text }]}>{collection.chapters.length}</Text>
+                  <Text style={[styles.statLabel, { color: theme.textSecondary }]}>CHAPTERS</Text>
                 </View>
               )}
-
               {collection.bookInfo && (
-                <View
-                  style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
-                >
-                  <MaterialCommunityIcons name="crosshairs-gps" size={24} color={theme.success} />
-                  <Text style={[styles.statValue, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]}>
+                <View style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}>
+                  <MaterialCommunityIcons name="crosshairs-gps" size={16} color={theme.success} />
+                  <Text style={[styles.statValue, { color: theme.text }]}>
                     {collection.bookInfo.averageAccuracy?.toFixed(0) || '0'}%
                   </Text>
-                  <Text style={[styles.statLabel, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}>
-                    ACCURACY
-                  </Text>
+                  <Text style={[styles.statLabel, { color: theme.textSecondary }]}>ACCURACY</Text>
                 </View>
               )}
-
-              <View
-                style={[styles.statCard, { backgroundColor: isDark ? '#0D0D0D' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.08)' }]}
-              >
-                <MaterialCommunityIcons name="calendar-month" size={24} color={theme.textSecondary} />
-                <Text style={[styles.statValue, { color: theme.text, ...MILITARY_TYPOGRAPHY.heading }]}>
-                  {new Date(
-                    collection.createdAt || Date.now()
-                  ).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  })}
-                </Text>
-                <Text style={[styles.statLabel, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}>
-                  CREATED
-                </Text>
-              </View>
             </View>
+          </View>
+
+          {/* Chapter Selection & Progress - Prominent Position */}
+          <View style={styles.chaptersSection}>
+            {/* Show chapter info when collection is chapter-based */}
+            {collection.isChapterBased && collection.chapters && collection.chapters.length > 0 && (
+              <>
+                <View style={[styles.chapterInfoCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                  <View style={styles.chapterInfoHeader}>
+                    <MaterialCommunityIcons name="book-open-page-variant" size={20} color={theme.accent} />
+                    <Text style={[styles.chapterInfoTitle, { color: theme.text }]}>
+                      Book Chapters
+                    </Text>
+                  </View>
+                  <Text style={[styles.chapterInfoText, { color: theme.textSecondary }]}>
+                    This collection is organized by {collection.chapters.length} chapters from the table of contents.
+                  </Text>
+                </View>
+                <CollectionChapterView
+                  collection={collection}
+                  onChapterSelect={handleChapterSelect}
+                  onCollectionUpdate={updateCollection}
+                  selectedChapterId={selectedChapterId}
+                  showProgress={true}
+                />
+                <Text style={[styles.chapterHint, { color: theme.textSecondary }]}>
+                  Tap a chapter to launch a focused drill.
+                </Text>
+              </>
+            )}
+            
+            {/* Show enable chapters option if not yet enabled but possible */}
+            {!collection.isChapterBased && chapterAnalysis.canBeChapterBased && (
+              <View style={[styles.chapterEnableCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                <View style={styles.chapterEnableHeader}>
+                  <MaterialCommunityIcons name="book-open-variant" size={20} color={theme.accent} />
+                  <Text style={[styles.chapterEnableTitle, { color: theme.text }]}>
+                    Chapters Available
+                  </Text>
+                </View>
+                <Text style={[styles.chapterEnableText, { color: theme.textSecondary }]}>
+                  {chapterAnalysis.stats.totalChapters} chapters detected. Enable chapter view for focused drills.
+                </Text>
+                <TouchableOpacity
+                  style={[styles.chapterEnableButton, { backgroundColor: theme.accent }]}
+                  onPress={handleEnableChapters}
+                >
+                  <Text style={[styles.chapterEnableButtonText, { color: theme.accentContrastText || '#FFFFFF' }]}>
+                    ENABLE CHAPTERS
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
 
           {/* Tags Section */}
@@ -769,64 +824,46 @@ const CollectionDetailModal = React.memo(({
             </View>
           )}
 
-          {/* Chapter Progress Section */}
-          {collection.isChapterBased && collection.chapters && (
-            <View style={styles.chaptersSection}>
-              <Text
-                style={[styles.sectionTitle, { ...MILITARY_TYPOGRAPHY.subheading }]}
-              >
-                CHAPTER PROGRESS
+          {/* Collapsible Verses List */}
+          <View style={styles.versesSection}>
+            <TouchableOpacity
+              style={styles.versesSectionHeader}
+              onPress={() => setIsVersesExpanded(prev => !prev)}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={isVersesExpanded ? 'Collapse ammunition inventory' : 'Expand ammunition inventory'}
+            >
+              <Text style={[styles.sectionTitle, { color: theme.text, marginBottom: 0 }]}>
+                AMMUNITION INVENTORY ({localScriptures.length})
               </Text>
+              <MaterialCommunityIcons
+                name={isVersesExpanded ? 'chevron-up' : 'chevron-down'}
+                size={20}
+                color={theme.textSecondary}
+              />
+            </TouchableOpacity>
 
-              <View style={styles.chaptersList}>
-                {collection.chapters.slice(0, 5).map((chapter) => (
-                  <LinearGradient
-                    key={chapter.id}
-                    colors={[isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)']}
-                    style={styles.chapterItem}
-                  >
-                    <View style={styles.chapterInfo}>
-                      <Text
-                        style={[styles.chapterName, { color: theme.text, ...MILITARY_TYPOGRAPHY.body }]}
-                      >
-                        {chapter.name}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.chapterStats,
-                          { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption },
-                        ]}
-                      >
-                        {chapter.scriptures.length} verses
-                        {chapter.averageAccuracy &&
-                          ` • ${chapter.averageAccuracy.toFixed(0)}%`}
-                      </Text>
-                    </View>
-                    <View
-                      style={[
-                        styles.chapterStatus,
-                        {
-                          backgroundColor: chapter.isCompleted
-                            ? theme.success
-                            : 'rgba(255,255,255,0.1)',
-                          borderWidth: chapter.isCompleted ? 0 : 1,
-                          borderColor: chapter.isCompleted ? 'transparent' : 'rgba(255,255,255,0.2)'
-                        },
-                      ]}
-                    />
-                  </LinearGradient>
-                ))}
-
-                {collection.chapters.length > 5 && (
-                  <Text
-                    style={[styles.moreChapters, { color: theme.textSecondary, ...MILITARY_TYPOGRAPHY.caption }]}
-                  >
-                    +{collection.chapters.length - 5} more chapters
-                  </Text>
-                )}
-              </View>
-            </View>
-          )}
+            {isVersesExpanded && (
+              localScriptures.length > 0 ? (
+                <FlatList
+                  data={localScriptures}
+                  renderItem={renderScriptureItem}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  initialNumToRender={8}
+                  maxToRenderPerBatch={8}
+                  windowSize={3}
+                  removeClippedSubviews={true}
+                  updateCellsBatchingPeriod={50}
+                />
+              ) : (
+                <View style={[styles.emptyVerses, { backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)' }]}>
+                  <Feather name="inbox" size={32} color={theme.textSecondary} style={{ opacity: 0.5 }} />
+                  <Text style={[styles.emptyVersesText, { color: theme.textSecondary }]}>No ammunition loaded yet.</Text>
+                </View>
+              )
+            )}
+          </View>
         </ScrollView>
 
         {!isEditingInfo && !isBulkSelecting && (
@@ -834,7 +871,7 @@ const CollectionDetailModal = React.memo(({
             style={[styles.trainingButton, { backgroundColor: theme.primary }]} // Keep button always military green
             onPress={() => {
               onClose()
-              router.push('/(tabs)/training')
+              router.push('/(tabs)/train')
             }}
             accessibilityRole="button"
             accessibilityLabel="Enter Training Range"
@@ -1125,6 +1162,9 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   versesSectionHeader: {
     marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   emptyVerses: {
     alignItems: 'center',
@@ -1195,6 +1235,66 @@ const getStyles = (theme: any) => StyleSheet.create({
   },
   chaptersSection: {
     marginBottom: 24,
+  },
+  chapterInfoCard: {
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  chapterInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  chapterInfoTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  chapterInfoText: {
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  chapterEnableCard: {
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  chapterEnableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  chapterEnableTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+  },
+  chapterEnableText: {
+    fontSize: 12,
+    lineHeight: 18,
+    marginBottom: 12,
+  },
+  chapterEnableButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  chapterEnableButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  chapterHint: {
+    marginTop: 8,
+    fontSize: 12,
+    opacity: 0.7,
+    textAlign: 'center',
   },
   chaptersList: {
     gap: 12,

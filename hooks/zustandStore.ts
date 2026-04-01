@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { eq, inArray, and } from 'drizzle-orm'
+import { eq, inArray, and, sql } from 'drizzle-orm'
 import { getDb, getExpoDb } from '@/db/client'
 import { initializeDatabase } from '@/db/init'
 import {
@@ -26,6 +26,8 @@ import { DataLoaderService } from '@/services/dataLoader'
 import { militaryRankingService } from '@/services/militaryRanking'
 import { bibleApiService } from '@/services/bibleApi'
 import { errorHandler } from '@/services/errorHandler'
+import { CollectionChapterService } from '@/services/collectionChapters'
+import { sampleCollectionsLoader } from '@/services/sampleCollectionsLoader'
 import { createAvatarSlice, AvatarSlice } from '@/hooks/stores/createAvatarSlice'
 import { analytics, AnalyticsEvents } from '@/services/analytics'
 
@@ -47,7 +49,7 @@ const DEFAULT_USER_SETTINGS: UserSettings = {
   voicePitch: 1.0,
   language: 'en-US',
   trainingMode: 'single',
-  voiceEngine: 'whisper',
+  voiceEngine: 'native',
 }
 
 const DEFAULT_USER_STATS: UserStats = {
@@ -130,10 +132,13 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
 
     while (retryCount < maxRetries) {
       try {
+        console.log('🟢 [ZustandStore] Starting initializeAppData, attempt:', retryCount + 1)
         set({ isLoading: true })
 
         // 1. Initialize Database Tables
+        console.log('🟢 [ZustandStore] Initializing database...')
         await initializeDatabase();
+        console.log('🟢 [ZustandStore] Database initialized')
 
         // 1.5. Load Avatar Data (independent of database)
         await get().loadAvatarData();
@@ -248,8 +253,11 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
           });
 
           // Merge into collections
-          // Identify system collections by their IDs
+          // Identify system collections by their IDs (from mocks) and sample collections (sample_ prefix)
           const systemCollectionIds = new Set(COLLECTIONS.filter(c => c.isSystem).map(c => c.id));
+          dbCollections.forEach(c => {
+            if (c.id.startsWith('sample_')) systemCollectionIds.add(c.id);
+          });
 
           let mergedCollections: Collection[] = dbCollections.map(c => ({
             id: c.id,
@@ -394,6 +402,62 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
             console.log('✅ Final collections loaded:', mergedCollections.map(c => `${c.name}: ${c.scriptures.length} verses`));
           }
 
+          // Auto-generate chapters for legacy/imported collections missing chapter data
+          const collectionsWithChapters = [...mergedCollections]
+          const dbUpdates: Promise<any>[] = []
+
+          for (let i = 0; i < collectionsWithChapters.length; i++) {
+            const collection = collectionsWithChapters[i]
+            if (collection.isSystem) continue
+            if (collection.isChapterBased && collection.chapters && collection.chapters.length > 0) continue
+
+            const scriptureIds = scripturesByCollection[collection.id] || []
+            const collectionScriptures = dbScriptures.filter(s => scriptureIds.includes(s.id)).map(s => ({
+              ...s,
+              endVerse: s.endVerse ?? undefined,
+              mnemonic: s.mnemonic ?? undefined,
+              lastPracticed: s.lastPracticed ?? undefined,
+              accuracy: s.accuracy ?? undefined,
+              practiceCount: s.practiceCount ?? 0,
+              isJesusWords: s.isJesusWords ?? false,
+            }))
+            const analysis = CollectionChapterService.analyzeScripturesForChapters(collectionScriptures)
+
+            if (analysis.canBeChapterBased && analysis.suggestedChapters.length > 0) {
+              const updatedCollection: Collection = {
+                ...collection,
+                isChapterBased: true,
+                chapters: analysis.suggestedChapters,
+                sourceBook: analysis.sourceBook,
+                bookInfo: analysis.sourceBook ? {
+                  totalChapters: analysis.stats.totalChapters,
+                  completedChapters: 0,
+                  averageAccuracy: 0,
+                } : undefined,
+              }
+
+              collectionsWithChapters[i] = updatedCollection
+
+              // Queue the update instead of executing in loop
+              const updatePromise = db.update(collectionsTable)
+                .set({
+                  isChapterBased: updatedCollection.isChapterBased,
+                  sourceBook: updatedCollection.sourceBook || null,
+                  bookInfo: updatedCollection.bookInfo || null,
+                  chapters: updatedCollection.chapters || null,
+                })
+                .where(eq(collectionsTable.id, updatedCollection.id))
+
+              dbUpdates.push(updatePromise)
+            }
+          }
+
+          // Execute all database updates in parallel
+          if (dbUpdates.length > 0) {
+            await Promise.all(dbUpdates)
+            console.log(`✅ Batch updated ${dbUpdates.length} collections with chapter data`)
+          }
+
           set({
             scriptures: dbScriptures.map(s => ({
               ...s,
@@ -404,7 +468,7 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
               practiceCount: s.practiceCount || 0,
               isJesusWords: s.isJesusWords || false,
             })),
-            collections: mergedCollections
+            collections: collectionsWithChapters
           })
         } else {
           // First time load: Seed from Mocks/DataLoader
@@ -463,13 +527,109 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
           set({ scriptures: initialScriptures, collections: initialCollections })
         }
 
+        // ── Load sample EPUB collections (for all users, first launch only) ───
+        try {
+          const existingCollections = get().collections
+          const sampleResult = await sampleCollectionsLoader.loadSampleCollections(existingCollections)
+          if (sampleResult.loaded) {
+            console.log(`📚 Inserting ${sampleResult.collections.length} sample collections into DB`)
+
+            // Determine if this is a re-extraction (sample collections already exist in DB)
+            const existingSampleIds = sampleResult.collections
+              .filter(c => existingCollections.some(ec => ec.id === c.id))
+              .map(c => c.id)
+            const isReextract = existingSampleIds.length > 0
+
+            if (isReextract) {
+              console.log(`📚 Re-extraction detected — removing old sample data for: ${existingSampleIds.join(', ')}`)
+              // Delete old collection-scripture relationships
+              for (const colId of existingSampleIds) {
+                await db.delete(collectionScripturesTable)
+                  .where(eq(collectionScripturesTable.collectionId, colId))
+              }
+              // Delete old collections
+              await db.delete(collectionsTable)
+                .where(inArray(collectionsTable.id, existingSampleIds))
+              // Delete old scriptures
+              const oldSampleScriptureIds = existingCollections
+                .filter(c => existingSampleIds.includes(c.id))
+                .flatMap(c => c.scriptures)
+              if (oldSampleScriptureIds.length > 0) {
+                await db.delete(scripturesTable)
+                  .where(inArray(scripturesTable.id, oldSampleScriptureIds))
+              }
+            }
+
+            // Insert sample scriptures
+            if (sampleResult.scriptures.length > 0) {
+              const sampleScripturesToInsert = sampleResult.scriptures.map(s => ({
+                id: s.id,
+                book: s.book,
+                chapter: s.chapter,
+                verse: s.verse,
+                endVerse: s.endVerse,
+                text: s.text,
+                reference: s.reference,
+                mnemonic: s.mnemonic,
+                lastPracticed: s.lastPracticed,
+                accuracy: s.accuracy,
+                practiceCount: s.practiceCount,
+                isJesusWords: s.isJesusWords
+              }))
+              await db.insert(scripturesTable).values(sampleScripturesToInsert)
+            }
+
+            // Insert sample collections
+            for (const col of sampleResult.collections) {
+              const { scriptures: _scriptures, ...collectionData } = col
+              await db.insert(collectionsTable).values({
+                id: collectionData.id,
+                name: collectionData.name,
+                abbreviation: collectionData.abbreviation,
+                description: collectionData.description,
+                createdAt: collectionData.createdAt,
+                tags: collectionData.tags,
+                isChapterBased: collectionData.isChapterBased,
+                sourceBook: collectionData.sourceBook,
+                bookInfo: collectionData.bookInfo,
+                chapters: collectionData.chapters,
+              })
+
+              // Insert collection-scripture relationships
+              if (col.scriptures.length > 0) {
+                await db.insert(collectionScripturesTable).values(
+                  col.scriptures.map(sid => ({ collectionId: col.id, scriptureId: sid }))
+                )
+              }
+            }
+
+            // Merge into current state — replace old sample entries if re-extracting
+            const currentCollections = get().collections
+            const currentScriptures = get().scriptures
+            const sampleCollectionIdSet = new Set(sampleResult.collections.map(c => c.id))
+
+            const filteredCollections = currentCollections.filter(c => !sampleCollectionIdSet.has(c.id))
+            const sampleScriptureIdSet = new Set(sampleResult.scriptures.map(s => s.id))
+            const filteredScriptures = currentScriptures.filter(s => !sampleScriptureIdSet.has(s.id))
+
+            set({
+              collections: [...filteredCollections, ...sampleResult.collections],
+              scriptures: [...filteredScriptures, ...sampleResult.scriptures],
+            })
+            console.log(`📚 Loaded ${sampleResult.collections.length} sample collections, ${sampleResult.scriptures.length} scriptures`)
+          }
+        } catch (sampleError) {
+          console.warn('📚 Sample collection loading failed (non-fatal):', sampleError)
+        }
+
         // Set initial scripture if none
         const s = get().currentScripture
         if ((get().scriptures.length > 0) && !s) {
           set({ currentScripture: get().scriptures[0] })
         }
 
-        // Success - break retry loop
+        // Success - mark loaded and break retry loop
+        set({ isLoading: false })
         break;
       } catch (error) {
         await errorHandler.handleError(error, `Initialize App Data (Attempt ${retryCount + 1}/${maxRetries})`, { silent: true });
@@ -820,7 +980,7 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
       }
 
       // Update State
-      const updatedCollections = get().collections.map((collection) => {
+      let updatedCollections = get().collections.map((collection) => {
         if (collection.id === collectionId) {
           // We also need to update the in-memory 'scriptures' array of the collection
           const currentIds = new Set(collection.scriptures);
@@ -829,6 +989,53 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
         }
         return collection;
       });
+
+      // Auto-generate chapters for uploaded collections when possible
+      const updatedCollection = updatedCollections.find(c => c.id === collectionId);
+      if (updatedCollection && !updatedCollection.isSystem) {
+        const shouldAnalyze = !updatedCollection.isChapterBased || !updatedCollection.chapters || updatedCollection.chapters.length === 0;
+        if (shouldAnalyze) {
+          const collectionScriptures = get().scriptures.filter(s =>
+            updatedCollection.scriptures.includes(s.id)
+          ).map(s => ({
+            ...s,
+            endVerse: s.endVerse ?? undefined,
+            mnemonic: s.mnemonic ?? undefined,
+            lastPracticed: s.lastPracticed ?? undefined,
+            accuracy: s.accuracy ?? undefined,
+            practiceCount: s.practiceCount ?? 0,
+            isJesusWords: s.isJesusWords ?? false,
+          }));
+          const analysis = CollectionChapterService.analyzeScripturesForChapters(collectionScriptures);
+
+          if (analysis.canBeChapterBased && analysis.suggestedChapters.length > 0) {
+            const chapterBasedCollection: Collection = {
+              ...updatedCollection,
+              isChapterBased: true,
+              chapters: analysis.suggestedChapters,
+              sourceBook: analysis.sourceBook,
+              bookInfo: analysis.sourceBook ? {
+                totalChapters: analysis.stats.totalChapters,
+                completedChapters: 0,
+                averageAccuracy: 0,
+              } : undefined,
+            };
+
+            updatedCollections = updatedCollections.map(c =>
+              c.id === collectionId ? chapterBasedCollection : c
+            );
+
+            await db.update(collectionsTable)
+              .set({
+                isChapterBased: chapterBasedCollection.isChapterBased,
+                sourceBook: chapterBasedCollection.sourceBook || null,
+                bookInfo: chapterBasedCollection.bookInfo || null,
+                chapters: chapterBasedCollection.chapters || null,
+              })
+              .where(eq(collectionsTable.id, chapterBasedCollection.id));
+          }
+        }
+      }
 
       set({ collections: updatedCollections });
       return true;
@@ -1025,16 +1232,28 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
         return false;
       }
 
+      const existingCollection = get().collections.find(c => c.id === updatedCollection.id);
+      const mergedCollection: Collection = {
+        ...(existingCollection || updatedCollection),
+        ...updatedCollection,
+      };
+
       // Use Drizzle ORM with proper error handling
       await db.update(collectionsTable)
         .set({
-          name: updatedCollection.name,
-          description: updatedCollection.description || null,
+          name: mergedCollection.name,
+          abbreviation: mergedCollection.abbreviation || null,
+          description: mergedCollection.description || null,
+          tags: mergedCollection.tags || [],
+          isChapterBased: mergedCollection.isChapterBased || false,
+          sourceBook: mergedCollection.sourceBook || null,
+          bookInfo: mergedCollection.bookInfo || null,
+          chapters: mergedCollection.chapters || null,
         })
-        .where(eq(collectionsTable.id, updatedCollection.id));
+        .where(eq(collectionsTable.id, mergedCollection.id));
 
       const updatedCollections = get().collections.map((collection) =>
-        collection.id === updatedCollection.id ? updatedCollection : collection
+        collection.id === mergedCollection.id ? mergedCollection : collection
       )
       set({ collections: updatedCollections })
       return true

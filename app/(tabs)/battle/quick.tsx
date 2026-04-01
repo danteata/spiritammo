@@ -12,8 +12,9 @@ import { useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
-import ScriptureCard from '@/components/ScriptureCard'
-import VoiceRecorder from '@/components/VoiceRecorder'
+import UnifiedScriptureRecorderCard from '@/components/UnifiedScriptureRecorderCard'
+import ScriptureActionRow from '@/components/ScriptureActionRow'
+import StealthDrill from '@/components/StealthDrill'
 import { Scripture } from '@/types/scripture'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { practiceLogService } from '@/services/practiceLogService'
@@ -38,10 +39,10 @@ export default function QuickBattleScreen() {
     useScreenTracking('quick_battle')
 
     const [currentScripture, setCurrentScripture] = useState<Scripture | null>(null)
-    const [showVoiceRecorder, setShowVoiceRecorder] = useState(false)
     const [totalVP, setTotalVP] = useState(0)
     const [battlesWon, setBattlesWon] = useState(0)
     const [isLoading, setIsLoading] = useState(true)
+    const [showStealthDrill, setShowStealthDrill] = useState(false)
 
     const [isLoadingIntel, setIsLoadingIntel] = useState(false)
 
@@ -99,8 +100,6 @@ export default function QuickBattleScreen() {
             lastSessionWordCount: currentScripture.text.split(' ').length
         })
 
-        setShowVoiceRecorder(false)
-
         // Show feedback based on performance
         if (accuracy >= 80) {
             setBattlesWon(prev => prev + 1)
@@ -109,7 +108,7 @@ export default function QuickBattleScreen() {
                 `+${vpEarned} VP | ${accuracy}% accuracy`,
                 [
                     { text: 'Next Battle', onPress: loadRandomScripture },
-                    { text: 'Improve Score', onPress: () => setShowVoiceRecorder(true) }
+                    { text: 'Improve Score', onPress: () => { } }
                 ]
             )
         } else if (accuracy >= 60) {
@@ -117,7 +116,7 @@ export default function QuickBattleScreen() {
                 'HARD FOUGHT! 💪',
                 `+${vpEarned} VP | ${accuracy}% accuracy`,
                 [
-                    { text: 'Try Again', onPress: () => setShowVoiceRecorder(true) },
+                    { text: 'Try Again', onPress: () => { } },
                     { text: 'Next Battle', onPress: loadRandomScripture }
                 ]
             )
@@ -126,7 +125,7 @@ export default function QuickBattleScreen() {
                 'REGROUP! 🎯',
                 `${accuracy}% accuracy - Practice makes perfect!`,
                 [
-                    { text: 'Try Again', onPress: () => setShowVoiceRecorder(true) },
+                    { text: 'Try Again', onPress: () => { } },
                     { text: 'Next Verse', onPress: loadRandomScripture }
                 ]
             )
@@ -157,6 +156,16 @@ export default function QuickBattleScreen() {
         } finally {
             setIsLoadingIntel(false)
         }
+    }
+
+    const handleStartStealthBattle = () => {
+        if (!currentScripture) return
+        setShowStealthDrill(true)
+        trackEvent(AnalyticsEventType.PRACTICE_START, {
+            practice_type: 'stealth_battle',
+            scripture_id: currentScripture.id,
+            is_training: false,
+        })
     }
 
     return (
@@ -209,11 +218,17 @@ export default function QuickBattleScreen() {
                                 TARGET VERSE
                             </ThemedText>
                         </View>
-                        <ScriptureCard
+                        <UnifiedScriptureRecorderCard
                             scripture={currentScripture}
-                            onReveal={handleShowIntel}
-                            isBattleMode={true}
-                            isRecording={showVoiceRecorder}
+                            isBattleMode
+                            intelText={`Reference: ${currentScripture.reference}`}
+                            onRecordingComplete={handleRecordingComplete}
+                        />
+                        <ScriptureActionRow
+                            onStealth={handleStartStealthBattle}
+                            onIntel={handleShowIntel}
+                            isLoadingIntel={isLoadingIntel}
+                            accentColor="#EF4444"
                         />
                     </View>
                 ) : (
@@ -233,24 +248,6 @@ export default function QuickBattleScreen() {
                     </ThemedCard>
                 )}
 
-                {/* Battle Button */}
-                {currentScripture && (
-                    <TouchableOpacity
-                        style={styles.battleButton}
-                        onPress={() => {
-                            // Recording started, should auto-blur happen here?
-                            // ScriptureCard internal state is private, but we can force un-mount/re-mount or passed reached revealed.
-                            // Actually, I'll update ScriptureCard to take a 'forceBlur' prop or just use its own isRecording state if shared.
-                            setShowVoiceRecorder(true)
-                        }}
-                    >
-                        <FontAwesome5 name="crosshairs" size={20} color="#FFF" />
-                        <ThemedText variant="body" style={styles.battleButtonText}>
-                            ENGAGE
-                        </ThemedText>
-                    </TouchableOpacity>
-                )}
-
                 {/* Skip Button */}
                 {currentScripture && (
                     <TouchableOpacity
@@ -265,23 +262,14 @@ export default function QuickBattleScreen() {
                 )}
             </ScrollView>
 
-            {/* Voice Recorder Modal */}
-            {showVoiceRecorder && currentScripture && (
-                <View style={styles.voiceRecorderOverlay}>
-                    <TouchableOpacity
-                        style={styles.closeButton}
-                        onPress={() => setShowVoiceRecorder(false)}
-                    >
-                        <Ionicons name="close-circle" size={32} color="#FFF" />
-                    </TouchableOpacity>
-                    <VoiceRecorder
-                        scriptureText={currentScripture.text}
-                        scriptureId={currentScripture.id}
-                        scriptureRef={currentScripture.reference}
-                        intelText={`Reference: ${currentScripture.reference}`}
-                        onRecordingComplete={handleRecordingComplete}
-                    />
-                </View>
+            {currentScripture && (
+                <StealthDrill
+                    isVisible={showStealthDrill}
+                    onClose={() => setShowStealthDrill(false)}
+                    onComplete={(accuracy: number) => handleRecordingComplete(accuracy)}
+                    targetVerse={currentScripture.text}
+                    reference={currentScripture.reference}
+                />
             )}
         </ThemedContainer>
     )

@@ -33,6 +33,7 @@ export interface TranscriptionResult {
 const MODEL_NAME = 'ggml-base.en.bin';
 const MODEL_URL = `https://huggingface.co/ggerganov/whisper.cpp/resolve/main/${MODEL_NAME}`;
 const MODEL_PATH = `${FS.DocumentDirectoryPath}/${MODEL_NAME}`;
+const WHISPER_ENABLED = process.env.EXPO_PUBLIC_ENABLE_WHISPER === 'true';
 
 class WhisperService {
   private context: WhisperContext | null = null;
@@ -52,52 +53,76 @@ class WhisperService {
 
     this.initPromise = (async () => {
       try {
+        if (!WHISPER_ENABLED) {
+          console.warn('Whisper init skipped: EXPO_PUBLIC_ENABLE_WHISPER is not enabled');
+          return;
+        }
+
         this.isInitializing = true;
         console.log('Initializing Whisper Service...');
 
         // Dynamically require whisper.rn
         let whisperModule;
         try {
+          console.log('Attempting to load whisper.rn native module...');
           whisperModule = require('whisper.rn');
           this.whisperModule = whisperModule;
-          console.log('Whisper module loaded. Available keys:', Object.keys(whisperModule));
+          console.log('Whisper module loaded successfully. Exported keys:', Object.keys(whisperModule));
         } catch (e) {
-          console.error('Failed to load whisper.rn module:', e);
-          throw new Error('Whisper native module not found. Please rebuild the app.');
+          console.error('CRITICAL: Failed to load whisper.rn module:', e);
+          const errorMessage = Platform.OS === 'web' 
+            ? 'Whisper native module is not available on web. Please use a browser-compatible speech recognition engine.'
+            : 'Whisper native module (whisper.rn) was not found in the app bundle. This usually means the native code hasn\'t been linked or the dev client needs to be rebuilt (npx expo run:android/ios).';
+          throw new Error(errorMessage);
         }
 
         const { initWhisper } = whisperModule;
 
+        if (!initWhisper) {
+          throw new Error('Whisper module loaded but initWhisper function is missing. Check your whisper.rn version.');
+        }
+
         // Check if model exists
         const modelExists = await FS.exists(MODEL_PATH);
         if (!modelExists) {
-          console.log('Model not found. Downloading...', MODEL_URL);
+          console.log(`Model not found at ${MODEL_PATH}. Initiating download from ${MODEL_URL}...`);
+          
+          // Ensure directory exists (DocumentDirectoryPath usually exists, but good to be safe)
+          const dirPath = MODEL_PATH.substring(0, MODEL_PATH.lastIndexOf('/'));
+          const dirExists = await FS.exists(dirPath);
+          if (!dirExists) {
+            await FS.mkdir(dirPath);
+          }
+
           const download = FS.downloadFile({
             fromUrl: MODEL_URL,
             toFile: MODEL_PATH,
             progress: (res) => {
               const progress = (res.bytesWritten / res.contentLength) * 100;
-              console.log(`Downloading model: ${progress.toFixed(0)}%`);
+              if (Math.round(progress) % 10 === 0) { // Log every 10%
+                console.log(`Downloading Whisper model: ${progress.toFixed(0)}%`);
+              }
             },
           });
 
           const result = await download.promise;
           if (result.statusCode !== 200) {
-            throw new Error(`Failed to download model: Status ${result.statusCode}`);
+            throw new Error(`Failed to download Whisper model: Server returned status ${result.statusCode}`);
           }
-          console.log('Model downloaded successfully to:', MODEL_PATH);
+          console.log('Whisper model downloaded successfully to:', MODEL_PATH);
         } else {
-          console.log('Model found at:', MODEL_PATH);
+          console.log('Whisper model already exists at:', MODEL_PATH);
         }
 
         // Initialize Whisper Context
+        console.log('Initializing Whisper context with model...');
         this.context = await initWhisper({
           filePath: MODEL_PATH,
         });
 
-        console.log('Whisper Context Initialized!');
+        console.log('✅ Whisper Service successfully initialized and ready!');
       } catch (error) {
-        console.error('Failed to initialize Whisper:', error);
+        console.error('❌ Whisper Service failed to initialize:', error);
         this.initPromise = null;
         throw error;
       } finally {

@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useMemo } from 'react'
 import {
     View,
     StyleSheet,
@@ -7,6 +7,7 @@ import {
     FlatList,
     TouchableOpacity, Image
 } from 'react-native'
+import { useWindowDimensions } from 'react-native'
 import Svg, { Circle, Line, G } from 'react-native-svg'
 import { EquipmentSlot } from '@/types/avatar'
 import SoldierAvatar from '@/components/SoldierAvatar'
@@ -24,6 +25,8 @@ interface ArsenalEquipmentProps {
     avatarInventory: any
     isDark: boolean
     theme: any
+    valorPoints?: number
+    soldierName?: string
 }
 
 // Layout Constants
@@ -49,9 +52,12 @@ export const ArsenalEquipment: React.FC<ArsenalEquipmentProps> = ({
     avatarInventory,
     isDark,
     theme,
+    valorPoints,
+    soldierName,
 }) => {
     // Animation for rotation
     const rotateAnim = useRef(new Animated.Value(0)).current
+    const { width } = useWindowDimensions()
 
     useEffect(() => {
         Animated.loop(
@@ -89,8 +95,32 @@ export const ArsenalEquipment: React.FC<ArsenalEquipmentProps> = ({
             !avatarInventory.equippedItems[slotId].includes('basic')
     }
 
+    const vpValue = typeof valorPoints === 'number' ? valorPoints : (avatarInventory?.valorPoints || 0)
+
+    const columns = width < 380 ? 2 : 3
+    const columnGap = 12
+    const horizontalPadding = 20
+    const cardWidth = useMemo(() => {
+        const available = width - horizontalPadding * 2 - columnGap * (columns - 1)
+        return Math.floor(available / columns)
+    }, [width, columns])
+
     return (
         <View style={styles.container}>
+            <View style={styles.bayHeader}>
+                {soldierName ? (
+                    <View style={[styles.namePill, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+                        <ThemedText style={styles.nameText}>{soldierName}</ThemedText>
+                    </View>
+                ) : (
+                    <View />
+                )}
+                <View style={[styles.vpPill, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+                    <FontAwesome5 name="coins" size={14} color="#FFD700" />
+                    <ThemedText style={styles.vpText}>{vpValue}</ThemedText>
+                    <ThemedText style={styles.vpLabel}>VP</ThemedText>
+                </View>
+            </View>
             {/* Upper Section: Orbital Layout (Fixed Height) */}
             <View style={styles.orbitalContainer}>
                 {/* SVG Layer for Rings and Connectors */}
@@ -221,9 +251,11 @@ export const ArsenalEquipment: React.FC<ArsenalEquipmentProps> = ({
                     <FlatList
                         data={getItemsBySlot(selectedSlot as EquipmentSlot)}
                         keyExtractor={(item) => item.id}
-                        horizontal
-                        showsHorizontalScrollIndicator={false}
+                        numColumns={columns}
+                        key={columns}
+                        showsVerticalScrollIndicator={false}
                         contentContainerStyle={styles.itemsListContent}
+                        columnWrapperStyle={columns > 1 ? { gap: columnGap } : undefined}
                         renderItem={({ item }) => {
                             const isOwned = avatarInventory?.ownedItems?.includes(item.id)
                             const isEquipped = avatarInventory?.equippedItems?.[selectedSlot] === item.id
@@ -234,7 +266,7 @@ export const ArsenalEquipment: React.FC<ArsenalEquipmentProps> = ({
                                     style={[
                                         styles.itemCard,
                                         isEquipped && styles.equippedItemCard,
-                                        { borderColor: isEquipped ? theme.accent : undefined }
+                                        { borderColor: isEquipped ? theme.accent : undefined, width: cardWidth }
                                     ]}
                                     onPress={() => onItemPress(item.id)}
                                 >
@@ -286,12 +318,46 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 0,
     },
+    bayHeader: {
+        width: '100%',
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        marginBottom: 8,
+    },
+    namePill: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    nameText: {
+        fontSize: 12,
+        opacity: 0.85,
+    },
+    vpPill: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 16,
+    },
+    vpText: {
+        fontSize: 14,
+        fontWeight: '700',
+        color: '#FFD700',
+    },
+    vpLabel: {
+        fontSize: 10,
+        opacity: 0.7,
+    },
     orbitalContainer: {
         width: CONTAINER_SIZE,
         height: CONTAINER_SIZE,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: -40, // Pull up solar system significantly
+        marginTop: -10, // Pull up slightly to balance header space
     },
     svgContainer: {
         ...StyleSheet.absoluteFillObject,
@@ -325,12 +391,11 @@ const styles = StyleSheet.create({
     },
     itemsListContent: {
         paddingRight: 20,
-        gap: 12,
+        rowGap: 12,
         paddingBottom: 100, // Ample space for bottom nav
     },
     itemCard: {
-        width: 120,
-        height: 150, // Increased height for better layout
+        minHeight: 150, // Increased height for better layout
         alignItems: 'center',
         justifyContent: 'space-between', // Distribute content
         padding: 12,

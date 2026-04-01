@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
     StyleSheet,
     View,
@@ -20,6 +20,10 @@ import { VoicePlaybackToggle } from '@/components/ui/VoicePlaybackToggle'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
 import { MILITARY_RANKS } from '@/services/militaryRanking'
+import { getDb } from '@/db/client'
+import { practiceLogs as practiceLogsTable } from '@/db/schema'
+import { desc } from 'drizzle-orm'
+import { initializeDatabase } from '@/db/init'
 
 type ProfileSection = 'journey' | 'settings'
 
@@ -33,6 +37,7 @@ export default function ProfileScreen() {
         saveUserSettings,
         userStats,
         theme,
+        scriptures,
     } = useAppStore()
     const router = useRouter()
     const { signOut, isSignedIn } = useAuth()
@@ -42,6 +47,29 @@ export default function ProfileScreen() {
     useScreenTracking('profile')
 
     const [activeSection, setActiveSection] = useState<ProfileSection>('journey')
+    const [practiceLogs, setPracticeLogs] = useState<any[]>([])
+
+    useEffect(() => {
+        const loadPracticeLogs = async () => {
+            try {
+                await initializeDatabase()
+                const db = await getDb()
+                if (!db) return
+
+                const logs = await db
+                    .select()
+                    .from(practiceLogsTable)
+                    .orderBy(desc(practiceLogsTable.date))
+                    .limit(5)
+
+                setPracticeLogs(logs)
+            } catch (error) {
+                console.error('Failed to load practice logs:', error)
+            }
+        }
+
+        loadPracticeLogs()
+    }, [])
 
     const handleThemeChange = (value: boolean) => {
         const oldTheme = isDark ? 'dark' : 'light'
@@ -113,12 +141,12 @@ export default function ProfileScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Section Tabs - At the top for easy access */}
-                <View style={[styles.sectionTabs, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                <View style={[styles.sectionTabs, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'transparent' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
                     <TouchableOpacity
                         style={[
                             styles.sectionTab,
                             activeSection === 'journey' && styles.activeTab,
-                            activeSection === 'journey' && { backgroundColor: theme.accent }
+                            activeSection === 'journey' && { backgroundColor: isDark ? theme.accent : '#4A5D23' }
                         ]}
                         onPress={() => setActiveSection('journey')}
                         activeOpacity={0.8}
@@ -126,11 +154,11 @@ export default function ProfileScreen() {
                         <Ionicons
                             name="map"
                             size={16}
-                            color={activeSection === 'journey' ? (theme.accentContrastText || '#FFFFFF') : theme.textSecondary}
+                            color={activeSection === 'journey' ? (isDark ? '#FFFFFF' : '#F5F0E1') : (isDark ? theme.textSecondary : '#6B7B3A')}
                         />
                         <ThemedText
                             variant="caption"
-                            style={[styles.tabText, activeSection === 'journey' && { color: theme.accentContrastText || '#FFFFFF' }]}
+                            style={[styles.tabText, activeSection === 'journey' && { color: isDark ? '#FFFFFF' : '#F5F0E1' }]}
                         >
                             Journey
                         </ThemedText>
@@ -139,7 +167,7 @@ export default function ProfileScreen() {
                         style={[
                             styles.sectionTab,
                             activeSection === 'settings' && styles.activeTab,
-                            activeSection === 'settings' && { backgroundColor: theme.accent }
+                            activeSection === 'settings' && { backgroundColor: isDark ? theme.accent : '#4A5D23' }
                         ]}
                         onPress={() => setActiveSection('settings')}
                         activeOpacity={0.8}
@@ -147,11 +175,11 @@ export default function ProfileScreen() {
                         <Ionicons
                             name="settings"
                             size={16}
-                            color={activeSection === 'settings' ? (theme.accentContrastText || '#FFFFFF') : theme.textSecondary}
+                            color={activeSection === 'settings' ? (isDark ? '#FFFFFF' : '#F5F0E1') : (isDark ? theme.textSecondary : '#6B7B3A')}
                         />
                         <ThemedText
                             variant="caption"
-                            style={[styles.tabText, activeSection === 'settings' && { color: theme.accentContrastText || '#FFFFFF' }]}
+                            style={[styles.tabText, activeSection === 'settings' && { color: isDark ? '#FFFFFF' : '#F5F0E1' }]}
                         >
                             Settings
                         </ThemedText>
@@ -182,68 +210,98 @@ export default function ProfileScreen() {
 
                         {/* Quick Stats */}
                         <View style={styles.statsGrid}>
-                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                                <Ionicons name="flame" size={24} color="#FF6B35" />
-                                <ThemedText variant="heading" style={styles.statValue}>{userStats?.streak || 0}</ThemedText>
-                                <ThemedText variant="caption" style={styles.statLabel}>Day Streak</ThemedText>
+                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
+                                <View style={[styles.statsAccentBar, { backgroundColor: isDark ? '#FF6B35' : '#B45309' }]} />
+                                <Ionicons name="flame" size={22} color={isDark ? '#FF6B35' : '#B45309'} />
+                                <ThemedText variant="heading" style={[styles.statValue, { color: isDark ? '#F8FAFC' : '#1A2309' }]}>{userStats?.streak || 0}</ThemedText>
+                                <ThemedText variant="caption" style={[styles.statLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>Day Streak</ThemedText>
                             </View>
-                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                                <FontAwesome5 name="crosshairs" size={24} color={theme.accent} />
-                                <ThemedText variant="heading" style={styles.statValue}>{userStats?.totalPracticed || 0}</ThemedText>
-                                <ThemedText variant="caption" style={styles.statLabel}>Drills</ThemedText>
+                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
+                                <View style={[styles.statsAccentBar, { backgroundColor: isDark ? theme.accent : '#4A5D23' }]} />
+                                <FontAwesome5 name="crosshairs" size={22} color={isDark ? theme.accent : '#4A5D23'} />
+                                <ThemedText variant="heading" style={[styles.statValue, { color: isDark ? '#F8FAFC' : '#1A2309' }]}>{userStats?.totalPracticed || 0}</ThemedText>
+                                <ThemedText variant="caption" style={[styles.statLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>Drills</ThemedText>
                             </View>
-                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                                <FontAwesome name="star" size={24} color="#FFD700" />
-                                <ThemedText variant="heading" style={styles.statValue}>{userStats?.averageAccuracy ? Math.round(userStats.averageAccuracy) : 0}%</ThemedText>
-                                <ThemedText variant="caption" style={styles.statLabel}>Accuracy</ThemedText>
+                            <View style={[styles.statItem, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
+                                <View style={[styles.statsAccentBar, { backgroundColor: isDark ? '#FFD700' : '#C8A951' }]} />
+                                <FontAwesome name="star" size={22} color={isDark ? '#FFD700' : '#C8A951'} />
+                                <ThemedText variant="heading" style={[styles.statValue, { color: isDark ? '#F8FAFC' : '#1A2309' }]}>{userStats?.averageAccuracy ? Math.round(userStats.averageAccuracy) : 0}%</ThemedText>
+                                <ThemedText variant="caption" style={[styles.statLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>Accuracy</ThemedText>
                             </View>
                         </View>
 
-                        {/* Weekly Activity Chart */}
+                        {/* Mission Report Snapshot */}
                         <View style={[styles.weeklyActivityCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                             <View style={styles.weeklyHeader}>
-                                <ThemedText variant="body" style={styles.weeklyTitle}>Weekly Activity</ThemedText>
-                                <ThemedText variant="caption" style={styles.weeklySubtitle}>Your practice frequency</ThemedText>
+                                <ThemedText variant="body" style={styles.weeklyTitle}>Mission Reports</ThemedText>
+                                <ThemedText variant="caption" style={styles.weeklySubtitle}>Recent performance snapshots</ThemedText>
                             </View>
-                            <View style={styles.weeklyChart}>
-                                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, index) => {
-                                    // Simulate weekly activity (in a real app, this would come from userStats)
-                                    const activityLevel = userStats?.weeklyActivity?.[index] ?? (index < 5 ? Math.random() * 0.8 + 0.2 : Math.random() * 0.4);
-                                    const hasActivity = activityLevel > 0.3;
-                                    return (
-                                        <View key={index} style={styles.dayColumn}>
-                                            <View style={[styles.dayBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
-                                                <View
-                                                    style={[
-                                                        styles.dayBarFill,
-                                                        {
-                                                            backgroundColor: hasActivity ? theme.accent : 'transparent',
-                                                            height: `${Math.min(activityLevel * 100, 100)}%`
-                                                        }
-                                                    ]}
-                                                />
-                                            </View>
-                                            <Text style={[styles.dayLabel, { color: theme.textSecondary }]}>{day}</Text>
-                                        </View>
-                                    );
-                                })}
-                            </View>
-                        </View>
 
-                        {/* Mission Reports Link */}
-                        <TouchableOpacity
-                            style={styles.menuItem}
-                            onPress={() => router.push('/mission-report')}
-                        >
-                            <View style={styles.menuIcon}>
-                                <Ionicons name="document-text" size={22} color={theme.accent} />
-                            </View>
-                            <View style={styles.menuContent}>
-                                <ThemedText variant="body">Mission Reports</ThemedText>
-                                <ThemedText variant="caption" style={styles.menuSubtitle}>View your detailed progress</ThemedText>
-                            </View>
-                            <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
-                        </TouchableOpacity>
+                            {practiceLogs.length === 0 ? (
+                                <View style={styles.emptyLogState}>
+                                    <MaterialCommunityIcons name="file-document-outline" size={36} color={theme.textSecondary} />
+                                    <ThemedText variant="caption" style={styles.emptyLogText}>
+                                        No mission logs yet. Complete a drill to see results here.
+                                    </ThemedText>
+                                </View>
+                            ) : (
+                                <View style={styles.logsList}>
+                                    {practiceLogs.map((log) => {
+                                        const scripture = scriptures.find(s => s.id === log.scriptureId)
+                                        const date = new Date(log.date)
+                                        const accuracy = Number(log.accuracy || 0)
+                                        const accuracyColor = accuracy >= 90
+                                            ? theme.success
+                                            : accuracy >= 75
+                                                ? theme.warning
+                                                : theme.error
+
+                                        return (
+                                            <View
+                                                key={log.id}
+                                                style={[
+                                                    styles.logItem,
+                                                    {
+                                                        backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)',
+                                                        borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)'
+                                                    }
+                                                ]}
+                                            >
+                                                <View style={styles.logHeader}>
+                                                    <View style={styles.logDateContainer}>
+                                                        <Ionicons name="time-outline" size={12} color={theme.textSecondary} />
+                                                        <Text style={[styles.logDate, { color: theme.textSecondary }]}>
+                                                            {date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                                                        </Text>
+                                                    </View>
+                                                    <View style={[styles.accuracyBadge, { backgroundColor: accuracyColor }]}>
+                                                        <Text style={styles.accuracyBadgeText}>{accuracy.toFixed(0)}%</Text>
+                                                    </View>
+                                                </View>
+                                                {scripture && (
+                                                    <View style={styles.logContent}>
+                                                        <Text style={[styles.logReference, { color: theme.accent }]}>
+                                                            {scripture.reference}
+                                                        </Text>
+                                                        <Text style={[styles.logText, { color: theme.textSecondary }]} numberOfLines={2}>
+                                                            {scripture.text}
+                                                        </Text>
+                                                    </View>
+                                                )}
+                                            </View>
+                                        )
+                                    })}
+                                </View>
+                            )}
+
+                            <TouchableOpacity
+                                style={styles.reportLink}
+                                onPress={() => router.push('/mission-report')}
+                            >
+                                <Ionicons name="document-text" size={16} color={theme.accent} />
+                                <ThemedText variant="caption" style={styles.reportLinkText}>View Full Report</ThemedText>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 )}
 
@@ -340,7 +398,7 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     },
     sectionTabs: {
         flexDirection: 'row',
-        borderRadius: 14,
+        borderRadius: 8,
         padding: 4,
         marginBottom: 20,
         marginTop: 8,
@@ -393,7 +451,7 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 16,
         paddingVertical: 10,
-        borderRadius: 20,
+        borderRadius: 8,
         marginTop: 16,
         gap: 6,
     },
@@ -411,7 +469,16 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
         flex: 1,
         alignItems: 'center',
         paddingVertical: 16,
-        borderRadius: 12,
+        borderRadius: 8,
+        overflow: 'hidden',
+        position: 'relative',
+    },
+    statsAccentBar: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 3,
     },
     statValue: {
         fontSize: 20,
@@ -424,7 +491,10 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     weeklyActivityCard: {
         marginTop: 16,
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 8,
+        backgroundColor: 'transparent',
+        borderWidth: 1.5,
+        borderColor: '#D4CBAB',
     },
     weeklyHeader: {
         marginBottom: 12,
@@ -435,6 +505,74 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     },
     weeklySubtitle: {
         opacity: 0.6,
+    },
+    emptyLogState: {
+        alignItems: 'center',
+        paddingVertical: 20,
+        gap: 8,
+    },
+    emptyLogText: {
+        textAlign: 'center',
+        opacity: 0.7,
+    },
+    logsList: {
+        gap: 10,
+    },
+    logItem: {
+        padding: 12,
+        borderRadius: 8,
+        borderWidth: 1,
+    },
+    logHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 6,
+    },
+    logDateContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+    },
+    logDate: {
+        fontSize: 11,
+    },
+    accuracyBadge: {
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderRadius: 999,
+    },
+    accuracyBadgeText: {
+        fontSize: 10,
+        fontWeight: '700',
+        color: '#fff',
+    },
+    logContent: {
+        gap: 4,
+    },
+    logReference: {
+        fontSize: 12,
+        fontWeight: '600',
+    },
+    logText: {
+        fontSize: 12,
+        lineHeight: 16,
+    },
+    reportLink: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        marginTop: 12,
+        paddingVertical: 10,
+        borderRadius: 8,
+        borderWidth: 1.5,
+        borderColor: '#4A5D2340',
+    },
+    reportLinkText: {
+        color: theme.accent,
+        fontWeight: '600',
+        letterSpacing: 0.6,
     },
     weeklyChart: {
         flexDirection: 'row',
@@ -465,10 +603,12 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     settingItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.surface,
+        backgroundColor: isDark ? theme.surface : '#FFFFFF',
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 8,
         marginBottom: 8,
+        borderWidth: isDark ? 0 : 1.5,
+        borderColor: isDark ? 'transparent' : '#D4CBAB',
     },
     settingIcon: {
         marginRight: 12,
@@ -483,7 +623,7 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     engineToggle: {
         paddingHorizontal: 12,
         paddingVertical: 6,
-        backgroundColor: theme.accent + '20',
+        backgroundColor: (isDark ? theme.accent : '#4A5D23') + '20',
         borderRadius: 6,
     },
     engineToggleText: {
@@ -492,10 +632,12 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     menuItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: theme.surface,
+        backgroundColor: isDark ? theme.surface : '#FFFFFF',
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 8,
         marginBottom: 8,
+        borderWidth: isDark ? 0 : 1.5,
+        borderColor: isDark ? 'transparent' : '#D4CBAB',
     },
     menuIcon: {
         marginRight: 12,

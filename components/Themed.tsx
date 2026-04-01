@@ -19,6 +19,9 @@ import {
     MILITARY_TYPOGRAPHY,
 } from '@/constants/colors';
 
+// Military stencil pattern - diagonal hash lines for light mode texture
+const MILITARY_PATTERN_COLORS = ['rgba(74, 93, 35, 0.03)', 'rgba(74, 93, 35, 0.06)', 'rgba(74, 93, 35, 0.03)'] as const;
+
 // --- Types ---
 
 type ThemeProps = {
@@ -95,6 +98,15 @@ export function ThemedContainer({
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
             >
+                {/* Military texture overlay for light mode */}
+                {!isDark && (
+                    <LinearGradient
+                        colors={['rgba(74, 93, 35, 0.02)', 'rgba(200, 169, 81, 0.02)', 'rgba(74, 93, 35, 0.02)']}
+                        style={StyleSheet.absoluteFill}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 0.5, y: 1 }}
+                    />
+                )}
                 {children}
             </LinearGradient>
         );
@@ -164,28 +176,34 @@ export function ThemedCard({
         variant === 'default' && {
             shadowColor: theme.shadow,
             shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: isDark ? 0.5 : 0.1,
-            shadowRadius: 12,
-            elevation: 8,
-            borderWidth: 1,
-            borderColor: isDark ? 'rgba(255,255,255,0.05)' : 'transparent'
+            shadowOpacity: isDark ? 0.5 : 0.12,
+            shadowRadius: isDark ? 12 : 8,
+            elevation: isDark ? 8 : 4,
+            borderWidth: isDark ? 1 : 1.5,
+            borderColor: isDark ? 'rgba(255,255,255,0.05)' : '#D4CBAB',
+            borderRadius: isDark ? 16 : 8,
         },
         variant === 'outlined' && {
-            borderWidth: 1,
-            borderColor: theme.border,
+            borderWidth: isDark ? 1 : 2,
+            borderColor: isDark ? theme.border : '#4A5D2340',
             backgroundColor: 'transparent',
+            borderRadius: isDark ? 16 : 8,
         },
         variant === 'flat' && {
             backgroundColor: theme.surfaceHighlight,
+            borderRadius: isDark ? 16 : 8,
+            borderWidth: isDark ? 0 : 1,
+            borderColor: isDark ? 'transparent' : '#D4CBAB',
         },
         variant === 'glass' && {
-            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.4)' : 'rgba(255, 255, 255, 0.5)',
-            borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.3)',
-            borderWidth: 1,
+            backgroundColor: isDark ? 'rgba(30, 41, 59, 0.4)' : 'rgba(255, 255, 255, 0.92)',
+            borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#D4CBAB',
+            borderWidth: isDark ? 1 : 1.5,
             shadowColor: theme.shadow,
             shadowOffset: { width: 0, height: 8 },
-            shadowOpacity: 0.2,
+            shadowOpacity: isDark ? 0.2 : 0.08,
             shadowRadius: 16,
+            borderRadius: isDark ? 16 : 8,
         },
         style,
     ];
@@ -248,9 +266,9 @@ export function ThemedButton({
                     ? ((tactical as any).accent || tactical)
                     : (gradients?.primary || ['#333', '#000']);
             } else {
-                gradientColors = [theme.accent, '#EA580C'];
+                gradientColors = ['#4A5D23', '#3D4F1C']; // Olive drab gradient
             }
-            textColor = '#FFFFFF';
+            textColor = isDark ? '#FFFFFF' : '#F5F0E1'; // Parchment text on olive
             break;
         case 'secondary':
             backgroundColor = theme.secondary;
@@ -341,21 +359,21 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     card: {
-        borderRadius: 16,
+        borderRadius: 8,
         padding: 16,
         marginBottom: 16,
     },
     buttonContainer: {
-        borderRadius: 12,
+        borderRadius: 8,
         overflow: 'hidden',
     },
     button: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        paddingVertical: 14, // Slightly taller
+        paddingVertical: 14,
         paddingHorizontal: 24,
-        borderRadius: 12,
-        minHeight: 56, // Accessible touch target
+        borderRadius: 8,
+        minHeight: 56,
     },
 });

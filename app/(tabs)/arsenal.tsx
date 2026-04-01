@@ -22,6 +22,7 @@ import CollectionDetailModal from '@/components/CollectionDetailModal'
 import AddVersesModal from '@/components/AddVersesModal'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
+import { CollectionChapterService } from '@/services/collectionChapters'
 
 const { width } = Dimensions.get('window')
 
@@ -35,6 +36,7 @@ export default function ArsenalScreen() {
         getScripturesByCollection,
         addScriptures,
         addScripturesToCollection,
+        updateCollection,
         theme,
     } = useAppStore()
     const router = useRouter()
@@ -86,8 +88,6 @@ export default function ArsenalScreen() {
         }
     }
 
-    const systemCollections = collections?.filter(c => c.isSystem) || []
-    const customCollections = collections?.filter(c => !c.isSystem) || []
     const totalVerses = scriptures?.length || 0
 
     const sections: { key: ArsenalSection; label: string; icon: string }[] = [
@@ -109,35 +109,37 @@ export default function ArsenalScreen() {
             >
                 {/* Quick Stats */}
                 <View style={styles.statsContainer}>
-                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                        <View style={[styles.statIconBg, { backgroundColor: theme.accent + '15' }]}>
-                            <FontAwesome5 name="book" size={18} color={theme.accent} />
+                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
+                        <View style={[styles.statsAccentBar, { backgroundColor: isDark ? theme.accent : '#4A5D23' }]} />
+                        <View style={[styles.statIconBg, { backgroundColor: (isDark ? theme.accent : '#4A5D23') + '15' }]}>
+                            <FontAwesome5 name="book" size={18} color={isDark ? theme.accent : '#4A5D23'} />
                         </View>
                         <View>
-                            <ThemedText variant="heading" style={styles.statNumber}>{totalVerses}</ThemedText>
-                            <ThemedText variant="caption" style={styles.statLabel}>Total Verses</ThemedText>
+                            <ThemedText variant="heading" style={[styles.statNumber, { color: isDark ? '#F8FAFC' : '#1A2309' }]}>{totalVerses}</ThemedText>
+                            <ThemedText variant="caption" style={[styles.statLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>Total Verses</ThemedText>
                         </View>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                        <View style={[styles.statIconBg, { backgroundColor: '#22C55E' + '15' }]}>
-                            <FontAwesome name="folder" size={18} color="#22C55E" />
+                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
+                        <View style={[styles.statsAccentBar, { backgroundColor: isDark ? '#22C55E' : '#4A7C2E' }]} />
+                        <View style={[styles.statIconBg, { backgroundColor: (isDark ? '#22C55E' : '#4A7C2E') + '15' }]}>
+                            <FontAwesome name="folder" size={18} color={isDark ? '#22C55E' : '#4A7C2E'} />
                         </View>
                         <View>
-                            <ThemedText variant="heading" style={styles.statNumber}>{collections?.length || 0}</ThemedText>
-                            <ThemedText variant="caption" style={styles.statLabel}>Collections</ThemedText>
+                            <ThemedText variant="heading" style={[styles.statNumber, { color: isDark ? '#F8FAFC' : '#1A2309' }]}>{collections?.length || 0}</ThemedText>
+                            <ThemedText variant="caption" style={[styles.statLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>Collections</ThemedText>
                         </View>
                     </View>
                 </View>
 
                 {/* Section Tabs - Pill Style */}
-                <View style={[styles.sectionTabs, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                <View style={[styles.sectionTabs, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'transparent' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
                     {sections.map((section) => (
                         <TouchableOpacity
                             key={section.key}
                             style={[
                                 styles.sectionTab,
                                 activeSection === section.key && styles.activeTab,
-                                activeSection === section.key && { backgroundColor: theme.accent }
+                                activeSection === section.key && { backgroundColor: isDark ? theme.accent : '#4A5D23' }
                             ]}
                             onPress={() => setActiveSection(section.key)}
                             activeOpacity={0.8}
@@ -145,13 +147,13 @@ export default function ArsenalScreen() {
                             <Ionicons
                                 name={section.icon as any}
                                 size={16}
-                                color={activeSection === section.key ? (theme.accentContrastText || '#FFFFFF') : theme.textSecondary}
+                                color={activeSection === section.key ? (isDark ? '#FFFFFF' : '#F5F0E1') : (isDark ? theme.textSecondary : '#6B7B3A')}
                             />
                             <ThemedText
                                 variant="caption"
                                 style={[
                                     styles.tabText,
-                                    activeSection === section.key && { color: theme.accentContrastText || '#FFFFFF' }
+                                    activeSection === section.key && { color: isDark ? '#FFFFFF' : '#F5F0E1' }
                                 ]}
                             >
                                 {section.label}
@@ -163,41 +165,10 @@ export default function ArsenalScreen() {
                 {/* Collections Section */}
                 {activeSection === 'collections' && (
                     <View style={styles.sectionContent}>
-                        {/* System Collections */}
-                        {systemCollections.length > 0 && (
-                            <View style={styles.collectionGroup}>
-                                <ThemedText variant="caption" style={styles.groupTitle}>
-                                    SYSTEM COLLECTIONS
-                                </ThemedText>
-                                {systemCollections.map(collection => (
-                                    <TouchableOpacity
-                                        key={collection.id}
-                                        style={[styles.collectionCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }]}
-                                        onPress={() => handleSelectCollection(collection)}
-                                        activeOpacity={0.7}
-                                    >
-                                        <View style={[styles.collectionIcon, { backgroundColor: theme.accent + '15' }]}>
-                                            <FontAwesome name="star" size={18} color={theme.accent} />
-                                        </View>
-                                        <View style={styles.collectionInfo}>
-                                            <ThemedText variant="body" style={styles.collectionName}>{collection.name}</ThemedText>
-                                            <ThemedText variant="caption" style={styles.collectionCount}>
-                                                {collection.scriptures?.length || 0} verses
-                                            </ThemedText>
-                                        </View>
-                                        <View style={[styles.chevronIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                                            <FontAwesome5 name="chevron-right" size={12} color={theme.textSecondary} />
-                                        </View>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        )}
-
-                        {/* Custom Collections */}
                         <View style={styles.collectionGroup}>
                             <View style={styles.groupHeader}>
                                 <ThemedText variant="caption" style={styles.groupTitle}>
-                                    MY COLLECTIONS
+                                    COLLECTIONS
                                 </ThemedText>
                                 <View style={styles.addButtonGroup}>
                                     <TouchableOpacity
@@ -216,7 +187,7 @@ export default function ArsenalScreen() {
                                     </TouchableOpacity>
                                 </View>
                             </View>
-                            {customCollections.length === 0 ? (
+                            {(collections?.length || 0) === 0 ? (
                                 <View style={[styles.emptyState, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]}>
                                     <View style={[styles.emptyIconBg, { backgroundColor: theme.accent + '15' }]}>
                                         <Ionicons name="library-outline" size={32} color={theme.accent} />
@@ -245,20 +216,29 @@ export default function ArsenalScreen() {
                                     </View>
                                 </View>
                             ) : (
-                                customCollections.map(collection => (
+                                (collections || []).map(collection => (
                                     <TouchableOpacity
                                         key={collection.id}
                                         style={[styles.collectionCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }]}
                                         onPress={() => handleSelectCollection(collection)}
                                         activeOpacity={0.7}
                                     >
-                                        <View style={[styles.collectionIcon, { backgroundColor: '#22C55E' + '15' }]}>
-                                            <FontAwesome name="folder" size={18} color="#22C55E" />
+                                        <View style={[styles.collectionIcon, { backgroundColor: collection.isSystem ? (theme.accent + '15') : ('#22C55E' + '15') }]}>
+                                            <FontAwesome name={collection.isSystem ? 'star' : 'folder'} size={18} color={collection.isSystem ? theme.accent : '#22C55E'} />
                                         </View>
                                         <View style={styles.collectionInfo}>
-                                            <ThemedText variant="body" style={styles.collectionName}>{collection.name}</ThemedText>
+                                            <View style={styles.collectionNameRow}>
+                                                <ThemedText variant="body" style={styles.collectionName}>{collection.name}</ThemedText>
+                                                {collection.isSystem && (
+                                                    <View style={[styles.systemBadge, { backgroundColor: theme.accent + '20' }]}>
+                                                        <ThemedText variant="caption" style={[styles.systemBadgeText, { color: theme.accent }]}>SYSTEM</ThemedText>
+                                                    </View>
+                                                )}
+                                            </View>
                                             <ThemedText variant="caption" style={styles.collectionCount}>
-                                                {collection.scriptures?.length || 0} verses
+                                                {collection.isChapterBased && collection.chapters
+                                                    ? `${collection.chapters.length} chapters · ${collection.scriptures?.length || 0} verses`
+                                                    : `${collection.scriptures?.length || 0} verses`}
                                             </ThemedText>
                                         </View>
                                         <View style={[styles.chevronIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
@@ -285,34 +265,48 @@ export default function ArsenalScreen() {
                     isVisible={showCollectionDetail}
                     collection={selectedCollection}
                     onClose={() => {
+                        console.log('🟡 [Arsenal] onClose called, clearing collection')
                         setShowCollectionDetail(false)
                         setSelectedCollection(null)
+                    }}
+                    onChapterNavigate={(collectionId, chapterId) => {
+                        console.log('🟡 [Arsenal] onChapterNavigate called:', collectionId, chapterId)
+                        // Don't clear collection when navigating - let the navigation handle it
+                        setShowCollectionDetail(false)
+                        router.push({
+                            pathname: '/(tabs)/train/collection',
+                            params: {
+                                collectionId,
+                                chapterIds: chapterId,
+                            }
+                        })
+                        console.log('🟡 [Arsenal] router.push executed')
                     }}
                 />
             )}
 
-            <FileUploader
-                isVisible={showFileUploader}
-                onClose={() => setShowFileUploader(false)}
-                onVersesExtracted={async (verses, targetCollectionId) => {
-                    console.log('Extracted verses:', verses.length, 'for collection:', targetCollectionId)
-                    if (verses.length > 0) {
-                        try {
-                            // 1. Add scriptures to global store
-                            const addSuccess = await addScriptures(verses)
-                            if (addSuccess && targetCollectionId) {
-                                // 2. Link them to the selected collection
-                                await addScripturesToCollection(targetCollectionId, verses.map(v => v.id))
+                <FileUploader
+                    isVisible={showFileUploader}
+                    onClose={() => setShowFileUploader(false)}
+                    onVersesExtracted={async (verses, targetCollectionId) => {
+                        console.log('Extracted verses:', verses.length, 'for collection:', targetCollectionId)
+                        if (verses.length > 0) {
+                            try {
+                                // 1. Add scriptures to global store
+                                const addSuccess = await addScriptures(verses)
+                                if (addSuccess && targetCollectionId) {
+                                    // 2. Link them to the selected collection
+                                    await addScripturesToCollection(targetCollectionId, verses.map(v => v.id))
+                                }
+                                console.log('✅ Successfully persisted extracted verses')
+                            } catch (error) {
+                                console.error('❌ Failed to persist extracted verses:', error)
+                                Alert.alert('Persistence Failed', 'Failed to save extracted verses to your arsenal.')
                             }
-                            console.log('✅ Successfully persisted extracted verses')
-                        } catch (error) {
-                            console.error('❌ Failed to persist extracted verses:', error)
-                            Alert.alert('Persistence Failed', 'Failed to save extracted verses to your arsenal.')
                         }
-                    }
-                    setShowFileUploader(false)
-                }}
-            />
+                        setShowFileUploader(false)
+                    }}
+                />
 
             <AddVersesModal
                 isVisible={showAddVerses}
@@ -352,8 +346,17 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 14,
-        borderRadius: 16,
+        borderRadius: 8,
         gap: 12,
+        overflow: 'hidden',
+        position: 'relative',
+    },
+    statsAccentBar: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        height: 3,
     },
     statIconBg: {
         width: 40,
@@ -372,7 +375,7 @@ const styles = StyleSheet.create({
     },
     sectionTabs: {
         flexDirection: 'row',
-        borderRadius: 14,
+        borderRadius: 8,
         padding: 4,
         marginBottom: 20,
     },
@@ -434,13 +437,13 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 14,
-        borderRadius: 14,
+        borderRadius: 8,
         marginBottom: 8,
     },
     collectionIcon: {
         width: 42,
         height: 42,
-        borderRadius: 12,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -448,9 +451,27 @@ const styles = StyleSheet.create({
         flex: 1,
         marginLeft: 12,
     },
+    collectionNameRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: 6,
+    },
     collectionName: {
         fontWeight: '600',
         fontSize: 15,
+        flexShrink: 1,
+    },
+    systemBadge: {
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        alignSelf: 'flex-start',
+    },
+    systemBadgeText: {
+        fontSize: 9,
+        fontWeight: '700',
+        letterSpacing: 0.5,
     },
     collectionCount: {
         marginTop: 2,
@@ -466,14 +487,14 @@ const styles = StyleSheet.create({
     },
     emptyState: {
         padding: 24,
-        borderRadius: 16,
+        borderRadius: 8,
         alignItems: 'center',
         marginVertical: 8,
     },
     emptyIconBg: {
         width: 72,
         height: 72,
-        borderRadius: 24,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 16,

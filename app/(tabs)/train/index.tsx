@@ -8,7 +8,7 @@ import {
     Dimensions,
 } from 'react-native'
 import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
@@ -16,7 +16,9 @@ import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
 import CollectionSelector from '@/components/CollectionSelector'
+import CollectionChapterDropdown from '@/components/CollectionChapterDropdown'
 import { Collection } from '@/types/scripture'
+import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 
 const { width } = Dimensions.get('window')
 
@@ -25,26 +27,53 @@ type TrainingMode = 'single' | 'burst' | 'automatic'
 export default function TrainingScreen() {
     const { isLoading, theme, isDark, userStats, scriptures, collections } = useAppStore()
     const router = useRouter()
+    const params = useLocalSearchParams()
     const { trackEvent } = useAnalytics()
 
     const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
+    const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
+    const [showChapterSelector, setShowChapterSelector] = useState(false)
 
     // Track screen view
     useScreenTracking('training')
+
+    // Defensive routing: if train root receives collection/chapter params,
+    // forward to the collection drill instead of showing general practice UI.
+    useEffect(() => {
+        const collectionId = params.collectionId
+        console.log('🔴 [TrainIndex] useEffect for collectionId:', collectionId)
+        console.log('🔴 [TrainIndex] params:', JSON.stringify(params))
+        if (!collectionId) {
+            console.log('🔴 [TrainIndex] No collectionId, staying on practice area')
+            return
+        }
+
+        console.log('🔴 [TrainIndex] Redirecting to collection drill')
+        router.replace({
+            pathname: '/train/collection',
+            params: {
+                collectionId: String(collectionId),
+                chapterIds: params.chapterIds ? String(params.chapterIds) : undefined,
+            },
+        })
+        console.log('🔴 [TrainIndex] router.replace executed')
+    }, [params.collectionId, params.chapterIds, router])
 
     const handleModeSelect = (mode: TrainingMode) => {
         trackEvent(AnalyticsEventType.PRACTICE_START, {
             practice_type: 'training_mode_selected',
             mode_selected: mode,
-            collection_id: selectedCollection?.id
+            collection_id: selectedCollection?.id,
+            chapter_ids: selectedChapterIds.length > 0 ? selectedChapterIds.join(',') : undefined
         })
-        // Navigate to training practice screen with collection info
-        router.push({ 
-            pathname: '/train/practice', 
-            params: { 
+        // Navigate to training practice screen with collection and chapter info
+        router.push({
+            pathname: '/train/practice',
+            params: {
                 mode,
-                collectionId: selectedCollection?.id 
-            } 
+                collectionId: selectedCollection?.id,
+                chapterIds: selectedChapterIds.length > 0 ? selectedChapterIds.join(',') : undefined
+            }
         })
     }
 
@@ -56,19 +85,11 @@ export default function TrainingScreen() {
         router.push('/train/collection')
     }
 
-    const handleListenAndLearn = () => {
-        trackEvent(AnalyticsEventType.PRACTICE_START, {
-            practice_type: 'listen_and_learn',
-            source: 'training_screen'
-        })
-        router.push('/train/listen')
-    }
-
     const verseCount = scriptures?.length || 0
     const collectionCount = collections?.length || 0
 
-    const displayVerseCount = selectedCollection 
-        ? selectedCollection.scriptures.length 
+    const displayVerseCount = selectedCollection
+        ? selectedCollection.scriptures.length
         : verseCount
 
     return (
@@ -84,15 +105,15 @@ export default function TrainingScreen() {
                 showsVerticalScrollIndicator={false}
             >
                 {/* Info Banner */}
-                <View style={[styles.infoBanner, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
-                    <Ionicons name="information-circle" size={20} color="#3B82F6" />
-                    <ThemedText variant="caption" style={styles.infoText}>
+                <View style={[styles.infoBanner, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : '#FFFFFF', borderColor: isDark ? 'transparent' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
+                    <Ionicons name="information-circle" size={18} color={isDark ? '#3B82F6' : '#4A5D23'} />
+                    <ThemedText variant="caption" style={[styles.infoText, { color: isDark ? '#3B82F6' : '#4A5D23' }]}>
                         Practice mode is pressure-free. Learn at your own pace without affecting your stats.
                     </ThemedText>
                 </View>
 
                 {/* Quick Stats */}
-                <View style={styles.statsRow}>
+                {/* <View style={styles.statsRow}>
                     <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                         <FontAwesome5 name="book" size={20} color={theme.accent} />
                         <ThemedText variant="heading" style={styles.statNumber}>{displayVerseCount}</ThemedText>
@@ -108,16 +129,23 @@ export default function TrainingScreen() {
                         <ThemedText variant="heading" style={styles.statNumber}>{userStats?.totalPracticed || 0}</ThemedText>
                         <ThemedText variant="caption" style={styles.statLabel}>Sessions</ThemedText>
                     </View>
-                </View>
+                </View> */}
 
                 {/* Load Ammunition */}
                 <View style={styles.collectionSection}>
-                    <ThemedText variant="caption" style={styles.sectionTitle}>
+                    {/* <ThemedText variant="caption" style={styles.sectionTitle}>
                         LOAD ARSENAL (OPTIONAL)
-                    </ThemedText>
+                    </ThemedText> */}
                     <CollectionSelector
                         selectedCollection={selectedCollection}
                         onSelectCollection={setSelectedCollection}
+                    />
+                    
+                    {/* Chapter Selection Dropdown */}
+                    <CollectionChapterDropdown
+                        collection={selectedCollection}
+                        selectedChapterIds={selectedChapterIds}
+                        onSelectChapters={setSelectedChapterIds}
                     />
                 </View>
 
@@ -133,23 +161,23 @@ export default function TrainingScreen() {
                         onPress={() => handleModeSelect('single')}
                         activeOpacity={0.9}
                     >
-                        <ThemedCard variant="glass" style={[styles.modeCardInner, styles.primaryMode]}>
+                        <ThemedCard variant="glass" style={[styles.modeCardInner, styles.primaryMode, !isDark && { borderColor: '#4A5D23' }]}>
                             <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
-                                    <Ionicons name="eye" size={32} color="#3B82F6" />
+                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(74, 93, 35, 0.1)' }]}>
+                                    <Ionicons name="eye" size={28} color={isDark ? '#3B82F6' : '#4A5D23'} />
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={styles.modeTitle}>SINGLE FOCUS</ThemedText>
-                                <ThemedText variant="body" style={styles.modeDescription}>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5 }]}>SINGLE FOCUS</ThemedText>
+                                <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
                                     Deep memorization drill. Master one target verse at a time before advancing.
                                 </ThemedText>
-                                <View style={styles.modeTag}>
-                                    <ThemedText variant="caption" style={styles.modeTagText}>Deep Focus</ThemedText>
+                                <View style={[styles.modeTag, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(74, 93, 35, 0.1)' }]}>
+                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: isDark ? '#3B82F6' : '#4A5D23' }]}>Deep Focus</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
-                                <FontAwesome5 name="chevron-right" size={16} color={theme.textSecondary} />
+                                <FontAwesome5 name="chevron-right" size={14} color={isDark ? theme.textSecondary : '#6B7B3A'} />
                             </View>
                         </ThemedCard>
                     </TouchableOpacity>
@@ -160,23 +188,23 @@ export default function TrainingScreen() {
                         onPress={() => handleModeSelect('burst')}
                         activeOpacity={0.9}
                     >
-                        <ThemedCard variant="glass" style={styles.modeCardInner}>
+                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: '#D4CBAB' }]}>
                             <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: 'rgba(34, 197, 94, 0.15)' }]}>
-                                    <Ionicons name="flash" size={28} color="#22C55E" />
+                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(74, 124, 46, 0.1)' }]}>
+                                    <Ionicons name="flash" size={28} color={isDark ? '#22C55E' : '#4A7C2E'} />
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={styles.modeTitle}>BURST FIRE</ThemedText>
-                                <ThemedText variant="body" style={styles.modeDescription}>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5 }]}>BURST FIRE</ThemedText>
+                                <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
                                     Rapid-fire tactical drill for quick recall. Engage multiple familiar verses in succession.
                                 </ThemedText>
-                                <View style={styles.modeTag}>
-                                    <ThemedText variant="caption" style={styles.modeTagText}>Quick Review</ThemedText>
+                                <View style={[styles.modeTag, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(74, 124, 46, 0.1)' }]}>
+                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: isDark ? '#22C55E' : '#4A7C2E' }]}>Quick Review</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
-                                <FontAwesome5 name="chevron-right" size={16} color={theme.textSecondary} />
+                                <FontAwesome5 name="chevron-right" size={14} color={isDark ? theme.textSecondary : '#6B7B3A'} />
                             </View>
                         </ThemedCard>
                     </TouchableOpacity>
@@ -187,23 +215,23 @@ export default function TrainingScreen() {
                         onPress={() => handleModeSelect('automatic')}
                         activeOpacity={0.9}
                     >
-                        <ThemedCard variant="glass" style={styles.modeCardInner}>
+                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: '#D4CBAB' }]}>
                             <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: 'rgba(168, 85, 247, 0.15)' }]}>
+                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.08)' }]}>
                                     <Ionicons name="infinite" size={28} color="#A855F7" />
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={styles.modeTitle}>AUTO PILOT</ThemedText>
-                                <ThemedText variant="body" style={styles.modeDescription}>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5 }]}>AUTO PILOT</ThemedText>
+                                <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
                                     Verses read aloud automatically, one after another. Just listen and absorb.
                                 </ThemedText>
-                                <View style={styles.modeTag}>
-                                    <ThemedText variant="caption" style={styles.modeTagText}>Passive Learning</ThemedText>
+                                <View style={[styles.modeTag, { backgroundColor: isDark ? 'rgba(168, 85, 247, 0.15)' : 'rgba(168, 85, 247, 0.08)' }]}>
+                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: '#A855F7' }]}>Passive Learning</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
-                                <FontAwesome5 name="chevron-right" size={16} color={theme.textSecondary} />
+                                <FontAwesome5 name="chevron-right" size={14} color={isDark ? theme.textSecondary : '#6B7B3A'} />
                             </View>
                         </ThemedCard>
                     </TouchableOpacity>
@@ -243,7 +271,7 @@ export default function TrainingScreen() {
                 </View>
             </ScrollView>
 
-            {isLoading && <LoadingOverlay />}
+            <LoadingOverlay visible={isLoading} />
         </ThemedContainer>
     )
 }
@@ -269,7 +297,6 @@ const styles = StyleSheet.create({
     },
     infoText: {
         flex: 1,
-        color: '#3B82F6',
     },
     statsRow: {
         flexDirection: 'row',
@@ -296,19 +323,20 @@ const styles = StyleSheet.create({
         marginBottom: 24,
     },
     sectionTitle: {
-        fontSize: 12,
-        letterSpacing: 1.5,
+        fontSize: 11,
+        letterSpacing: 2,
         opacity: 0.7,
         marginBottom: 12,
+        fontWeight: '700',
     },
     modeCard: {
-        marginBottom: 12,
+        marginBottom: 10,
     },
     modeCardInner: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 16,
-        borderRadius: 16,
+        borderRadius: 8,
     },
     primaryMode: {
         borderWidth: 2,
@@ -318,9 +346,9 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     modeIcon: {
-        width: 56,
-        height: 56,
-        borderRadius: 28,
+        width: 52,
+        height: 52,
+        borderRadius: 8,
         alignItems: 'center',
         justifyContent: 'center',
     },
@@ -363,7 +391,7 @@ const styles = StyleSheet.create({
     },
     tipCard: {
         padding: 16,
-        borderRadius: 12,
+        borderRadius: 8,
     },
     tipItem: {
         flexDirection: 'row',
@@ -374,5 +402,86 @@ const styles = StyleSheet.create({
     tipText: {
         flex: 1,
         fontSize: 13,
+    },
+    chapterSelector: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        marginTop: 12,
+        gap: 12,
+    },
+    chapterSelectorContent: {
+        flex: 1,
+    },
+    chapterSelectorText: {
+        fontWeight: '600',
+        fontSize: 14,
+    },
+    chapterSelectorSubtext: {
+        fontSize: 11,
+        marginTop: 2,
+        opacity: 0.7,
+    },
+    chapterSection: {
+        marginTop: 12,
+        backgroundColor: 'rgba(255,255,255,0.03)',
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+        padding: 12,
+    },
+    chapterSectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 12,
+    },
+    chapterSectionTitle: {
+        fontWeight: '600',
+        letterSpacing: 1,
+    },
+    chapterList: {
+        maxHeight: 200,
+    },
+    chapterItem: {
+        borderRadius: 8,
+        borderWidth: 1,
+        marginBottom: 6,
+        padding: 10,
+    },
+    chapterItemContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    chapterItemInfo: {
+        flex: 1,
+    },
+    chapterItemName: {
+        fontWeight: '500',
+        fontSize: 13,
+    },
+    chapterItemCount: {
+        fontSize: 11,
+        marginTop: 2,
+    },
+    chapterActions: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 8,
+    },
+    chapterActionButton: {
+        flex: 1,
+        paddingVertical: 8,
+        borderRadius: 6,
+        borderWidth: 1,
+        alignItems: 'center',
+    },
+    chapterActionText: {
+        fontWeight: '600',
+        letterSpacing: 0.5,
     },
 })

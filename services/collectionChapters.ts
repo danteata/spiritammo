@@ -24,6 +24,60 @@ export class CollectionChapterService {
       };
     }
 
+    // Check if scriptures have collectionChapter fields (from EPUB extraction)
+    const hasCollectionChapters = scriptures.some((s: any) => s.collectionChapter !== undefined);
+    
+    if (hasCollectionChapters) {
+      // Group by collection chapters (from EPUB table of contents)
+      const collectionChapterMap = new Map<number, { name: string; scriptures: Scripture[] }>();
+      
+      scriptures.forEach((scripture: any) => {
+        const chapterNum = scripture.collectionChapter;
+        const chapterName = scripture.collectionChapterName || `Chapter ${chapterNum}`;
+        
+        if (chapterNum !== undefined) {
+          if (!collectionChapterMap.has(chapterNum)) {
+            collectionChapterMap.set(chapterNum, { name: chapterName, scriptures: [] });
+          }
+          collectionChapterMap.get(chapterNum)!.scriptures.push(scripture);
+        }
+      });
+
+      const totalChapters = collectionChapterMap.size;
+      const canBeChapterBased = totalChapters > 1;
+
+      const suggestedChapters: CollectionChapter[] = [];
+      
+      if (canBeChapterBased) {
+        Array.from(collectionChapterMap.entries())
+          .sort(([a], [b]) => a - b)
+          .forEach(([chapterNum, { name, scriptures: chapterScriptures }]) => {
+            suggestedChapters.push({
+              id: `collection_chapter_${chapterNum}`,
+              chapterNumber: chapterNum,
+              name: name,
+              description: `${chapterScriptures.length} verses`,
+              scriptures: chapterScriptures.map(s => s.id),
+              isCompleted: false,
+              isCustomSection: false,
+            });
+          });
+      }
+
+      return {
+        canBeChapterBased,
+        suggestedChapters,
+        sourceBook: undefined,
+        stats: {
+          totalBooks: 1, // Treat as single source for EPUB books
+          totalChapters,
+          consecutiveChapters: true,
+          singleBook: true
+        }
+      };
+    }
+
+    // Original logic for Bible-based collections
     // Group scriptures by book and chapter
     const bookChapterMap = new Map<string, Map<number, Scripture[]>>();
     const books = new Set<string>();

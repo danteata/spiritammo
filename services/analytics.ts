@@ -941,9 +941,14 @@ class AmplitudeProvider implements AnalyticsProvider {
             this.initialized = true;
 
             // Add Session Replay if available
-            if (SessionReplayPlugin) {
+            if (SessionReplayPlugin && config.enableSessionReplay) {
                 try {
-                    await amplitude.add(new SessionReplayPlugin()).promise
+                    const sessionReplayConfig = {
+                        sampleRate: typeof config.sessionReplaySampleRate === 'number' ? config.sessionReplaySampleRate : 0.2,
+                        enableRemoteConfig: true,
+                        autoStart: true,
+                    }
+                    await amplitude.add(new SessionReplayPlugin(sessionReplayConfig)).promise
                     console.log('📊 Amplitude Session Replay enabled')
                 } catch (replayError) {
                     console.warn('📊 Session Replay not available:', replayError)
@@ -1274,7 +1279,11 @@ export const Analytics = {
         const config: any = {
             enabled: process.env.EXPO_PUBLIC_ANALYTICS_ENABLED !== 'false',
             version: process.env.EXPO_PUBLIC_APP_VERSION || '1.0.0',
-            platform: 'mobile'
+            platform: 'mobile',
+            enableSessionReplay: process.env.EXPO_PUBLIC_AMPLITUDE_SESSION_REPLAY === 'true',
+            sessionReplaySampleRate: process.env.EXPO_PUBLIC_AMPLITUDE_SESSION_REPLAY_SAMPLE_RATE
+                ? Number(process.env.EXPO_PUBLIC_AMPLITUDE_SESSION_REPLAY_SAMPLE_RATE)
+                : undefined,
         }
 
         // Provider-specific config from environment

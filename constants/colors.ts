@@ -43,45 +43,45 @@ export const STEALTH_THEME = {
 }
 
 export const GARRISON_THEME = {
-  primary: '#F1F5F9', // Slate 100
-  secondary: '#FFFFFF',
-  accent: '#F97316', // Orange
-  background: '#F8FAFC', // Slate 50
-  surface: '#FFFFFF',
-  surfaceHighlight: '#F1F5F9',
-  text: '#0F172A', // Slate 900
-  textSecondary: '#64748B', // Slate 500
-  success: '#10B981',
-  warning: '#F59E0B',
-  error: '#EF4444',
-  border: '#E2E8F0', // Slate 200
-  shadow: 'rgba(15, 23, 42, 0.05)',
-  glass: 'rgba(255, 255, 255, 0.8)',
+  primary: '#4A5D23', // Olive Drab Green
+  secondary: '#3D4F1C', // Darker Olive
+  accent: '#C8A951', // Military Brass Gold
+  background: '#F5F0E1', // Parchment/Khaki Base
+  surface: '#FFFFFF', // Clean white cards
+  surfaceHighlight: '#EDE8D5', // Warm sand highlight
+  text: '#1A2309', // Deep Military Black-Green
+  textSecondary: '#6B7B3A', // Olive muted text
+  success: '#4A7C2E', // Military Green
+  warning: '#D4A017', // Amber Gold
+  error: '#B91C1C', // Command Red
+  border: '#D4CBAB', // Sand/Khaki border
+  shadow: 'rgba(26, 35, 9, 0.08)',
+  glass: 'rgba(255, 255, 255, 0.85)',
   // Contrast colors for readability
-  accentContrastText: '#000000', // Black text on orange backgrounds
-  surfaceContrastText: '#0F172A', // Dark text for surface backgrounds
-  primaryContrastText: '#0F172A', // Dark text for primary backgrounds
+  accentContrastText: '#1A2309', // Dark text on brass backgrounds
+  surfaceContrastText: '#1A2309', // Dark text for surface backgrounds
+  primaryContrastText: '#F5F0E1', // Light text on olive backgrounds
 }
 
 export const JUNGLE_THEME = {
-  primary: '#1E3A1E', // Classic Military Green (Base)
-  secondary: '#0F1C0F', // Darker shades
-  accent: '#4ADE80', // Bright Green (HUD/Terminal style)
-  background: '#1A2F1C', // Deep Hunter Green (Top of gradient)
-  surface: '#050805', // Almost Black (Card background)
-  text: '#F0F5F0', // Off-white
-  textSecondary: '#869D86', // Muted Green Gray
-  success: '#32CD32', // Lime Green (Classic)
-  warning: '#FFD700', // Gold
-  error: '#EF4444', // Red
-  border: '#2A402A', // Subtle Green Border
+  primary: '#1A2309', // Deep Military Black-Green (Base)
+  secondary: '#0D1205', // Near Black Olive
+  accent: '#C8A951', // Military Brass Gold (matches Garrison)
+  background: '#0D1205', // Deep Black-Green (Top of gradient)
+  surface: '#1A2309', // Military Black-Green (Card background)
+  text: '#E8E0CC', // Warm Parchment (readable on dark green)
+  textSecondary: '#7A8B52', // Muted Military Olive
+  success: '#4A7C2E', // Military Green (matches Garrison)
+  warning: '#C8A951', // Brass Gold (matches Garrison)
+  error: '#B91C1C', // Command Red (matches Garrison)
+  border: '#2A3518', // Dark Olive Border
   shadow: 'rgba(0, 0, 0, 0.9)',
-  surfaceHighlight: '#111F11',
-  glass: 'rgba(5, 8, 5, 0.8)', // Very dark glass
+  surfaceHighlight: '#222E12', // Slightly lighter military green
+  glass: 'rgba(13, 18, 5, 0.85)', // Deep black-green glass
   // Contrast colors for readability
-  accentContrastText: '#000000', // Black text on green backgrounds
-  surfaceContrastText: '#F0F5F0', // Existing text for surface backgrounds
-  primaryContrastText: '#F0F5F0', // Existing text for primary backgrounds
+  accentContrastText: '#0D1205', // Dark text on brass backgrounds
+  surfaceContrastText: '#E8E0CC', // Parchment text for surface backgrounds
+  primaryContrastText: '#E8E0CC', // Parchment text for primary backgrounds
 }
 
 export const SLATE_THEME = {
@@ -141,11 +141,11 @@ export const COLORS = {
 export const GRADIENTS = {
   primary: {
     dark: [TACTICAL_THEME.background, TACTICAL_THEME.primary] as const,
-    light: [GARRISON_THEME.background, '#E8E8E0'] as const,
+    light: ['#F5F0E1', '#EDE8D5'] as const, // Parchment to warm sand
   },
   secondary: {
     dark: [TACTICAL_THEME.surface, TACTICAL_THEME.secondary] as const,
-    light: [GARRISON_THEME.surface, '#F0F0E8'] as const,
+    light: ['#FFFFFF', '#F5F0E1'] as const, // White to parchment
   },
   tactical: {
     background: [TACTICAL_THEME.background, '#020617'] as const, // Slate 900 -> Slate 950
@@ -158,9 +158,9 @@ export const GRADIENTS = {
     accent: [STEALTH_THEME.accent, '#0284C7'] as const, // Sky 400 -> Sky 600
   },
   jungle: {
-    background: ['#1A2F1C', '#000000'] as const, // Hunter Green -> Pure Black
-    surface: ['#0A0F0A', '#000000'] as const,
-    accent: ['#4ADE80', '#22C55E'] as const, // Bright Green Gradient
+    background: ['#0D1205', '#000000'] as const, // Deep Black-Green -> Pure Black
+    surface: ['#1A2309', '#0D1205'] as const, // Military Black-Green gradient
+    accent: ['#C8A951', '#A68B3C'] as const, // Brass Gold gradient (matches Garrison)
   },
   slate: {
     background: [SLATE_THEME.background, '#020617'] as const, // Slate 900 -> Slate 950
