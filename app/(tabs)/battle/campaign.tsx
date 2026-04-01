@@ -7,6 +7,7 @@ import {
     Alert,
     ActivityIndicator,
     Animated,
+    Platform,
 } from 'react-native'
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
@@ -15,7 +16,9 @@ import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import CampaignMap from '@/components/CampaignMap'
 import CampaignCard from '@/components/CampaignCard'
-import TargetPractice from '@/components/TargetPractice'
+import UnifiedScriptureRecorderCard from '@/components/UnifiedScriptureRecorderCard'
+import ScriptureActionRow from '@/components/ScriptureActionRow'
+import VoicePlaybackService from '@/services/voicePlayback'
 import MissionBriefingModal from '@/components/MissionBriefingModal'
 import StealthDrill from '@/components/StealthDrill'
 import { Campaign, CampaignNode } from '@/types/campaign'
@@ -55,8 +58,8 @@ export default function CampaignScreen() {
         itemName: ''
     })
 
-    // Constants
     const [isLoadingScripture, setIsLoadingScripture] = useState(false)
+    const [isListeningVerse, setIsListeningVerse] = useState(false)
 
     useEffect(() => {
         if (activeCampaignId) {
@@ -144,6 +147,39 @@ export default function CampaignScreen() {
         // Reset selection
         setSelectedNode(null)
         setTargetScripture(null)
+    }
+
+    const handleListenVerse = async () => {
+        if (!targetScripture) return
+        setIsListeningVerse(true)
+        try {
+            await VoicePlaybackService.playScripture(
+                targetScripture.id,
+                `${targetScripture.reference}. ${targetScripture.text}`,
+                {
+                    rate: 0.9,
+                    pitch: 1.0,
+                    language: 'en-US',
+                }
+            )
+        } finally {
+            setIsListeningVerse(false)
+        }
+    }
+
+    const handleIntelPress = async () => {
+        if (!targetScripture) return
+        const intelText = targetScripture.mnemonic || `Target objective: ${targetScripture.reference}`
+        setIsListeningVerse(true)
+        try {
+            await VoicePlaybackService.playTextToSpeech(intelText, {
+                rate: 0.9,
+                pitch: 1.0,
+                language: 'en-US',
+            })
+        } finally {
+            setIsListeningVerse(false)
+        }
     }
 
     const renderBriefingCard = () => {
@@ -284,14 +320,39 @@ export default function CampaignScreen() {
 
             {targetScripture && practiceMode === 'VOICE' && (
                 <View style={styles.fullScreenPractice}>
-                    <TargetPractice
-                        isVisible={true}
-                        targetVerse={targetScripture.text}
-                        reference={targetScripture.reference}
-                        scriptureId={targetScripture.id}
-                        onRecordingComplete={(_, acc) => handleMissionComplete(acc)}
-                        onClose={() => setPracticeMode(null)}
-                    />
+                    <View style={styles.practiceHeader}>
+                        <TouchableOpacity 
+                            style={styles.closePracticeButton}
+                            onPress={() => setPracticeMode(null)}
+                        >
+                            <Ionicons name="arrow-back" size={24} color={theme.text} />
+                            <ThemedText variant="button" style={{ marginLeft: 8 }}>ABORT MISSION</ThemedText>
+                        </TouchableOpacity>
+                        <View style={styles.requirementBadge}>
+                            <ThemedText variant="caption" style={{ color: theme.accent }}>REQ: {selectedNode?.requiredAccuracy}% ACCURACY</ThemedText>
+                        </View>
+                    </View>
+                    
+                    <ScrollView contentContainerStyle={styles.practiceScrollContent}>
+                        <UnifiedScriptureRecorderCard
+                            scripture={targetScripture}
+                            isBattleMode={true}
+                            onRecordingComplete={handleMissionComplete}
+                            onListen={handleListenVerse}
+                            isListening={isListeningVerse}
+                        />
+                        <ScriptureActionRow
+                            onIntel={handleIntelPress}
+                            accentColor={theme.accent}
+                        />
+                        
+                        <ThemedCard variant="glass" style={styles.missionNote}>
+                            <Ionicons name="shield-checkmark" size={20} color={theme.accent} />
+                            <ThemedText variant="caption" style={styles.missionNoteText}>
+                                Ensure maximum silence for optimal transmission clarity. Target coordinates locked.
+                            </ThemedText>
+                        </ThemedCard>
+                    </ScrollView>
                 </View>
             )}
 
@@ -401,8 +462,44 @@ const styles = StyleSheet.create({
     },
     fullScreenPractice: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'black',
+        backgroundColor: 'rgba(0,0,0,0.95)',
         zIndex: 100,
+        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    },
+    practiceHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        marginBottom: 20,
+    },
+    closePracticeButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    requirementBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    practiceScrollContent: {
+        padding: 20,
+        paddingBottom: 40,
+    },
+    missionNote: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        marginTop: 20,
+        gap: 12,
+    },
+    missionNoteText: {
+        flex: 1,
+        opacity: 0.8,
+        letterSpacing: 0.5,
     },
     briefingCard: {
         position: 'absolute',

@@ -17,10 +17,12 @@ import ScriptureActionRow from '@/components/ScriptureActionRow'
 import StealthDrill from '@/components/StealthDrill'
 import { Scripture } from '@/types/scripture'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
+import { AnalyticsEventType } from '@/services/analytics'
 import { practiceLogService } from '@/services/practiceLogService'
 import { generateBattleIntel } from '@/services/battleIntelligence'
 import { militaryRankingService } from '@/services/militaryRanking'
 import ValorPointsService from '@/services/valorPoints'
+import VoicePlaybackService from '@/services/voicePlayback'
 
 export default function QuickBattleScreen() {
     const {
@@ -45,6 +47,7 @@ export default function QuickBattleScreen() {
     const [showStealthDrill, setShowStealthDrill] = useState(false)
 
     const [isLoadingIntel, setIsLoadingIntel] = useState(false)
+    const [isListeningVerse, setIsListeningVerse] = useState(false)
 
     // Load a random scripture on mount
     useEffect(() => {
@@ -132,6 +135,24 @@ export default function QuickBattleScreen() {
         }
     }
 
+    const handleListenVerse = async () => {
+        if (!currentScripture) return
+        setIsListeningVerse(true)
+        try {
+            await VoicePlaybackService.playScripture(
+                currentScripture.id,
+                `${currentScripture.reference}. ${currentScripture.text}`,
+                {
+                    rate: 0.9,
+                    pitch: 1.0,
+                    language: 'en-US',
+                }
+            )
+        } finally {
+            setIsListeningVerse(false)
+        }
+    }
+
     const handleShowIntel = async () => {
         if (!currentScripture) return
 
@@ -147,6 +168,13 @@ export default function QuickBattleScreen() {
                 `MNEMONIC: ${intel.battlePlan}\n\nTACTICAL NOTES: ${intel.tacticalNotes}`,
                 [{ text: 'COPY THAT' }]
             )
+
+            // Also read it aloud
+            await VoicePlaybackService.playTextToSpeech(`${intel.battlePlan}. ${intel.tacticalNotes}`, {
+                rate: 0.9,
+                pitch: 1.0,
+                language: 'en-US',
+            })
 
             // Record intel generation for rank progress
             await militaryRankingService.recordIntelGenerated()
@@ -221,8 +249,9 @@ export default function QuickBattleScreen() {
                         <UnifiedScriptureRecorderCard
                             scripture={currentScripture}
                             isBattleMode
-                            intelText={`Reference: ${currentScripture.reference}`}
                             onRecordingComplete={handleRecordingComplete}
+                            onListen={handleListenVerse}
+                            isListening={isListeningVerse}
                         />
                         <ScriptureActionRow
                             onStealth={handleStartStealthBattle}

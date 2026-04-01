@@ -53,7 +53,7 @@ export default function CollectionDrillScreen() {
     const [scriptureIndex, setScriptureIndex] = useState(0)
     const [showStealthDrill, setShowStealthDrill] = useState(false)
     const [isListeningVerse, setIsListeningVerse] = useState(false)
-    const [isLoading, setIsLoading] = useState(false)
+    const [isLoading, setIsLoading] = useState(!!params.collectionId)
 
     const initialChapterIds = useMemo(() => {
         const raw = params.chapterIds
@@ -84,6 +84,17 @@ export default function CollectionDrillScreen() {
             console.log('🟢 [CollectionDrill] Set selectedCollection')
         }
     }, [params.collectionId, collections])
+
+    // Clear loading state once collection is settled
+    useEffect(() => {
+        if (params.collectionId) {
+            if (selectedCollection || !collections) {
+                setIsLoading(false)
+            }
+        } else {
+            setIsLoading(false)
+        }
+    }, [selectedCollection, collections, params.collectionId])
 
     useEffect(() => {
         if (!selectedCollection) {
@@ -252,7 +263,12 @@ export default function CollectionDrillScreen() {
                     </ThemedText>
                 </View>
 
-                {!selectedCollection ? (
+                {isLoading ? (
+                    <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color={theme.accent} />
+                        <ThemedText variant="caption" style={styles.loadingText}>INITIALIZING TRAINING PROTOCOL...</ThemedText>
+                    </View>
+                ) : !selectedCollection ? (
                     <View style={styles.selectorContainer}>
                         <ThemedText variant="caption" style={styles.sectionTitle}>
                             SELECT A COLLECTION
@@ -458,5 +474,16 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontWeight: '600',
         fontSize: 16,
+    },
+    loadingContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 100,
+        gap: 20,
+    },
+    loadingText: {
+        letterSpacing: 2,
+        opacity: 0.6,
     },
 })

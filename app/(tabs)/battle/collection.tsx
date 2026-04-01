@@ -15,6 +15,7 @@ import CollectionSelector from '@/components/CollectionSelector'
 import CollectionChapterSelector from '@/components/CollectionChapterSelector'
 import UnifiedScriptureRecorderCard from '@/components/UnifiedScriptureRecorderCard'
 import ScriptureActionRow from '@/components/ScriptureActionRow'
+import VoicePlaybackService from '@/services/voicePlayback'
 import StealthDrill from '@/components/StealthDrill'
 import { Collection } from '@/types/scripture'
 import { Scripture } from '@/types/scripture'
@@ -47,6 +48,7 @@ export default function CollectionBattleScreen() {
     const [scriptureIndex, setScriptureIndex] = useState(0)
     const [totalVP, setTotalVP] = useState(0)
     const [showStealthDrill, setShowStealthDrill] = useState(false)
+    const [isListeningVerse, setIsListeningVerse] = useState(false)
 
     const initialChapterIds = useMemo(() => {
         const raw = params.chapterIds
@@ -195,6 +197,24 @@ export default function CollectionBattleScreen() {
         }
     }
 
+    const handleListenVerse = async () => {
+        if (!currentScripture) return
+        setIsListeningVerse(true)
+        try {
+            await VoicePlaybackService.playScripture(
+                currentScripture.id,
+                `${currentScripture.reference}. ${currentScripture.text}`,
+                {
+                    rate: 0.9,
+                    pitch: 1.0,
+                    language: 'en-US',
+                }
+            )
+        } finally {
+            setIsListeningVerse(false)
+        }
+    }
+
     const handleStartStealthBattle = () => {
         if (!currentScripture || !selectedCollection) return
         setShowStealthDrill(true)
@@ -300,6 +320,8 @@ export default function CollectionBattleScreen() {
                                     scripture={currentScripture}
                                     isBattleMode
                                     onRecordingComplete={handleRecordingComplete}
+                                    onListen={handleListenVerse}
+                                    isListening={isListeningVerse}
                                 />
                                 <ScriptureActionRow
                                     onStealth={handleStartStealthBattle}

@@ -295,6 +295,7 @@ export default function TrainingPracticeScreen() {
         }
     }, [currentScripture, userSettings, isAutoPaused])
 
+
     const autoAdvance = useCallback(() => {
         if (!scriptures || scriptures.length === 0 || !isMountedRef.current) return
 
@@ -465,6 +466,13 @@ export default function TrainingPracticeScreen() {
                 `MNEMONIC: ${intel.battlePlan}\n\nTACTICAL NOTES: ${intel.tacticalNotes}`,
                 [{ text: 'COPY THAT' }]
             )
+
+            // Also read it aloud
+            await VoicePlaybackService.playTextToSpeech(`${intel.battlePlan}. ${intel.tacticalNotes}`, {
+                rate: userSettings.voiceRate || 0.9,
+                pitch: userSettings.voicePitch || 1.0,
+                language: userSettings.language || 'en-US',
+            })
 
             // Record intel generation for rank progress
             await militaryRankingService.recordIntelGenerated()
@@ -665,6 +673,8 @@ export default function TrainingPracticeScreen() {
                         <UnifiedScriptureRecorderCard
                             scripture={currentScripture}
                             onRecordingComplete={(accuracy) => handlePracticeComplete('', accuracy)}
+                            onListen={handleListenVerse}
+                            isListening={isListeningVerse}
                         />
                         <ScriptureActionRow
                             onStealth={handleStartStealthPractice}

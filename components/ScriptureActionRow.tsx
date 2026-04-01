@@ -7,27 +7,22 @@ import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 interface ScriptureActionRowProps {
   onStealth?: () => void
   onIntel?: () => void
-  onListen?: () => void
   isLoadingIntel?: boolean
-  isListening?: boolean
   accentColor?: string
 }
 
 export default function ScriptureActionRow({
   onStealth,
   onIntel,
-  onListen,
   isLoadingIntel = false,
-  isListening = false,
   accentColor,
 }: ScriptureActionRowProps) {
   const { theme, isDark } = useAppStore()
 
   const hasStealth = Boolean(onStealth)
   const hasIntel = Boolean(onIntel)
-  const hasListen = Boolean(onListen)
 
-  if (!hasStealth && !hasIntel && !hasListen) return null
+  if (!hasStealth && !hasIntel) return null
 
   const buttonColor = accentColor || theme.accent
   const subtleBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'
@@ -55,20 +50,6 @@ export default function ScriptureActionRow({
             <FontAwesome5 name="brain" size={16} color={theme.accentContrastText} />
           )}
           <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.caption, { color: theme.accentContrastText }]}>INTEL</Text>
-        </TouchableOpacity>
-      )}
-      {hasListen && (
-        <TouchableOpacity
-          style={[styles.button, { backgroundColor: subtleBg, borderColor: theme.border }]}
-          onPress={onListen}
-          disabled={isListening}
-        >
-          {isListening ? (
-            <ActivityIndicator size="small" color={theme.text} />
-          ) : (
-            <Ionicons name="volume-high" size={18} color={theme.text} />
-          )}
-          <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.caption, { color: theme.text }]}>LISTEN</Text>
         </TouchableOpacity>
       )}
     </View>

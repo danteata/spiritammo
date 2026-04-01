@@ -7,6 +7,7 @@ import {
     Alert,
     ActivityIndicator,
     Animated,
+    Platform,
 } from 'react-native'
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
@@ -15,7 +16,9 @@ import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import CampaignMap from '@/components/CampaignMap'
 import CampaignCard from '@/components/CampaignCard'
-import TargetPractice from '@/components/TargetPractice'
+import UnifiedScriptureRecorderCard from '@/components/UnifiedScriptureRecorderCard'
+import ScriptureActionRow from '@/components/ScriptureActionRow'
+import VoicePlaybackService from '@/services/voicePlayback'
 import MissionBriefingModal from '@/components/MissionBriefingModal'
 import StealthDrill from '@/components/StealthDrill'
 import { Toast } from '@/components/ui/Toast'
@@ -54,8 +57,8 @@ export default function TrainingCampaignScreen() {
         itemName: ''
     })
 
-    // Constants
     const [isLoadingScripture, setIsLoadingScripture] = useState(false)
+    const [isListeningVerse, setIsListeningVerse] = useState(false)
 
     useEffect(() => {
         if (activeCampaignId) {
@@ -131,52 +134,37 @@ export default function TrainingCampaignScreen() {
         }
     }
 
-    const renderBriefingCard = () => {
-        if (!selectedNode || !targetScripture || practiceMode) return null
+    const handleListenVerse = async () => {
+        if (!targetScripture) return
+        setIsListeningVerse(true)
+        try {
+            await VoicePlaybackService.playScripture(
+                targetScripture.id,
+                `${targetScripture.reference}. ${targetScripture.text}`,
+                {
+                    rate: 0.9,
+                    pitch: 1.0,
+                    language: 'en-US',
+                }
+            )
+        } finally {
+            setIsListeningVerse(false)
+        }
+    }
 
-        return (
-            <Animated.View style={[styles.briefingCard, { backgroundColor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', borderColor: theme.border }]}>
-                <View style={styles.briefingHeader}>
-                    <View style={styles.briefingTitleRow}>
-                        <View style={[styles.briefingIndicator, { backgroundColor: theme.accent }]} />
-                        <ThemedText variant="heading" style={styles.briefingTitle}>MISSION INTEL</ThemedText>
-                    </View>
-                    <TouchableOpacity onPress={() => setSelectedNode(null)}>
-                        <Ionicons name="close-circle" size={24} color={theme.textSecondary} />
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.briefingDetails}>
-                    <View style={styles.briefingStat}>
-                        <ThemedText variant="caption" style={styles.briefingLabel}>OBJECTIVE</ThemedText>
-                        <ThemedText variant="body" style={styles.briefingValue}>{targetScripture.reference}</ThemedText>
-                    </View>
-                    <View style={styles.briefingDivider} />
-                    <View style={styles.briefingStat}>
-                        <ThemedText variant="caption" style={styles.briefingLabel}>REQD. ACCURACY</ThemedText>
-                        <ThemedText variant="body" style={styles.briefingValue}>{selectedNode.requiredAccuracy}%</ThemedText>
-                    </View>
-                </View>
-
-                <View style={styles.briefingActions}>
-                    <TouchableOpacity
-                        style={[styles.briefingButton, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}
-                        onPress={() => setPracticeMode('STEALTH')}
-                    >
-                        <FontAwesome5 name="mask" size={14} color={theme.text} />
-                        <ThemedText variant="button" style={styles.briefingButtonText}>STEALTH</ThemedText>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.briefingButton, styles.primaryBriefingButton, { backgroundColor: theme.accent }]}
-                        onPress={() => setPracticeMode('VOICE')}
-                    >
-                        <FontAwesome5 name="microphone" size={14} color="white" />
-                        <ThemedText variant="button" style={[styles.briefingButtonText, { color: 'white' }]}>ENGAGE</ThemedText>
-                    </TouchableOpacity>
-                </View>
-            </Animated.View>
-        )
+    const handleIntelPress = async () => {
+        if (!targetScripture) return
+        const intelText = targetScripture.mnemonic || `Target objective: ${targetScripture.reference}`
+        setIsListeningVerse(true)
+        try {
+            await VoicePlaybackService.playTextToSpeech(intelText, {
+                rate: 0.9,
+                pitch: 1.0,
+                language: 'en-US',
+            })
+        } finally {
+            setIsListeningVerse(false)
+        }
     }
 
     return (
@@ -262,18 +250,55 @@ export default function TrainingCampaignScreen() {
                 />
             </View>
 
-            {renderBriefingCard()}
+            <MissionBriefingModal
+                isVisible={showBriefing && !!selectedNode && !!targetScripture}
+                node={selectedNode}
+                scripture={targetScripture}
+                onClose={() => {
+                    setShowBriefing(false)
+                    setSelectedNode(null)
+                }}
+                onStartMission={(mode) => {
+                    setShowBriefing(false)
+                    setPracticeMode(mode)
+                }}
+            />
 
             {targetScripture && practiceMode === 'VOICE' && (
                 <View style={styles.fullScreenPractice}>
-                    <TargetPractice
-                        isVisible={true}
-                        targetVerse={targetScripture.text}
-                        reference={targetScripture.reference}
-                        scriptureId={targetScripture.id}
-                        onRecordingComplete={(_, acc) => handleMissionComplete(acc)}
-                        onClose={() => setPracticeMode(null)}
-                    />
+                    <View style={styles.practiceHeader}>
+                        <TouchableOpacity 
+                            style={styles.closePracticeButton}
+                            onPress={() => setPracticeMode(null)}
+                        >
+                            <Ionicons name="arrow-back" size={24} color={theme.text} />
+                            <ThemedText variant="button" style={{ marginLeft: 8 }}>ABORT MISSION</ThemedText>
+                        </TouchableOpacity>
+                        <View style={styles.requirementBadge}>
+                            <ThemedText variant="caption" style={{ color: theme.accent }}>REQ: {selectedNode?.requiredAccuracy || 60}% ACCURACY</ThemedText>
+                        </View>
+                    </View>
+                    
+                    <ScrollView contentContainerStyle={styles.practiceScrollContent}>
+                        <UnifiedScriptureRecorderCard
+                            scripture={targetScripture}
+                            isBattleMode={true}
+                            onRecordingComplete={handleMissionComplete}
+                            onListen={handleListenVerse}
+                            isListening={isListeningVerse}
+                        />
+                        <ScriptureActionRow
+                            onIntel={handleIntelPress}
+                            accentColor={theme.accent}
+                        />
+                        
+                        <ThemedCard variant="glass" style={styles.missionNote}>
+                            <Ionicons name="shield-checkmark" size={20} color={theme.accent} />
+                            <ThemedText variant="caption" style={styles.missionNoteText}>
+                                Ensure maximum silence for optimal transmission clarity. Target coordinates locked.
+                            </ThemedText>
+                        </ThemedCard>
+                    </ScrollView>
                 </View>
             )}
 
@@ -381,8 +406,44 @@ const styles = StyleSheet.create({
     },
     fullScreenPractice: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'black',
+        backgroundColor: 'rgba(0,0,0,0.95)',
         zIndex: 100,
+        paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    },
+    practiceHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        marginBottom: 20,
+    },
+    closePracticeButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    requirementBadge: {
+        paddingHorizontal: 12,
+        paddingVertical: 6,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.1)',
+    },
+    practiceScrollContent: {
+        padding: 20,
+        paddingBottom: 40,
+    },
+    missionNote: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        marginTop: 20,
+        gap: 12,
+    },
+    missionNoteText: {
+        flex: 1,
+        opacity: 0.8,
+        letterSpacing: 0.5,
     },
     briefingCard: {
         position: 'absolute',

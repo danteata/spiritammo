@@ -987,7 +987,7 @@ class AmplitudeProvider implements AnalyticsProvider {
             Object.entries(properties).forEach(([key, value]) => {
                 identify.set(key, value)
             })
-            await amplitude.identify(identify).promise
+            await amplitude.identify(identify)
         } catch (error) {
             console.error('📊 Amplitude setUserProperties error:', error)
         }
