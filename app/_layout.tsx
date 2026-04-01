@@ -1,6 +1,5 @@
 import { BundleInspector } from '../.rorkai/inspector';
 import { RorkErrorBoundary } from '../.rorkai/rork-error-boundary';
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -17,8 +16,6 @@ import "../global.css";
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
-
-const queryClient = new QueryClient();
 
 const publishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!
 
@@ -85,20 +82,18 @@ export default function RootLayout() {
         <ClerkLoaded>
           <AnalyticsProvider>
             <ConvexClientProvider>
-              <QueryClientProvider client={queryClient}>
-                <AppStoreProvider>
-                  <GestureHandlerRootView style={{ flex: 1 }}>
-                    <BundleInspector>
-                      <RorkErrorBoundary>
-                        <Stack screenOptions={{ headerShown: false }}>
-                          <Stack.Screen name="(tabs)" />
-                          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-                        </Stack>
-                      </RorkErrorBoundary>
-                    </BundleInspector>
-                  </GestureHandlerRootView>
-                </AppStoreProvider>
-              </QueryClientProvider>
+              <AppStoreProvider>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                  <BundleInspector>
+                    <RorkErrorBoundary>
+                      <Stack screenOptions={{ headerShown: false }}>
+                        <Stack.Screen name="(tabs)" />
+                        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+                      </Stack>
+                    </RorkErrorBoundary>
+                  </BundleInspector>
+                </GestureHandlerRootView>
+              </AppStoreProvider>
             </ConvexClientProvider>
           </AnalyticsProvider>
         </ClerkLoaded>
