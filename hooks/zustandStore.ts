@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { eq, inArray, and } from 'drizzle-orm'
+import { eq, inArray, and, sql } from 'drizzle-orm'
 import { getDb, getExpoDb } from '@/db/client'
 import { initializeDatabase } from '@/db/init'
 import {
@@ -27,6 +27,7 @@ import { militaryRankingService } from '@/services/militaryRanking'
 import { bibleApiService } from '@/services/bibleApi'
 import { errorHandler } from '@/services/errorHandler'
 import { CollectionChapterService } from '@/services/collectionChapters'
+import { sampleCollectionsLoader } from '@/services/sampleCollectionsLoader'
 import { createAvatarSlice, AvatarSlice } from '@/hooks/stores/createAvatarSlice'
 import { analytics, AnalyticsEvents } from '@/services/analytics'
 
@@ -131,10 +132,13 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
 
     while (retryCount < maxRetries) {
       try {
+        console.log('🟢 [ZustandStore] Starting initializeAppData, attempt:', retryCount + 1)
         set({ isLoading: true })
 
         // 1. Initialize Database Tables
+        console.log('🟢 [ZustandStore] Initializing database...')
         await initializeDatabase();
+        console.log('🟢 [ZustandStore] Database initialized')
 
         // 1.5. Load Avatar Data (independent of database)
         await get().loadAvatarData();
@@ -249,8 +253,11 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
           });
 
           // Merge into collections
-          // Identify system collections by their IDs
+          // Identify system collections by their IDs (from mocks) and sample collections (sample_ prefix)
           const systemCollectionIds = new Set(COLLECTIONS.filter(c => c.isSystem).map(c => c.id));
+          dbCollections.forEach(c => {
+            if (c.id.startsWith('sample_')) systemCollectionIds.add(c.id);
+          });
 
           let mergedCollections: Collection[] = dbCollections.map(c => ({
             id: c.id,
@@ -518,6 +525,101 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
           }
 
           set({ scriptures: initialScriptures, collections: initialCollections })
+        }
+
+        // ── Load sample EPUB collections (for all users, first launch only) ───
+        try {
+          const existingCollections = get().collections
+          const sampleResult = await sampleCollectionsLoader.loadSampleCollections(existingCollections)
+          if (sampleResult.loaded) {
+            console.log(`📚 Inserting ${sampleResult.collections.length} sample collections into DB`)
+
+            // Determine if this is a re-extraction (sample collections already exist in DB)
+            const existingSampleIds = sampleResult.collections
+              .filter(c => existingCollections.some(ec => ec.id === c.id))
+              .map(c => c.id)
+            const isReextract = existingSampleIds.length > 0
+
+            if (isReextract) {
+              console.log(`📚 Re-extraction detected — removing old sample data for: ${existingSampleIds.join(', ')}`)
+              // Delete old collection-scripture relationships
+              for (const colId of existingSampleIds) {
+                await db.delete(collectionScripturesTable)
+                  .where(eq(collectionScripturesTable.collectionId, colId))
+              }
+              // Delete old collections
+              await db.delete(collectionsTable)
+                .where(inArray(collectionsTable.id, existingSampleIds))
+              // Delete old scriptures
+              const oldSampleScriptureIds = existingCollections
+                .filter(c => existingSampleIds.includes(c.id))
+                .flatMap(c => c.scriptures)
+              if (oldSampleScriptureIds.length > 0) {
+                await db.delete(scripturesTable)
+                  .where(inArray(scripturesTable.id, oldSampleScriptureIds))
+              }
+            }
+
+            // Insert sample scriptures
+            if (sampleResult.scriptures.length > 0) {
+              const sampleScripturesToInsert = sampleResult.scriptures.map(s => ({
+                id: s.id,
+                book: s.book,
+                chapter: s.chapter,
+                verse: s.verse,
+                endVerse: s.endVerse,
+                text: s.text,
+                reference: s.reference,
+                mnemonic: s.mnemonic,
+                lastPracticed: s.lastPracticed,
+                accuracy: s.accuracy,
+                practiceCount: s.practiceCount,
+                isJesusWords: s.isJesusWords
+              }))
+              await db.insert(scripturesTable).values(sampleScripturesToInsert)
+            }
+
+            // Insert sample collections
+            for (const col of sampleResult.collections) {
+              const { scriptures: _scriptures, ...collectionData } = col
+              await db.insert(collectionsTable).values({
+                id: collectionData.id,
+                name: collectionData.name,
+                abbreviation: collectionData.abbreviation,
+                description: collectionData.description,
+                createdAt: collectionData.createdAt,
+                tags: collectionData.tags,
+                isChapterBased: collectionData.isChapterBased,
+                sourceBook: collectionData.sourceBook,
+                bookInfo: collectionData.bookInfo,
+                chapters: collectionData.chapters,
+              })
+
+              // Insert collection-scripture relationships
+              if (col.scriptures.length > 0) {
+                await db.insert(collectionScripturesTable).values(
+                  col.scriptures.map(sid => ({ collectionId: col.id, scriptureId: sid }))
+                )
+              }
+            }
+
+            // Merge into current state — replace old sample entries if re-extracting
+            const currentCollections = get().collections
+            const currentScriptures = get().scriptures
+            const sampleCollectionIdSet = new Set(sampleResult.collections.map(c => c.id))
+
+            const filteredCollections = currentCollections.filter(c => !sampleCollectionIdSet.has(c.id))
+            const sampleScriptureIdSet = new Set(sampleResult.scriptures.map(s => s.id))
+            const filteredScriptures = currentScriptures.filter(s => !sampleScriptureIdSet.has(s.id))
+
+            set({
+              collections: [...filteredCollections, ...sampleResult.collections],
+              scriptures: [...filteredScriptures, ...sampleResult.scriptures],
+            })
+            console.log(`📚 Loaded ${sampleResult.collections.length} sample collections, ${sampleResult.scriptures.length} scriptures`)
+          }
+        } catch (sampleError) {
+          console.warn('📚 Sample collection loading failed (non-fatal):', sampleError)
         }
 
         // Set initial scripture if none
