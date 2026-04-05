@@ -229,7 +229,7 @@ export default function CollectionSelector({
                     style={[styles.actionButton, { backgroundColor: theme.accent, borderColor: theme.accent }]}
                     onPress={handleCreateArsenal}
                   >
-                    <Text style={[styles.actionButtonText, { color: theme.text }]}>CREATE</Text>
+                    <Text style={[styles.actionButtonText, { color: theme.accentContrastText }]}>CREATE</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -379,7 +379,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 4,
   },
   chapterBadgeText: {
-    color: theme.text,
+    color: theme.accentContrastText,
     fontSize: 10,
     fontWeight: 'bold',
   },
@@ -440,7 +440,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     justifyContent: 'center',
     padding: 12,
     marginBottom: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    backgroundColor: theme.surfaceHighlight || 'rgba(15, 23, 42, 0.05)',
     borderRadius: 8,
     borderWidth: 1,
     borderColor: theme.border,

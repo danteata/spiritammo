@@ -205,7 +205,7 @@ const CollectionDetailModal = React.memo(({
         <View style={styles.scriptureItemContent}>
           {isBulkSelecting ? (
             <View style={[styles.checkbox, isSelected && { backgroundColor: theme.accent, borderColor: theme.accent }, { borderColor: theme.textSecondary }]}>
-              {isSelected && <Feather name="check" size={14} color="#FFF" />}
+              {isSelected && <Feather name="check" size={14} color={theme.accentContrastText} />}
             </View>
           ) : (
             <View style={styles.scriptureIconContainer}>

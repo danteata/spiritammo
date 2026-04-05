@@ -89,7 +89,7 @@ export default function CollectionChapterDropdown({
         style={[
           styles.chapterItem,
           isSelected && { 
-            backgroundColor: isDark ? 'rgba(255, 107, 53, 0.15)' : 'rgba(255, 107, 53, 0.1)',
+            backgroundColor: isDark ? `${theme.accent}20` : `${theme.accent}10`,
             borderColor: theme.accent 
           }
         ]}
@@ -236,7 +236,7 @@ export default function CollectionChapterDropdown({
                   style={[styles.footerButton, styles.applyButton, { backgroundColor: theme.accent }]}
                   onPress={handleApply}
                 >
-                  <Text style={[styles.footerButtonText, { color: theme.text }]}>
+                  <Text style={[styles.footerButtonText, { color: theme.accentContrastText }]}>
                     APPLY
                   </Text>
                 </TouchableOpacity>
