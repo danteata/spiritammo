@@ -365,9 +365,9 @@ export default function FileUploader({
                 <View style={styles.documentInfo}>
                   <View style={[styles.documentIconBadge, selectedDocument?.id === doc.id && { backgroundColor: theme.accent }]}>
                     {isLoadingDocument && selectedDocument?.id === doc.id ? (
-                      <ActivityIndicator size="small" color={theme.accent} />
+                      <ActivityIndicator size="small" color={theme.accentContrastText} />
                     ) : (
-                      <FontAwesome name="file-text-o" size={18} color={selectedDocument?.id === doc.id ? '#FFF' : theme.textSecondary} />
+                      <FontAwesome name="file-text-o" size={18} color={selectedDocument?.id === doc.id ? theme.accentContrastText : theme.textSecondary} />
                     )}
                   </View>
                   <View style={styles.documentDetails}>

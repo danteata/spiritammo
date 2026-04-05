@@ -181,7 +181,7 @@ export default function MissionBriefingModal({
                                     style={styles.protocolGradient}
                                 >
                                     <View style={[styles.iconBox, { backgroundColor: theme.accent }]}>
-                                        <Ionicons name="mic" size={28} color="#FFF" />
+                                        <Ionicons name="mic" size={28} color={theme.accentContrastText} />
                                     </View>
                                     <View style={{ flex: 1 }}>
                                         <ThemedText variant="button" style={{ fontSize: 18, color: isDark ? 'white' : '#7c2d12' }}>LIVE FIRE</ThemedText>
