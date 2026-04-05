@@ -99,10 +99,10 @@ export const SLATE_THEME = {
   shadow: 'rgba(0, 0, 0, 0.5)',
   surfaceHighlight: '#334155',
   glass: 'rgba(30, 41, 59, 0.7)', // Translucent Surface
-  // Contrast colors for readability (slate has light accent on dark)
-  accentContrastText: '#000000', // Black text on light accent backgrounds
-  surfaceContrastText: '#F8FAFC', // Existing text for surface backgrounds
-  primaryContrastText: '#000000', // Dark text for muted blue primary backgrounds
+  // Contrast colors for readability
+  accentContrastText: '#0F172A', // Dark text on bright accent
+  surfaceContrastText: '#F8FAFC', // Light text for surface backgrounds
+  primaryContrastText: '#F8FAFC', // Light text for primary backgrounds
 }
 
 // Legacy colors for backward compatibility

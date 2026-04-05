@@ -8,9 +8,6 @@ export default function TabsLayout() {
   return (
     <NativeTabs
       minimizeBehavior="onScrollDown"
-      tintColor={isDark ? theme.accent : '#4A5D23'}
-      barTintColor={isDark ? theme.background : '#F5F0E1'}
-      unselectedItemTintColor={isDark ? theme.textSecondary : '#8E9B5A'}
     >
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>

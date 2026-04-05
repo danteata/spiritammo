@@ -112,37 +112,37 @@ export default function ArsenalScreen() {
             >
                 {/* Quick Stats */}
                 <View style={styles.statsContainer}>
-                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
-                        <View style={[styles.statsAccentBar, { backgroundColor: isDark ? theme.accent : '#4A5D23' }]} />
-                        <View style={[styles.statIconBg, { backgroundColor: (isDark ? theme.accent : '#4A5D23') + '15' }]}>
-                            <FontAwesome5 name="book" size={18} color={isDark ? theme.accent : '#4A5D23'} />
+                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : theme.surface, borderColor: theme.border, borderWidth: isDark ? 0 : 1.5 }]}>
+                        <View style={[styles.statsAccentBar, { backgroundColor: theme.accent }]} />
+                        <View style={[styles.statIconBg, { backgroundColor: theme.accent + '15' }]}>
+                            <FontAwesome5 name="book" size={18} color={theme.accent} />
                         </View>
                         <View>
-                            <ThemedText variant="heading" style={[styles.statNumber, { color: isDark ? '#F8FAFC' : '#1A2309' }]}>{totalVerses}</ThemedText>
-                            <ThemedText variant="caption" style={[styles.statLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>Total Verses</ThemedText>
+                            <ThemedText variant="heading" style={[styles.statNumber, { color: theme.text }]}>{totalVerses}</ThemedText>
+                            <ThemedText variant="caption" style={[styles.statLabel, { color: theme.textSecondary }]}>Total Verses</ThemedText>
                         </View>
                     </View>
-                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
-                        <View style={[styles.statsAccentBar, { backgroundColor: isDark ? '#22C55E' : '#4A7C2E' }]} />
-                        <View style={[styles.statIconBg, { backgroundColor: (isDark ? '#22C55E' : '#4A7C2E') + '15' }]}>
-                            <FontAwesome name="folder" size={18} color={isDark ? '#22C55E' : '#4A7C2E'} />
+                    <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : theme.surface, borderColor: theme.border, borderWidth: isDark ? 0 : 1.5 }]}>
+                        <View style={[styles.statsAccentBar, { backgroundColor: theme.success }]} />
+                        <View style={[styles.statIconBg, { backgroundColor: theme.success + '15' }]}>
+                            <FontAwesome name="folder" size={18} color={theme.success} />
                         </View>
                         <View>
-                            <ThemedText variant="heading" style={[styles.statNumber, { color: isDark ? '#F8FAFC' : '#1A2309' }]}>{collections?.length || 0}</ThemedText>
-                            <ThemedText variant="caption" style={[styles.statLabel, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>Collections</ThemedText>
+                            <ThemedText variant="heading" style={[styles.statNumber, { color: theme.text }]}>{collections?.length || 0}</ThemedText>
+                            <ThemedText variant="caption" style={[styles.statLabel, { color: theme.textSecondary }]}>Collections</ThemedText>
                         </View>
                     </View>
                 </View>
 
                 {/* Section Tabs - Pill Style */}
-                <View style={[styles.sectionTabs, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'transparent' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
+                <View style={[styles.sectionTabs, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : theme.surface, borderColor: theme.border, borderWidth: isDark ? 0 : 1.5 }]}>
                     {sections.map((section) => (
                         <TouchableOpacity
                             key={section.key}
                             style={[
                                 styles.sectionTab,
                                 activeSection === section.key && styles.activeTab,
-                                activeSection === section.key && { backgroundColor: isDark ? theme.accent : '#4A5D23' }
+                                activeSection === section.key && { backgroundColor: isDark ? theme.accent : '#E2E8F0' }
                             ]}
                             onPress={() => setActiveSection(section.key)}
                             activeOpacity={0.8}
@@ -150,13 +150,14 @@ export default function ArsenalScreen() {
                             <Ionicons
                                 name={section.icon as any}
                                 size={16}
-                                color={activeSection === section.key ? (isDark ? '#FFFFFF' : '#F5F0E1') : (isDark ? theme.textSecondary : '#6B7B3A')}
+                                color={activeSection === section.key ? (isDark ? theme.accentContrastText : '#1E293B') : (isDark ? '#94A3B8' : '#475569')}
                             />
                             <ThemedText
                                 variant="caption"
                                 style={[
                                     styles.tabText,
-                                    activeSection === section.key && { color: isDark ? '#FFFFFF' : '#F5F0E1' }
+                                    activeSection === section.key && styles.activeTabText,
+                                    { color: activeSection === section.key ? (isDark ? theme.accentContrastText : '#1E293B') : (isDark ? '#94A3B8' : '#475569') }
                                 ]}
                             >
                                 {section.label}
@@ -193,7 +194,7 @@ export default function ArsenalScreen() {
                             {isLoading ? (
                                 <SkeletonCollectionList />
                             ) : (collections?.length || 0) === 0 ? (
-                                <View style={[styles.emptyState, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]}>
+                                <View style={[styles.emptyState, { backgroundColor: theme.surface }]}>
                                     <View style={[styles.emptyIconBg, { backgroundColor: theme.accent + '15' }]}>
                                         <Ionicons name="library-outline" size={32} color={theme.accent} />
                                     </View>
@@ -208,8 +209,8 @@ export default function ArsenalScreen() {
                                             style={[styles.emptyButton, { backgroundColor: theme.accent }]}
                                             onPress={() => setShowAddVerses(true)}
                                         >
-                                            <Ionicons name="create-outline" size={16} color="#FFFFFF" />
-                                            <Text style={styles.emptyButtonText}>Add Verse</Text>
+                                            <Ionicons name="create-outline" size={16} color={theme.accentContrastText} />
+                                            <Text style={[styles.emptyButtonText, { color: theme.accentContrastText }]}>Add Verse</Text>
                                         </TouchableOpacity>
                                         <TouchableOpacity
                                             style={[styles.emptyButtonSecondary, { borderColor: theme.accent }]}
@@ -224,12 +225,12 @@ export default function ArsenalScreen() {
                                 (collections || []).map(collection => (
                                     <TouchableOpacity
                                         key={collection.id}
-                                        style={[styles.collectionCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)' }]}
+                                        style={[styles.collectionCard, { backgroundColor: theme.surface, borderColor: theme.border, borderWidth: isDark ? 0 : 1 }]}
                                         onPress={() => handleSelectCollection(collection)}
                                         activeOpacity={0.7}
                                     >
-                                        <View style={[styles.collectionIcon, { backgroundColor: collection.isSystem ? (theme.accent + '15') : ('#22C55E' + '15') }]}>
-                                            <FontAwesome name={collection.isSystem ? 'star' : 'folder'} size={18} color={collection.isSystem ? theme.accent : '#22C55E'} />
+                                        <View style={[styles.collectionIcon, { backgroundColor: `${theme.accent}15` }]}>
+                                            <FontAwesome name={collection.isSystem ? 'star' : 'folder'} size={18} color={theme.accent} />
                                         </View>
                                         <View style={styles.collectionInfo}>
                                             <View style={styles.collectionNameRow}>
@@ -246,7 +247,7 @@ export default function ArsenalScreen() {
                                                     : `${collection.scriptures?.length || 0} verses`}
                                             </ThemedText>
                                         </View>
-                                        <View style={[styles.chevronIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                                        <View style={[styles.chevronIcon, { backgroundColor: theme.accent + '10' }]}>
                                             <FontAwesome5 name="chevron-right" size={12} color={theme.textSecondary} />
                                         </View>
                                     </TouchableOpacity>
@@ -537,7 +538,6 @@ const styles = StyleSheet.create({
         gap: 6,
     },
     emptyButtonText: {
-        color: '#FFFFFF',
         fontSize: 13,
         fontWeight: '600',
     },
