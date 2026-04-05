@@ -201,7 +201,7 @@ export default function TrainingScreen() {
                             </View>
                             <View style={styles.modeContent}>
                                 <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.warning }]}>AUTO PILOT</ThemedText>
-                                <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
+                                <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
                                     Verses read aloud automatically, one after another. Just listen and absorb.
                                 </ThemedText>
                                 <View style={[styles.modeTag, { backgroundColor: `${theme.warning}15` }]}>
@@ -209,7 +209,7 @@ export default function TrainingScreen() {
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
-                                <FontAwesome5 name="chevron-right" size={14} color={isDark ? theme.textSecondary : '#6B7B3A'} />
+                                <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
                             </View>
                         </ThemedCard>
                     </TouchableOpacity>
@@ -401,10 +401,8 @@ const styles = StyleSheet.create({
     },
     chapterSection: {
         marginTop: 12,
-        backgroundColor: 'rgba(255,255,255,0.03)',
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: 'rgba(255,255,255,0.1)',
         padding: 12,
     },
     chapterSectionHeader: {

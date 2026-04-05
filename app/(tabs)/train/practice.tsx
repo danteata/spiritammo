@@ -122,6 +122,7 @@ export default function TrainingPracticeScreen() {
     const [isLoadingIntel, setIsLoadingIntel] = useState(false)
     const [isListeningVerse, setIsListeningVerse] = useState(false)
     const [isListeningIntel, setIsListeningIntel] = useState(false)
+    const [tacticalIntel, setTacticalIntel] = useState<{ battlePlan: string; tacticalNotes: string } | null>(null)
     const [history, setHistory] = useState<Scripture[]>([])
     const [historyIndex, setHistoryIndex] = useState(-1)
 
@@ -214,6 +215,7 @@ export default function TrainingPracticeScreen() {
         setCurrentScripture(selectedVerses[0])
         setIsBurstActive(true)
         setBurstScore({ correct: 0, total: 0 })
+        setTacticalIntel(null)
     }, [scriptures])
 
     const nextBurstVerse = useCallback((wasCorrect: boolean) => {
@@ -222,6 +224,7 @@ export default function TrainingPracticeScreen() {
             total: burstScore.total + 1,
         }
         setBurstScore(newScore)
+        setTacticalIntel(null)
 
         const nextIdx = burstIndex + 1
         if (nextIdx < burstQueue.length) {
@@ -238,7 +241,7 @@ export default function TrainingPracticeScreen() {
             setIsBurstActive(false)
             Alert.alert(
                 'Burst Complete! 🔥',
-                `You scored ${newScore.correct}/${newScore.total}!`,
+                `You scored ${newScore.correct}/${burstQueue.length}!`,
                 [
                     { text: 'New Burst', onPress: initBurstMode },
                     { text: 'Exit', onPress: () => router.back() },
@@ -306,8 +309,12 @@ export default function TrainingPracticeScreen() {
         ]).start()
 
         const randomIndex = Math.floor(Math.random() * scriptures.length)
-        setCurrentScripture(scriptures[randomIndex])
-    }, [scriptures])
+        const nextScripture = scriptures[randomIndex]
+        
+        setCurrentScripture(nextScripture)
+        setHistory(prev => [...prev.slice(0, historyIndex + 1), nextScripture])
+        setHistoryIndex(prev => prev + 1)
+    }, [scriptures, historyIndex])
 
     // Start auto-play when scripture changes in auto mode
     useEffect(() => {
@@ -439,18 +446,47 @@ export default function TrainingPracticeScreen() {
         if (!currentScripture) return
         setIsListeningIntel(true)
         try {
-            const textToRead = currentScripture.mnemonic || `Reference: ${currentScripture.reference}`
-            await VoicePlaybackService.playScripture(
-                currentScripture.id,
-                textToRead,
-                {
-                    rate: userSettings.voiceRate || 0.9,
-                    pitch: userSettings.voicePitch || 1.0,
-                    language: userSettings.language || 'en-US',
-                }
-            )
+            let intel = tacticalIntel
+            if (!intel) {
+                setIsLoadingIntel(true)
+                intel = await generateBattleIntel({
+                    reference: currentScripture.reference,
+                    text: currentScripture.text
+                })
+                setTacticalIntel(intel)
+                setIsLoadingIntel(false)
+                await militaryRankingService.recordIntelGenerated()
+            }
+            await VoicePlaybackService.playTextToSpeech(`${intel.battlePlan}. ${intel.tacticalNotes}`, {
+                rate: userSettings.voiceRate || 0.9,
+                pitch: userSettings.voicePitch || 1.0,
+                language: userSettings.language || 'en-US',
+            })
+        } catch (error) {
+            console.error('Failed to get intel:', error)
+            Alert.alert('SYSTEM ERROR', 'Failed to retrieve battle intelligence. Check communications.')
         } finally {
             setIsListeningIntel(false)
+            setIsLoadingIntel(false)
+        }
+    }
+
+    const handleShowIntel = async () => {
+        if (!currentScripture) return
+
+        setIsLoadingIntel(true)
+        try {
+            const intel = await generateBattleIntel({
+                reference: currentScripture.reference,
+                text: currentScripture.text
+            })
+            setTacticalIntel(intel)
+            await militaryRankingService.recordIntelGenerated()
+        } catch (error) {
+            console.error('Failed to get intel:', error)
+            Alert.alert('SYSTEM ERROR', 'Failed to retrieve battle intelligence. Check communications.')
+        } finally {
+            setIsLoadingIntel(false)
         }
     }
 
@@ -470,39 +506,6 @@ export default function TrainingPracticeScreen() {
     }
 
     const modeInfo = getModeInfo()
-
-    const handleShowIntel = async () => {
-        if (!currentScripture) return
-
-        setIsLoadingIntel(true)
-        try {
-            const intel = await generateBattleIntel({
-                reference: currentScripture.reference,
-                text: currentScripture.text
-            })
-
-            Alert.alert(
-                'BATTLE INTELLIGENCE 📡',
-                `MNEMONIC: ${intel.battlePlan}\n\nTACTICAL NOTES: ${intel.tacticalNotes}`,
-                [{ text: 'COPY THAT' }]
-            )
-
-            // Also read it aloud
-            await VoicePlaybackService.playTextToSpeech(`${intel.battlePlan}. ${intel.tacticalNotes}`, {
-                rate: userSettings.voiceRate || 0.9,
-                pitch: userSettings.voicePitch || 1.0,
-                language: userSettings.language || 'en-US',
-            })
-
-            // Record intel generation for rank progress
-            await militaryRankingService.recordIntelGenerated()
-        } catch (error) {
-            console.error('Failed to get intel:', error)
-            Alert.alert('SYSTEM ERROR', 'Failed to retrieve battle intelligence. Check communications.')
-        } finally {
-            setIsLoadingIntel(false)
-        }
-    }
 
     // ──────────────────────────────────────
     //  RENDER
@@ -564,7 +567,7 @@ export default function TrainingPracticeScreen() {
                                     PROGRESS
                                 </ThemedText>
                                 <ThemedText variant="caption" style={styles.burstScoreLabel}>
-                                    Score: {burstScore.correct}/{burstScore.total}
+                                    Score: {burstScore.correct}/{burstQueue.length}
                                 </ThemedText>
                             </View>
                             <View style={[styles.burstProgressBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
@@ -612,7 +615,7 @@ export default function TrainingPracticeScreen() {
                                 onPress={handleStartAutoPilot}
                             >
                                 <Ionicons name="play" size={24} color={theme.accentContrastText} />
-                                <ThemedText variant="body" style={styles.startAutoText}>
+                                <ThemedText variant="body" style={[styles.startAutoText, { color: theme.accentContrastText }]}>
                                     START AUTO PILOT
                                 </ThemedText>
                             </TouchableOpacity>
@@ -694,15 +697,17 @@ export default function TrainingPracticeScreen() {
                             scripture={currentScripture}
                             onRecordingComplete={(accuracy) => handlePracticeComplete('', accuracy)}
                             onListen={handleListenVerse}
-                            onIntel={handleListenIntel}
                             isListening={isListeningVerse}
+                            intelText={tacticalIntel ? `${tacticalIntel.battlePlan}\n\n${tacticalIntel.tacticalNotes}` : undefined}
+                            onIntel={handleShowIntel}
+                            onReadIntelAloud={handleListenIntel}
                             isListeningIntel={isListeningIntel}
-                            intelText={currentScripture.mnemonic}
                         />
                         <ScriptureActionRow
                             onStealth={handleStartStealthPractice}
                             onIntel={handleShowIntel}
                             isLoadingIntel={isLoadingIntel}
+                            accentColor="#EF4444"
                         />
                     </Animated.View>
                 )}
@@ -917,7 +922,6 @@ const styles = StyleSheet.create({
         elevation: 6,
     },
     startAutoText: {
-        color: '#FFF',
         fontWeight: '700',
         fontSize: 16,
         letterSpacing: 1,
