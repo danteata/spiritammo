@@ -5,6 +5,7 @@ import {
     TouchableOpacity,
     ScrollView,
     ImageBackground,
+    Dimensions,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome5 } from '@expo/vector-icons'
@@ -16,19 +17,24 @@ import Svg, { Line } from 'react-native-svg'
 interface CampaignMapProps {
     campaign: Campaign
     onNodeSelect: (node: CampaignNode) => void
+    containerHeight?: number
 }
 
-const MAP_WIDTH = 390 // Typical phone width
-const MAP_HEIGHT = 550 // Usable map height
+const MAP_WIDTH = 390
+const SCREEN_HEIGHT = Dimensions.get('window').height
 
-export default function CampaignMap({ campaign, onNodeSelect }: CampaignMapProps) {
+export default function CampaignMap({ campaign, onNodeSelect, containerHeight }: CampaignMapProps) {
     const { theme, isDark } = useAppStore()
+    // Use container height if provided, otherwise calculate from screen
+    const mapHeight = containerHeight && containerHeight > 0 ? containerHeight : SCREEN_HEIGHT - 200
+    // Reserve bottom padding so nodes aren't hidden behind the info overlay
+    const bottomPadding = 80
 
     // Convert percentage coordinates to actual pixel positions
     const getNodePosition = (node: CampaignNode) => {
         return {
             x: (node.coordinate.x / 100) * MAP_WIDTH,
-            y: (node.coordinate.y / 100) * MAP_HEIGHT,
+            y: (node.coordinate.y / 100) * (mapHeight - bottomPadding),
         }
     }
 
@@ -43,7 +49,7 @@ export default function CampaignMap({ campaign, onNodeSelect }: CampaignMapProps
             const end = getNodePosition(nextNode)
 
             // Determine line color based on node status
-            let strokeColor = 'rgba(255,255,255,0.2)'
+            let strokeColor = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
             let strokeWidth = 2
 
             if (currentNode.status === 'CONQUERED' && nextNode.status === 'CONQUERED') {
@@ -73,7 +79,7 @@ export default function CampaignMap({ campaign, onNodeSelect }: CampaignMapProps
         }
 
         return (
-            <Svg style={StyleSheet.absoluteFill} width={MAP_WIDTH} height={MAP_HEIGHT}>
+            <Svg style={StyleSheet.absoluteFill} width={MAP_WIDTH} height={mapHeight}>
                 {lines}
             </Svg>
         )
@@ -111,7 +117,7 @@ export default function CampaignMap({ campaign, onNodeSelect }: CampaignMapProps
                         {
                             left: position.x - 25, // Center the 50px node
                             top: position.y - 25,
-                            backgroundColor: isDark ? 'rgba(30,41,59,0.95)' : 'rgba(255,255,255,0.95)',
+                            backgroundColor: theme.surface,
                             borderColor: nodeColor,
                             opacity,
                             transform: [{ scale }]
@@ -168,8 +174,8 @@ export default function CampaignMap({ campaign, onNodeSelect }: CampaignMapProps
                         <LinearGradient
                             colors={
                                 node.status === 'ACTIVE'
-                                    ? ['rgba(245,158,11,0.9)', 'rgba(217,119,6,0.9)']
-                                    : ['rgba(0,0,0,0.8)', 'rgba(0,0,0,0.6)']
+                                    ? [theme.accent + 'E6', theme.accent + 'B3']
+                                    : [theme.surfaceContrastText + 'CC', theme.surfaceContrastText + '99']
                             }
                             style={styles.detailsBadge}
                         >
@@ -202,7 +208,7 @@ export default function CampaignMap({ campaign, onNodeSelect }: CampaignMapProps
                     showsVerticalScrollIndicator={false}
                 >
                     {/* Map Container with fixed dimensions */}
-                    <View style={[styles.mapContainer, { width: MAP_WIDTH, height: MAP_HEIGHT }]}>
+                    <View style={[styles.mapContainer, { width: MAP_WIDTH, height: mapHeight }]}>
                         {/* Grid Overlay for visual effect */}
                         <View style={styles.gridOverlay} />
 
@@ -212,9 +218,6 @@ export default function CampaignMap({ campaign, onNodeSelect }: CampaignMapProps
                         {/* Nodes Layer */}
                         {campaign.nodes.map(renderNode)}
                     </View>
-
-                    {/* Extra padding at bottom */}
-                    <View style={{ height: 100 }} />
                 </ScrollView>
             </ImageBackground>
 
@@ -222,12 +225,8 @@ export default function CampaignMap({ campaign, onNodeSelect }: CampaignMapProps
             <View style={[
                 styles.infoOverlay,
                 {
-                    backgroundColor: isDark
-                        ? 'rgba(15,23,42,0.95)'
-                        : 'rgba(255,255,255,0.95)',
-                    borderTopColor: isDark
-                        ? 'rgba(255,255,255,0.1)'
-                        : 'rgba(0,0,0,0.1)'
+                    backgroundColor: theme.surface,
+                    borderTopColor: theme.border
                 }
             ]}>
                 <ThemedText variant="heading" style={styles.campaignTitle}>
@@ -336,10 +335,6 @@ const styles = StyleSheet.create({
         letterSpacing: 0.5,
     },
     infoOverlay: {
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
         paddingHorizontal: 20,
         paddingVertical: 16,
         borderTopWidth: 1,

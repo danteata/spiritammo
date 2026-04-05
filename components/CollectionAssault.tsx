@@ -185,7 +185,7 @@ export default function CollectionAssault({
                 onPress={startAssault}
             >
                 <FontAwesome5 name="fighter-jet" size={20} color={theme.accentContrastText} />
-                <ThemedText variant="button" style={styles.buttonText}>
+                <ThemedText variant="button" style={[styles.buttonText, { color: theme.accentContrastText }]}>
                     BEGIN ASSAULT
                 </ThemedText>
             </TouchableOpacity>

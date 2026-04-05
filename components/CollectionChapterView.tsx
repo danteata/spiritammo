@@ -463,7 +463,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     alignSelf: 'flex-start',
   },
   customBadgeText: {
-    color: theme.text,
+    color: theme.accentContrastText,
     fontSize: 10,
     fontWeight: 'bold',
   },
