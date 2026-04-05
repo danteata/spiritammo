@@ -106,7 +106,7 @@ export default function TrainingCampaignScreen() {
         if (scripture) {
             setTargetScripture(scripture)
             setSelectedNode(node)
-            setShowBriefing(true)
+            setPracticeMode('VOICE') // Direct to recorder
         } else {
             setDeniedModal({
                 visible: true,
@@ -119,14 +119,8 @@ export default function TrainingCampaignScreen() {
     const handleMissionComplete = async (accuracy: number) => {
         if (!selectedNode || !activeCampaign) return
 
-        // Close practice mode
-        setPracticeMode(null)
-
-        // Reset selection
-        setSelectedNode(null)
-        setTargetScripture(null)
-
         // In training mode, we don't track scores - just show feedback
+        // We no longer close practiceMode here, so user sees results in recorder
         if (accuracy >= 70) {
             Toast.missionSuccess(`Training Complete: ${accuracy.toFixed(1)}%`)
         } else {
@@ -268,7 +262,7 @@ export default function TrainingCampaignScreen() {
             {targetScripture && practiceMode === 'VOICE' && (
                 <View style={styles.fullScreenPractice}>
                     <View style={styles.practiceHeader}>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.closePracticeButton}
                             onPress={() => setPracticeMode(null)}
                         >
@@ -279,7 +273,7 @@ export default function TrainingCampaignScreen() {
                             <ThemedText variant="caption" style={{ color: theme.accent }}>REQ: {selectedNode?.requiredAccuracy || 60}% ACCURACY</ThemedText>
                         </View>
                     </View>
-                    
+
                     <ScrollView contentContainerStyle={styles.practiceScrollContent}>
                         <UnifiedScriptureRecorderCard
                             scripture={targetScripture}
@@ -288,12 +282,17 @@ export default function TrainingCampaignScreen() {
                             onListen={handleListenVerse}
                             onIntel={handleIntelPress}
                             isListening={isListeningVerse}
+                            onClose={() => {
+                                setPracticeMode(null)
+                                setSelectedNode(null)
+                                setTargetScripture(null)
+                            }}
                         />
                         <ScriptureActionRow
                             onStealth={() => setPracticeMode('STEALTH')}
                             onIntel={handleIntelPress}
                         />
-                        
+
                         <ThemedCard variant="glass" style={styles.missionNote}>
                             <Ionicons name="shield-checkmark" size={20} color={theme.accent} />
                             <ThemedText variant="caption" style={styles.missionNoteText}>
@@ -390,7 +389,7 @@ const styles = StyleSheet.create({
         overflow: 'hidden',
         borderWidth: 1,
         borderColor: 'rgba(255,255,255,0.1)',
-        marginBottom: 80,
+        marginBottom: 0,
     },
     mapBorder: {
         ...StyleSheet.absoluteFillObject,

@@ -154,11 +154,11 @@ export default function ProfileScreen() {
                         <Ionicons
                             name="map"
                             size={16}
-                            color={activeSection === 'journey' ? (isDark ? '#FFFFFF' : '#F5F0E1') : (isDark ? theme.textSecondary : '#6B7B3A')}
+                            color={activeSection === 'journey' ? (isDark ? theme.accentContrastText : '#F5F0E1') : (isDark ? theme.textSecondary : '#6B7B3A')}
                         />
                         <ThemedText
                             variant="caption"
-                            style={[styles.tabText, activeSection === 'journey' && { color: isDark ? '#FFFFFF' : '#F5F0E1' }]}
+                            style={[styles.tabText, activeSection === 'journey' && styles.activeTabText, activeSection === 'journey' && { color: isDark ? theme.accentContrastText : '#F5F0E1' }]}
                         >
                             Journey
                         </ThemedText>
@@ -175,11 +175,11 @@ export default function ProfileScreen() {
                         <Ionicons
                             name="settings"
                             size={16}
-                            color={activeSection === 'settings' ? (isDark ? '#FFFFFF' : '#F5F0E1') : (isDark ? theme.textSecondary : '#6B7B3A')}
+                            color={activeSection === 'settings' ? (isDark ? theme.accentContrastText : '#F5F0E1') : (isDark ? theme.textSecondary : '#6B7B3A')}
                         />
                         <ThemedText
                             variant="caption"
-                            style={[styles.tabText, activeSection === 'settings' && { color: isDark ? '#FFFFFF' : '#F5F0E1' }]}
+                            style={[styles.tabText, activeSection === 'settings' && styles.activeTabText, activeSection === 'settings' && { color: isDark ? theme.accentContrastText : '#F5F0E1' }]}
                         >
                             Settings
                         </ThemedText>
