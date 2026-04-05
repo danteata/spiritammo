@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo, useCallback } from 'react'
 import {
   StyleSheet,
   Text,
@@ -26,7 +26,7 @@ export default function CollectionSelector({
   selectedChapterIds = [],
 }: CollectionSelectorProps) {
   const { collections, isDark, addCollection, theme } = useAppStore()
-  const styles = getStyles(theme)
+  const styles = useMemo(() => getStyles(theme), [theme])
   const [modalVisible, setModalVisible] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [newArsenalName, setNewArsenalName] = useState('')
@@ -76,7 +76,7 @@ export default function CollectionSelector({
     }, 0)
   }
 
-  const renderItem = ({ item }: { item: Collection }) => (
+  const renderItem = useCallback(({ item }: { item: Collection }) => (
     <TouchableOpacity
       style={styles.collectionItem}
       onPress={() => handleSelect(item)}
@@ -129,7 +129,7 @@ export default function CollectionSelector({
         </View>
       </View>
     </TouchableOpacity>
-  )
+  ), [theme, collections, selectedChapterIds])
 
   const backgroundColor = theme.surface
   const textColor = theme.text

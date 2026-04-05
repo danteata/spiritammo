@@ -14,7 +14,7 @@ type CollectionListItemProps = {
     variant?: 'arsenal' | 'armory'
 }
 
-export default function CollectionListItem({
+export default React.memo(function CollectionListItem({
     item,
     isSelected,
     onSelect,
@@ -162,7 +162,7 @@ export default function CollectionListItem({
             </TouchableOpacity>
         </ThemedCard>
     )
-}
+})
 
 const styles = StyleSheet.create({
     collectionItem: {

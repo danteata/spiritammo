@@ -36,28 +36,18 @@ interface AnimatedWaveformBarProps {
 }
 
 const AnimatedWaveformBar: React.FC<AnimatedWaveformBarProps> = ({ isActive, delay }) => {
-  const animatedHeight = useRef(new Animated.Value(10));
-  const animatedOpacity = useRef(new Animated.Value(0.3));
+  const animatedScale = useRef(new Animated.Value(1));
 
   React.useEffect(() => {
     if (isActive) {
-      // Create random height animation
       const animate = () => {
-        const randomHeight = Math.random() * 20 + 10; // 10-30
-        const randomOpacity = Math.random() * 0.5 + 0.5; // 0.5-1.0
+        const randomScale = Math.random() * 2 + 1;
 
-        Animated.parallel([
-          Animated.timing(animatedHeight.current, {
-            toValue: randomHeight,
-            duration: 150,
-            useNativeDriver: false,
-          }),
-          Animated.timing(animatedOpacity.current, {
-            toValue: randomOpacity,
-            duration: 150,
-            useNativeDriver: false,
-          }),
-        ]).start(() => {
+        Animated.timing(animatedScale.current, {
+          toValue: randomScale,
+          duration: 150,
+          useNativeDriver: true,
+        }).start(() => {
           if (isActive) {
             setTimeout(animate, 50 + delay);
           }
@@ -66,19 +56,11 @@ const AnimatedWaveformBar: React.FC<AnimatedWaveformBarProps> = ({ isActive, del
 
       setTimeout(animate, delay);
     } else {
-      // Reset to default
-      Animated.parallel([
-        Animated.timing(animatedHeight.current, {
-          toValue: 10,
-          duration: 200,
-          useNativeDriver: false,
-        }),
-        Animated.timing(animatedOpacity.current, {
-          toValue: 0.3,
-          duration: 200,
-          useNativeDriver: false,
-        }),
-      ]).start();
+      Animated.timing(animatedScale.current, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
     }
   }, [isActive, delay]);
 
@@ -87,8 +69,7 @@ const AnimatedWaveformBar: React.FC<AnimatedWaveformBarProps> = ({ isActive, del
       style={[
         styles.waveformBar,
         {
-          height: animatedHeight.current,
-          opacity: animatedOpacity.current,
+          transform: [{ scaleY: animatedScale.current }],
         },
       ]}
     />
