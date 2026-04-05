@@ -38,9 +38,9 @@ export const ProtocolCard: React.FC<ProtocolCardProps> = ({
             >
                 <View style={[styles.iconBox, { backgroundColor: isActive ? theme.accent : theme.primary }]}>
                     {iconType === 'material' ? (
-                        <MaterialCommunityIcons name={icon as any} size={28} color="#FFF" />
+                        <MaterialCommunityIcons name={icon as any} size={28} color={isActive ? theme.accentContrastText : '#FFF'} />
                     ) : (
-                        <Ionicons name={icon as any} size={28} color="#FFF" />
+                        <Ionicons name={icon as any} size={28} color={isActive ? theme.accentContrastText : '#FFF'} />
                     )}
                 </View>
                 <View style={{ flex: 1 }}>

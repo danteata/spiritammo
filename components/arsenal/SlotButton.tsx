@@ -66,7 +66,7 @@ export const SlotButton: React.FC<SlotButtonProps> = ({
                 <FontAwesome5
                     name={slot.icon as any}
                     size={18}
-                    color={isSelected ? theme.accent : theme.textSecondary}
+                    color={isSelected ? theme.accentContrastText : theme.textSecondary}
                 />
             </View>
 

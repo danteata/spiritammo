@@ -351,8 +351,8 @@ export const ArsenalAmmunition: React.FC<ArsenalAmmunitionProps> = ({
                             style={[styles.addButton, { backgroundColor: theme.accent }]}
                             onPress={onAddCollection}
                         >
-                            <FontAwesome name="plus" size={14} color="white" />
-                            <Text style={styles.addButtonText}>ADD COLLECTION</Text>
+                            <FontAwesome name="plus" size={14} color={theme.accentContrastText} />
+                            <Text style={[styles.addButtonText, { color: theme.accentContrastText }]}>ADD COLLECTION</Text>
                         </TouchableOpacity>
                     </View>
                 }
