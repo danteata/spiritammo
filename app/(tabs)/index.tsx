@@ -289,11 +289,11 @@ export default function HomeScreen() {
             {/* Integrated Tactical Header */}
             <Animated.View style={[styles.headerSection, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
               <View style={styles.headerTitleContainer}>
-                <ThemedText variant="caption" style={[styles.unitLabel, { color: theme.accent }]}>
+                {/* <ThemedText variant="caption" style={[styles.unitLabel, { color: theme.accent }]}>
                   SIGINT OPS // HQ
-                </ThemedText>
+                </ThemedText> */}
                 <ThemedText variant="heading" style={styles.headerTitle}>
-                  {`GREETINGS,\n${userSettings.soldierName || 'Soldier'}`}
+                    {`GREETINGS, ${userSettings?.soldierName || 'Soldier'}`}
                 </ThemedText>
                 <View style={[styles.headerUnderline, { backgroundColor: theme.accent }]} />
               </View>
@@ -335,11 +335,9 @@ export default function HomeScreen() {
                       <Text style={[styles.classificationText, { color: theme.error }]}>CLASSIFIED</Text>
                     </View>
                   )}
-                </View>            <ThemedText variant="heading" style={styles.greetingTitle}>{ctaState.greeting}</ThemedText>
-
-                <View style={styles.briefingTextContainer}>
+                </View>            <View style={styles.briefingTextContainer}>
                   <TypewriterText
-                    text={`> ${ctaState.subtext}`}
+                    text={`> ${ctaState.greeting}\n> ${ctaState.subtext}`}
                     style={styles.briefingText}
                     delay={300}
                     isDark={isDark}
@@ -406,7 +404,7 @@ export default function HomeScreen() {
             <View style={styles.operationsHeader}>
               <ThemedText variant="subheading" style={styles.operationsTitle}>RECENT OPERATIONS</ThemedText>
               <TouchableOpacity onPress={() => router.push('/(tabs)/train')}>
-                <ThemedText variant="caption" style={{ color: theme.accent }}>VIEW ALL</ThemedText>
+                <ThemedText variant="caption" style={{ color: theme.accent }}>GO TO TRAIN</ThemedText>
               </TouchableOpacity>
             </View>
           </>
