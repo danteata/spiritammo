@@ -129,9 +129,9 @@ export const VoiceLibrary: React.FC<VoiceLibraryProps> = ({ isDark, theme }) => 
                         <FontAwesome5
                             name={playingId === item.id ? 'pause' : 'play'}
                             size={12}
-                            color="white"
+                            color={theme.accentContrastText}
                         />
-                        <Text style={styles.actionButtonText}>
+                        <Text style={[styles.actionButtonText, { color: theme.accentContrastText }]}>
                             {playingId === item.id ? 'PAUSE' : 'PLAY'}
                         </Text>
                     </TouchableOpacity>
@@ -152,8 +152,8 @@ export const VoiceLibrary: React.FC<VoiceLibraryProps> = ({ isDark, theme }) => 
                 </ThemedText>
                 {item.tags?.includes('high-accuracy') && (
                     <View style={[styles.tag, { backgroundColor: theme.accent }]}>
-                        <FontAwesome5 name="star" size={10} color="white" />
-                        <Text style={styles.tagText}>HIGH ACCURACY</Text>
+                        <FontAwesome5 name="star" size={10} color={theme.accentContrastText} />
+                        <Text style={[styles.tagText, { color: theme.accentContrastText }]}>HIGH ACCURACY</Text>
                     </View>
                 )}
             </View>
@@ -205,8 +205,8 @@ export const VoiceLibrary: React.FC<VoiceLibraryProps> = ({ isDark, theme }) => 
                         style={[styles.emptyButton, { backgroundColor: theme.accent }]}
                         onPress={() => router.push('/train/campaign')}
                     >
-                        <Ionicons name="play-circle" size={18} color="#FFFFFF" />
-                        <Text style={styles.emptyButtonText}>Start Practice</Text>
+                        <Ionicons name="play-circle" size={18} color={theme.accentContrastText} />
+                        <Text style={[styles.emptyButtonText, { color: theme.accentContrastText }]}>Start Practice</Text>
                     </TouchableOpacity>
                 </View>
             ) : (

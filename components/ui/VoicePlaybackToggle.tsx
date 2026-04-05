@@ -58,10 +58,10 @@ export const VoicePlaybackToggle: React.FC<VoicePlaybackToggleProps> = ({ isDark
                 <FontAwesome5
                     name={isUsingRecordedVoice ? 'microphone-alt' : 'volume-up'}
                     size={16}
-                    color={isUsingRecordedVoice ? 'white' : theme.accent}
+                    color={isUsingRecordedVoice ? theme.accentContrastText : theme.accent}
                 />
                 <ThemedText style={[styles.toggleText, {
-                    color: isUsingRecordedVoice ? 'white' : theme.text,
+                    color: isUsingRecordedVoice ? theme.accentContrastText : theme.text,
                     marginLeft: 8
                 }]}>
                     {isUsingRecordedVoice ? 'USING MY VOICE' : 'USING TTS'}

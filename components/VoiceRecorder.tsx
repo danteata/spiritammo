@@ -794,11 +794,7 @@ export default function VoiceRecorder({
     <View style={[styles.container, isEmbedded && styles.embeddedContainer]}>
       {/* Comms Panel Header */}
       <View style={styles.panelHeader}>
-        {isInitializing || isProcessing ? (
-          <ActivityIndicator size="small" color={textColor} style={{ marginRight: 8 }} />
-        ) : (
-          <StatusIndicator isActive={isRecording} isLoading={false} isError={false} />
-        )}
+        <StatusIndicator isActive={isRecording} isLoading={isInitializing || isProcessing} isError={false} />
         <Text style={[styles.statusText, { color: textColor }]}>
           {statusMessage.toUpperCase()}
         </Text>
@@ -883,7 +879,7 @@ export default function VoiceRecorder({
         isRecording={audioIsRecording}
         isRecognizing={isRecognizing}
         isLoading={isInitializing}
-        isProcessing={isProcessing || isInitializing}
+        isProcessing={false}
         onListen={hideListen ? undefined : speakVerse}
         onToggleRecording={audioIsRecording || isRecognizing ? stopRecording : startRecording}
         textColor={textColor}
