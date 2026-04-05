@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
     StyleSheet,
     View,
@@ -7,7 +7,7 @@ import {
     Alert,
 } from 'react-native'
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
@@ -17,18 +17,16 @@ import UnifiedScriptureRecorderCard from '@/components/UnifiedScriptureRecorderC
 import ScriptureActionRow from '@/components/ScriptureActionRow'
 import VoicePlaybackService from '@/services/voicePlayback'
 import StealthDrill from '@/components/StealthDrill'
-import { Collection } from '@/types/scripture'
-import { Scripture } from '@/types/scripture'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
 import ValorPointsService from '@/services/valorPoints'
 import { generateBattleIntel } from '@/services/battleIntelligence'
 import { militaryRankingService } from '@/services/militaryRanking'
+import { useCollectionPractice } from '@/hooks/useCollectionPractice'
+import { useLocalSearchParams } from 'expo-router'
 
 export default function CollectionBattleScreen() {
     const {
-        scriptures,
-        collections,
         isDark,
         theme,
         updateScriptureAccuracy,
@@ -40,89 +38,28 @@ export default function CollectionBattleScreen() {
     const router = useRouter()
     const { trackEvent } = useAnalytics()
 
-    // Track screen view
     useScreenTracking('collection_battle')
 
-    const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
-    const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
-    const [showChapterSelector, setShowChapterSelector] = useState(false)
-    const [currentScripture, setCurrentScripture] = useState<Scripture | null>(null)
-    const [scriptureIndex, setScriptureIndex] = useState(0)
+    const {
+        selectedCollection,
+        setSelectedCollection,
+        selectedChapterIds,
+        setSelectedChapterIds,
+        currentScripture,
+        scriptureIndex,
+        collectionScriptures,
+        loadNextScripture,
+    } = useCollectionPractice({
+        collectionId: params.collectionId as string | undefined,
+        initialChapterIds: params.chapterIds ? (Array.isArray(params.chapterIds) ? params.chapterIds : [params.chapterIds]) : [],
+    })
+
     const [totalVP, setTotalVP] = useState(0)
     const [showStealthDrill, setShowStealthDrill] = useState(false)
+    const [showChapterSelector, setShowChapterSelector] = useState(false)
     const [isLoadingIntel, setIsLoadingIntel] = useState(false)
     const [isListeningIntel, setIsListeningIntel] = useState(false)
     const [tacticalIntel, setTacticalIntel] = useState<{ battlePlan: string; tacticalNotes: string } | null>(null)
-
-    const initialChapterIds = useMemo(() => {
-        const raw = params.chapterIds
-        if (!raw) return []
-        if (Array.isArray(raw)) {
-            return raw.flatMap((id) => id.split(',')).filter(Boolean)
-        }
-        return raw.split(',').filter(Boolean)
-    }, [params.chapterIds])
-
-    // Preselect collection if provided via params
-    useEffect(() => {
-        const collectionId = params.collectionId as string | undefined
-        if (!collectionId || !collections) return
-        const preselected = collections.find(c => c.id === collectionId) || null
-        if (preselected) {
-            setSelectedCollection(preselected)
-        }
-    }, [params.collectionId, collections])
-
-    useEffect(() => {
-        if (!selectedCollection) {
-            setSelectedChapterIds([])
-            return
-        }
-
-        if (selectedCollection.isChapterBased && selectedCollection.chapters?.length) {
-            if (initialChapterIds.length > 0) {
-                setSelectedChapterIds(initialChapterIds)
-            } else {
-                setSelectedChapterIds(selectedCollection.chapters.map((ch) => ch.id))
-            }
-        } else {
-            setSelectedChapterIds([])
-        }
-    }, [selectedCollection?.id, initialChapterIds.join(',')])
-
-    const collectionScriptures = useMemo(() => {
-        if (!selectedCollection || !scriptures) return []
-
-        const base = scriptures.filter(s =>
-            selectedCollection.scriptures.includes(s.id)
-        )
-
-        if (
-            selectedCollection.isChapterBased &&
-            selectedCollection.chapters &&
-            selectedChapterIds.length > 0
-        ) {
-            const selectedIds = new Set(
-                selectedCollection.chapters
-                    .filter((ch) => selectedChapterIds.includes(ch.id))
-                    .flatMap((ch) => ch.scriptures)
-            )
-            return base.filter(s => selectedIds.has(s.id))
-        }
-
-        return base
-    }, [selectedCollection, scriptures, selectedChapterIds])
-
-    // Load scripture when collection or chapter selection changes
-    useEffect(() => {
-        if (collectionScriptures.length > 0) {
-            setCurrentScripture(collectionScriptures[0])
-            setScriptureIndex(0)
-        } else {
-            setCurrentScripture(null)
-            setScriptureIndex(0)
-        }
-    }, [collectionScriptures, selectedCollection?.id])
 
     const handleRecordingComplete = async (accuracy: number) => {
         if (!currentScripture || !selectedCollection) return
@@ -180,16 +117,6 @@ export default function CollectionBattleScreen() {
                     { text: 'Next Verse', onPress: loadNextScripture }
                 ]
             )
-        }
-    }
-
-    const loadNextScripture = () => {
-        if (!selectedCollection || collectionScriptures.length === 0) return
-
-        const nextIndex = scriptureIndex + 1
-        if (nextIndex < collectionScriptures.length) {
-            setScriptureIndex(nextIndex)
-            setCurrentScripture(collectionScriptures[nextIndex])
         }
     }
 

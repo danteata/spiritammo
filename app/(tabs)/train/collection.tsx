@@ -1,16 +1,15 @@
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import {
     StyleSheet,
     View,
     ScrollView,
     TouchableOpacity,
     Alert,
-    ActivityIndicator,
 } from 'react-native'
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
-import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
+import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import CollectionSelector from '@/components/CollectionSelector'
 import CollectionChapterSelector from '@/components/CollectionChapterSelector'
@@ -18,16 +17,14 @@ import UnifiedScriptureRecorderCard from '@/components/UnifiedScriptureRecorderC
 import ScriptureActionRow from '@/components/ScriptureActionRow'
 import StealthDrill from '@/components/StealthDrill'
 import VoicePlaybackService from '@/services/voicePlayback'
-import { Collection } from '@/types/scripture'
-import { Scripture } from '@/types/scripture'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
 import { Toast } from '@/components/ui/Toast'
+import { useCollectionPractice } from '@/hooks/useCollectionPractice'
+import { useLocalSearchParams } from 'expo-router'
 
 export default function CollectionDrillScreen() {
     const {
-        scriptures,
-        collections,
         isDark,
         theme,
         updateScriptureAccuracy,
@@ -38,114 +35,25 @@ export default function CollectionDrillScreen() {
     const router = useRouter()
     const { trackEvent } = useAnalytics()
 
-    // Track screen view
     useScreenTracking('collection_drill')
 
-    useEffect(() => {
-        console.log('🔵 [CollectionDrill] Component mounted')
-        return () => console.log('🔴 [CollectionDrill] Component UNMOUNTING')
-    }, [])
+    const {
+        selectedCollection,
+        setSelectedCollection,
+        selectedChapterIds,
+        setSelectedChapterIds,
+        currentScripture,
+        scriptureIndex,
+        collectionScriptures,
+        loadNextScripture,
+    } = useCollectionPractice({
+        collectionId: params.collectionId as string | undefined,
+        initialChapterIds: params.chapterIds ? (Array.isArray(params.chapterIds) ? params.chapterIds : [params.chapterIds]) : [],
+    })
 
-    const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
-    const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
-    const [showChapterSelector, setShowChapterSelector] = useState(false)
-    const [currentScripture, setCurrentScripture] = useState<Scripture | null>(null)
-    const [scriptureIndex, setScriptureIndex] = useState(0)
     const [showStealthDrill, setShowStealthDrill] = useState(false)
+    const [showChapterSelector, setShowChapterSelector] = useState(false)
     const [isListeningVerse, setIsListeningVerse] = useState(false)
-    const [isLoading, setIsLoading] = useState(!!params.collectionId)
-
-    const initialChapterIds = useMemo(() => {
-        const raw = params.chapterIds
-        console.log('🔵 [CollectionDrill] params.chapterIds raw:', raw)
-        if (!raw) return []
-        if (Array.isArray(raw)) {
-            const result = raw.flatMap((id) => id.split(',')).filter(Boolean)
-            console.log('🔵 [CollectionDrill] parsed chapterIds (array):', result)
-            return result
-        }
-        const result = raw.split(',').filter(Boolean)
-        console.log('🔵 [CollectionDrill] parsed chapterIds (string):', result)
-        return result
-    }, [params.chapterIds])
-
-    // Preselect collection if provided via params
-    useEffect(() => {
-        const collectionId = params.collectionId as string | undefined
-        console.log('🟢 [CollectionDrill] useEffect for collectionId:', collectionId)
-        if (!collectionId || !collections) {
-            console.log('🟢 [CollectionDrill] No collectionId or collections not ready')
-            return
-        }
-        const preselected = collections.find(c => c.id === collectionId) || null
-        console.log('🟢 [CollectionDrill] Found collection:', preselected?.name)
-        if (preselected) {
-            setSelectedCollection(preselected)
-            console.log('🟢 [CollectionDrill] Set selectedCollection')
-        }
-    }, [params.collectionId, collections])
-
-    // Clear loading state once collection is settled
-    useEffect(() => {
-        if (params.collectionId) {
-            if (selectedCollection || !collections) {
-                setIsLoading(false)
-            }
-        } else {
-            setIsLoading(false)
-        }
-    }, [selectedCollection, collections, params.collectionId])
-
-    useEffect(() => {
-        if (!selectedCollection) {
-            setSelectedChapterIds([])
-            return
-        }
-
-        if (selectedCollection.isChapterBased && selectedCollection.chapters?.length) {
-            if (initialChapterIds.length > 0) {
-                setSelectedChapterIds(initialChapterIds)
-            } else {
-                setSelectedChapterIds(selectedCollection.chapters.map((ch) => ch.id))
-            }
-        } else {
-            setSelectedChapterIds([])
-        }
-    }, [selectedCollection?.id, initialChapterIds.join(',')])
-
-    const collectionScriptures = useMemo(() => {
-        if (!selectedCollection || !scriptures) return []
-
-        const base = scriptures.filter(s =>
-            selectedCollection.scriptures.includes(s.id)
-        )
-
-        if (
-            selectedCollection.isChapterBased &&
-            selectedCollection.chapters &&
-            selectedChapterIds.length > 0
-        ) {
-            const selectedIds = new Set(
-                selectedCollection.chapters
-                    .filter((ch) => selectedChapterIds.includes(ch.id))
-                    .flatMap((ch) => ch.scriptures)
-            )
-            return base.filter(s => selectedIds.has(s.id))
-        }
-
-        return base
-    }, [selectedCollection, scriptures, selectedChapterIds])
-
-    // Load scripture when collection or chapter selection changes
-    useEffect(() => {
-        if (collectionScriptures.length > 0) {
-            setCurrentScripture(collectionScriptures[0])
-            setScriptureIndex(0)
-        } else {
-            setCurrentScripture(null)
-            setScriptureIndex(0)
-        }
-    }, [collectionScriptures, selectedCollection?.id])
 
     const handleRecordingComplete = async (accuracy: number) => {
         if (!currentScripture || !selectedCollection) return
@@ -170,7 +78,9 @@ export default function CollectionDrillScreen() {
                     'COLLECTION COMPLETE 🎖️',
                     'You have engaged all targets in this collection.',
                     [
-                        { text: 'Restart', onPress: () => setScriptureIndex(0) },
+                        { text: 'Restart', onPress: () => {
+                            setSelectedChapterIds([])
+                        }},
                         { text: 'Finish', onPress: () => router.back() }
                     ]
                 )
@@ -186,16 +96,6 @@ export default function CollectionDrillScreen() {
                 title: '⚡ LOW PRECISION',
                 message: `${accuracy}% accuracy - check your coordinates and try again.`,
             })
-        }
-    }
-
-    const loadNextScripture = () => {
-        if (!selectedCollection || collectionScriptures.length === 0) return
-
-        const nextIndex = scriptureIndex + 1
-        if (nextIndex < collectionScriptures.length) {
-            setScriptureIndex(nextIndex)
-            setCurrentScripture(collectionScriptures[nextIndex])
         }
     }
 
@@ -263,12 +163,7 @@ export default function CollectionDrillScreen() {
                     </ThemedText>
                 </View>
 
-                {isLoading ? (
-                    <View style={styles.loadingContainer}>
-                        <ActivityIndicator size="large" color={theme.accent} />
-                        <ThemedText variant="caption" style={styles.loadingText}>INITIALIZING TRAINING PROTOCOL...</ThemedText>
-                    </View>
-                ) : !selectedCollection ? (
+                {!selectedCollection ? (
                     <View style={styles.selectorContainer}>
                         <ThemedText variant="caption" style={styles.sectionTitle}>
                             SELECT A COLLECTION

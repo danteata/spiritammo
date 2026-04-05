@@ -16,9 +16,8 @@ import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
 import CollectionSelector from '@/components/CollectionSelector'
-import CollectionChapterDropdown from '@/components/CollectionChapterDropdown'
+import CollectionChapterSelector from '@/components/CollectionChapterSelector'
 import { Collection } from '@/types/scripture'
-import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 
 const { width } = Dimensions.get('window')
 
@@ -119,12 +118,30 @@ export default function TrainingScreen() {
                         onSelectCollection={setSelectedCollection}
                     />
                     
-                    {/* Chapter Selection Dropdown */}
-                    <CollectionChapterDropdown
-                        collection={selectedCollection}
-                        selectedChapterIds={selectedChapterIds}
-                        onSelectChapters={setSelectedChapterIds}
-                    />
+                    {selectedCollection && (
+                        <>
+                            <CollectionChapterSelector
+                                collection={selectedCollection}
+                                isVisible={false}
+                                onClose={() => setShowChapterSelector(true)}
+                                onStartPractice={setSelectedChapterIds}
+                                initialSelectedChapterIds={selectedChapterIds}
+                                variant="dropdown"
+                            />
+                            
+                            <CollectionChapterSelector
+                                collection={selectedCollection}
+                                isVisible={showChapterSelector}
+                                onClose={() => setShowChapterSelector(false)}
+                                onStartPractice={(chapterIds) => {
+                                    setSelectedChapterIds(chapterIds)
+                                    setShowChapterSelector(false)
+                                }}
+                                initialSelectedChapterIds={selectedChapterIds}
+                                variant="modal"
+                            />
+                        </>
+                    )}
                 </View>
 
                 {/* Training Mode Selection */}

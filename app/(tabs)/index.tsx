@@ -335,7 +335,8 @@ export default function HomeScreen() {
                       <Text style={[styles.classificationText, { color: theme.error }]}>CLASSIFIED</Text>
                     </View>
                   )}
-                </View>            <View style={styles.briefingTextContainer}>
+                </View>
+                <View style={styles.briefingTextContainer}>
                   <TypewriterText
                     text={`> ${ctaState.greeting}\n> ${ctaState.subtext}`}
                     style={styles.briefingText}

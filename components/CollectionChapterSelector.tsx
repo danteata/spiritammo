@@ -10,6 +10,7 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Feather } from '@expo/vector-icons';
+import { BlurView } from 'expo-blur';
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection, CollectionChapter } from '@/types/scripture'
 import { useAppStore } from '@/hooks/useAppStore'
@@ -23,6 +24,7 @@ interface CollectionChapterSelectorProps {
   actionLabel?: string
   title?: string
   subtitle?: string
+  variant?: 'modal' | 'dropdown'
 }
 
 export default function CollectionChapterSelector({
@@ -34,9 +36,10 @@ export default function CollectionChapterSelector({
   actionLabel = 'APPLY SELECTION',
   title = 'SELECT CHAPTERS',
   subtitle,
+  variant = 'modal',
 }: CollectionChapterSelectorProps) {
-  const { theme, gradients } = useAppStore()
-  const styles = getStyles(theme)
+  const { theme, gradients, isDark } = useAppStore()
+  const styles = getStyles(theme, variant)
   const gradientColors = Array.isArray(gradients?.primary)
     ? gradients.primary
     : [theme.background, theme.surface]
@@ -69,10 +72,22 @@ export default function CollectionChapterSelector({
 
   const handleStartPractice = () => {
     if (selectedChapterIds.length === 0) {
-      Alert.alert(
-        'No Chapters Selected',
-        'Please select at least one chapter to practice.'
-      )
+      if (variant === 'modal') {
+        Alert.alert(
+          'No Chapters Selected',
+          'Please select at least one chapter to practice.'
+        )
+      }
+      return
+    }
+    onStartPractice(selectedChapterIds)
+    if (variant === 'modal') {
+      onClose()
+    }
+  }
+
+  const handleApply = () => {
+    if (selectedChapterIds.length === 0) {
       return
     }
     onStartPractice(selectedChapterIds)
@@ -81,6 +96,39 @@ export default function CollectionChapterSelector({
 
   const renderChapterItem = ({ item }: { item: CollectionChapter }) => {
     const isSelected = selectedChapterIds.includes(item.id)
+
+    if (variant === 'dropdown') {
+      return (
+        <TouchableOpacity
+          style={[
+            styles.chapterItem,
+            isSelected && { 
+              backgroundColor: isDark ? `${theme.accent}20` : `${theme.accent}10`,
+              borderColor: theme.accent 
+            }
+          ]}
+          onPress={() => toggleChapter(item.id)}
+        >
+          <View style={styles.chapterContent}>
+            <View style={styles.chapterHeader}>
+              <FontAwesome
+                name={isSelected ? "check-square-o" : "square-o"}
+                size={18}
+                color={isSelected ? theme.accent : theme.textSecondary}
+              />
+              <View style={styles.chapterInfo}>
+                <Text style={[styles.chapterName, MILITARY_TYPOGRAPHY.body, { color: theme.text }]}>
+                  {item.name}
+                </Text>
+                <Text style={[styles.chapterMeta, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>
+                  {item.scriptures.length} verses
+                </Text>
+              </View>
+            </View>
+          </View>
+        </TouchableOpacity>
+      )
+    }
 
     return (
       <TouchableOpacity
@@ -147,6 +195,63 @@ export default function CollectionChapterSelector({
     .filter((ch) => selectedChapterIds.includes(ch.id))
     .reduce((sum, ch) => sum + ch.scriptures.length, 0)
 
+  if (variant === 'dropdown') {
+    const getDisplayText = () => {
+      if (selectedChapterIds.length === 0) {
+        return 'No chapters selected'
+      }
+      if (selectedChapterIds.length === chapters.length) {
+        return 'All Chapters'
+      }
+      return `${selectedChapterIds.length} Chapter${selectedChapterIds.length !== 1 ? 's' : ''} Selected`
+    }
+
+    const getVerseCount = () => {
+      if (selectedChapterIds.length === 0) {
+        return 0
+      }
+      const selectedChapters = chapters.filter(ch => selectedChapterIds.includes(ch.id))
+      return selectedChapters.reduce((total, ch) => total + ch.scriptures.length, 0)
+    }
+
+    return (
+      <View style={styles.container}>
+        <TouchableOpacity
+          style={[styles.selector, { backgroundColor: theme.surface, borderColor: theme.border }]}
+          onPress={onClose}
+          testID="chapter-selector-button"
+        >
+          <View style={styles.selectorContent}>
+            <FontAwesome name="list" size={18} color={theme.accent} />
+            <View style={styles.selectorTextContainer}>
+              <Text
+                style={[
+                  styles.selectorText,
+                  MILITARY_TYPOGRAPHY.body,
+                  { color: theme.text },
+                ]}
+              >
+                {getDisplayText()}
+              </Text>
+              {selectedChapterIds.length > 0 && (
+                <Text
+                  style={[
+                    styles.selectorSubtext,
+                    MILITARY_TYPOGRAPHY.caption,
+                    { color: theme.textSecondary },
+                  ]}
+                >
+                  {getVerseCount()} verses loaded
+                </Text>
+              )}
+            </View>
+          </View>
+          <FontAwesome name="chevron-down" size={16} color={theme.text} />
+        </TouchableOpacity>
+      </View>
+    )
+  }
+
   return (
     <Modal
       visible={isVisible}
@@ -155,7 +260,7 @@ export default function CollectionChapterSelector({
       onRequestClose={onClose}
     >
       <LinearGradient
-        colors={gradientColors}
+        colors={gradientColors as any}
         style={styles.container}
       >
         {/* Header */}
@@ -258,10 +363,40 @@ const withAlpha = (hex: string, alpha: number) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
-const getStyles = (theme: any) => StyleSheet.create({
-  container: {
+const getStyles = (theme: any, variant: 'modal' | 'dropdown' = 'modal') => StyleSheet.create({
+  container: variant === 'dropdown' ? {
+    marginTop: 12,
+    paddingHorizontal: 16,
+  } : {
     flex: 1,
   },
+  selector: variant === 'dropdown' ? {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  } : {},
+  selectorContent: variant === 'dropdown' ? {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 10,
+  } : {},
+  selectorTextContainer: variant === 'dropdown' ? {
+    flex: 1,
+  } : {},
+  selectorText: variant === 'dropdown' ? {
+    fontWeight: '600',
+    fontSize: 14,
+  } : {},
+  selectorSubtext: variant === 'dropdown' ? {
+    marginTop: 2,
+    opacity: 0.8,
+    fontSize: 11,
+  } : {},
   header: {
     paddingTop: 50,
     paddingHorizontal: 20,
@@ -319,7 +454,16 @@ const getStyles = (theme: any) => StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
   },
-  chapterItem: {
+  chapterItem: variant === 'dropdown' ? {
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.border,
+    borderRadius: 8,
+    marginBottom: 4,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  } : {
     backgroundColor: theme.surface,
     borderRadius: 8,
     marginBottom: 12,
