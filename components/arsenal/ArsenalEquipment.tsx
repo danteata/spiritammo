@@ -102,7 +102,7 @@ export const ArsenalEquipment: React.FC<ArsenalEquipmentProps> = ({
     const horizontalPadding = 16
     const cardWidth = useMemo(() => {
         const available = width - horizontalPadding * 2 - columnGap * (columns - 1)
-        return Math.floor(available / columns) - 24
+        return Math.floor(available / columns) - 28
     }, [width, columns])
 
     return (
@@ -379,7 +379,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 12,
         gap: 12,
-        paddingHorizontal: 4,
     },
     itemsTitle: {
         ...MILITARY_TYPOGRAPHY.code,
@@ -391,7 +390,7 @@ const styles = StyleSheet.create({
         // backgroundColor handled inline
     },
     itemsListContent: {
-        paddingHorizontal: 12,
+        paddingHorizontal: 16,
         rowGap: 12,
         columnGap: 10,
         paddingBottom: 100,
