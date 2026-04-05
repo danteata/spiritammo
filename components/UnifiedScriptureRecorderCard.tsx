@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
@@ -14,6 +14,7 @@ interface UnifiedScriptureRecorderCardProps {
   intelText?: string
   onListen?: () => void
   onIntel?: () => void
+  onReadIntelAloud?: () => void
   onClose?: () => void
   isListening?: boolean
   isListeningIntel?: boolean
@@ -26,13 +27,24 @@ export default function UnifiedScriptureRecorderCard({
   intelText,
   onListen,
   onIntel,
+  onReadIntelAloud,
   onClose,
   isListening = false,
   isListeningIntel = false,
 }: UnifiedScriptureRecorderCardProps) {
-  const { theme } = useAppStore()
+  const { theme, isDark } = useAppStore()
   const [isRecording, setIsRecording] = useState(false)
   const [showIntel, setShowIntel] = useState(false)
+
+  // Auto-show intel section when intelText becomes available
+  // Auto-hide when intelText is cleared (scripture changed)
+  useEffect(() => {
+    if (intelText) {
+      setShowIntel(true)
+    } else {
+      setShowIntel(false)
+    }
+  }, [intelText])
 
   return (
     <View style={[styles.container, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -43,6 +55,19 @@ export default function UnifiedScriptureRecorderCard({
         embedded
       />
 
+      {onClose && (
+        <TouchableOpacity 
+          style={styles.absoluteCloseBtn} 
+          onPress={onClose}
+        >
+          <Ionicons 
+            name="close-circle" 
+            size={28} 
+            color={theme.textSecondary} 
+          />
+        </TouchableOpacity>
+      )}
+
       <View style={[styles.recorderSection, { borderTopColor: theme.border }]}>
         <View style={styles.recorderHeader}>
           <Text style={[styles.recorderTitle, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>
@@ -51,7 +76,7 @@ export default function UnifiedScriptureRecorderCard({
           <View style={styles.headerActions}>
             {onIntel && (
               <TouchableOpacity 
-                style={[styles.listenBtn, { borderColor: theme.border, marginRight: 8, backgroundColor: showIntel ? `${theme.accent}15` : 'transparent' }]} 
+                style={[styles.listenBtn, { borderColor: theme.border, backgroundColor: showIntel ? `${theme.accent}15` : 'transparent' }]} 
                 onPress={() => setShowIntel(!showIntel)}
               >
                 <Ionicons 
@@ -59,39 +84,27 @@ export default function UnifiedScriptureRecorderCard({
                   size={14} 
                   color={showIntel ? theme.accent : theme.textSecondary} 
                 />
-                <Text style={[styles.listenBtnText, MILITARY_TYPOGRAPHY.caption, { color: showIntel ? theme.accent : theme.textSecondary }]}>
-                  {showIntel ? 'INTEL ACTIVE' : 'INTEL'}
-                </Text>
               </TouchableOpacity>
             )}
-            {onClose && (
-              <TouchableOpacity 
-                style={[styles.closeBtn, { borderColor: theme.border, marginRight: 8 }]} 
-                onPress={onClose}
-              >
-                <Ionicons 
-                  name="close" 
-                  size={14} 
-                  color={theme.textSecondary} 
-                />
-              </TouchableOpacity>
-            )}
-            {onListen && (
-              <TouchableOpacity 
-                style={[styles.listenBtn, { borderColor: theme.border }]} 
-                onPress={onListen}
-                disabled={isListening}
-              >
-                <Ionicons 
-                  name={isListening ? "radio" : "volume-high"} 
-                  size={14} 
-                  color={isListening ? theme.accent : theme.textSecondary} 
-                />
-                <Text style={[styles.listenBtnText, MILITARY_TYPOGRAPHY.caption, { color: isListening ? theme.accent : theme.textSecondary }]}>
-                  {isListening ? 'RECEIVING...' : 'LISTEN'}
-                </Text>
-              </TouchableOpacity>
-            )}
+            
+            <View style={styles.rightActions}>
+              {onListen && (
+                <TouchableOpacity 
+                  style={[styles.listenBtn, { borderColor: theme.border }]} 
+                  onPress={onListen}
+                  disabled={isListening}
+                >
+                  <Ionicons 
+                    name={isListening ? "radio" : "volume-high"} 
+                    size={14} 
+                    color={isListening ? theme.accent : theme.textSecondary} 
+                  />
+                  <Text style={[styles.listenBtnText, MILITARY_TYPOGRAPHY.caption, { color: isListening ? theme.accent : theme.textSecondary }]}>
+                    {isListening ? 'RECEIVING...' : 'LISTEN'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
 
@@ -102,9 +115,9 @@ export default function UnifiedScriptureRecorderCard({
                 <Ionicons name="shield-checkmark" size={14} color={theme.accent} />
                 <Text style={[styles.intelTitle, MILITARY_TYPOGRAPHY.caption, { color: theme.accent }]}>TACTICAL INTEL</Text>
               </View>
-              {onIntel && (
+              {onReadIntelAloud && (
                 <TouchableOpacity 
-                  onPress={onIntel} 
+                  onPress={onReadIntelAloud} 
                   disabled={isListeningIntel}
                   style={styles.intelSpeakBtn}
                 >
@@ -180,6 +193,25 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  absoluteCloseBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    zIndex: 100,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  closeCircleBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   closeBtn: {
     width: 24,

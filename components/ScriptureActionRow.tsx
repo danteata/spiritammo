@@ -5,10 +5,10 @@ import { useAppStore } from '@/hooks/useAppStore'
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 
 interface ScriptureActionRowProps {
-  onStealth?: () => void
-  onIntel?: () => void
-  isLoadingIntel?: boolean
-  accentColor?: string
+    onStealth?: () => void
+    onIntel?: () => void
+    isLoadingIntel?: boolean
+    accentColor?: string
 }
 
 export default function ScriptureActionRow({
@@ -25,13 +25,14 @@ export default function ScriptureActionRow({
     if (!hasStealth && !hasIntel) return null
 
     const buttonColor = accentColor || theme.accent
-    const subtleBg = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'
+    const subtleBg = isDark ? 'rgba(255,255,255,0.12)' : `${theme.accent}99`
+    const subtleBorder = isDark ? 'rgba(255,255,255,0.2)' : `${theme.accent}99`
 
     return (
         <View style={styles.container}>
             {hasStealth && (
                 <TouchableOpacity
-                    style={[styles.button, { backgroundColor: subtleBg, borderColor: theme.border }]}
+                    style={[styles.button, { backgroundColor: subtleBg, borderColor: subtleBorder }]}
                     onPress={onStealth}
                 >
                     <MaterialCommunityIcons name="incognito" size={18} color={theme.text} />
