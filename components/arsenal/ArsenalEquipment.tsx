@@ -97,12 +97,12 @@ export const ArsenalEquipment: React.FC<ArsenalEquipmentProps> = ({
 
     const vpValue = typeof valorPoints === 'number' ? valorPoints : (avatarInventory?.valorPoints || 0)
 
-    const columns = width < 380 ? 2 : 3
-    const columnGap = 12
-    const horizontalPadding = 20
+    const columns = 2
+    const columnGap = 10
+    const horizontalPadding = 16
     const cardWidth = useMemo(() => {
         const available = width - horizontalPadding * 2 - columnGap * (columns - 1)
-        return Math.floor(available / columns)
+        return Math.floor(available / columns) - 24
     }, [width, columns])
 
     return (
@@ -357,7 +357,7 @@ const styles = StyleSheet.create({
         height: CONTAINER_SIZE,
         alignItems: 'center',
         justifyContent: 'center',
-        marginTop: -10, // Pull up slightly to balance header space
+        marginTop: -20,
     },
     svgContainer: {
         ...StyleSheet.absoluteFillObject,
@@ -369,16 +369,17 @@ const styles = StyleSheet.create({
         elevation: 10,
     },
     itemsContainer: {
-        marginTop: 0, // Reduced margin
+        marginTop: 20,
         width: '100%',
         paddingHorizontal: 20,
-        flex: 1, // Allow list to take remaining space
+        flex: 1,
     },
     itemsHeader: {
         flexDirection: 'row',
         alignItems: 'center',
         marginBottom: 12,
         gap: 12,
+        paddingHorizontal: 4,
     },
     itemsTitle: {
         ...MILITARY_TYPOGRAPHY.code,
@@ -390,29 +391,29 @@ const styles = StyleSheet.create({
         // backgroundColor handled inline
     },
     itemsListContent: {
-        paddingRight: 20,
+        paddingHorizontal: 12,
         rowGap: 12,
-        paddingBottom: 100, // Ample space for bottom nav
+        columnGap: 10,
+        paddingBottom: 100,
     },
     itemCard: {
-        minHeight: 150, // Increased height for better layout
+        minHeight: 130,
         alignItems: 'center',
-        justifyContent: 'space-between', // Distribute content
-        padding: 12,
-        marginBottom: 0, // ThemedCard handles this
+        justifyContent: 'space-between',
+        padding: 10,
+        marginBottom: 0,
     },
     equippedItemCard: {
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 6,
-        transform: [{ scale: 1.05 }],
         borderWidth: 2,
     },
     itemIconContainer: {
-        width: 48,
-        height: 48,
-        borderRadius: 24,
+        width: 40,
+        height: 40,
+        borderRadius: 20,
         backgroundColor: 'rgba(0,0,0,0.3)',
         alignItems: 'center',
         justifyContent: 'center',

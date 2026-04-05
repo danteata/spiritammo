@@ -27,7 +27,7 @@ export default function AvatarScreen() {
     useScreenTracking('avatar')
 
     const valorPoints = avatarInventory?.valorPoints || 0
-    const [selectedSlot, setSelectedSlot] = useState<EquipmentSlot | null>(null)
+    const [selectedSlot, setSelectedSlot] = useState<EquipmentSlot>('primary')
 
     const handleSlotPress = (slot: EquipmentSlot) => {
         setSelectedSlot(prev => (prev === slot ? null : slot))
