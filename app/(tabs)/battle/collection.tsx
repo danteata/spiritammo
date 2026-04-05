@@ -22,6 +22,8 @@ import { Scripture } from '@/types/scripture'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
 import ValorPointsService from '@/services/valorPoints'
+import { generateBattleIntel } from '@/services/battleIntelligence'
+import { militaryRankingService } from '@/services/militaryRanking'
 
 export default function CollectionBattleScreen() {
     const {
@@ -48,7 +50,9 @@ export default function CollectionBattleScreen() {
     const [scriptureIndex, setScriptureIndex] = useState(0)
     const [totalVP, setTotalVP] = useState(0)
     const [showStealthDrill, setShowStealthDrill] = useState(false)
-    const [isListeningVerse, setIsListeningVerse] = useState(false)
+    const [isLoadingIntel, setIsLoadingIntel] = useState(false)
+    const [isListeningIntel, setIsListeningIntel] = useState(false)
+    const [tacticalIntel, setTacticalIntel] = useState<{ battlePlan: string; tacticalNotes: string } | null>(null)
 
     const initialChapterIds = useMemo(() => {
         const raw = params.chapterIds
@@ -197,21 +201,51 @@ export default function CollectionBattleScreen() {
         }
     }
 
-    const handleListenVerse = async () => {
+    const handleListenIntel = async () => {
         if (!currentScripture) return
-        setIsListeningVerse(true)
+        setIsListeningIntel(true)
         try {
-            await VoicePlaybackService.playScripture(
-                currentScripture.id,
-                `${currentScripture.reference}. ${currentScripture.text}`,
-                {
-                    rate: 0.9,
-                    pitch: 1.0,
-                    language: 'en-US',
-                }
-            )
+            let intel = tacticalIntel
+            if (!intel) {
+                setIsLoadingIntel(true)
+                intel = await generateBattleIntel({
+                    reference: currentScripture.reference,
+                    text: currentScripture.text
+                })
+                setTacticalIntel(intel)
+                setIsLoadingIntel(false)
+                await militaryRankingService.recordIntelGenerated()
+            }
+            await VoicePlaybackService.playTextToSpeech(`${intel.battlePlan}. ${intel.tacticalNotes}`, {
+                rate: 0.9,
+                pitch: 1.0,
+                language: 'en-US',
+            })
+        } catch (error) {
+            console.error('Failed to get intel:', error)
+            Alert.alert('SYSTEM ERROR', 'Failed to retrieve battle intelligence. Check communications.')
         } finally {
-            setIsListeningVerse(false)
+            setIsListeningIntel(false)
+            setIsLoadingIntel(false)
+        }
+    }
+
+    const handleShowIntel = async () => {
+        if (!currentScripture) return
+
+        setIsLoadingIntel(true)
+        try {
+            const intel = await generateBattleIntel({
+                reference: currentScripture.reference,
+                text: currentScripture.text
+            })
+            setTacticalIntel(intel)
+            await militaryRankingService.recordIntelGenerated()
+        } catch (error) {
+            console.error('Failed to get intel:', error)
+            Alert.alert('SYSTEM ERROR', 'Failed to retrieve battle intelligence. Check communications.')
+        } finally {
+            setIsLoadingIntel(false)
         }
     }
 
@@ -320,11 +354,17 @@ export default function CollectionBattleScreen() {
                                     scripture={currentScripture}
                                     isBattleMode
                                     onRecordingComplete={handleRecordingComplete}
-                                    onListen={handleListenVerse}
-                                    isListening={isListeningVerse}
+                                    onListen={handleListenIntel}
+                                    isListening={isListeningIntel}
+                                    intelText={tacticalIntel ? `${tacticalIntel.battlePlan}\n\n${tacticalIntel.tacticalNotes}` : undefined}
+                                    onIntel={handleShowIntel}
+                                    onReadIntelAloud={handleListenIntel}
+                                    isListeningIntel={isListeningIntel}
                                 />
                                 <ScriptureActionRow
                                     onStealth={handleStartStealthBattle}
+                                    onIntel={handleShowIntel}
+                                    isLoadingIntel={isLoadingIntel}
                                     accentColor="#EF4444"
                                 />
                             </>

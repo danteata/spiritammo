@@ -47,7 +47,8 @@ export default function QuickBattleScreen() {
     const [showStealthDrill, setShowStealthDrill] = useState(false)
 
     const [isLoadingIntel, setIsLoadingIntel] = useState(false)
-    const [isListeningVerse, setIsListeningVerse] = useState(false)
+    const [isListeningIntel, setIsListeningIntel] = useState(false)
+    const [tacticalIntel, setTacticalIntel] = useState<{ battlePlan: string; tacticalNotes: string } | null>(null)
 
     // Load a random scripture on mount
     useEffect(() => {
@@ -135,21 +136,32 @@ export default function QuickBattleScreen() {
         }
     }
 
-    const handleListenVerse = async () => {
+    const handleListenIntel = async () => {
         if (!currentScripture) return
-        setIsListeningVerse(true)
+        setIsListeningIntel(true)
         try {
-            await VoicePlaybackService.playScripture(
-                currentScripture.id,
-                `${currentScripture.reference}. ${currentScripture.text}`,
-                {
-                    rate: 0.9,
-                    pitch: 1.0,
-                    language: 'en-US',
-                }
-            )
+            let intel = tacticalIntel
+            if (!intel) {
+                setIsLoadingIntel(true)
+                intel = await generateBattleIntel({
+                    reference: currentScripture.reference,
+                    text: currentScripture.text
+                })
+                setTacticalIntel(intel)
+                setIsLoadingIntel(false)
+                await militaryRankingService.recordIntelGenerated()
+            }
+            await VoicePlaybackService.playTextToSpeech(`${intel.battlePlan}. ${intel.tacticalNotes}`, {
+                rate: 0.9,
+                pitch: 1.0,
+                language: 'en-US',
+            })
+        } catch (error) {
+            console.error('Failed to get intel:', error)
+            Alert.alert('SYSTEM ERROR', 'Failed to retrieve battle intelligence. Check communications.')
         } finally {
-            setIsListeningVerse(false)
+            setIsListeningIntel(false)
+            setIsLoadingIntel(false)
         }
     }
 
@@ -162,19 +174,7 @@ export default function QuickBattleScreen() {
                 reference: currentScripture.reference,
                 text: currentScripture.text
             })
-
-            Alert.alert(
-                'BATTLE INTELLIGENCE 📡',
-                `MNEMONIC: ${intel.battlePlan}\n\nTACTICAL NOTES: ${intel.tacticalNotes}`,
-                [{ text: 'COPY THAT' }]
-            )
-
-            // Also read it aloud
-            await VoicePlaybackService.playTextToSpeech(`${intel.battlePlan}. ${intel.tacticalNotes}`, {
-                rate: 0.9,
-                pitch: 1.0,
-                language: 'en-US',
-            })
+            setTacticalIntel(intel)
 
             // Record intel generation for rank progress
             await militaryRankingService.recordIntelGenerated()
@@ -250,8 +250,12 @@ export default function QuickBattleScreen() {
                             scripture={currentScripture}
                             isBattleMode
                             onRecordingComplete={handleRecordingComplete}
-                            onListen={handleListenVerse}
-                            isListening={isListeningVerse}
+                            onListen={handleListenIntel}
+                            isListening={isListeningIntel}
+                            intelText={tacticalIntel ? `${tacticalIntel.battlePlan}\n\n${tacticalIntel.tacticalNotes}` : undefined}
+                            onIntel={handleShowIntel}
+                            onReadIntelAloud={handleListenIntel}
+                            isListeningIntel={isListeningIntel}
                         />
                         <ScriptureActionRow
                             onStealth={handleStartStealthBattle}
@@ -270,7 +274,7 @@ export default function QuickBattleScreen() {
                             style={[styles.addButton, { backgroundColor: theme.accent }]}
                             onPress={() => router.push('/arsenal')}
                         >
-                            <ThemedText variant="body" style={styles.addButtonText}>
+                            <ThemedText variant="body" style={[styles.addButtonText, { color: theme.accentContrastText }]}>
                                 Add Verses
                             </ThemedText>
                         </TouchableOpacity>

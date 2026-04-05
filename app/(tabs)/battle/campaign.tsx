@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     Alert,
     ActivityIndicator,
-    Animated,
     Platform,
 } from 'react-native'
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
@@ -29,6 +28,8 @@ import { analytics, AnalyticsEventType } from '@/services/analytics'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import ValorPointsService from '@/services/valorPoints'
 import { Toast } from '@/components/ui/Toast'
+import { generateBattleIntel } from '@/services/battleIntelligence'
+import { militaryRankingService } from '@/services/militaryRanking'
 
 export default function CampaignScreen() {
     const {
@@ -51,7 +52,6 @@ export default function CampaignScreen() {
     const [selectedNode, setSelectedNode] = useState<CampaignNode | null>(null)
     const [targetScripture, setTargetScripture] = useState<Scripture | null>(null)
     const [practiceMode, setPracticeMode] = useState<'VOICE' | 'STEALTH' | null>(null)
-    const [showBriefing, setShowBriefing] = useState(false)
     const [deniedModal, setDeniedModal] = useState({
         visible: false,
         type: 'operation' as 'rank' | 'funds' | 'operation' | 'security',
@@ -61,6 +61,13 @@ export default function CampaignScreen() {
     const [isLoadingScripture, setIsLoadingScripture] = useState(false)
     const [isListeningVerse, setIsListeningVerse] = useState(false)
     const [isListeningIntel, setIsListeningIntel] = useState(false)
+    const [isLoadingIntel, setIsLoadingIntel] = useState(false)
+    const [tacticalIntel, setTacticalIntel] = useState<{ battlePlan: string; tacticalNotes: string } | null>(null)
+    const [mapContainerHeight, setMapContainerHeight] = useState(0)
+
+    const handleMapLayout = (e: any) => {
+        setMapContainerHeight(e.nativeEvent.layout.height)
+    }
 
     useEffect(() => {
         if (activeCampaignId) {
@@ -140,85 +147,52 @@ export default function CampaignScreen() {
         }
     }
 
-    const handleListenVerse = async () => {
+    const handleListenIntel = async () => {
         if (!targetScripture) return
-        setIsListeningVerse(true)
-        try {
-            await VoicePlaybackService.playScripture(
-                targetScripture.id,
-                `${targetScripture.reference}. ${targetScripture.text}`,
-                {
-                    rate: 0.9,
-                    pitch: 1.0,
-                    language: 'en-US',
-                }
-            )
-        } finally {
-            setIsListeningVerse(false)
-        }
-    }
-
-    const handleIntelPress = async () => {
-        if (!targetScripture) return
-        const intelText = targetScripture.mnemonic || `Target objective: ${targetScripture.reference}`
         setIsListeningIntel(true)
         try {
-            await VoicePlaybackService.playTextToSpeech(intelText, {
+            let intel = tacticalIntel
+            if (!intel) {
+                setIsLoadingIntel(true)
+                intel = await generateBattleIntel({
+                    reference: targetScripture.reference,
+                    text: targetScripture.text
+                })
+                setTacticalIntel(intel)
+                setIsLoadingIntel(false)
+                await militaryRankingService.recordIntelGenerated()
+            }
+            await VoicePlaybackService.playTextToSpeech(`${intel.battlePlan}. ${intel.tacticalNotes}`, {
                 rate: 0.9,
                 pitch: 1.0,
                 language: 'en-US',
             })
+        } catch (error) {
+            console.error('Failed to get intel:', error)
+            Alert.alert('SYSTEM ERROR', 'Failed to retrieve battle intelligence. Check communications.')
         } finally {
             setIsListeningIntel(false)
+            setIsLoadingIntel(false)
         }
     }
 
-    const renderBriefingCard = () => {
-        if (!selectedNode || !targetScripture || practiceMode) return null
+    const handleShowIntel = async () => {
+        if (!targetScripture) return
 
-        return (
-            <Animated.View style={[styles.briefingCard, { backgroundColor: isDark ? 'rgba(15, 23, 42, 0.98)' : 'rgba(255, 255, 255, 0.98)', borderColor: theme.border }]}>
-                <View style={styles.briefingHeader}>
-                    <View style={styles.briefingTitleRow}>
-                        <View style={[styles.briefingIndicator, { backgroundColor: theme.accent }]} />
-                        <ThemedText variant="heading" style={styles.briefingTitle}>BATTLE INTEL</ThemedText>
-                    </View>
-                    <TouchableOpacity onPress={() => setSelectedNode(null)}>
-                        <Ionicons name="close-circle" size={24} color={theme.textSecondary} />
-                    </TouchableOpacity>
-                </View>
-
-                <View style={styles.briefingDetails}>
-                    <View style={styles.briefingStat}>
-                        <ThemedText variant="caption" style={styles.briefingLabel}>OBJECTIVE</ThemedText>
-                        <ThemedText variant="body" style={styles.briefingValue}>{targetScripture.reference}</ThemedText>
-                    </View>
-                    <View style={styles.briefingDivider} />
-                    <View style={styles.briefingStat}>
-                        <ThemedText variant="caption" style={styles.briefingLabel}>REQD. ACCURACY</ThemedText>
-                        <ThemedText variant="body" style={styles.briefingValue}>{selectedNode.requiredAccuracy}%</ThemedText>
-                    </View>
-                </View>
-
-                <View style={styles.briefingActions}>
-                    <TouchableOpacity
-                        style={[styles.briefingButton, { borderColor: theme.border, backgroundColor: theme.surfaceHighlight }]}
-                        onPress={() => setPracticeMode('STEALTH')}
-                    >
-                        <FontAwesome5 name="mask" size={14} color={theme.text} />
-                        <ThemedText variant="button" style={styles.briefingButtonText}>STEALTH</ThemedText>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[styles.briefingButton, styles.primaryBriefingButton, { backgroundColor: theme.accent }]}
-                        onPress={() => setPracticeMode('VOICE')}
-                    >
-                        <FontAwesome5 name="microphone" size={14} color="white" />
-                        <ThemedText variant="button" style={[styles.briefingButtonText, { color: 'white' }]}>ENGAGE</ThemedText>
-                    </TouchableOpacity>
-                </View>
-            </Animated.View>
-        )
+        setIsLoadingIntel(true)
+        try {
+            const intel = await generateBattleIntel({
+                reference: targetScripture.reference,
+                text: targetScripture.text
+            })
+            setTacticalIntel(intel)
+            await militaryRankingService.recordIntelGenerated()
+        } catch (error) {
+            console.error('Failed to get intel:', error)
+            Alert.alert('SYSTEM ERROR', 'Failed to retrieve battle intelligence. Check communications.')
+        } finally {
+            setIsLoadingIntel(false)
+        }
     }
 
     return (
@@ -277,10 +251,11 @@ export default function CampaignScreen() {
                             <ThemedText variant="button" style={{ fontSize: 14, letterSpacing: 1 }}>RETURN TO BASE</ThemedText>
                         </TouchableOpacity>
 
-                        <View style={styles.mapContainer}>
+                        <View style={styles.mapContainer} onLayout={handleMapLayout}>
                             <CampaignMap
                                 campaign={activeCampaign}
                                 onNodeSelect={handleNodeSelect}
+                                containerHeight={mapContainerHeight}
                             />
                             {/* Glass Overlay Border for Map */}
                             <View style={styles.mapBorder} pointerEvents="none" />
@@ -307,8 +282,6 @@ export default function CampaignScreen() {
                 />
             </View>
 
-            {renderBriefingCard()}
-
             {targetScripture && practiceMode === 'VOICE' && (
                 <View style={styles.fullScreenPractice}>
                     <View style={styles.practiceHeader}>
@@ -316,8 +289,8 @@ export default function CampaignScreen() {
                             style={styles.closePracticeButton}
                             onPress={() => setPracticeMode(null)}
                         >
-                            <Ionicons name="arrow-back" size={24} color={theme.text} />
-                            <ThemedText variant="button" style={{ marginLeft: 8 }}>ABORT MISSION</ThemedText>
+                            <Ionicons name="arrow-back" size={24} color={theme.accent} />
+                            <ThemedText variant="button" style={{ marginLeft: 8, color: theme.accent }}>ABORT MISSION</ThemedText>
                         </TouchableOpacity>
                         <View style={styles.requirementBadge}>
                             <ThemedText variant="caption" style={{ color: theme.accent }}>REQ: {selectedNode?.requiredAccuracy}% ACCURACY</ThemedText>
@@ -325,23 +298,26 @@ export default function CampaignScreen() {
                     </View>
                     
                     <ScrollView contentContainerStyle={styles.practiceScrollContent}>
-                        <UnifiedScriptureRecorderCard
-                            scripture={targetScripture}
-                            isBattleMode={true}
-                            onRecordingComplete={handleMissionComplete}
-                            onListen={handleListenVerse}
-                            onIntel={handleIntelPress}
-                            onClose={() => {
-                                setPracticeMode(null)
-                                setSelectedNode(null)
-                                setTargetScripture(null)
-                            }}
-                            isListening={isListeningVerse}
-                            isListeningIntel={isListeningIntel}
-                            intelText={targetScripture.mnemonic}
-                        />
+                    <UnifiedScriptureRecorderCard
+                        scripture={targetScripture}
+                        isBattleMode={true}
+                        onRecordingComplete={handleMissionComplete}
+                        onListen={handleListenIntel}
+                        onClose={() => {
+                            setPracticeMode(null)
+                            setSelectedNode(null)
+                            setTargetScripture(null)
+                        }}
+                        isListening={isListeningIntel}
+                        intelText={tacticalIntel ? `${tacticalIntel.battlePlan}\n\n${tacticalIntel.tacticalNotes}` : undefined}
+                        onIntel={handleShowIntel}
+                        onReadIntelAloud={handleListenIntel}
+                        isListeningIntel={isListeningIntel}
+                    />
                         <ScriptureActionRow
                             onStealth={() => setPracticeMode('STEALTH')}
+                            onIntel={handleShowIntel}
+                            isLoadingIntel={isLoadingIntel}
                             accentColor={theme.accent}
                         />
                         
@@ -441,7 +417,6 @@ const styles = StyleSheet.create({
         borderRadius: 24,
         overflow: 'hidden',
         borderWidth: 1,
-        marginBottom: 80, // Space for tab bar
     },
     mapBorder: {
         ...StyleSheet.absoluteFillObject,
@@ -459,7 +434,7 @@ const styles = StyleSheet.create({
     },
     fullScreenPractice: {
         ...StyleSheet.absoluteFillObject,
-        backgroundColor: 'rgba(0,0,0,0.95)',
+        backgroundColor: 'rgba(0,0,0,0.9)',
         zIndex: 100,
         paddingTop: Platform.OS === 'ios' ? 60 : 40,
     },
@@ -497,87 +472,5 @@ const styles = StyleSheet.create({
         flex: 1,
         opacity: 0.8,
         letterSpacing: 0.5,
-    },
-    briefingCard: {
-        position: 'absolute',
-        bottom: 100,
-        left: 20,
-        right: 20,
-        padding: 20,
-        borderRadius: 24,
-        borderWidth: 1,
-        zIndex: 50,
-        elevation: 10,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 10,
-    },
-    briefingHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    briefingTitleRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-    },
-    briefingIndicator: {
-        width: 3,
-        height: 16,
-        borderRadius: 2,
-    },
-    briefingTitle: {
-        fontSize: 16,
-        letterSpacing: 1,
-    },
-    briefingDetails: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 20,
-        borderRadius: 16,
-        padding: 12,
-    },
-    briefingStat: {
-        flex: 1,
-        alignItems: 'center',
-    },
-    briefingDivider: {
-        width: 1,
-        height: 30,
-        backgroundColor: 'rgba(128,128,128,0.2)',
-    },
-    briefingLabel: {
-        fontSize: 9,
-        opacity: 0.5,
-        marginBottom: 2,
-    },
-    briefingValue: {
-        fontWeight: 'bold',
-        fontSize: 14,
-    },
-    briefingActions: {
-        flexDirection: 'row',
-        gap: 12,
-    },
-    briefingButton: {
-        flex: 1,
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 14,
-        borderRadius: 16,
-        borderWidth: 1,
-        gap: 8,
-    },
-    primaryBriefingButton: {
-        flex: 2,
-    },
-    briefingButtonText: {
-        fontSize: 14,
-        fontWeight: 'bold',
-        letterSpacing: 1,
     },
 })
