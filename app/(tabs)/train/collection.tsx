@@ -203,6 +203,42 @@ export default function CollectionDrillScreen() {
                             </TouchableOpacity>
                         )}
 
+                        <TouchableOpacity
+                            style={[styles.quizButton, { backgroundColor: theme.accent }]}
+                            onPress={() => {
+                                router.push({
+                                    pathname: '/(tabs)/train/quiz',
+                                    params: { collectionId: selectedCollection.id }
+                                })
+                                trackEvent(AnalyticsEventType.QUIZ_STARTED, {
+                                    collection_id: selectedCollection.id,
+                                })
+                            }}
+                        >
+                            <Ionicons name="help-circle" size={20} color={theme.accentContrastText} />
+                            <ThemedText variant="body" style={[styles.quizButtonText, { color: theme.accentContrastText }]}>
+                                TEST KNOWLEDGE
+                            </ThemedText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[styles.quizButton, { backgroundColor: theme.accent }]}
+                            onPress={() => {
+                                router.push({
+                                    pathname: '/(tabs)/train/quiz',
+                                    params: { collectionId: selectedCollection.id }
+                                })
+                                trackEvent(AnalyticsEventType.QUIZ_STARTED, {
+                                    collection_id: selectedCollection.id,
+                                })
+                            }}
+                        >
+                            <Ionicons name="help-circle" size={20} color={theme.accentContrastText} />
+                            <ThemedText variant="body" style={[styles.quizButtonText, { color: theme.accentContrastText }]}>
+                                TEST KNOWLEDGE
+                            </ThemedText>
+                        </TouchableOpacity>
+
                         {/* Progress */}
                         <View style={styles.progressContainer}>
                             <ThemedText variant="caption" style={styles.progressText}>
@@ -380,5 +416,23 @@ const styles = StyleSheet.create({
     loadingText: {
         letterSpacing: 2,
         opacity: 0.6,
+    },
+    quizButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 16,
+        borderRadius: 12,
+        marginTop: 12,
+        gap: 10,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    quizButtonText: {
+        fontWeight: '700',
+        fontSize: 16,
+        letterSpacing: 1,
     },
 })

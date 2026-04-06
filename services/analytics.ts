@@ -105,6 +105,14 @@ export enum AnalyticsEventType {
     SCRIPTURE_VIEWED = 'scripture_viewed',
     INTEL_GENERATED = 'intel_generated',
     FILE_UPLOADED = 'file_uploaded',
+    QUIZ_STARTED = 'quiz_started',
+    QUIZ_GENERATED = 'quiz_generated',
+    QUIZ_QUESTION_ANSWERED = 'quiz_question_answered',
+    QUIZ_COMPLETED = 'quiz_completed',
+    QUIZ_STARTED = 'quiz_started',
+    QUIZ_GENERATED = 'quiz_generated',
+    QUIZ_QUESTION_ANSWERED = 'quiz_question_answered',
+    QUIZ_COMPLETED = 'quiz_completed',
 
     // Campaigns & Missions
     CAMPAIGN_START = 'campaign_start',
