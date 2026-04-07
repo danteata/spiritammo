@@ -24,6 +24,10 @@ const SAMPLE_EPUBS: Array<{ requireModule: number; name: string }> = [
     requireModule: require('@/assets/sample-collections/loyalty-and-disloyalty.epub'),
     name: 'Loyalty and Disloyalty',
   },
+  {
+    requireModule: require('@/assets/sample-collections/the-mega-church-2nd-ed-dag-heward-mills.epub'),
+    name: 'The Mega Church',
+  },
 ]
 
 export interface SampleLoadResult {

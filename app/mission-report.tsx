@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import {
   StyleSheet,
   Text,
@@ -28,6 +28,8 @@ const { width } = Dimensions.get('window')
 
 export default function MissionReportScreen() {
   const { theme, isDark } = useTheme()
+  const userStats = useZustandStore((s) => s.userStats)
+  const scriptures = useZustandStore((s) => s.scriptures)
   const [militaryProfile, setMilitaryProfile] = useState<any>(null)
   const [selectedTab, setSelectedTab] = useState<
     'overview' | 'achievements' | 'history'

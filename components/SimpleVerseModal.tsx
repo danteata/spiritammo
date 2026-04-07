@@ -1,4 +1,5 @@
-import { useTheme } from '@/hooks/useTheme'
+import { useTheme } from '@/hooks/useTheme';
+import useZustandStore from '@/hooks/zustandStore';
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -28,14 +29,8 @@ export default function SimpleVerseModal({
   isVisible,
   onClose
 }: SimpleVerseModalProps) {
-  const {
-    collections,
-    books,
-    scriptures,
-    addCollection,
-    addScripturesToCollection,
-    theme
-  const { isDark,theme } = useTheme()
+  const { collections, books, scriptures, addCollection, addScripturesToCollection } = useZustandStore();
+  const { isDark, theme } = useTheme();
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const styles = getStyles(theme);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);

@@ -424,6 +424,8 @@ export class BibleApiService {
       'romans': 'Rom',
       '1 corinthians': '1Cor',
       '2 corinthians': '2Cor',
+      '1corinthians': '1Cor',
+      '2corinthians': '2Cor',
       'galatians': 'Gal',
       'ephesians': 'Eph',
       'philippians': 'Phil',
@@ -432,6 +434,8 @@ export class BibleApiService {
       '2 thessalonians': '2Thess',
       '1 timothy': '1Tim',
       '2 timothy': '2Tim',
+      '1timothy': '1Tim',
+      '2timothy': '2Tim',
       'titus': 'Titus',
       'philemon': 'Phlm',
       'hebrews': 'Heb',
@@ -443,6 +447,7 @@ export class BibleApiService {
       '3 john': '3John',
       'jude': 'Jude',
       'revelation': 'Rev',
+      'revelations': 'Rev',
     };
 
     const normalized = book.toLowerCase().trim();
