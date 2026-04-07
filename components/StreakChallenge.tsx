@@ -1,3 +1,5 @@
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import React, { useEffect, useState } from 'react'
 import {
     StyleSheet,
@@ -7,7 +9,6 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons'
-import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { streakManager, getStreakFlavorText, getDailyChallengeFlavorText, DailyChallenge, StreakData } from '@/services/streakManager'
 import { errorHandler } from '@/services/errorHandler'
@@ -20,7 +21,6 @@ interface StreakChallengeProps {
 }
 
 export default function StreakChallenge({ onStreakPress, compact = false }: StreakChallengeProps) {
-    const { theme, isDark } = useAppStore()
     const [streakData, setStreakData] = useState<StreakData | null>(null)
     const [dailyChallenge, setDailyChallenge] = useState<DailyChallenge | null>(null)
     const [loading, setLoading] = useState(true)

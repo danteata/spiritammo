@@ -11,7 +11,7 @@ import {
 import { FontAwesome } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import { COLORS } from '@/constants/colors'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 
 interface ActionButtonProps {
   title: string
@@ -56,7 +56,7 @@ export default function ActionButton({
   icon = 'crosshairs',
   variant = 'primary',
 }: ActionButtonProps) {
-  const { isDark, theme } = useAppStore()
+  const { isDark, theme } = useTheme()
   const [pulseAnimation] = useState(new Animated.Value(1))
   const scaleAnim = useRef(new Animated.Value(1)).current
   const lastPressTime = useRef(0)

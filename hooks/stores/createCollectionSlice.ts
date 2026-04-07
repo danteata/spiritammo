@@ -27,8 +27,10 @@ export const createCollectionSlice: StateCreator<CollectionSlice & ScriptureSlic
         const collection = get().collections.find((c) => c.id === collectionId)
         if (!collection) return []
 
-        // Filter from the main scriptures list based on IDs in the collection
-        return get().scriptures.filter((s) => collection.scriptures.includes(s.id))
+        const scriptureMap = new Map(get().scriptures.map(s => [s.id, s]))
+        return collection.scriptures
+            .map(id => scriptureMap.get(id))
+            .filter((s): s is Scripture => s !== undefined)
     },
 
     addCollection: async (collection) => {

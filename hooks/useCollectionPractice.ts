@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from 'react'
 import { Collection, Scripture } from '@/types/scripture'
-import { useAppStore } from '@/hooks/useAppStore'
+import useZustandStore from '@/hooks/zustandStore'
 
 interface UseCollectionPracticeParams {
     collectionId?: string
@@ -11,7 +11,8 @@ export function useCollectionPractice({
     collectionId,
     initialChapterIds = [],
 }: UseCollectionPracticeParams) {
-    const { scriptures, collections } = useAppStore()
+    const scriptures = useZustandStore((s) => s.scriptures)
+    const collections = useZustandStore((s) => s.collections)
 
     const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
     const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])

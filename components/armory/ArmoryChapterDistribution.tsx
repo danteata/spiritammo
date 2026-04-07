@@ -1,7 +1,7 @@
+import { useTheme } from '@/hooks/useTheme'
 import { StyleSheet, View, Text } from 'react-native'
 import { FontAwesome, Feather } from '@expo/vector-icons'
 import { ThemedCard, ThemedText } from '@/components/Themed'
-import { useAppStore } from '@/hooks/useAppStore'
 
 interface ArmoryChapterDistributionProps {
     item: { chapter: string; count: number }
@@ -12,7 +12,7 @@ export default function ArmoryChapterDistribution({
     item,
     onPress,
 }: ArmoryChapterDistributionProps) {
-    const { theme } = useAppStore() // Use dynamic theme
+  const { isDark,theme } = useTheme()
 
     return (
         <ThemedCard

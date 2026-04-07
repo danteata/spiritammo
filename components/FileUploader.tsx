@@ -24,7 +24,7 @@ import { Scripture } from '@/types/scripture'
 import CollectionSelector from './CollectionSelector'
 import { Collection } from '@/types/scripture'
 import { PDFExtractor } from './PDFExtractor';
-import { useAppStore } from '@/hooks/useAppStore';
+import { useTheme } from '@/hooks/useTheme';
 
 interface FileUploaderProps {
   isVisible: boolean
@@ -37,7 +37,7 @@ export default function FileUploader({
   onClose,
   onVersesExtracted,
 }: FileUploaderProps) {
-  const { theme, isDark } = useAppStore()
+  const { theme, isDark } = useTheme()
   const styles = getStyles(theme)
   const [isExtracting, setIsExtracting] = useState(false)
   const [extractionProgress, setExtractionProgress] =

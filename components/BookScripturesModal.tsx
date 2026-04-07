@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme'
 import React from 'react'
 import {
   StyleSheet,
@@ -11,7 +12,6 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome } from '@expo/vector-icons';
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Scripture } from '@/types/scripture'
-import { useAppStore } from '@/hooks/useAppStore'
 import ScriptureText from './ScriptureText'
 
 interface BookScripturesModalProps {
@@ -27,7 +27,7 @@ export default function BookScripturesModal({
   scriptures,
   bookName,
 }: BookScripturesModalProps) {
-  const { theme, gradients, isDark } = useAppStore()
+  const { isDark,theme } = useTheme()
   const styles = getStyles(theme)
 
   const ExpandableScriptureItem = ({ item }: { item: Scripture }) => {

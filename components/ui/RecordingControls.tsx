@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, ActivityIndicator } from 'react-native';
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
-import { useAppStore } from '@/hooks/useAppStore';
 import { COLORS } from '@/constants/colors';
 
 interface RecordingControlsProps {

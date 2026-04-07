@@ -11,7 +11,8 @@ import {
 } from 'react-native'
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import CampaignMap from '@/components/CampaignMap'
@@ -24,22 +25,17 @@ import StealthDrill from '@/components/StealthDrill'
 import { Toast } from '@/components/ui/Toast'
 import { Campaign, CampaignNode } from '@/types/campaign'
 import { Scripture } from '@/types/scripture'
-import useZustandStore from '@/hooks/zustandStore'
 import { AccessDeniedModal } from '@/components/AccessDeniedModal'
 import { analytics, AnalyticsEventType } from '@/services/analytics'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 
 export default function TrainingCampaignScreen() {
-    const {
-        campaigns,
-        activeCampaignId,
-        startCampaign,
-        completeNode,
-        isDark,
-        theme,
-        userStats
-    } = useAppStore()
-
+    const { isDark, theme } = useTheme()
+    const campaigns = useZustandStore((s) => s.campaigns)
+    const activeCampaignId = useZustandStore((s) => s.activeCampaignId)
+    const startCampaign = useZustandStore((s) => s.startCampaign)
+    const completeNode = useZustandStore((s) => s.completeNode)
+    const userStats = useZustandStore((s) => s.userStats)
     const router = useRouter()
     const { trackCampaignStart } = useAnalytics()
 

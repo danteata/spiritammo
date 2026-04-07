@@ -18,7 +18,8 @@ import {
     MILITARY_TYPOGRAPHY,
 } from '@/constants/colors'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import ActionButton from '@/components/ActionButton'
 import ScreenHeader from '@/components/ScreenHeader'
 
@@ -32,7 +33,14 @@ import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 const { width } = Dimensions.get('window')
 
 export default function SquadScreen() {
-    const { isDark, squadMembers = [], squadChallenges = [], loadSquadData, userStats, theme } = useAppStore()
+    const { theme, isDark } = useTheme()
+    const isLoading = useZustandStore((s) => s.isLoading)
+    const squadMembers = useZustandStore((s) => s.squadMembers)
+    const squadChallenges = useZustandStore((s) => s.squadChallenges)
+    const userStats = useZustandStore((s) => s.userStats)
+    const loadSquadData = useZustandStore((s) => s.loadSquadData)
+    const addSquadMember = useZustandStore((s) => s.addSquadMember)
+    const addSquadChallenge = useZustandStore((s) => s.addSquadChallenge)
     const styles = getStyles(theme)
     const { isSignedIn, isLoaded } = useAuth()
     const { user } = useUser()

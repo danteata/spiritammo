@@ -43,6 +43,7 @@ yarn-error.*
 /android
 .idea
 .env
+.kilo
 
 # Kilo Code
 .kilocode

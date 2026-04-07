@@ -4,11 +4,11 @@ import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AppStoreProvider } from "@/hooks/useAppStore";
 import { ClerkProvider, ClerkLoaded } from '@clerk/clerk-expo'
 import { tokenCache } from '@/utils/cache'
 import * as Linking from 'expo-linking'
 import { useZustandStore } from '@/hooks/zustandStore'
+import { AppStoreProvider } from '@/hooks/useAppStore'
 import AnalyticsProvider from '@/components/AnalyticsProvider'
 import { ConvexClientProvider } from '@/providers/ConvexProvider';
 import { ToastContainer } from '@/components/ui/Toast';

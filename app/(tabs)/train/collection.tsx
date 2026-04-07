@@ -8,7 +8,8 @@ import {
 } from 'react-native'
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import { useZustandStore } from '@/hooks/zustandStore'
 import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import CollectionSelector from '@/components/CollectionSelector'
@@ -24,14 +25,10 @@ import { useCollectionPractice } from '@/hooks/useCollectionPractice'
 import { useLocalSearchParams } from 'expo-router'
 
 export default function CollectionDrillScreen() {
-    const {
-        isDark,
-        theme,
-        updateScriptureAccuracy,
-        userSettings,
-    } = useAppStore()
-
     const params = useLocalSearchParams()
+    const { isDark, theme } = useTheme()
+    const updateScriptureAccuracy = useZustandStore((state) => state.updateScriptureAccuracy)
+    const userSettings = useZustandStore((state) => state.userSettings)
     const router = useRouter()
     const { trackEvent } = useAnalytics()
 

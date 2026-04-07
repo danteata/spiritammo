@@ -1,3 +1,5 @@
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -12,7 +14,6 @@ import {
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors';
-import { useAppStore } from '@/hooks/useAppStore';
 import {
   Book,
   Collection,
@@ -40,15 +41,11 @@ export default function AddVersesModal({
   onVersesAdded,
   preselectedCollection
 }: AddVersesModalProps) {
-  const {
-    collections,
-    addCollection,
-    addScripturesToCollection,
-    addScriptures,
-    isDark
-  } = useAppStore();
-
-  const { theme } = useAppStore();
+  const { isDark, theme } = useTheme()
+  const collections = useZustandStore((s) => s.collections)
+  const addCollection = useZustandStore((s) => s.addCollection)
+  const addScripturesToCollection = useZustandStore((s) => s.addScripturesToCollection)
+  const addScriptures = useZustandStore((s) => s.addScriptures)
 
   const [currentStep, setCurrentStep] = useState<Step>('collection');
   const [activeTab, setActiveTab] = useState<TabType>('BOOK');
@@ -519,7 +516,7 @@ export default function AddVersesModal({
 
 // Helper function to get theme colors since we can't use hooks in StyleSheet
 // We'll use inline styles for theme-dependent colors or a style generator
-const getStyles = (theme: typeof TACTICAL_THEME) => StyleSheet.create({
+const getStyles = (theme: any) => StyleSheet.create({
   modalContainer: {
     flex: 1,
     backgroundColor: theme.background,

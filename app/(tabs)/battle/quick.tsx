@@ -9,7 +9,8 @@ import {
 } from 'react-native'
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import UnifiedScriptureRecorderCard from '@/components/UnifiedScriptureRecorderCard'
@@ -25,15 +26,11 @@ import ValorPointsService from '@/services/valorPoints'
 import VoicePlaybackService from '@/services/voicePlayback'
 
 export default function QuickBattleScreen() {
-    const {
-        scriptures,
-        isDark,
-        theme,
-        updateScriptureAccuracy,
-        userStats,
-        addValorPoints,
-    } = useAppStore()
-
+    const { isDark, theme } = useTheme()
+    const scriptures = useZustandStore((s) => s.scriptures)
+    const updateScriptureAccuracy = useZustandStore((s) => s.updateScriptureAccuracy)
+    const userStats = useZustandStore((s) => s.userStats)
+    const addValorPoints = useZustandStore((s) => s.addValorPoints)
     const router = useRouter()
     const { trackEvent } = useAnalytics()
 

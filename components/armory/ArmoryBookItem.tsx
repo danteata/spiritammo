@@ -1,7 +1,7 @@
+import { useTheme } from '@/hooks/useTheme'
 import { StyleSheet, View, Text } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons'
 import { ThemedCard, ThemedText } from '@/components/Themed'
-import { useAppStore } from '@/hooks/useAppStore'
 
 interface ArmoryBookItemProps {
     item: any
@@ -14,7 +14,7 @@ export default function ArmoryBookItem({
     scriptureCount,
     onPress,
 }: ArmoryBookItemProps) {
-    const { theme } = useAppStore()
+  const { isDark,theme } = useTheme()
 
     return (
         <ThemedCard

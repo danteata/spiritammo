@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Text } from 'react-native'
 import { FontAwesome, Feather } from '@expo/vector-icons'
 import { ThemedCard, ThemedText } from '@/components/Themed'
 import { Collection } from '@/types/scripture'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 
 type CollectionListItemProps = {
     item: Collection
@@ -22,7 +22,7 @@ export default React.memo(function CollectionListItem({
     onDelete,
     variant = 'arsenal',
 }: CollectionListItemProps) {
-    const { isDark, theme } = useAppStore()
+    const { isDark, theme } = useTheme()
 
     if (variant === 'armory') {
         return (

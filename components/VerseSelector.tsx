@@ -1,10 +1,10 @@
+import { useTheme } from '@/hooks/useTheme'
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors';
 import { Scripture } from '@/types/scripture';
 import { bibleApiService } from '@/services/bibleApi';
-import { useAppStore } from '@/hooks/useAppStore';
 
 interface VerseSelectorProps {
   bookName: string;
@@ -19,7 +19,7 @@ export default function VerseSelector({
   onVersesSelected,
   selectedVerses = []
 }: VerseSelectorProps) {
-  const { theme } = useAppStore();
+  const { isDark,theme } = useTheme()
   const styles = getStyles(theme);
   const [verses, setVerses] = useState<Scripture[]>([]);
   const [selectedVerseIds, setSelectedVerseIds] = useState<Set<string>>(new Set());

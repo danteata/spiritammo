@@ -1,7 +1,7 @@
 import React from 'react'
 import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native'
 import { FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 
 interface ScriptureActionRowProps {
@@ -17,7 +17,7 @@ export default function ScriptureActionRow({
     isLoadingIntel = false,
     accentColor,
 }: ScriptureActionRowProps) {
-    const { theme, isDark } = useAppStore()
+    const { theme, isDark } = useTheme()
 
     const hasStealth = Boolean(onStealth)
     const hasIntel = Boolean(onIntel)

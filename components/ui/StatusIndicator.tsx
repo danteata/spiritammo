@@ -1,6 +1,6 @@
+import { useTheme } from '@/hooks/useTheme'
 import * as React from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
-import { useAppStore } from '@/hooks/useAppStore';
 import { COLORS } from '@/constants/colors';
 
 interface StatusIndicatorProps {
@@ -16,7 +16,7 @@ export const StatusIndicator: React.FC<StatusIndicatorProps> = ({
     isError = false,
     size = 'medium'
 }) => {
-    const { isDark } = useAppStore();
+  const { isDark,theme } = useTheme()
 
     if (isLoading) {
         return <ActivityIndicator size={size === 'large' ? 'large' : size === 'medium' ? 'small' : 'small'} color={isDark ? COLORS.text.dark : COLORS.text.light} />;

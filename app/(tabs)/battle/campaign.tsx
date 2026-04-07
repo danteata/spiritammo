@@ -10,7 +10,8 @@ import {
 } from 'react-native'
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import CampaignMap from '@/components/CampaignMap'
@@ -22,7 +23,6 @@ import MissionBriefingModal from '@/components/MissionBriefingModal'
 import StealthDrill from '@/components/StealthDrill'
 import { Campaign, CampaignNode } from '@/types/campaign'
 import { Scripture } from '@/types/scripture'
-import useZustandStore from '@/hooks/zustandStore'
 import { AccessDeniedModal } from '@/components/AccessDeniedModal'
 import { analytics, AnalyticsEventType } from '@/services/analytics'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
@@ -32,16 +32,12 @@ import { generateBattleIntel } from '@/services/battleIntelligence'
 import { militaryRankingService } from '@/services/militaryRanking'
 
 export default function CampaignScreen() {
-    const {
-        campaigns,
-        activeCampaignId,
-        startCampaign,
-        completeNode,
-        isDark,
-        theme,
-        userStats
-    } = useAppStore()
-
+    const { isDark, theme } = useTheme()
+    const campaigns = useZustandStore((s) => s.campaigns)
+    const activeCampaignId = useZustandStore((s) => s.activeCampaignId)
+    const startCampaign = useZustandStore((s) => s.startCampaign)
+    const completeNode = useZustandStore((s) => s.completeNode)
+    const userStats = useZustandStore((s) => s.userStats)
     const router = useRouter()
     const { trackCampaignStart, trackCampaignComplete } = useAnalytics()
 
@@ -131,7 +127,7 @@ export default function CampaignScreen() {
         if (accuracy >= selectedNode.requiredAccuracy) {
             const vpEarned = await ValorPointsService.awardTargetPracticeVP(
                 accuracy,
-                0, 
+                0,
                 userStats.rank || 'recruit'
             )
 
@@ -285,7 +281,7 @@ export default function CampaignScreen() {
             {targetScripture && practiceMode === 'VOICE' && (
                 <View style={styles.fullScreenPractice}>
                     <View style={styles.practiceHeader}>
-                        <TouchableOpacity 
+                        <TouchableOpacity
                             style={styles.closePracticeButton}
                             onPress={() => setPracticeMode(null)}
                         >
@@ -296,31 +292,31 @@ export default function CampaignScreen() {
                             <ThemedText variant="caption" style={{ color: theme.accent }}>REQ: {selectedNode?.requiredAccuracy}% ACCURACY</ThemedText>
                         </View>
                     </View>
-                    
+
                     <ScrollView contentContainerStyle={styles.practiceScrollContent}>
-                    <UnifiedScriptureRecorderCard
-                        scripture={targetScripture}
-                        isBattleMode={true}
-                        onRecordingComplete={handleMissionComplete}
-                        onListen={handleListenIntel}
-                        onClose={() => {
-                            setPracticeMode(null)
-                            setSelectedNode(null)
-                            setTargetScripture(null)
-                        }}
-                        isListening={isListeningIntel}
-                        intelText={tacticalIntel ? `${tacticalIntel.battlePlan}\n\n${tacticalIntel.tacticalNotes}` : undefined}
-                        onIntel={handleShowIntel}
-                        onReadIntelAloud={handleListenIntel}
-                        isListeningIntel={isListeningIntel}
-                    />
+                        <UnifiedScriptureRecorderCard
+                            scripture={targetScripture}
+                            isBattleMode={true}
+                            onRecordingComplete={handleMissionComplete}
+                            onListen={handleListenIntel}
+                            onClose={() => {
+                                setPracticeMode(null)
+                                setSelectedNode(null)
+                                setTargetScripture(null)
+                            }}
+                            isListening={isListeningIntel}
+                            intelText={tacticalIntel ? `${tacticalIntel.battlePlan}\n\n${tacticalIntel.tacticalNotes}` : undefined}
+                            onIntel={handleShowIntel}
+                            onReadIntelAloud={handleListenIntel}
+                            isListeningIntel={isListeningIntel}
+                        />
                         <ScriptureActionRow
                             onStealth={() => setPracticeMode('STEALTH')}
                             onIntel={handleShowIntel}
                             isLoadingIntel={isLoadingIntel}
                             accentColor={theme.accent}
                         />
-                        
+
                         <ThemedCard variant="glass" style={styles.missionNote}>
                             <Ionicons name="shield-checkmark" size={20} color={theme.accent} />
                             <ThemedText variant="caption" style={styles.missionNoteText}>

@@ -19,7 +19,8 @@ import {
 } from '@/constants/colors'
 import { Scripture } from '@/types/scripture'
 import ScriptureText from './ScriptureText'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import VoicePlaybackService from '@/services/voicePlayback'
 
 interface AmmunitionCardProps {
@@ -45,7 +46,8 @@ const AmmunitionCard = React.memo(({
   allowBlur = true, // Default true for practice mode
   isBattleMode = false,
 }: AmmunitionCardProps) => {
-  const { theme, isDark, userSettings } = useAppStore()
+  const { theme, isDark } = useTheme()
+  const userSettings = useZustandStore((s) => s.userSettings)
   const styles = getStyles(theme)
   const fireAnimation = useRef(new Animated.Value(1)).current
   const [pulseAnimation] = useState(new Animated.Value(1))

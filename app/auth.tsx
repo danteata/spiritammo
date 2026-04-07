@@ -15,7 +15,8 @@ import * as Linking from 'expo-linking'
 import { LinearGradient } from 'expo-linear-gradient'
 
 import { ThemedContainer, ThemedText } from '@/components/Themed'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 
 const { width } = Dimensions.get('window')
 
@@ -32,7 +33,7 @@ WebBrowser.maybeCompleteAuthSession()
 
 export default function AuthScreen() {
     const router = useRouter()
-    const { theme, isDark } = useAppStore()
+  const { theme, isDark } = useTheme()
     const styles = getStyles(theme)
     useWarmUpBrowser()
 

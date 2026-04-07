@@ -14,7 +14,7 @@ import {
 import { FontAwesome5 } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as Haptics from 'expo-haptics'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 import { ThemedText } from '@/components/Themed'
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window')
@@ -86,7 +86,7 @@ export const TutorialOverlay: React.FC<TutorialOverlayProps> = ({
     onSkip,
     theme = 'military',
 }) => {
-    const { isDark } = useAppStore()
+    const { isDark } = useTheme()
     const [targetLayout, setTargetLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
     const [tooltipLayout, setTooltipLayout] = useState<{ x: number; y: number; width: number; height: number } | null>(null)
 

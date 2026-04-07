@@ -13,7 +13,7 @@ import { FontAwesome } from '@expo/vector-icons';
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection, CollectionChapter } from '@/types/scripture'
 import { CollectionChapterService } from '@/services/collectionChapters'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 
 interface CollectionChapterViewProps {
   collection: Collection
@@ -30,7 +30,7 @@ export default function CollectionChapterView({
   selectedChapterId,
   showProgress = true,
 }: CollectionChapterViewProps) {
-  const { theme } = useAppStore()
+  const { theme } = useTheme()
   const styles = getStyles(theme)
   const [showChapterManager, setShowChapterManager] = useState(false)
 

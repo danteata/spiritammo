@@ -10,30 +10,27 @@ import {
 } from 'react-native'
 import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
 import CampaignCard from '@/components/CampaignCard'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
-import useZustandStore from '@/hooks/zustandStore'
 
 const { width } = Dimensions.get('window')
 
 export default function BattleScreen() {
-    const {
-        isLoading,
-        theme,
-        isDark,
-        userStats,
-        campaigns,
-        activeCampaignId,
-        startCampaign
-    } = useAppStore()
+    const { theme, isDark } = useTheme()
+    const isLoading = useZustandStore((s) => s.isLoading)
+    const userStats = useZustandStore((s) => s.userStats)
+    const campaigns = useZustandStore((s) => s.campaigns)
+    const activeCampaignId = useZustandStore((s) => s.activeCampaignId)
+    const startCampaign = useZustandStore((s) => s.startCampaign)
+    const squadChallenges = useZustandStore((s) => s.squadChallenges)
     const router = useRouter()
     const { trackEvent } = useAnalytics()
-    const { squadChallenges } = useZustandStore()
 
     // Track screen view
     useScreenTracking('battle')

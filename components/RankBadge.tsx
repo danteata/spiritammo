@@ -1,8 +1,8 @@
+import { useTheme } from '@/hooks/useTheme'
 import { StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MILITARY_TYPOGRAPHY, RANK_COLORS } from '@/constants/colors';
 import { UserStats } from '@/types/scripture';
-import { useAppStore } from '@/hooks/useAppStore';
 
 interface RankBadgeProps {
   rank: UserStats['rank'];
@@ -18,7 +18,7 @@ export default function RankBadge({
   animated = false
 }: RankBadgeProps) {
 
-  const { theme } = useAppStore()
+  const { isDark,theme } = useTheme()
   const styles = getStyles(theme)
 
   const getRankInfo = (rank: UserStats['rank']) => {

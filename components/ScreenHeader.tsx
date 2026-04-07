@@ -2,7 +2,7 @@ import * as React from 'react'
 import { StyleSheet, View, TouchableOpacity, ViewStyle } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { ThemedText } from '@/components/Themed'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 
 interface ScreenHeaderProps {
     title: string
@@ -18,7 +18,7 @@ export default function ScreenHeader({
     style,
 }: ScreenHeaderProps) {
     const insets = useSafeAreaInsets()
-    const { isDark, theme } = useAppStore()
+    const { isDark, theme } = useTheme()
 
     return (
         <View

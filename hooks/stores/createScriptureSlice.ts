@@ -53,12 +53,19 @@ export const createScriptureSlice: StateCreator<ScriptureSlice & { updateUserSta
         const scriptures = get().scriptures
         if (scriptures.length === 0) return null
 
-        let filtered = scriptures
         const selectedBook = get().selectedBook
+        const selectedChapters = get().selectedChapters
+
+        let filtered = scriptures
         if (selectedBook) {
-            filtered = filtered.filter((s) => s.book.toLowerCase() === selectedBook.name.toLowerCase())
-            if (get().selectedChapters.length > 0) {
-                filtered = filtered.filter((s) => get().selectedChapters.includes(s.chapter))
+            const bookName = selectedBook.name.toLowerCase()
+            if (selectedChapters.length > 0) {
+                const chapterSet = new Set(selectedChapters)
+                filtered = scriptures.filter((s) => 
+                    s.book.toLowerCase() === bookName && chapterSet.has(s.chapter)
+                )
+            } else {
+                filtered = scriptures.filter((s) => s.book.toLowerCase() === bookName)
             }
         }
 

@@ -72,6 +72,10 @@ export const initializeDatabase = async () => {
             CREATE INDEX IF NOT EXISTS idx_book_chapter ON scriptures(book, chapter);
             CREATE INDEX IF NOT EXISTS idx_reference ON scriptures(reference);
             CREATE INDEX IF NOT EXISTS idx_accuracy ON scriptures(accuracy);
+            CREATE INDEX IF NOT EXISTS idx_collection_scriptures_collection_id ON collection_scriptures(collection_id);
+            CREATE INDEX IF NOT EXISTS idx_collection_scriptures_scripture_id ON collection_scriptures(scripture_id);
+            CREATE INDEX IF NOT EXISTS idx_practice_logs_scripture_id ON practice_logs(scripture_id);
+            CREATE INDEX IF NOT EXISTS idx_practice_logs_date ON practice_logs(date);
         `);
 
         console.log('Database initialized successfully');

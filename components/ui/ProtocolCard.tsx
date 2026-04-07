@@ -3,7 +3,7 @@ import { TouchableOpacity, View, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { ThemedText } from '@/components/Themed';
-import { useAppStore } from '@/hooks/useAppStore';
+import { useTheme } from '@/hooks/useTheme';
 
 interface ProtocolCardProps {
     title: string;
@@ -24,7 +24,7 @@ export const ProtocolCard: React.FC<ProtocolCardProps> = ({
     isActive = false,
     isDark = false
 }) => {
-    const { theme } = useAppStore();
+    const { theme } = useTheme();
 
     return (
         <TouchableOpacity

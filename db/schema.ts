@@ -42,6 +42,8 @@ export const collectionScriptures = sqliteTable('collection_scriptures', {
     scriptureId: text('scripture_id').references(() => scriptures.id).notNull(),
 }, (t) => ({
     pk: primaryKey({ columns: [t.collectionId, t.scriptureId] }),
+    collectionIdIdx: index('idx_collection_scriptures_collection_id').on(t.collectionId),
+    scriptureIdIdx: index('idx_collection_scriptures_scripture_id').on(t.scriptureId),
 }));
 
 // Practice Logs / History
@@ -52,15 +54,7 @@ export const practiceLogs = sqliteTable('practice_logs', {
     accuracy: real('accuracy').notNull(),
     duration: integer('duration'), // in seconds
     transcription: text('transcription'),
-});
-
-// Battle Intel (Mnemonics)
-export const battleIntel = sqliteTable('battle_intel', {
-    id: text('id').primaryKey(),
-    reference: text('reference').notNull(),
-    battlePlan: text('battle_plan').notNull(),
-    tacticalNotes: text('tactical_notes'),
-    reliability: integer('reliability'),
-    dateCreated: text('date_created').notNull(),
-    missionType: text('mission_type'),
-});
+}, (t) => ({
+    scriptureIdIdx: index('idx_practice_logs_scripture_id').on(t.scriptureId),
+    dateIdx: index('idx_practice_logs_date').on(t.date),
+}));

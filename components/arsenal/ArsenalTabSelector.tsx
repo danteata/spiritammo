@@ -1,7 +1,7 @@
+import { useTheme } from '@/hooks/useTheme'
 import React from 'react'
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
 import { FontAwesome5, FontAwesome } from '@expo/vector-icons'
-import { useAppStore } from '@/hooks/useAppStore'
 
 type ArsenalTab = 'ammunition' | 'equipment' | 'voice'
 
@@ -15,7 +15,7 @@ export const ArsenalTabSelector: React.FC<ArsenalTabSelectorProps> = ({
     onTabChange
 }) => {
     // Use app store for dynamic theming
-    const { isDark } = useAppStore()
+  const { isDark,theme } = useTheme()
 
     return (
         <View style={

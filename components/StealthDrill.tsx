@@ -17,7 +17,7 @@ import {
     MILITARY_TYPOGRAPHY,
     ACCURACY_COLORS,
 } from '@/constants/colors'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 import { ThemedText } from '@/components/Themed'
 
 interface StealthDrillProps {
@@ -51,7 +51,7 @@ export default function StealthDrill({
         'GHOST': { label: 'GHOST', percent: 1.00, icon: 'ghost', color: '#9C27B0' }
     }
 
-    const { isDark, theme } = useAppStore()
+    const { isDark, theme } = useTheme()
 
     const [difficulty, setDifficulty] = useState<DifficultyLevel | null>(null)
     const [tokens, setTokens] = useState<WordToken[]>([])

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { StyleSheet, Text, View, ScrollView, Switch, TouchableOpacity, TextInput, Modal, Alert } from 'react-native'
 import { GARRISON_THEME, MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { FontAwesome, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { VoicePlaybackToggle } from '@/components/ui/VoicePlaybackToggle'
 import ScreenHeader from '@/components/ScreenHeader'
@@ -13,7 +14,9 @@ import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
 
 export default function SettingsScreen() {
-  const { isDark, setTheme, setThemeColor, themeColor, userSettings, saveUserSettings, theme } = useAppStore()
+  const { theme, isDark, themeColor, setTheme, setThemeColor } = useTheme()
+  const userSettings = useZustandStore((s) => s.userSettings)
+  const saveUserSettings = useZustandStore((s) => s.saveUserSettings)
   const { trackEvent } = useAnalytics()
   const [showNameModal, setShowNameModal] = useState(false)
   const [tempName, setTempName] = useState('')

@@ -1,8 +1,8 @@
+import { useTheme } from '@/hooks/useTheme'
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors';
 import { Book } from '@/types/scripture';
-import { useAppStore } from '@/hooks/useAppStore';
 
 interface ChapterSelectorProps {
   book: Book;
@@ -11,7 +11,7 @@ interface ChapterSelectorProps {
 }
 
 export default function ChapterSelector({ book, onSelectChapter, selectedChapter }: ChapterSelectorProps) {
-  const { theme } = useAppStore();
+  const { isDark,theme } = useTheme()
   const renderChapterButtons = () => {
     const chapters = [];
     for (let i = 1; i <= book.chapters; i++) {

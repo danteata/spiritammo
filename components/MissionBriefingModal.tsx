@@ -14,7 +14,7 @@ import { LinearGradient } from 'expo-linear-gradient'
 import { BlurView } from 'expo-blur'
 import { FontAwesome5, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 import { ThemedText } from '@/components/Themed'
 import { CampaignNode } from '@/types/campaign'
 import { Scripture } from '@/types/scripture'
@@ -36,7 +36,7 @@ export default function MissionBriefingModal({
     node,
     scripture
 }: MissionBriefingModalProps) {
-    const { isDark, theme } = useAppStore()
+    const { isDark, theme } = useTheme()
 
     // Animations
     const slideAnim = useRef(new Animated.Value(Dimensions.get('window').height)).current

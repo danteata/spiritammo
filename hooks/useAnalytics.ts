@@ -1,35 +1,10 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { analytics, AnalyticsEvents, AnalyticsEventType } from '@/services/analytics'
-import { useAppStore } from './useAppStore'
-
-// Performance timing helper
-const usePerformanceTimer = () => {
-    const startTimeRef = useRef<number | undefined>(undefined)
-
-    const start = useCallback(() => {
-        startTimeRef.current = Date.now()
-    }, [])
-
-    const end = useCallback((operationName: string, additionalProps?: Record<string, any>) => {
-        if (startTimeRef.current !== undefined) {
-            const duration = Date.now() - startTimeRef.current
-            analytics.track(AnalyticsEvents.performanceTiming({
-                operation_name: operationName,
-                duration_ms: duration,
-                success: true,
-                ...additionalProps
-            }))
-            startTimeRef.current = undefined
-        }
-    }, [])
-
-    return { start, end }
-}
+import useZustandStore from './zustandStore'
 
 // Main analytics hook
 export const useAnalytics = () => {
-    const { userStats } = useAppStore()
-    const performanceTimer = usePerformanceTimer()
+    const userStats = useZustandStore((s) => s.userStats)
     const currentScreenRef = useRef<string | undefined>(undefined)
 
     // Update user properties when user stats change
@@ -110,14 +85,14 @@ export const useAnalytics = () => {
         analytics.trackAchievement(achievement)
     }, [])
 
-    // Performance tracking helpers
-    const startPerformanceTimer = useCallback((operationName: string) => {
-        performanceTimer.start()
-    }, [performanceTimer])
+    // Performance tracking helpers (placeholder - performanceTimer was removed)
+    const startPerformanceTimer = useCallback((_operationName: string) => {
+        // No-op until performance timer is re-implemented
+    }, [])
 
-    const endPerformanceTimer = useCallback((operationName: string, additionalProps?: Record<string, any>) => {
-        performanceTimer.end(operationName, additionalProps)
-    }, [performanceTimer])
+    const endPerformanceTimer = useCallback((_operationName: string, _additionalProps?: Record<string, any>) => {
+        // No-op until performance timer is re-implemented
+    }, [])
 
     // Equipment & Arsenal Analytics
     const trackArsenalOpened = useCallback((properties?: Record<string, any>) => {

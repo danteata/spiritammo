@@ -10,7 +10,7 @@ import {
 import { FontAwesome } from '@expo/vector-icons';
 import { BlurView, BlurTargetView } from 'expo-blur'
 import { Scripture } from '@/types/scripture'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 import ScriptureText from './ScriptureText'
 
 interface ScriptureCardProps {
@@ -30,7 +30,7 @@ export default function ScriptureCard({
   isRecording = false,
   embedded = false,
 }: ScriptureCardProps) {
-  const { theme, isDark } = useAppStore()
+  const { theme, isDark } = useTheme()
   const [revealed, setRevealed] = useState(false)
 
   // Auto-blur when recording starts in Battle Mode

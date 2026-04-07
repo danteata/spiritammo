@@ -12,7 +12,8 @@ import {
 import { FontAwesome, FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useAuth } from '@clerk/clerk-expo'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import SoldierAvatar from '@/components/SoldierAvatar'
@@ -28,17 +29,11 @@ import { initializeDatabase } from '@/db/init'
 type ProfileSection = 'journey' | 'settings'
 
 export default function ProfileScreen() {
-    const {
-        isDark,
-        setTheme,
-        themeColor,
-        setThemeColor,
-        userSettings,
-        saveUserSettings,
-        userStats,
-        theme,
-        scriptures,
-    } = useAppStore()
+    const { isDark, themeColor, theme, setTheme, setThemeColor } = useTheme()
+    const userSettings = useZustandStore((s) => s.userSettings)
+    const saveUserSettings = useZustandStore((s) => s.saveUserSettings)
+    const userStats = useZustandStore((s) => s.userStats)
+    const scriptures = useZustandStore((s) => s.scriptures)
     const router = useRouter()
     const { signOut, isSignedIn } = useAuth()
     const { trackEvent } = useAnalytics()

@@ -1,8 +1,8 @@
+import { useTheme } from '@/hooks/useTheme'
 import React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { GRADIENTS } from '@/constants/colors';
-import { useAppStore } from '@/hooks/useAppStore';
 import { LinearGradient } from 'expo-linear-gradient';
 
 interface HeaderProps {
@@ -10,7 +10,7 @@ interface HeaderProps {
 }
 
 export default function Header({ title }: HeaderProps) {
-  const { isDark, toggleTheme } = useAppStore();
+  const { isDark,theme } = useTheme()
   
   const gradientColors = isDark
     ? GRADIENTS.primary.dark as [string, string, string]

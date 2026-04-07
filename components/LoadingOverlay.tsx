@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { StyleSheet, View, Modal, Text, Animated, Easing, Platform } from 'react-native'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 
 interface LoadingOverlayProps {
   visible: boolean
@@ -30,7 +30,7 @@ export const LoadingOverlay: React.FC<LoadingOverlayProps> = ({
   progress,
   showTips = false,
 }) => {
-  const { isDark, theme } = useAppStore()
+  const { isDark, theme } = useTheme()
 
   // Animations
   const pulseAnim = useRef(new Animated.Value(0.4)).current

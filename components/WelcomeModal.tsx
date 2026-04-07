@@ -14,7 +14,7 @@ import { FontAwesome5 } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LinearGradient } from 'expo-linear-gradient'
 import * as Haptics from 'expo-haptics'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 import { ThemedText } from '@/components/Themed'
 
 const { width, height } = Dimensions.get('window')
@@ -87,7 +87,7 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0,
 }
 
 export default function WelcomeModal({ isVisible, onClose }: WelcomeModalProps) {
-    const { isDark } = useAppStore()
+    const { isDark } = useTheme()
     const scaleAnim = React.useRef(new Animated.Value(0.95)).current
     const fadeAnim = React.useRef(new Animated.Value(0)).current
 

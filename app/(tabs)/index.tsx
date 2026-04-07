@@ -4,7 +4,8 @@ import { FontAwesome5 } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRouter } from 'expo-router'
 import * as Haptics from 'expo-haptics'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
@@ -124,7 +125,12 @@ const PulsingGlow: React.FC<PulsingGlowProps> = ({ children, color, style }: Pul
 }
 
 export default function HomeScreen() {
-  const { isLoading, theme, isDark, userStats, scriptures, collections, userSettings } = useAppStore()
+  const isLoading = useZustandStore((s) => s.isLoading)
+  const userStats = useZustandStore((s) => s.userStats)
+  const scriptures = useZustandStore((s) => s.scriptures)
+  const collections = useZustandStore((s) => s.collections)
+  const userSettings = useZustandStore((s) => s.userSettings)
+  const { theme, isDark } = useTheme()
   const router = useRouter()
   const [showWelcome, setShowWelcome] = useState(false)
   const [showTutorial, setShowTutorial] = useState(false)

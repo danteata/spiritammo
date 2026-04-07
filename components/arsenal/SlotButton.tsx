@@ -1,7 +1,6 @@
 import React from 'react'
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
 import { FontAwesome5 } from '@expo/vector-icons'
-import { useAppStore } from '@/hooks/useAppStore'
 import { GARRISON_THEME } from '@/constants/colors'
 
 type SlotButtonProps = {

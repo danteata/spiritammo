@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme'
 import React, { useState, useEffect } from 'react'
 import {
     View,
@@ -11,7 +12,6 @@ import {
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedText, ThemedCard } from '@/components/Themed'
 
 const { width, height } = Dimensions.get('window')
@@ -31,7 +31,7 @@ export const FirstDrillOverlay: React.FC<FirstDrillOverlayProps> = ({
     onComplete,
     onSkip,
 }) => {
-    const { theme, isDark } = useAppStore()
+  const { isDark } = useTheme()
     const [step, setStep] = useState(0) // 0: intro, 1: read, 2: practice, 3: done
     const [fadeAnim] = useState(new Animated.Value(0))
     const [slideAnim] = useState(new Animated.Value(50))

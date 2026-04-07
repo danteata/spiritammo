@@ -4,7 +4,8 @@ import { StyleSheet, Text, View, Platform, ActivityIndicator, Animated } from 'r
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import { COLORS } from '@/constants/colors';
-import { useAppStore } from '@/hooks/useAppStore';
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore';
 import * as Speech from 'expo-speech';
 import whisperService from '@/services/whisper';
 import neuralTTSService, { speakWithNeuralTTS, TTSProgress } from '@/services/neuralTTS';
@@ -97,7 +98,8 @@ export default function VoiceRecorder({
   onRecordingStateChange,
   hideListen = false,
 }: VoiceRecorderProps) {
-  const { isDark, userSettings, theme } = useAppStore();
+  const { isDark, theme } = useTheme()
+  const userSettings = useZustandStore((s) => s.userSettings)
   const { trackEvent, trackVoiceRecordingStart, trackVoiceRecordingComplete, trackError } = useAnalytics();
 
   // Audio recording hook for mobile fallback

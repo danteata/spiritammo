@@ -1,9 +1,9 @@
+import { useTheme } from '@/hooks/useTheme'
 import { useState, useEffect } from 'react'
 import { View, TouchableOpacity, StyleSheet, Animated, Text } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import * as Haptics from 'expo-haptics'
-import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedText } from '@/components/Themed'
 
 interface ContextualTipProps {
@@ -29,7 +29,7 @@ export const ContextualTip: React.FC<ContextualTipProps> = ({
     actionText,
     showOnce = true,
 }) => {
-    const { theme, isDark } = useAppStore()
+  const { isDark,theme } = useTheme()
     const [visible, setVisible] = useState(false)
     const [fadeAnim] = useState(new Animated.Value(0))
 

@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme'
 import React, { useEffect, useState } from 'react'
 import {
   StyleSheet,
@@ -13,7 +14,6 @@ import { FontAwesome, Feather } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection, CollectionChapter } from '@/types/scripture'
-import { useAppStore } from '@/hooks/useAppStore'
 
 interface CollectionChapterSelectorProps {
   collection: Collection
@@ -38,7 +38,7 @@ export default function CollectionChapterSelector({
   subtitle,
   variant = 'modal',
 }: CollectionChapterSelectorProps) {
-  const { theme, gradients, isDark } = useAppStore()
+  const { theme,gradients,isDark } = useTheme()
   const styles = getStyles(theme, variant)
   const gradientColors = Array.isArray(gradients?.primary)
     ? gradients.primary

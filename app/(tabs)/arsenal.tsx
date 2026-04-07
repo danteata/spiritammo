@@ -13,7 +13,8 @@ import { FontAwesome, FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { VoiceLibrary } from '@/components/VoiceLibrary'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { Collection, Scripture } from '@/types/scripture'
 import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
@@ -31,19 +32,16 @@ const { width } = Dimensions.get('window')
 type ArsenalSection = 'collections' | 'voice'
 
 export default function ArsenalScreen() {
-    const {
-        isDark,
-        collections,
-        scriptures,
-        getScripturesByCollection,
-        addScriptures,
-        addScripturesToCollection,
-        updateCollection,
-        theme,
-        isLoading,
-    } = useAppStore()
-    const router = useRouter()
+    const { isDark, theme } = useTheme()
+    const collections = useZustandStore((s) => s.collections)
+    const scriptures = useZustandStore((s) => s.scriptures)
+    const getScripturesByCollection = useZustandStore((s) => s.getScripturesByCollection)
+    const addScriptures = useZustandStore((s) => s.addScriptures)
+    const addScripturesToCollection = useZustandStore((s) => s.addScripturesToCollection)
+    const updateCollection = useZustandStore((s) => s.updateCollection)
+    const isLoading = useZustandStore((s) => s.isLoading)
     const { action } = useLocalSearchParams()
+    const router = useRouter()
     const { trackEvent } = useAnalytics()
 
     // Track screen view

@@ -9,7 +9,8 @@ import {
 } from 'react-native'
 import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
@@ -24,7 +25,11 @@ const { width } = Dimensions.get('window')
 type TrainingMode = 'single' | 'burst' | 'automatic'
 
 export default function TrainingScreen() {
-    const { isLoading, theme, isDark, userStats, scriptures, collections } = useAppStore()
+    const isLoading = useZustandStore((s) => s.isLoading)
+    const userStats = useZustandStore((s) => s.userStats)
+    const scriptures = useZustandStore((s) => s.scriptures)
+    const collections = useZustandStore((s) => s.collections)
+    const { theme, isDark } = useTheme()
     const router = useRouter()
     const params = useLocalSearchParams()
     const { trackEvent } = useAnalytics()

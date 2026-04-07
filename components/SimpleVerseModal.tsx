@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme'
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
@@ -12,7 +13,6 @@ import {
 } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors';
-import { useAppStore } from '@/hooks/useAppStore';
 import { Collection, Scripture, Book } from '@/types/scripture';
 import { bibleApiService } from '@/services/bibleApi';
 import VerseSelector from './VerseSelector';
@@ -35,8 +35,7 @@ export default function SimpleVerseModal({
     addCollection,
     addScripturesToCollection,
     theme
-  } = useAppStore();
-
+  const { isDark,theme } = useTheme()
   const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null);
   const styles = getStyles(theme);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);

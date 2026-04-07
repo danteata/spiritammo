@@ -1,7 +1,7 @@
+import { useTheme } from '@/hooks/useTheme'
 import React from 'react'
 import { View, TouchableOpacity, StyleSheet, Text } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedText } from '@/components/Themed'
 import { useUserJourney } from '@/hooks/useUserJourney'
 
@@ -22,7 +22,7 @@ export const ProgressiveFeature: React.FC<ProgressiveFeatureProps> = ({
     lockedMessage,
     onPressLocked,
 }) => {
-    const { theme, isDark } = useAppStore()
+  const { isDark,theme } = useTheme()
     const { isFeatureUnlocked } = useUserJourney()
 
     const isUnlocked = isFeatureUnlocked(feature)
@@ -67,7 +67,7 @@ interface FeatureBadgeProps {
 }
 
 export const FeatureBadge: React.FC<FeatureBadgeProps> = ({ feature, isNew, isLocked }) => {
-    const { theme } = useAppStore()
+  const { isDark,theme } = useTheme()
 
     if (isLocked) {
         return (

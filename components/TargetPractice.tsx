@@ -19,7 +19,8 @@ import {
   ACCURACY_COLORS,
   COLORS
 } from '@/constants/colors'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { ThemedText } from '@/components/Themed'
 import { StatusIndicator } from './ui/StatusIndicator'
 import { RecordingControls } from './ui/RecordingControls'
@@ -67,8 +68,8 @@ export default function TargetPractice({
   onClose,
   isAssaultMode = false,
 }: TargetPracticeProps) {
-  const { theme, isDark } = useAppStore()
-  const { userSettings } = useAppStore()
+  const { theme, isDark } = useTheme()
+  const userSettings = useZustandStore((s) => s.userSettings)
   const { trackEvent, trackError, trackVoiceRecordingStart, trackVoiceRecordingComplete } = useAnalytics()
 
   const [shotResults, setShotResults] = useState<ShotResult[]>([])

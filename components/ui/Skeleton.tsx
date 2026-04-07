@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme'
 import React, { useRef, useEffect } from 'react'
 import {
   StyleSheet,
@@ -8,7 +9,6 @@ import {
   Dimensions,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { useAppStore } from '@/hooks/useAppStore'
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window')
 
@@ -68,7 +68,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
   borderRadius = 6,
   style,
 }) => {
-  const { isDark } = useAppStore()
+  const { isDark } = useTheme()
 
   return (
     <View
@@ -91,7 +91,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 // ─── Skeleton Card ────────────────────────────────────────────────────────────
 
 export const SkeletonCard: React.FC<{ style?: StyleProp<ViewStyle> }> = ({ style }) => {
-  const { isDark, theme } = useAppStore()
+  const { isDark } = useTheme()
 
   return (
     <View
@@ -120,7 +120,7 @@ export const SkeletonCard: React.FC<{ style?: StyleProp<ViewStyle> }> = ({ style
 // ─── Skeleton Collection List ─────────────────────────────────────────────────
 
 export const SkeletonCollectionList: React.FC<{ count?: number }> = ({ count = 4 }) => {
-  const { isDark } = useAppStore()
+  const { isDark } = useTheme()
 
   return (
     <View style={styles.listContainer}>
@@ -149,7 +149,7 @@ export const SkeletonCollectionList: React.FC<{ count?: number }> = ({ count = 4
 // ─── Skeleton Stats Grid ──────────────────────────────────────────────────────
 
 export const SkeletonStatsGrid: React.FC<{ columns?: number }> = ({ columns = 3 }) => {
-  const { isDark } = useAppStore()
+  const { isDark } = useTheme()
 
   return (
     <View style={styles.statsGrid}>
@@ -176,7 +176,7 @@ export const SkeletonStatsGrid: React.FC<{ columns?: number }> = ({ columns = 3 
 // ─── Skeleton Verse Card ──────────────────────────────────────────────────────
 
 export const SkeletonVerseCard: React.FC = () => {
-  const { isDark } = useAppStore()
+  const { isDark } = useTheme()
 
   return (
     <View

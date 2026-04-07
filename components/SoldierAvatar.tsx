@@ -1,3 +1,5 @@
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 // Soldier Avatar Component - Layered paper doll system for The Barracks
 
 import React from 'react'
@@ -10,7 +12,6 @@ import {
     Animated,
     Easing,
 } from 'react-native'
-import { useAppStore } from '@/hooks/useAppStore'
 import { getItemById } from '@/constants/avatarItems'
 import { EquipmentSlot } from '@/types/avatar'
 
@@ -30,7 +31,34 @@ export default function SoldierAvatar({
     style
 }: SoldierAvatarProps) {
 
-    const { avatarInventory, isLoadingAvatar, userSettings, isDark, theme } = useAppStore()
+  const { isDark,theme } = useTheme()
+  const avatarInventory = useZustandStore((s) => s.avatarInventory)
+  const isLoadingAvatar = useZustandStore((s) => s.isLoading)
+  const userSettings = useZustandStore((s) => s.userSettings)
+
+  const scaleValue = React.useRef(new Animated.Value(1)).current
+
+  React.useEffect(() => {
+      if (size === 'small' || !showStats) return
+      const pulseAnimation = Animated.loop(
+          Animated.sequence([
+              Animated.timing(scaleValue, {
+                  toValue: 1.05,
+                  duration: 1000,
+                  easing: Easing.inOut(Easing.quad),
+                  useNativeDriver: true,
+              }),
+              Animated.timing(scaleValue, {
+                  toValue: 1,
+                  duration: 1000,
+                  easing: Easing.inOut(Easing.quad),
+                  useNativeDriver: true,
+              }),
+          ])
+      )
+      pulseAnimation.start()
+      return () => pulseAnimation.stop()
+  }, [size, showStats, scaleValue])
 
     // Size mappings
     const getSize = () => {
@@ -137,33 +165,9 @@ export default function SoldierAvatar({
         if (size === 'small' || !showStats) return null
 
         const valorPoints = avatarInventory?.valorPoints || 100 // Default starting VP
-        const scaleValue = new Animated.Value(1)
-
-        // Create a subtle pulse animation for the VP badge
-        React.useEffect(() => {
-            const pulseAnimation = Animated.loop(
-                Animated.sequence([
-                    Animated.timing(scaleValue, {
-                        toValue: 1.05,
-                        duration: 1000,
-                        easing: Easing.inOut(Easing.quad),
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(scaleValue, {
-                        toValue: 1,
-                        duration: 1000,
-                        easing: Easing.inOut(Easing.quad),
-                        useNativeDriver: true,
-                    }),
-                ])
-            )
-
-            pulseAnimation.start()
-            return () => pulseAnimation.stop()
-        }, [scaleValue])
 
         // Determine text color based on theme for better legibility
-        const vpTextColor = isDark ? '#000000' : theme.text // Black on light gold, dark text on dark themes
+        const vpTextColor = isDark ? '#000000' : theme.text
 
         return (
             <View style={[styles.vpBadge, { right: -10, top: -10 }]}>

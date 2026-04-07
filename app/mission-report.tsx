@@ -13,7 +13,8 @@ import {
   MILITARY_TYPOGRAPHY,
 } from '@/constants/colors'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import RankBadge from '@/components/RankBadge'
 import AccuracyMeter from '@/components/AccuracyMeter'
 import { militaryRankingService } from '@/services/militaryRanking'
@@ -26,7 +27,7 @@ import ScreenHeader from '@/components/ScreenHeader'
 const { width } = Dimensions.get('window')
 
 export default function MissionReportScreen() {
-  const { isDark, userStats, scriptures, theme } = useAppStore()
+  const { theme, isDark } = useTheme()
   const [militaryProfile, setMilitaryProfile] = useState<any>(null)
   const [selectedTab, setSelectedTab] = useState<
     'overview' | 'achievements' | 'history'

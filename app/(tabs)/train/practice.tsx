@@ -10,7 +10,8 @@ import {
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { COLORS } from '@/constants/colors'
 import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
@@ -31,15 +32,11 @@ import { Toast } from '@/components/ui/Toast'
 const AUTO_ADVANCE_DELAY = 3000 // ms delay between auto-pilot verses
 
 export default function TrainingPracticeScreen() {
-    const {
-        scriptures: allScriptures,
-        collections,
-        isDark,
-        theme,
-        userSettings,
-        userStats,
-    } = useAppStore()
-
+    const { isDark, theme } = useTheme()
+    const allScriptures = useZustandStore((s) => s.scriptures)
+    const collections = useZustandStore((s) => s.collections)
+    const userSettings = useZustandStore((s) => s.userSettings)
+    const userStats = useZustandStore((s) => s.userStats)
     const params = useLocalSearchParams()
     const router = useRouter()
     const { trackEvent } = useAnalytics()

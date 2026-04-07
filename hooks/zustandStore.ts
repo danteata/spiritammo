@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { eq, inArray, and } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { getDb } from '@/db/client'
 import { initializeDatabase } from '@/db/init'
 import {
@@ -30,6 +31,7 @@ import { createScriptureSlice, ScriptureSlice } from '@/hooks/stores/createScrip
 import { createCollectionSlice, CollectionSlice } from '@/hooks/stores/createCollectionSlice'
 import { createUserSlice, UserSlice } from '@/hooks/stores/createUserSlice'
 import { createCampaignSlice, CampaignSlice } from '@/hooks/stores/createCampaignSlice'
+import { createThemeSlice, ThemeSlice } from '@/hooks/stores/createThemeSlice'
 import { analytics, AnalyticsEvents } from '@/services/analytics'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -38,7 +40,8 @@ type AppState = AvatarSlice &
   ScriptureSlice &
   CollectionSlice &
   UserSlice &
-  CampaignSlice & {
+  CampaignSlice &
+  ThemeSlice & {
     // Additional state not in slices
     isLoading: boolean
     squadMembers: SquadMember[]
@@ -63,6 +66,7 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
   ...createCollectionSlice(set, get, store),
   ...createUserSlice(set, get, store),
   ...createCampaignSlice(set, get, store),
+  ...createThemeSlice(set, get, store),
 
   // Additional state
   isLoading: true,
@@ -78,6 +82,7 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
     while (retryCount < maxRetries) {
       try {
         set({ isLoading: true })
+        await get().initializeTheme()
         await initializeDatabase()
         await get().loadAvatarData()
 
@@ -108,12 +113,24 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
         } else {
           const db = await getDb()
           if (db) {
-            const practiceLogs = await db.select().from(practiceLogsTable)
-            if (practiceLogs.length > 0) {
-              const totalPracticed = practiceLogs.length
-              const averageAccuracy = practiceLogs.reduce((sum, l) => sum + (l.accuracy || 0), 0) / totalPracticed
-              const sortedLogs = [...practiceLogs].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-              let streak = 0
+            const statsResult = await db.select({
+              total: sql`COUNT(*)`,
+              avgAccuracy: sql`AVG(accuracy)`,
+            }).from(practiceLogsTable)
+
+            const totalPracticed = Number(statsResult[0]?.total || 0)
+            const averageAccuracy = Number(statsResult[0]?.avgAccuracy || 0)
+
+            let streak = 0
+            let lastPracticeDate: string | undefined
+
+            if (totalPracticed > 0) {
+              const sortedLogs = await db.select({ date: practiceLogsTable.date })
+                .from(practiceLogsTable)
+                .orderBy(sql`${practiceLogsTable.date} DESC`)
+
+              lastPracticeDate = sortedLogs[0]?.date
+
               const now = new Date()
               now.setHours(0, 0, 0, 0)
               for (const log of sortedLogs) {
@@ -123,16 +140,17 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
                 if (diff === streak) streak++
                 else if (diff > streak) break
               }
-              const stats = {
-                totalPracticed,
-                averageAccuracy,
-                streak,
-                rank: 'recruit' as const,
-                lastPracticeDate: sortedLogs[0]?.date,
-              }
-              await AsyncStorage.setItem('user_stats', JSON.stringify(stats))
-              set({ userStats: stats })
             }
+
+            const stats = {
+              totalPracticed,
+              averageAccuracy,
+              streak,
+              rank: 'recruit' as const,
+              lastPracticeDate,
+            }
+            await AsyncStorage.setItem('user_stats', JSON.stringify(stats))
+            set({ userStats: stats })
           }
         }
 

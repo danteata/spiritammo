@@ -7,7 +7,6 @@
 import useZustandStore from '@/hooks/zustandStore'
 import { VPReward, VP_REWARDS } from '@/types/avatar'
 import { errorHandler } from './errorHandler'
-import { useAppStore } from '@/hooks/useAppStore'
 
 class ValorPointsService {
 

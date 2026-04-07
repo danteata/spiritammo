@@ -11,13 +11,13 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { useAppStore } from '@/hooks/useAppStore';
 import {
     TACTICAL_THEME,
     GARRISON_THEME,
     GRADIENTS,
     MILITARY_TYPOGRAPHY,
 } from '@/constants/colors';
+import { useTheme } from '@/hooks/useTheme';
 
 // Military stencil pattern - diagonal hash lines for light mode texture
 const MILITARY_PATTERN_COLORS = ['rgba(74, 93, 35, 0.03)', 'rgba(74, 93, 35, 0.06)', 'rgba(74, 93, 35, 0.03)'] as const;
@@ -62,7 +62,7 @@ function useThemeColor(
     props: { light?: string; dark?: string },
     colorName: keyof typeof TACTICAL_THEME
 ) {
-    const { isDark, theme } = useAppStore(); // Use dynamic theme
+  const { isDark,theme,gradients } = useTheme()
     const colorFromProps = isDark ? props.dark : props.light;
 
     if (colorFromProps) {
@@ -81,14 +81,17 @@ export function ThemedContainer({
     darkColor,
     useGradient = true,
 }: ThemedContainerProps) {
-    const { isDark, gradients } = useAppStore();
+  const { isDark,theme,gradients } = useTheme()
     const backgroundColor = useThemeColor(
         { light: lightColor, dark: darkColor },
         'background'
     );
 
     if (useGradient) {
-        const primaryGradient = gradients?.primary || ['#333', '#000'];
+        const rawGradient = gradients?.primary;
+        const primaryGradient = Array.isArray(rawGradient)
+            ? rawGradient
+            : (isDark ? rawGradient?.dark : rawGradient?.light) || ['#333', '#000'];
         const gradientColors = primaryGradient as readonly [string, string, ...string[]];
 
         return (
@@ -163,7 +166,7 @@ export function ThemedCard({
     accessibilityRole,
     accessibilityLabel,
 }: ThemedCardProps) {
-    const { isDark, theme } = useAppStore();
+    const { isDark, theme } = useTheme();
 
     const backgroundColor = useThemeColor(
         { light: lightColor, dark: darkColor },
@@ -249,7 +252,7 @@ export function ThemedButton({
     disabled,
     ...props
 }: ThemedButtonProps) {
-    const { isDark, theme, gradients } = useAppStore();
+    const { isDark, theme, gradients } = useTheme();
 
     // Default styles
     let backgroundColor = 'transparent';

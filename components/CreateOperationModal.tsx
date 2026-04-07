@@ -1,3 +1,5 @@
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import React, { useState } from 'react'
 import { Modal, StyleSheet, View, TextInput, TouchableOpacity, ScrollView, Switch, Share } from 'react-native'
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
@@ -8,7 +10,6 @@ import { useUser } from '@clerk/clerk-expo'
 import { } from '@/constants/colors'
 import { ThemedText, ThemedCard } from '@/components/Themed'
 import ActionButton from '@/components/ActionButton'
-import { useAppStore } from '@/hooks/useAppStore'
 
 interface CreateOperationModalProps {
     visible: boolean
@@ -18,7 +19,6 @@ interface CreateOperationModalProps {
 type OperationType = 'ROUNDS' | 'ACCURACY' | 'STREAK'
 
 export default function CreateOperationModal({ visible, onClose }: CreateOperationModalProps) {
-    const { isDark, addSquadChallenge, theme } = useAppStore()
     const { user } = useUser()
 
     const [title, setTitle] = useState('')

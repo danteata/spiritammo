@@ -1,3 +1,5 @@
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import React, { useState, useEffect } from 'react'
 import {
   StyleSheet,
@@ -20,7 +22,6 @@ import { FontAwesome, Feather, MaterialCommunityIcons, Ionicons } from '@expo/ve
 import { useRouter } from 'expo-router'
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection, Scripture } from '@/types/scripture'
-import { useAppStore } from '@/hooks/useAppStore'
 import AddVersesModal from './AddVersesModal'
 import CollectionChapterView from './CollectionChapterView'
 import { CollectionChapterService } from '@/services/collectionChapters'
@@ -44,16 +45,12 @@ const CollectionDetailModal = React.memo(({
   onChapterNavigate,
 }: CollectionDetailModalProps) => {
   const router = useRouter()
-  const {
-    getScripturesByCollection,
-    updateCollection,
-    removeScriptureFromCollection,
-    bulkRemoveScripturesFromCollection,
-    deleteCollection,
-    isDark,
-    theme,
-    gradients,
-  } = useAppStore()
+  const { isDark, theme, gradients } = useTheme()
+  const getScripturesByCollection = useZustandStore((s) => s.getScripturesByCollection)
+  const updateCollection = useZustandStore((s) => s.updateCollection)
+  const removeScriptureFromCollection = useZustandStore((s) => s.removeScriptureFromCollection)
+  const bulkRemoveScripturesFromCollection = useZustandStore((s) => s.bulkRemoveScripturesFromCollection)
+  const deleteCollection = useZustandStore((s) => s.deleteCollection)
   const styles = getStyles(theme)
 
   const [isBulkSelecting, setIsBulkSelecting] = useState(false)

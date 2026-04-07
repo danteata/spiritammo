@@ -1,3 +1,4 @@
+import { useTheme } from '@/hooks/useTheme'
 import React, { useEffect, useRef } from 'react'
 import { StyleSheet, Text, View, Animated } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
@@ -6,7 +7,6 @@ import {
   MILITARY_TYPOGRAPHY,
   ACCURACY_COLORS,
 } from '@/constants/colors'
-import { useAppStore } from '@/hooks/useAppStore'
 
 interface AccuracyMeterProps {
   accuracy: number
@@ -29,7 +29,7 @@ export default function AccuracyMeter({
 }: AccuracyMeterProps) {
   const animatedValue = useRef(new Animated.Value(0)).current
   const pulseAnimation = useRef(new Animated.Value(1)).current
-  const { theme, isDark } = useAppStore()
+  const { isDark,theme } = useTheme()
 
   useEffect(() => {
     if (animated) {

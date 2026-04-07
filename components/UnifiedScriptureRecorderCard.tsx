@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native
 import { Ionicons } from '@expo/vector-icons'
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Scripture } from '@/types/scripture'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 import ScriptureCard from './ScriptureCard'
 import VoiceRecorder from './VoiceRecorder'
 
@@ -32,7 +32,7 @@ export default function UnifiedScriptureRecorderCard({
   isListening = false,
   isListeningIntel = false,
 }: UnifiedScriptureRecorderCardProps) {
-  const { theme, isDark } = useAppStore()
+  const { theme, isDark } = useTheme()
   const [isRecording, setIsRecording] = useState(false)
   const [showIntel, setShowIntel] = useState(false)
 

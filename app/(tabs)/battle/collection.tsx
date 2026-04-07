@@ -8,7 +8,8 @@ import {
 } from 'react-native'
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import CollectionSelector from '@/components/CollectionSelector'
@@ -26,14 +27,10 @@ import { useCollectionPractice } from '@/hooks/useCollectionPractice'
 import { useLocalSearchParams } from 'expo-router'
 
 export default function CollectionBattleScreen() {
-    const {
-        isDark,
-        theme,
-        updateScriptureAccuracy,
-        userStats,
-        addValorPoints,
-    } = useAppStore()
-
+    const { isDark, theme } = useTheme()
+    const updateScriptureAccuracy = useZustandStore((s) => s.updateScriptureAccuracy)
+    const userStats = useZustandStore((s) => s.userStats)
+    const addValorPoints = useZustandStore((s) => s.addValorPoints)
     const params = useLocalSearchParams()
     const router = useRouter()
     const { trackEvent } = useAnalytics()

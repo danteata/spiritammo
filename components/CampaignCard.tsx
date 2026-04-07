@@ -1,6 +1,6 @@
+import { useTheme } from '@/hooks/useTheme'
 import { StyleSheet, View, TouchableOpacity } from 'react-native'
 import { FontAwesome5 } from '@expo/vector-icons'
-import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { Campaign } from '@/types/campaign'
 
@@ -11,7 +11,7 @@ interface CampaignCardProps {
 }
 
 export default function CampaignCard({ campaign, onPress }: CampaignCardProps) {
-    const { isDark, theme } = useAppStore()
+  const { isDark,theme } = useTheme()
 
     return (
         <TouchableOpacity

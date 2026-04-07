@@ -11,7 +11,6 @@ import {
 import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { ThemedText, ThemedCard } from './Themed'
-import { useAppStore } from '@/hooks/useAppStore'
 import VoiceRecordingService from '@/services/voiceRecording'
 import { VoiceRecording, VoiceRecordingStats } from '@/types/scripture'
 

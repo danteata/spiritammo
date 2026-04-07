@@ -1,15 +1,15 @@
+import { useTheme } from '@/hooks/useTheme'
 import React, { useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView } from 'react-native';
 import { FontAwesome } from '@expo/vector-icons';
 import { Book } from '@/types/scripture';
-import { useAppStore } from '@/hooks/useAppStore';
 
 interface BookSelectorProps {
   onSelectBook: (book: Book) => void;
 }
 
 export default function BookSelector({ onSelectBook }: BookSelectorProps) {
-  const { books, isDark, theme } = useAppStore();
+  const { isDark,theme } = useTheme()
 
   // Define book groups with color coding (inspired by your screenshot)
   const bookGroups = [

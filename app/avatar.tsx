@@ -7,7 +7,8 @@ import {
     Alert,
 } from 'react-native'
 import { FontAwesome5 } from '@expo/vector-icons'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import { useScreenTracking } from '@/hooks/useAnalytics'
@@ -15,14 +16,10 @@ import { ArsenalEquipment } from '@/components/arsenal/ArsenalEquipment'
 import { EquipmentSlot } from '@/types/avatar'
 
 export default function AvatarScreen() {
-    const {
-        isDark,
-        theme,
-        avatarInventory,
-        userSettings,
-        equipItem,
-    } = useAppStore()
-
+    const { isDark, theme } = useTheme()
+    const avatarInventory = useZustandStore((s) => s.avatarInventory)
+    const userSettings = useZustandStore((s) => s.userSettings)
+    const equipItem = useZustandStore((s) => s.equipItem)
     // Track screen view
     useScreenTracking('avatar')
 

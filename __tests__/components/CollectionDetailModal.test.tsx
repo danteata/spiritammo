@@ -1,7 +1,6 @@
 import React from 'react';
 import { render, fireEvent } from '@testing-library/react-native';
 import CollectionDetailModal from '@/components/CollectionDetailModal';
-import { useAppStore } from '@/hooks/useAppStore';
 import { Collection } from '@/types/scripture';
 
 // Mock the useAppStore hook

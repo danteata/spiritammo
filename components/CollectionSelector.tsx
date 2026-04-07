@@ -12,7 +12,8 @@ import { FontAwesome } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { Collection } from '@/types/scripture'
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
+import useZustandStore from '@/hooks/zustandStore'
 
 interface CollectionSelectorProps {
   onSelectCollection: (collection: Collection) => void
@@ -25,7 +26,9 @@ export default function CollectionSelector({
   selectedCollection,
   selectedChapterIds = [],
 }: CollectionSelectorProps) {
-  const { collections, isDark, addCollection, theme } = useAppStore()
+  const { isDark, theme } = useTheme()
+  const collections = useZustandStore((s) => s.collections)
+  const addCollection = useZustandStore((s) => s.addCollection)
   const styles = useMemo(() => getStyles(theme), [theme])
   const [modalVisible, setModalVisible] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
