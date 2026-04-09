@@ -8,10 +8,11 @@ import {
     StatusBar,
     ScrollView,
     Platform,
-    Modal,
+    TextInput,
+    Keyboard,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons'
+import { FontAwesome, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons'
 import * as Haptics from 'expo-haptics'
 import {
     MILITARY_TYPOGRAPHY,
@@ -60,10 +61,12 @@ export default function StealthDrill({
     const [selectedBankWord, setSelectedBankWord] = useState<string | null>(null)
     const [drillComplete, setDrillComplete] = useState(false)
     const [accuracy, setAccuracy] = useState(0)
+    const [isTacticalMode, setIsTacticalMode] = useState(false)
 
     // Animations
     const fadeAnim = useRef(new Animated.Value(0)).current
     const slideAnim = useRef(new Animated.Value(50)).current
+    const typingRef = useRef<TextInput>(null)
 
     useEffect(() => {
         if (isVisible) {
@@ -153,12 +156,40 @@ export default function StealthDrill({
             const newFilled = { ...filledBlanks, [tokens[firstEmptyIndex].originalIndex]: token }
             setFilledBlanks(newFilled)
 
-            // Remove from bank
-            setWordBank((prev) => prev.filter((t) => t.id !== token.id))
+            // Remove from bank if in bank mode
+            if (!isTacticalMode) {
+                setWordBank((prev) => prev.filter((t) => t.id !== token.id))
+            }
 
             // Check completion
             if (Object.keys(newFilled).length === tokens.filter(t => t.isBlank).length) {
                 checkResult(newFilled)
+                if (isTacticalMode) Keyboard.dismiss()
+            }
+        }
+    }
+
+    const handleKeyboardInput = (text: string) => {
+        if (!text || drillComplete) return
+
+        const char = text.slice(-1).toLowerCase()
+        if (!char.match(/[a-z0-9]/i)) return
+
+        // Find first empty blank
+        const firstEmptyIndex = tokens.findIndex(
+            (t) => t.isBlank && !filledBlanks[t.originalIndex]
+        )
+
+        if (firstEmptyIndex !== -1) {
+            const targetToken = tokens[firstEmptyIndex]
+            // Get first alpha character of target text
+            const firstLetterMatch = targetToken.text.match(/[a-zA-Z0-9]/)
+            const firstLetter = firstLetterMatch ? firstLetterMatch[0].toLowerCase() : targetToken.text[0].toLowerCase()
+
+            if (char === firstLetter) {
+                handleBankWordSelect(targetToken)
+            } else {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error)
             }
         }
     }
@@ -217,6 +248,7 @@ export default function StealthDrill({
     const renderDifficultySelection = () => (
         <View style={styles.difficultyContainer}>
             <ThemedText variant="heading" style={styles.difficultyTitle}>SELECT DIFFICULTY</ThemedText>
+            
             <View style={styles.difficultyGrid}>
                 {(Object.keys(DIFFICULTIES) as DifficultyLevel[]).map((level) => (
                     <TouchableOpacity
@@ -239,12 +271,32 @@ export default function StealthDrill({
                     </TouchableOpacity>
                 ))}
             </View>
+
+            <View style={[styles.modeSelection, { borderColor: theme.border }]}>
+                <ThemedText variant="caption" style={styles.modeTitle}>INPUT METHOD</ThemedText>
+                <View style={styles.modeToggle}>
+                    <TouchableOpacity 
+                        style={[styles.modeButton, !isTacticalMode && { backgroundColor: theme.accent }]}
+                        onPress={() => setIsTacticalMode(false)}
+                    >
+                        <MaterialCommunityIcons name="format-list-bulleted" size={20} color={!isTacticalMode ? '#000' : theme.text} />
+                        <Text style={[styles.modeButtonText, { color: !isTacticalMode ? '#000' : theme.text }]}>SUPPLY CACHE</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                        style={[styles.modeButton, isTacticalMode && { backgroundColor: theme.accent }]}
+                        onPress={() => setIsTacticalMode(true)}
+                    >
+                        <MaterialCommunityIcons name="keyboard-outline" size={20} color={isTacticalMode ? '#000' : theme.text} />
+                        <Text style={[styles.modeButtonText, { color: isTacticalMode ? '#000' : theme.text }]}>TACTICAL TYPING</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
         </View>
     )
 
     const renderContent = () => (
         <>
-            <StatusBar barStyle="light-content" />
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
 
             {/* Header */}
             <View style={styles.header}>
@@ -261,7 +313,10 @@ export default function StealthDrill({
                 </View>
 
                 <TouchableOpacity
-                    onPress={onClose}
+                    onPress={() => {
+                        Keyboard.dismiss()
+                        onClose()
+                    }}
                     style={[styles.closeButton, { backgroundColor: 'rgba(255,255,255,0.1)' }]}
                 >
                     <Ionicons name="close" size={24} color={theme.text} />
@@ -281,6 +336,19 @@ export default function StealthDrill({
 
                     {/* Drill Area */}
                     <View style={styles.drillContainer}>
+                        {isTacticalMode && !drillComplete && (
+                            <TextInput
+                                ref={typingRef}
+                                style={styles.hiddenInput}
+                                autoFocus={true}
+                                autoCapitalize="none"
+                                autoComplete="off"
+                                autoCorrect={false}
+                                onChangeText={handleKeyboardInput}
+                                value=""
+                                onBlur={() => !drillComplete && typingRef.current?.focus()}
+                            />
+                        )}
                         <View style={[styles.verseContainer, {
                             backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.8)',
                             borderColor: theme.border
@@ -348,7 +416,12 @@ export default function StealthDrill({
                             {accuracy < 100 && (
                                 <TouchableOpacity
                                     style={[styles.retryButton]}
-                                    onPress={() => startDrill(difficulty)}
+                                    onPress={() => {
+                                        startDrill(difficulty!)
+                                        if (isTacticalMode) {
+                                            setTimeout(() => typingRef.current?.focus(), 100)
+                                        }
+                                    }}
                                 >
                                     <Text style={[styles.retryText, MILITARY_TYPOGRAPHY.button, { color: theme.textSecondary }]}>
                                         RETRY MISSION
@@ -358,8 +431,8 @@ export default function StealthDrill({
                         </Animated.View>
                     )}
 
-                    {/* Ammo Supply (Word Bank) - Hide when complete */}
-                    {!drillComplete && (
+                    {/* Ammo Supply (Word Bank) - Hide when complete OR in tactical mode */}
+                    {!drillComplete && !isTacticalMode && (
                         <View style={[styles.bankContainer, { borderTopColor: theme.border }]}>
                             <ThemedText variant="caption" style={styles.bankTitle}>AMMO SUPPLY</ThemedText>
                             <View style={styles.bankGrid}>
@@ -585,5 +658,43 @@ const styles = StyleSheet.create({
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.25,
         shadowRadius: 3.84,
+    },
+    modeSelection: {
+        marginTop: 40,
+        width: '100%',
+        paddingTop: 24,
+        borderTopWidth: 1,
+        alignItems: 'center',
+    },
+    modeTitle: {
+        marginBottom: 16,
+        letterSpacing: 2,
+        opacity: 0.7,
+    },
+    modeToggle: {
+        flexDirection: 'row',
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        borderRadius: 12,
+        padding: 4,
+        gap: 4,
+    },
+    modeButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingVertical: 10,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        gap: 8,
+    },
+    modeButtonText: {
+        fontSize: 12,
+        fontWeight: 'bold',
+        letterSpacing: 1,
+    },
+    hiddenInput: {
+        position: 'absolute',
+        width: 0,
+        height: 0,
+        opacity: 0,
     }
 })

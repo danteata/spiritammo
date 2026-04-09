@@ -830,7 +830,7 @@ export default function TargetPractice({
 
   const renderContent = () => (
     <>
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
 
       {/* Header */}
       <View style={styles.header}>

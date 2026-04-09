@@ -461,7 +461,7 @@ export default function AddVersesModal({
       visible={isVisible}
       onRequestClose={handleClose}
     >
-      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.background} />
+      <StatusBar barStyle={isDark ? "light-content" : "dark-content"} translucent backgroundColor="transparent" />
       <View style={[styles.modalContainer, { backgroundColor: theme.background }]}>
         {/* Header */}
         <View style={[styles.header, { backgroundColor: theme.background }]}>

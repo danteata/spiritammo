@@ -2,9 +2,9 @@
   "expo": {
     "name": "SpiritAmmo",
     "slug": "spiritammo",
-    "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.jpeg",
+    "version": "1.0.3",
+    "orientation": "default",
+    "icon": "./assets/images/icon.png",
     "scheme": "spiritammo",
     "userInterfaceStyle": "automatic",
     "splash": {
@@ -26,6 +26,7 @@
         "backgroundImage": "./assets/images/adaptive-icon/background.png"
       },
       "package": "com.danteata.spiritammo",
+      "versionCode": 4,
       "permissions": [
         "RECORD_AUDIO"
       ]
