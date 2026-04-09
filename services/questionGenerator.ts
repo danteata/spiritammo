@@ -245,7 +245,7 @@ export function ensureUniqueOptions(options: QuestionOption[]): QuestionOption[]
   return unique;
 }
 
-function buildOptions(correctLabel: string, distractors: string[]): QuestionOption[] {
+function buildOptions(correctLabel: string, distractors: string[], type: 'REFERENCE' | 'CONTENT', allScriptures: Scripture[] = []): QuestionOption[] {
   const allOptions: QuestionOption[] = [
     { label: correctLabel, isCorrect: true },
     ...distractors.slice(0, 4).map(d => ({ label: d, isCorrect: false })),
@@ -254,10 +254,22 @@ function buildOptions(correctLabel: string, distractors: string[]): QuestionOpti
   const unique = ensureUniqueOptions(allOptions);
 
   while (unique.length < 5) {
-    const randomBook = BOOKS[Math.floor(Math.random() * BOOKS.length)];
-    const ch = Math.floor(Math.random() * randomBook.chapters) + 1;
-    const v = Math.floor(Math.random() * 20) + 1;
-    const filler = `${randomBook.name} ${ch}:${v}`;
+    let filler = '';
+    if (type === 'REFERENCE') {
+      const randomBook = BOOKS[Math.floor(Math.random() * BOOKS.length)];
+      const ch = Math.floor(Math.random() * randomBook.chapters) + 1;
+      const v = Math.floor(Math.random() * 20) + 1;
+      filler = `${randomBook.name} ${ch}:${v}`;
+    } else {
+      // Content filler
+      if (allScriptures.length > 5) {
+        const randIdx = Math.floor(Math.random() * allScriptures.length);
+        filler = getMeaningfulTruncation(allScriptures[randIdx].text, 100);
+      } else {
+        filler = "Follow the path of righteousness and truth in all things.";
+      }
+    }
+
     if (!unique.some(o => o.label.toLowerCase() === filler.toLowerCase())) {
       unique.push({ label: filler, isCorrect: false });
     }
@@ -271,7 +283,7 @@ export function generateReferenceQuestion(scripture: Scripture): Question {
   const distractors = generateDistractorReferences(correctRef);
   
   // Ensure we have exactly 5 options (1 correct, 4 distractors)
-  const options = buildOptions(correctRef, distractors.slice(0, 4));
+  const options = buildOptions(correctRef, distractors.slice(0, 4), 'REFERENCE');
 
   const correctMap: Record<string, 'T' | 'F'> = {};
   options.forEach(o => {
@@ -298,7 +310,7 @@ export function generateContentQuestion(
   const distractors = shuffleArray(otherScriptures.map(s => s.text)).slice(0, 4);
   
   // Ensure exactly 5 options
-  const options = buildOptions(correctQuote, distractors);
+  const options = buildOptions(correctQuote, distractors, 'CONTENT', allScriptures);
 
   const correctMap: Record<string, 'T' | 'F'> = {};
   options.forEach(o => {
@@ -322,7 +334,7 @@ export function generateInferenceQuestion(scripture: Scripture): Question {
   const distractors = generateDistractorReferences(correctRef);
   
   // Ensure exactly 5 options
-  const options = buildOptions(correctRef, distractors.slice(0, 4));
+  const options = buildOptions(correctRef, distractors.slice(0, 4), 'REFERENCE');
 
   const correctMap: Record<string, 'T' | 'F'> = {};
   options.forEach(o => {
@@ -341,25 +353,27 @@ export function generateInferenceQuestion(scripture: Scripture): Question {
 }
 
 
-export function generateTrueFalseListQuestion(scripture: Scripture): Question {
+export function generateTrueFalseListQuestion(scripture: Scripture, allScriptures: Scripture[]): Question {
   const phrases = extractKeyPhrases(scripture.text, 3);
+  const otherScriptures = allScriptures.filter(s => s.id !== scripture.id);
   
   const allStatements = shuffleArray([
     ...phrases.map(p => ({ 
-      label: `"${p}" can be gleaned from this passage`, 
+      label: `"${p}" is a truth revealed in this passage`, 
       isCorrect: true 
     })),
-    ...generateDistractorReferences(scripture.reference).slice(0, 2).map(r => ({
-      label: `This passage appears in ${r}`,
+    ...shuffleArray(otherScriptures).slice(0, 2).map(s => ({
+      label: `"${getMeaningfulTruncation(s.text, 100)}" is the primary subject here`,
       isCorrect: false
     }))
   ]).slice(0, 5);
 
   // If we still need more distractors to reach 5
   while (allStatements.length < 5) {
-      const randRef = generateRandomReferences(scripture.reference, 1)[0];
+      const randIdx = Math.floor(Math.random() * otherScriptures.length);
+      const randText = otherScriptures.length > 0 ? otherScriptures[randIdx].text : "Hold fast to the teachings of the faithful.";
       allStatements.push({
-          label: `This passage is found in ${randRef}`,
+          label: `This passage implies that "${getMeaningfulTruncation(randText, 80)}"`,
           isCorrect: false
       });
   }
@@ -410,7 +424,7 @@ export function generateCollectionQuestions(
     }
 
     try {
-      const tfQuestion = generateTrueFalseListQuestion(scripture);
+      const tfQuestion = generateTrueFalseListQuestion(scripture, scriptures);
       questions.push(tfQuestion);
     } catch (e) {
       console.error(`Failed to generate true-false question for ${scripture.id}:`, e);

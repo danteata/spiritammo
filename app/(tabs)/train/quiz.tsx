@@ -6,6 +6,8 @@ import {
     TouchableOpacity,
     ActivityIndicator,
     Alert,
+    Platform,
+    TextInput,
 } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useLocalSearchParams, useRouter } from 'expo-router'
@@ -23,7 +25,7 @@ import { AnalyticsEventType } from '@/services/analytics'
 import { Toast } from '@/components/ui/Toast'
 
 export default function QuizScreen() {
-    const { scriptures, collections, isDark, theme } = useAppStore()
+    const { scriptures, collections, isDark, theme, userSettings } = useAppStore()
     const params = useLocalSearchParams()
     const router = useRouter()
     const { trackEvent } = useAnalytics()
@@ -51,6 +53,19 @@ export default function QuizScreen() {
     const [showExplanation, setShowExplanation] = useState(false)
     const [questionLimit, setQuestionLimit] = useState(20)
     const [showConfig, setShowConfig] = useState(true)
+    const [elapsedTime, setElapsedTime] = useState(0)
+    const [timerActive, setTimerActive] = useState(false)
+    const [timeLimit, setTimeLimit] = useState<number | null>(null) // in seconds
+    const [timedOut, setTimedOut] = useState(false)
+    const [isCustomTime, setIsCustomTime] = useState(false)
+    const [customMins, setCustomMins] = useState('')
+
+
+    const formatTime = useCallback((seconds: number) => {
+        const mins = Math.floor(seconds / 60)
+        const secs = seconds % 60
+        return `${mins}:${secs.toString().padStart(2, '0')}`
+    }, [])
 
     const generateQuestions = useCallback(async (limit: number = questionLimit) => {
         if (collectionScriptures.length === 0) return
@@ -68,8 +83,9 @@ export default function QuizScreen() {
             setCurrentQuestionIndex(0)
             setSelectedAnswers({})
             setShowResults(false)
-            setPoints(0)
             setShowExplanation(false)
+            setElapsedTime(0)
+            setTimerActive(true)
 
             trackEvent(AnalyticsEventType.QUIZ_GENERATED, {
                 collection_id: collectionId,
@@ -143,24 +159,33 @@ export default function QuizScreen() {
         return totalPoints
     }, [])
 
+    const finishMission = useCallback((isTimedOut = false) => {
+        setTimerActive(false)
+        if (!questionSet) return
+
+        const finalPoints = calculateRunningScore(selectedAnswers, questionSet.questions)
+        setPoints(finalPoints)
+        setShowResults(true)
+        setTimedOut(isTimedOut)
+
+        trackEvent(AnalyticsEventType.QUIZ_COMPLETED, {
+            collection_id: collectionId,
+            points_earned: finalPoints,
+            total_possible: totalPointsPossible,
+            timed_out: isTimedOut
+        })
+    }, [questionSet, selectedAnswers, calculateRunningScore, collectionId, trackEvent, totalPointsPossible])
+
     const handleNextQuestion = useCallback(() => {
         if (!questionSet || !currentQuestion) return
-
-        const newPoints = calculateRunningScore(selectedAnswers, questionSet.questions)
-        setPoints(newPoints)
 
         if (currentQuestionIndex < questionSet.questions.length - 1) {
             setCurrentQuestionIndex(prev => prev + 1)
             setShowExplanation(false)
         } else {
-            setShowResults(true)
-            trackEvent(AnalyticsEventType.QUIZ_COMPLETED, {
-                collection_id: collectionId,
-                points_earned: newPoints,
-                total_possible: totalPointsPossible,
-            })
+            finishMission(false)
         }
-    }, [questionSet, currentQuestion, selectedAnswers, currentQuestionIndex, totalPointsPossible, collectionId, trackEvent, calculateRunningScore])
+    }, [questionSet, currentQuestion, currentQuestionIndex, finishMission])
 
     const handlePreviousQuestion = useCallback(() => {
         if (currentQuestionIndex > 0) {
@@ -173,11 +198,33 @@ export default function QuizScreen() {
         setShowConfig(true)
         setQuestionSet(null)
         setShowResults(false)
+        setElapsedTime(0)
+        setTimerActive(false)
+        setTimedOut(false)
+        setIsCustomTime(false)
+        setCustomMins('')
     }, [])
 
     const handleBackToCollection = useCallback(() => {
         router.back()
     }, [router])
+
+    useEffect(() => {
+        let interval: NodeJS.Timeout
+        if (timerActive) {
+            interval = setInterval(() => {
+                setElapsedTime(prev => {
+                    const nextTime = prev + 1
+                    if (timeLimit !== null && nextTime >= timeLimit) {
+                        finishMission(true)
+                        return timeLimit
+                    }
+                    return nextTime
+                })
+            }, 1000)
+        }
+        return () => clearInterval(interval)
+    }, [timerActive, timeLimit, finishMission])
 
     if (showConfig) {
         return (
@@ -186,30 +233,107 @@ export default function QuizScreen() {
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     <View style={[styles.resultsCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                         <Ionicons name="fitness" size={48} color={theme.accent} style={{ marginBottom: 16 }} />
-                        <ThemedText variant="subheading" style={{ marginBottom: 8 }}>Select Mission Length</ThemedText>
-                        <ThemedText variant="body" style={{ textAlign: 'center', opacity: 0.7, marginBottom: 24 }}>
-                            How many questions per drill?
-                        </ThemedText>
+                        
+                        <View style={{ width: '100%' }}>
+                            <ThemedText variant="subheading" style={{ marginBottom: 8, textAlign: 'center' }}>1. MISSION LENGTH</ThemedText>
+                            <ThemedText variant="body" style={{ textAlign: 'center', opacity: 0.7, marginBottom: 16 }}>
+                                How many questions per drill?
+                            </ThemedText>
+                        </View>
 
                         <View style={styles.resultsActions}>
-                            {[20, 50, 100].map(limit => (
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 24 }}>
+                                {[20, 50, 100].map(limit => (
+                                    <TouchableOpacity
+                                        key={limit}
+                                        style={[
+                                            styles.configOption,
+                                            {
+                                                backgroundColor: questionLimit === limit ? theme.accent : theme.surface,
+                                                borderColor: theme.border,
+                                            }
+                                        ]}
+                                        onPress={() => setQuestionLimit(limit)}
+                                    >
+                                        <ThemedText variant="body" style={{ fontWeight: 'bold', color: questionLimit === limit ? theme.accentContrastText : theme.text }}>
+                                            {limit}
+                                        </ThemedText>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
+
+                            <View style={styles.separator} />
+
+                            <View style={{ width: '100%', marginTop: 24 }}>
+                                <ThemedText variant="subheading" style={{ marginBottom: 8, textAlign: 'center' }}>2. MISSION DEADLINE</ThemedText>
+                                <ThemedText variant="body" style={{ textAlign: 'center', opacity: 0.7, marginBottom: 16 }}>
+                                    Establish a hard cutoff for this drill.
+                                </ThemedText>
+                            </View>
+
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
+                                {[null, 5, 15, 30].map(mins => (
+                                    <TouchableOpacity
+                                        key={mins === null ? 'none' : mins}
+                                        style={[
+                                            styles.configOption,
+                                            {
+                                                width: mins === null ? '48%' : '23%',
+                                                backgroundColor: (!isCustomTime && (mins === null ? timeLimit === null : timeLimit === mins * 60)) ? theme.accent : theme.surface,
+                                                borderColor: theme.border,
+                                            }
+                                        ]}
+                                        onPress={() => {
+                                            setIsCustomTime(false)
+                                            setTimeLimit(mins === null ? null : mins * 60)
+                                        }}
+                                    >
+                                        <ThemedText variant="body" style={{ fontWeight: 'bold', fontSize: 13, color: (!isCustomTime && (mins === null ? timeLimit === null : timeLimit === mins * 60)) ? theme.accentContrastText : theme.text }}>
+                                            {mins === null ? 'UNLIMITED' : `${mins}M`}
+                                        </ThemedText>
+                                    </TouchableOpacity>
+                                ))}
                                 <TouchableOpacity
-                                    key={limit}
                                     style={[
-                                        styles.actionButton,
+                                        styles.configOption,
                                         {
-                                            backgroundColor: questionLimit === limit ? theme.accent : 'transparent',
+                                            width: '48%',
+                                            backgroundColor: isCustomTime ? theme.accent : theme.surface,
                                             borderColor: theme.border,
-                                            borderWidth: 1
                                         }
                                     ]}
-                                    onPress={() => setQuestionLimit(limit)}
+                                    onPress={() => setIsCustomTime(true)}
                                 >
-                                    <ThemedText variant="body" style={{ color: questionLimit === limit ? theme.accentContrastText : theme.text }}>
-                                        {limit} QUESTIONS
+                                    <ThemedText variant="body" style={{ fontWeight: 'bold', fontSize: 13, color: isCustomTime ? theme.accentContrastText : theme.text }}>
+                                        CUSTOM
                                     </ThemedText>
                                 </TouchableOpacity>
-                            ))}
+                            </View>
+
+                            {isCustomTime && (
+                                <View style={{ width: '100%', alignItems: 'center', marginBottom: 24 }}>
+                                    <TextInput
+                                        style={[styles.customInput, { color: theme.text, borderColor: theme.accent, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
+                                        placeholder="MINUTES"
+                                        placeholderTextColor={theme.textSecondary}
+                                        keyboardType="numeric"
+                                        value={customMins}
+                                        maxLength={3}
+                                        onChangeText={(val) => {
+                                            const numericVal = val.replace(/[^0-9]/g, '')
+                                            setCustomMins(numericVal)
+                                            const mins = parseInt(numericVal)
+                                            if (!isNaN(mins) && mins > 0) {
+                                                setTimeLimit(mins * 60)
+                                            } else {
+                                                setTimeLimit(null)
+                                            }
+                                        }}
+                                        autoFocus
+                                    />
+                                    <ThemedText variant="caption" style={{ marginTop: 8, opacity: 0.6 }}>SPECIFY EXACT DURATION (1-999 MIN)</ThemedText>
+                                </View>
+                            )}
 
                             <TouchableOpacity
                                 style={[styles.actionButton, { backgroundColor: theme.success, marginTop: 24 }]}
@@ -261,6 +385,24 @@ export default function QuizScreen() {
                                 {points}/{totalPointsPossible} Points
                             </ThemedText>
                         </View>
+
+                        {timedOut && (
+                            <View style={[styles.timeStats, { backgroundColor: theme.error + '20', borderColor: theme.error }]}>
+                                <Ionicons name="time" size={20} color={theme.error} />
+                                <ThemedText variant="body" style={{ fontWeight: 'bold', color: theme.error }}>
+                                    MISSION EXPIRED: TIME ELAPSED
+                                </ThemedText>
+                            </View>
+                        )}
+
+                        {(timeLimit !== null || userSettings.isTimedMission) && !timedOut && (
+                            <View style={[styles.timeStats, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.02)', borderColor: theme.border }]}>
+                                <Ionicons name="timer-outline" size={20} color={theme.accent} />
+                                <ThemedText variant="body" style={{ fontWeight: '600' }}>
+                                    MISSION DURATION: {formatTime(elapsedTime)}
+                                </ThemedText>
+                            </View>
+                        )}
 
                         <View style={styles.resultsMessage}>
                             {percentage >= 90 ? (
@@ -407,11 +549,7 @@ export default function QuizScreen() {
                                 {
                                     text: "ABORT & REPORT",
                                     style: "destructive",
-                                    onPress: () => {
-                                        const finalPoints = calculateRunningScore(selectedAnswers, questionSet.questions)
-                                        setPoints(finalPoints)
-                                        setShowResults(true)
-                                    }
+                                    onPress: () => finishMission(false)
                                 }
                             ])
                         }}
@@ -431,8 +569,27 @@ export default function QuizScreen() {
                         />
                     </View>
                     <ThemedText variant="caption" style={styles.progressText}>
-                        Points: {points}/{totalPointsPossible}
+                        PROGRESS: {currentQuestionIndex + 1}/{questionSet.questions.length}
                     </ThemedText>
+
+                    {(timeLimit !== null || userSettings.isTimedMission) && (
+                        <View style={[styles.timerHud, timeLimit !== null && (timeLimit - elapsedTime < 60) && { borderLeftColor: theme.error }]}>
+                            <Ionicons 
+                                name={timeLimit !== null ? (timeLimit - elapsedTime < 60 ? 'alert-circle' : 'hourglass-outline') : 'timer'} 
+                                size={14} 
+                                color={timeLimit !== null && (timeLimit - elapsedTime < 60) ? theme.error : theme.accent} 
+                            />
+                            <ThemedText 
+                                variant="caption" 
+                                style={[
+                                    styles.timerText, 
+                                    { color: timeLimit !== null && (timeLimit - elapsedTime < 60) ? theme.error : theme.accent }
+                                ]}
+                            >
+                                {timeLimit !== null ? formatTime(Math.max(0, timeLimit - elapsedTime)) : formatTime(elapsedTime)}
+                            </ThemedText>
+                        </View>
+                    )}
                 </View>
 
                 <View style={[styles.questionCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
@@ -607,7 +764,7 @@ export default function QuizScreen() {
                                     <ThemedText variant="caption" style={{ color: theme.info, fontWeight: '700' }}>REVEAL HUD HINT</ThemedText>
                                 </TouchableOpacity>
                             ) : (
-                                <View style={[styles.explanationBox, { backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.05)' }]}>
+                                <View style={[styles.explanationBox, { backgroundColor: `${theme.info}15` }]}>
                                     <Ionicons name="information-circle" size={16} color={theme.info} />
                                     <ThemedText variant="caption" style={[styles.explanationText, { color: theme.info }]}>
                                         {currentQuestion.explanation}
@@ -871,5 +1028,52 @@ const styles = StyleSheet.create({
         paddingVertical: 4,
         borderBottomWidth: 0.5,
         borderBottomColor: 'rgba(255,255,255,0.05)',
+    },
+    timerHud: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingLeft: 12,
+        borderLeftWidth: 1,
+        borderLeftColor: 'rgba(255,165,0,0.2)',
+    },
+    timerText: {
+        fontWeight: 'bold',
+        fontFamily: 'monospace',
+    },
+    timeStats: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        paddingVertical: 12,
+        paddingHorizontal: 20,
+        borderRadius: 30,
+        marginBottom: 24,
+        borderWidth: 1,
+    },
+    configOption: {
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 60,
+    },
+    separator: {
+        height: 1,
+        backgroundColor: 'rgba(255,255,255,0.05)',
+        width: '100%',
+        marginVertical: 4,
+    },
+    customInput: {
+        width: '60%',
+        height: 50,
+        borderRadius: 12,
+        borderWidth: 2,
+        textAlign: 'center',
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginTop: 8,
     },
 })

@@ -15,6 +15,7 @@ const DEFAULT_USER_SETTINGS: UserSettings = {
     language: 'en-US',
     trainingMode: 'single',
     voiceEngine: 'native',
+    isTimedMission: false,
 }
 
 const DEFAULT_USER_STATS: UserStats = {

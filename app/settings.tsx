@@ -174,6 +174,42 @@ export default function SettingsScreen() {
           )}
         </ThemedCard>
 
+        {/* Mission Protocols */}
+        <ThemedCard style={styles.card} variant="default">
+          <View style={styles.cardHeader}>
+            <MaterialCommunityIcons name="target" size={20} color={theme.accent} />
+            <ThemedText variant="subheading" style={styles.cardTitle}>
+              MISSION PROTOCOLS
+            </ThemedText>
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingInfo}>
+              <ThemedText variant="body" style={styles.settingLabel}>
+                Tactical Chronometer
+              </ThemedText>
+              <ThemedText variant="caption" style={styles.settingDescription}>
+                Record assessment duration for time-sensitive drills
+              </ThemedText>
+            </View>
+            <Switch
+              value={userSettings.isTimedMission || false}
+              onValueChange={(value) => {
+                saveUserSettings({
+                  ...userSettings,
+                  isTimedMission: value,
+                })
+                trackEvent(AnalyticsEventType.SETTING_CHANGED, {
+                  setting_name: 'timed_mission',
+                  new_value: value ? 'on' : 'off'
+                })
+              }}
+              trackColor={{ false: '#767577', true: 'rgba(255, 165, 0, 0.5)' }}
+              thumbColor={userSettings.isTimedMission ? theme.accent : '#f4f3f4'}
+            />
+          </View>
+        </ThemedCard>
+
         {/* Soldier Identity */}
         <ThemedCard style={styles.card} variant="default">
           <View style={styles.cardHeader}>

@@ -19,6 +19,7 @@ export const TACTICAL_THEME = {
   accentContrastText: '#000000', // Black text on orange backgrounds
   surfaceContrastText: '#F8FAFC', // Existing text for surface backgrounds
   primaryContrastText: '#F8FAFC', // Existing text for primary backgrounds
+  info: '#38BDF8', // Sky 400 (Bright Blue)
 }
 
 export const STEALTH_THEME = {
@@ -40,6 +41,7 @@ export const STEALTH_THEME = {
   accentContrastText: '#000000', // Black text on cyan backgrounds
   surfaceContrastText: '#FAFAFA', // Existing text for surface backgrounds
   primaryContrastText: '#FAFAFA', // Existing text for primary backgrounds
+  info: '#7DD3FC', // Sky 300
 }
 
 export const GARRISON_THEME = {
@@ -61,6 +63,7 @@ export const GARRISON_THEME = {
   accentContrastText: '#1A2309', // Dark text on brass backgrounds
   surfaceContrastText: '#1A2309', // Dark text for surface backgrounds
   primaryContrastText: '#F5F0E1', // Light text on olive backgrounds
+  info: '#2196F3', // Standard Blue for light mode
 }
 
 export const JUNGLE_THEME = {
@@ -82,6 +85,7 @@ export const JUNGLE_THEME = {
   accentContrastText: '#0D1205', // Dark text on brass backgrounds
   surfaceContrastText: '#E8E0CC', // Parchment text for surface backgrounds
   primaryContrastText: '#E8E0CC', // Parchment text for primary backgrounds
+  info: '#6EE7B7', // Emerald 300 (Bright Green)
 }
 
 export const SLATE_THEME = {
@@ -103,6 +107,7 @@ export const SLATE_THEME = {
   accentContrastText: '#0F172A', // Dark text on bright accent
   surfaceContrastText: '#F8FAFC', // Light text for surface backgrounds
   primaryContrastText: '#F8FAFC', // Light text for primary backgrounds
+  info: '#BAE6FD', // Sky 200 (Very Bright for Dark Mode legibility)
 }
 
 // Legacy colors for backward compatibility

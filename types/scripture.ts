@@ -77,6 +77,7 @@ export interface UserSettings {
   trainingMode: 'single' | 'burst' | 'automatic'
   voiceEngine: 'whisper' | 'native'
   soldierName?: string
+  isTimedMission?: boolean
 }
 
 export interface UserStats {
