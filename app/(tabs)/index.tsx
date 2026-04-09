@@ -22,7 +22,7 @@ const { width } = Dimensions.get('window')
 const getTimeBasedGreeting = (): { greeting: string; subtext: string } => {
   const hour = new Date().getHours()
   if (hour >= 5 && hour < 12) {
-    return { greeting: 'Good morning, Soldier!', subtext: 'Ready for today\'s verse?' }
+    return { greeting: 'Good morning, Soldier!', subtext: 'Ready for today\'s drill?' }
   } else if (hour >= 12 && hour < 17) {
     return { greeting: 'Good afternoon, Soldier!', subtext: 'Stay sharp with daily drills.' }
   } else if (hour >= 17 && hour < 21) {
@@ -293,7 +293,7 @@ export default function HomeScreen() {
                   SIGINT OPS // HQ
                 </ThemedText> */}
                 <ThemedText variant="heading" style={styles.headerTitle}>
-                    {`GREETINGS, ${userSettings?.soldierName || 'Soldier'}`}
+                  {`GREETINGS, ${userSettings?.soldierName || 'Soldier'}`}
                 </ThemedText>
                 <View style={[styles.headerUnderline, { backgroundColor: theme.accent }]} />
               </View>
@@ -331,8 +331,8 @@ export default function HomeScreen() {
                     INCOMING TRANSMISSION // {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </ThemedText>
                   {!isDark && (
-                    <View style={[styles.classificationStamp, { borderColor: `${theme.error}60`, backgroundColor: `${theme.error}10` }]}>
-                      <Text style={[styles.classificationText, { color: theme.error }]}>CLASSIFIED</Text>
+                    <View style={[styles.classificationStamp, { borderColor: `${theme.accent}60`, backgroundColor: `${theme.accent}10` }]}>
+                      <Text style={[styles.classificationText, { color: theme.accent }]}>CLASSIFIED</Text>
                     </View>
                   )}
                 </View>

@@ -127,17 +127,13 @@ export function ThemedText({
     color,
     ...otherProps
 }: ThemedTextProps) {
+    const colorKey = (variant === 'caption' || variant === 'code') ? 'textSecondary' : 'text';
     const themeColor = useThemeColor(
         { light: lightColor, dark: darkColor },
-        'text'
+        colorKey
     );
 
-    // If variant is caption/code, default to textSecondary unless overridden
-    const defaultColor = (variant === 'caption' || variant === 'code')
-        ? useThemeColor({ light: lightColor, dark: darkColor }, 'textSecondary')
-        : themeColor;
-
-    const finalColor = color || defaultColor;
+    const finalColor = color || themeColor;
 
     return (
         <Text

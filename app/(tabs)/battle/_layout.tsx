@@ -5,6 +5,8 @@ export default function BattleLayout() {
         <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="campaign" />
+            <Stack.Screen name="collection" />
+            <Stack.Screen name="quick" />
         </Stack>
     );
 }

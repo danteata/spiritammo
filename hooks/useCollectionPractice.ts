@@ -83,8 +83,17 @@ export function useCollectionPractice({
 
     const loadNextScripture = () => {
         if (scriptureIndex < collectionScriptures.length - 1) {
-            setScriptureIndex(scriptureIndex + 1)
-            setCurrentScripture(collectionScriptures[scriptureIndex + 1])
+            const nextIndex = scriptureIndex + 1
+            setScriptureIndex(nextIndex)
+            setCurrentScripture(collectionScriptures[nextIndex])
+        }
+    }
+
+    const loadPreviousScripture = () => {
+        if (scriptureIndex > 0) {
+            const prevIndex = scriptureIndex - 1
+            setScriptureIndex(prevIndex)
+            setCurrentScripture(collectionScriptures[prevIndex])
         }
     }
 
@@ -97,5 +106,6 @@ export function useCollectionPractice({
         scriptureIndex,
         collectionScriptures,
         loadNextScripture,
+        loadPreviousScripture,
     }
 }

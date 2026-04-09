@@ -4,7 +4,6 @@ import {
     View,
     ScrollView,
     TouchableOpacity,
-    Text,
     Dimensions,
 } from 'react-native'
 import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
@@ -59,7 +58,7 @@ export default function TrainingScreen() {
             practice_type: 'collection_training',
             source: 'training_screen'
         })
-        router.push('/train/collection')
+        router.push('/train/drill')
     }
 
     const verseCount = scriptures?.length || 0
@@ -72,8 +71,8 @@ export default function TrainingScreen() {
     return (
         <ThemedContainer style={styles.container}>
             <ScreenHeader
-                title="PRACTICE AREA"
-                subtitle="LEARN AT YOUR PACE"
+                title="ENGAGEMENT RANGE"
+                subtitle="COMBAT READINESS TRAINING"
             />
 
             <ScrollView
@@ -90,7 +89,7 @@ export default function TrainingScreen() {
                 </View>
 
                 {/* Quick Stats */}
-                {/* <View style={styles.statsRow}>
+                <View style={styles.statsRow}>
                     <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                         <FontAwesome5 name="book" size={20} color={theme.accent} />
                         <ThemedText variant="heading" style={styles.statNumber}>{displayVerseCount}</ThemedText>
@@ -106,13 +105,13 @@ export default function TrainingScreen() {
                         <ThemedText variant="heading" style={styles.statNumber}>{userStats?.totalPracticed || 0}</ThemedText>
                         <ThemedText variant="caption" style={styles.statLabel}>Sessions</ThemedText>
                     </View>
-                </View> */}
+                </View>
 
                 {/* Load Ammunition */}
                 <View style={styles.collectionSection}>
-                    {/* <ThemedText variant="caption" style={styles.sectionTitle}>
-                        LOAD ARSENAL (OPTIONAL)
-                    </ThemedText> */}
+                    <ThemedText variant="caption" style={styles.sectionTitle}>
+                        LOAD AMMUNITION (OPTIONAL)
+                    </ThemedText>
                     <CollectionSelector
                         selectedCollection={selectedCollection}
                         onSelectCollection={setSelectedCollection}
@@ -230,6 +229,33 @@ export default function TrainingScreen() {
                             </View>
                         </ThemedCard>
                     </TouchableOpacity>
+
+                    {/* Collection Drill - Structured Practice & Quiz */}
+                    <TouchableOpacity
+                        style={styles.modeCard}
+                        onPress={handleCollectionPractice}
+                        activeOpacity={0.9}
+                    >
+                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.accent }]}>
+                            <View style={styles.modeIconContainer}>
+                                <View style={[styles.modeIcon, { backgroundColor: `${theme.accent}15` }]}>
+                                    <Ionicons name="folder" size={28} color={theme.accent} />
+                                </View>
+                            </View>
+                            <View style={styles.modeContent}>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.accent }]}>LIVE FIRE DRILL</ThemedText>
+                                <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
+                                    Focus on specific collections. Practice recording or test yourself with a quiz.
+                                </ThemedText>
+                                <View style={[styles.modeTag, { backgroundColor: `${theme.accent}15` }]}>
+                                <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.accent }]}>Tactical Drill</ThemedText>
+                                </View>
+                            </View>
+                            <View style={styles.modeArrow}>
+                                <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
+                            </View>
+                        </ThemedCard>
+                    </TouchableOpacity>
                 </View>
 
                 {/* Tips Section */}
@@ -279,72 +305,81 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     scrollContent: {
-        padding: 16,
-        paddingBottom: 100,
+        padding: 20,
+        paddingBottom: 40,
     },
     infoBanner: {
         flexDirection: 'row',
         alignItems: 'center',
         padding: 12,
-        borderRadius: 8,
-        marginBottom: 16,
-        gap: 8,
+        borderRadius: 12,
+        borderWidth: 1,
+        marginBottom: 20,
+        gap: 10,
     },
     infoText: {
         flex: 1,
+        opacity: 0.9,
+        lineHeight: 18,
     },
     statsRow: {
         flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 24,
+        gap: 12,
+        marginBottom: 25,
     },
     statCard: {
         flex: 1,
         alignItems: 'center',
-        padding: 12,
+        padding: 15,
         borderRadius: 12,
-        marginHorizontal: 4,
+        gap: 5,
     },
     statNumber: {
-        fontSize: 20,
-        marginTop: 4,
-    },
-    statLabel: {
-        fontSize: 10,
-        opacity: 0.7,
-        marginTop: 2,
-    },
-    modesSection: {
-        marginBottom: 24,
-    },
-    sectionTitle: {
-        fontSize: 11,
-        letterSpacing: 2,
-        opacity: 0.7,
-        marginBottom: 12,
+        fontSize: 22,
         fontWeight: '700',
     },
+    statLabel: {
+        opacity: 0.6,
+        fontSize: 10,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
+    },
+    collectionSection: {
+        marginBottom: 25,
+    },
+    sectionTitle: {
+        letterSpacing: 2,
+        marginBottom: 12,
+        opacity: 0.6,
+        fontWeight: '700',
+        paddingLeft: 4,
+    },
+    modesSection: {
+        gap: 16,
+    },
     modeCard: {
-        marginBottom: 10,
+        marginBottom: 4,
     },
     modeCardInner: {
         flexDirection: 'row',
-        alignItems: 'center',
         padding: 16,
-        borderRadius: 8,
+        alignItems: 'center',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255,255,255,0.05)',
     },
     primaryMode: {
-        borderWidth: 2,
+        borderWidth: 1.5,
     },
     modeIconContainer: {
-        marginRight: 12,
+        marginRight: 16,
     },
     modeIcon: {
-        width: 52,
-        height: 52,
-        borderRadius: 8,
-        alignItems: 'center',
+        width: 56,
+        height: 56,
+        borderRadius: 14,
         justifyContent: 'center',
+        alignItems: 'center',
     },
     modeContent: {
         flex: 1,
@@ -352,125 +387,45 @@ const styles = StyleSheet.create({
     modeTitle: {
         fontSize: 16,
         marginBottom: 4,
+        fontWeight: '800',
     },
     modeDescription: {
-        fontSize: 12,
-        opacity: 0.7,
+        fontSize: 13,
         lineHeight: 18,
+        opacity: 0.8,
+        marginBottom: 8,
     },
     modeTag: {
-        marginTop: 8,
+        alignSelf: 'flex-start',
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 4,
-        alignSelf: 'flex-start',
     },
     modeTagText: {
         fontSize: 10,
+        fontWeight: '700',
+        textTransform: 'uppercase',
     },
     modeArrow: {
         marginLeft: 8,
-    },
-    collectionSection: {
-        marginBottom: 24,
-    },
-    listenMode: {
-        borderWidth: 2,
+        opacity: 0.5,
     },
     tipsSection: {
-        marginBottom: 24,
+        marginTop: 30,
     },
     tipCard: {
-        padding: 16,
-        borderRadius: 8,
+        padding: 20,
+        borderRadius: 16,
+        gap: 16,
     },
     tipItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 8,
-        gap: 8,
-    },
-    tipText: {
-        flex: 1,
-        fontSize: 13,
-    },
-    chapterSelector: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 16,
-        paddingVertical: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        marginTop: 12,
         gap: 12,
     },
-    chapterSelectorContent: {
-        flex: 1,
-    },
-    chapterSelectorText: {
-        fontWeight: '600',
-        fontSize: 14,
-    },
-    chapterSelectorSubtext: {
-        fontSize: 11,
-        marginTop: 2,
-        opacity: 0.7,
-    },
-    chapterSection: {
-        marginTop: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        padding: 12,
-    },
-    chapterSectionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 8,
-        marginBottom: 12,
-    },
-    chapterSectionTitle: {
-        fontWeight: '600',
-        letterSpacing: 1,
-    },
-    chapterList: {
-        maxHeight: 200,
-    },
-    chapterItem: {
-        borderRadius: 8,
-        borderWidth: 1,
-        marginBottom: 6,
-        padding: 10,
-    },
-    chapterItemContent: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-    },
-    chapterItemInfo: {
-        flex: 1,
-    },
-    chapterItemName: {
-        fontWeight: '500',
+    tipText: {
         fontSize: 13,
-    },
-    chapterItemCount: {
-        fontSize: 11,
-        marginTop: 2,
-    },
-    chapterActions: {
-        flexDirection: 'row',
-        gap: 8,
-        marginTop: 8,
-    },
-    chapterActionButton: {
+        opacity: 0.8,
         flex: 1,
-        paddingVertical: 8,
-        borderRadius: 6,
-        borderWidth: 1,
-        alignItems: 'center',
-    },
-    chapterActionText: {
-        fontWeight: '600',
-        letterSpacing: 0.5,
     },
 })

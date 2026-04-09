@@ -41,7 +41,7 @@ export default function CampaignCard({ campaign, onPress }: CampaignCardProps) {
                     </ThemedText>
 
                     <View style={styles.campaignStats}>
-                        <View style={styles.statBadge}>
+                        <View style={[styles.statBadge, { backgroundColor: `${theme.success}15` }]}>
                             <FontAwesome5 name="check-circle" size={10} color={theme.success} style={{ marginRight: 6 }} />
                             <ThemedText variant="code" style={{ color: theme.success, fontSize: 10 }}>
                                 {campaign.completedNodes}/{campaign.totalNodes} SECURED
@@ -88,7 +88,6 @@ const styles = StyleSheet.create({
     statBadge: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: 'rgba(16, 185, 129, 0.1)',
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderRadius: 4,

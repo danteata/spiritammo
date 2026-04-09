@@ -376,8 +376,8 @@ export default function ProfileScreen() {
                 {/* Sign Out Button */}
                 {isSignedIn && (
                     <TouchableOpacity style={styles.signOutButton} onPress={handleSignOut}>
-                        <Ionicons name="log-out-outline" size={20} color="#ef4444" />
-                        <Text style={styles.signOutText}>Sign Out</Text>
+                        <Ionicons name="log-out-outline" size={20} color={theme.textSecondary} />
+                        <Text style={[styles.signOutText, { color: theme.textSecondary }]}>Sign Out</Text>
                     </TouchableOpacity>
                 )}
             </ScrollView>
@@ -672,7 +672,6 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
         marginTop: 16,
     },
     signOutText: {
-        color: '#ef4444',
         marginLeft: 8,
         fontSize: 16,
     },

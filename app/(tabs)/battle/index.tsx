@@ -102,9 +102,9 @@ export default function BattleScreen() {
                 </View>
 
                 {/* Warning Banner */}
-                <View style={[styles.warningBanner, { backgroundColor: isDark ? 'rgba(255, 107, 53, 0.15)' : '#FFFFFF', borderColor: isDark ? 'transparent' : '#B91C1C40', borderWidth: isDark ? 0 : 1.5 }]}>
-                    <Ionicons name="warning" size={18} color={isDark ? '#FF6B35' : '#B91C1C'} />
-                    <ThemedText variant="caption" style={[styles.warningText, { color: isDark ? '#FF6B35' : '#B91C1C' }]}>
+                <View style={[styles.warningBanner, { backgroundColor: isDark ? `${theme.warning}15` : theme.surface, borderColor: isDark ? 'transparent' : `${theme.warning}40`, borderWidth: isDark ? 0 : 1.5 }]}>
+                    <Ionicons name="warning" size={18} color={theme.warning} />
+                    <ThemedText variant="caption" style={[styles.warningText, { color: theme.warning }]}>
                         Battles affect your score & earn Valor Points
                     </ThemedText>
                 </View>
@@ -121,20 +121,20 @@ export default function BattleScreen() {
                         onPress={handleQuickBattle}
                         activeOpacity={0.9}
                     >
-                        <ThemedCard variant="glass" style={[styles.modeCardInner, styles.primaryMode, !isDark && { borderColor: '#B91C1C' }]}>
+                        <ThemedCard variant="glass" style={[styles.modeCardInner, styles.primaryMode, { borderColor: isDark ? `${theme.accent}30` : theme.accent }]}>
                             <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : 'rgba(185, 28, 28, 0.08)' }]}>
-                                    <Ionicons name="flash" size={28} color={isDark ? '#EF4444' : '#B91C1C'} />
+                                <View style={[styles.modeIcon, { backgroundColor: `${theme.accent}15` }]}>
+                                    <Ionicons name="flash" size={28} color={theme.accent} />
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5 }]}>QUICK SKIRMISH</ThemedText>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.accent }]}>QUICK SKIRMISH</ThemedText>
                                 <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
                                     Random verse battle. Earn VP based on accuracy. No preparation needed.
                                 </ThemedText>
                                 <View style={styles.rewardBadge}>
-                                    <FontAwesome5 name="coins" size={12} color={isDark ? '#FFD700' : '#C8A951'} />
-                                    <ThemedText variant="caption" style={[styles.rewardText, { color: isDark ? '#FFD700' : '#C8A951' }]}>+5-25 VP</ThemedText>
+                                    <FontAwesome5 name="coins" size={12} color={theme.accent} />
+                                    <ThemedText variant="caption" style={[styles.rewardText, { color: theme.accent }]}>+5-25 VP</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
@@ -149,20 +149,20 @@ export default function BattleScreen() {
                         onPress={handleCollectionBattle}
                         activeOpacity={0.9}
                     >
-                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: '#D4CBAB' }]}>
+                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.border }]}>
                             <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(34, 197, 94, 0.15)' : 'rgba(74, 124, 46, 0.08)' }]}>
-                                    <FontAwesome name="folder-open" size={24} color={isDark ? '#22C55E' : '#4A7C2E'} />
+                                <View style={[styles.modeIcon, { backgroundColor: `${theme.success}15` }]}>
+                                    <FontAwesome name="folder-open" size={24} color={theme.success} />
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5 }]}>COLLECTION ASSAULT</ThemedText>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.success }]}>COLLECTION ASSAULT</ThemedText>
                                 <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
                                     Battle through your collections. Higher accuracy = more Valor Points.
                                 </ThemedText>
                                 <View style={styles.rewardBadge}>
-                                    <FontAwesome5 name="coins" size={12} color={isDark ? '#FFD700' : '#C8A951'} />
-                                    <ThemedText variant="caption" style={[styles.rewardText, { color: isDark ? '#FFD700' : '#C8A951' }]}>+10-50 VP</ThemedText>
+                                    <FontAwesome5 name="coins" size={12} color={theme.accent} />
+                                    <ThemedText variant="caption" style={[styles.rewardText, { color: theme.accent }]}>+10-50 VP</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
@@ -303,7 +303,6 @@ const styles = StyleSheet.create({
     },
     primaryMode: {
         borderWidth: 2,
-        borderColor: 'rgba(239, 68, 68, 0.3)',
     },
     modeIconContainer: {
         marginRight: 12,

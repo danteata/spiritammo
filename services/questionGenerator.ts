@@ -1,4 +1,10 @@
-import { v4 as uuidv4 } from 'uuid';
+// Pre-generate a simple UUID alternative to avoid crypto dependency in React Native
+const uuidv4 = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
 import { Scripture } from '@/types/scripture';
 import { BOOKS } from '@/mocks/books';
 
@@ -9,12 +15,13 @@ export interface QuestionOption {
 
 export interface Question {
   id: string;
-  type: 'reference' | 'content' | 'inference' | 'multiple-select' | 'facts';
+  type: 'reference' | 'content' | 'inference' | 'multiple-select' | 'facts' | 'true-false-list';
   text: string;
   options: QuestionOption[];
-  correctAnswer?: string | string[];
+  correctAnswer?: string | string[] | Record<string, 'T' | 'F'>;
   explanation?: string;
   scriptureIds: string[];
+  points?: number;
 }
 
 export interface QuestionSet {
@@ -26,54 +33,6 @@ export interface QuestionSet {
 
 const OPTION_LABELS = ['a', 'b', 'c', 'd', 'e'] as const;
 
-const COMMON_THEMES = [
-  'Faith and Trust',
-  'Love and Compassion',
-  'Obedience to God',
-  'Prayer and Worship',
-  'Salvation and Redemption',
-  'Wisdom and Understanding',
-  'Courage and Strength',
-  'Forgiveness and Mercy',
-  'Righteousness and Justice',
-  'Hope and Perseverance',
-  'Humility and Service',
-  'Spiritual Warfare',
-  'God\'s Promises',
-  'Repentance',
-  'The Holy Spirit',
-  'Kingdom of God',
-  'Grace and Truth',
-  'Peace and Unity',
-  'Discipleship',
-  'Prophecy and Fulfillment',
-  'The Gospel',
-  'Eternal Life',
-  'The Cross',
-  'Resurrection',
-  'Sin and Death',
-  'Judgment',
-  'Blessing',
-  'Suffering',
-  'Joy',
-  'Patience',
-  'Self-Control',
-  'Gentleness',
-  'Goodness',
-  'Kindness',
-  'Thankfulness',
-  'Generosity',
-  'Leadership',
-  'Service',
-  'Witnessing',
-  'Holiness',
-  'Stewardship',
-  'Unity',
-  'Trust in God',
-  'God\'s Sovereignty',
-  'God\'s Faithfulness',
-  'The Second Coming',
-] as const;
 
 export function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];
@@ -84,81 +43,37 @@ export function shuffleArray<T>(array: T[]): T[] {
   return shuffled;
 }
 
-export function extractKeyPhrases(text: string, count: number = 3): string[] {
-  const sentences = text.split(/[.!?;]+/).map(s => s.trim()).filter(s => s.length > 10);
-  if (sentences.length === 0) return [text.substring(0, 80)];
-
-  const scored = sentences.map(s => ({
-    text: s.trim(),
-    score: s.length + (s.includes('for') || s.includes('the') || s.includes('and') ? 10 : 0),
-  }));
-
-  scored.sort((a, b) => b.score - a.score);
-  return scored.slice(0, count).map(s => s.text);
+export function getMeaningfulTruncation(text: string, maxLength: number): string {
+  if (text.length <= maxLength) return text;
+  
+  // Try to find the last sentence end within the maxLength
+  const sentenceEndMatch = text.substring(0, maxLength).match(/.*[.!?]\s/);
+  if (sentenceEndMatch) {
+    return sentenceEndMatch[0].trim();
+  }
+  
+  // If no sentence end, try to find a comma or semicolon
+  const phraseEndMatch = text.substring(0, maxLength).match(/.*[,;]\s/);
+  if (phraseEndMatch) {
+    return phraseEndMatch[0].trim();
+  }
+  
+  // Fallback to word boundary
+  const lastSpace = text.lastIndexOf(' ', maxLength);
+  if (lastSpace > maxLength * 0.7) {
+    return text.substring(0, lastSpace).trim() + '...';
+  }
+  
+  return text.substring(0, maxLength).trim() + '...';
 }
 
-export function identifyThemes(scripture: Scripture): string[] {
-  const text = scripture.text.toLowerCase();
-  const themes: string[] = [];
-
-  const themeKeywords: Record<string, string[]> = {
-    'Faith and Trust': ['faith', 'believe', 'trust', 'confidence', 'assurance'],
-    'Love and Compassion': ['love', 'compassion', 'mercy', 'kindness', 'charity'],
-    'Obedience to God': ['obey', 'command', 'commandment', 'keep', 'follow'],
-    'Prayer and Worship': ['pray', 'prayer', 'worship', 'praise', 'supplication'],
-    'Salvation and Redemption': ['save', 'salvation', 'redeem', 'redemption', 'deliver'],
-    'Wisdom and Understanding': ['wisdom', 'understand', 'knowledge', 'discern', 'wise'],
-    'Courage and Strength': ['strong', 'courage', 'strength', 'mighty', 'bold'],
-    'Forgiveness and Mercy': ['forgive', 'forgiveness', 'pardon', 'mercy', 'grace'],
-    'Righteousness and Justice': ['righteous', 'justice', 'just', 'upright', 'equity'],
-    'Hope and Perseverance': ['hope', 'endure', 'persevere', 'patient', 'steadfast'],
-    'Humility and Service': ['humble', 'humility', 'serve', 'servant', 'meek'],
-    'Spiritual Warfare': ['armor', 'battle', 'fight', 'weapon', 'enemy', 'devil', 'demon', 'stronghold', 'demolish'],
-    'God\'s Promises': ['promise', 'covenant', 'pledge', 'vow', 'swear'],
-    'Repentance': ['repent', 'repentance', 'turn', 'confess', 'sin'],
-    'The Holy Spirit': ['spirit', 'holy ghost', 'comforter', 'counselor'],
-    'Kingdom of God': ['kingdom', 'reign', 'throne', 'heaven', 'glory'],
-    'Grace and Truth': ['grace', 'truth', 'favor', 'blessing'],
-    'Peace and Unity': ['peace', 'unity', 'one', 'together', 'harmony'],
-    'Discipleship': ['disciple', 'follow', 'teach', 'learn', 'apostle'],
-    'Prophecy and Fulfillment': ['prophecy', 'prophesy', 'fulfill', 'foretell', 'declare'],
-    'The Gospel': ['gospel', 'good news', 'glad tidings'],
-    'Eternal Life': ['eternal', 'everlasting', 'eternal life'],
-    'The Cross': ['cross', 'crucified', 'crucifixion'],
-    'Resurrection': ['resurrection', 'raised', 'rise', 'rose'],
-    'Sin and Death': ['sin', 'sins', 'death', 'die', 'dead', 'perish'],
-    'Judgment': ['judgment', 'judge', 'judged', 'reckoning'],
-    'Blessing': ['bless', 'blessing', 'blessed'],
-    'Suffering': ['suffer', 'suffering', 'tribulation', 'affliction', 'trials'],
-    'Joy': ['joy', 'rejoice', 'glad', 'delight'],
-    'Patience': ['patient', 'patience', 'longsuffering'],
-    'Self-Control': ['self-control', 'temperate', 'discipline'],
-    'Gentleness': ['gentle', 'gentleness', 'meekness'],
-    'Goodness': ['good', 'goodness', 'virtue'],
-    'Kindness': ['kind', 'kindness', 'compassion'],
-    'Thankfulness': ['thank', 'thanks', 'thankful', 'thanksgiving', 'gratitude'],
-    'Generosity': ['give', 'giving', 'generous', 'liberal', 'share'],
-    'Holiness': ['holy', 'holiness', 'sanctified', 'set apart'],
-    'God\'s Sovereignty': ['sovereign', 'almighty', 'lord of all', 'ruler'],
-    'God\'s Faithfulness': ['faithful', 'faithfulness', 'steadfast', 'never fails'],
-  };
-
-  for (const [theme, keywords] of Object.entries(themeKeywords)) {
-    for (const keyword of keywords) {
-      if (text.includes(keyword)) {
-        if (!themes.includes(theme)) {
-          themes.push(theme);
-        }
-        break;
-      }
-    }
+export function extractKeyPhrases(text: string, count: number): string[] {
+  const sentences = text.split(/[.!?]+/).map(s => s.trim()).filter(s => s.length > 5);
+  // If text is short, split by commas
+  if (sentences.length < 2) {
+    return text.split(',').map(s => s.trim()).filter(s => s.length > 5).slice(0, count);
   }
-
-  if (themes.length === 0) {
-    themes.push('Faith and Trust', 'God\'s Promises', 'Righteousness and Justice');
-  }
-
-  return themes.slice(0, 6);
+  return shuffleArray(sentences).slice(0, count);
 }
 
 export function generateParaphrase(scripture: Scripture): string {
@@ -315,53 +230,6 @@ function generateRandomReferences(excludeRef: string, count: number): string[] {
   return references;
 }
 
-export function generateDistractorQuotes(correctQuote: string, allScriptures: Scripture[]): string[] {
-  const distractors: string[] = [];
-  const candidates = allScriptures.filter((s) => s.text !== correctQuote && s.text.length > 15);
-  const shuffled = shuffleArray(candidates);
-
-  for (const scripture of shuffled) {
-    if (distractors.length >= 4) break;
-
-    const phrases = extractKeyPhrases(scripture.text, 1);
-    if (phrases.length > 0 && phrases[0] !== correctQuote && !distractors.includes(phrases[0])) {
-      distractors.push(phrases[0]);
-    }
-  }
-
-  while (distractors.length < 4) {
-    const randomScripture = allScriptures[Math.floor(Math.random() * allScriptures.length)];
-    if (randomScripture.text !== correctQuote) {
-      const truncated = randomScripture.text.length > 80 ? randomScripture.text.substring(0, 77) + '...' : randomScripture.text;
-      if (!distractors.includes(truncated)) {
-        distractors.push(truncated);
-      }
-    }
-  }
-
-  return distractors.slice(0, 4);
-}
-
-export function generateDistractorThemes(correctThemes: string[]): string[] {
-  const distractors: string[] = [];
-  const available = (COMMON_THEMES as readonly string[]).filter((t) => !correctThemes.includes(t));
-  const shuffled = shuffleArray([...available]);
-
-  for (const theme of shuffled) {
-    if (distractors.length >= 4) break;
-    distractors.push(theme);
-  }
-
-  while (distractors.length < 4) {
-    const randomTheme = COMMON_THEMES[Math.floor(Math.random() * COMMON_THEMES.length)];
-    if (!distractors.includes(randomTheme)) {
-      distractors.push(randomTheme);
-    }
-  }
-
-  return distractors.slice(0, 4);
-}
-
 export function ensureUniqueOptions(options: QuestionOption[]): QuestionOption[] {
   const seen = new Set<string>();
   const unique: QuestionOption[] = [];
@@ -398,55 +266,52 @@ function buildOptions(correctLabel: string, distractors: string[]): QuestionOpti
   return shuffleArray(unique.slice(0, 5));
 }
 
-function buildMultiSelectOptions(correctLabels: string[], distractors: string[]): QuestionOption[] {
-  const correctCount = Math.min(Math.max(correctLabels.length, 2), 4);
-  const distractorCount = 5 - correctCount;
-
-  const allOptions: QuestionOption[] = [
-    ...correctLabels.slice(0, correctCount).map(l => ({ label: l, isCorrect: true })),
-    ...distractors.slice(0, distractorCount).map(d => ({ label: d, isCorrect: false })),
-  ];
-
-  const unique = ensureUniqueOptions(allOptions);
-  const shuffled = shuffleArray(unique);
-
-  return shuffled.slice(0, 5);
-}
-
 export function generateReferenceQuestion(scripture: Scripture): Question {
-  const phrases = extractKeyPhrases(scripture.text, 1);
-  const quote = phrases[0] || scripture.text.substring(0, 60);
-
   const correctRef = scripture.reference;
   const distractors = generateDistractorReferences(correctRef);
-  const options = buildOptions(correctRef, distractors);
+  
+  // Ensure we have exactly 5 options (1 correct, 4 distractors)
+  const options = buildOptions(correctRef, distractors.slice(0, 4));
+
+  const correctMap: Record<string, 'T' | 'F'> = {};
+  options.forEach(o => {
+    correctMap[o.label] = o.isCorrect ? 'T' : 'F';
+  });
 
   return {
     id: uuidv4(),
-    type: 'reference',
-    text: `The scripture "${quote}" can be found in`,
+    type: 'true-false-list',
+    text: `Evaluate whether the following passage can be found in these references: "${getMeaningfulTruncation(scripture.text, 300)}"`,
     options,
-    correctAnswer: correctRef,
-    explanation: `This passage is from ${scripture.reference}.`,
+    correctAnswer: correctMap,
+    explanation: `This passage is actually from ${scripture.reference}.`,
     scriptureIds: [scripture.id],
   };
 }
 
-export function generateContentQuestion(scripture: Scripture, allScriptures?: Scripture[]): Question {
-  const correctQuote = extractKeyPhrases(scripture.text, 1)[0] || scripture.text.substring(0, 60);
-  const distractors = allScriptures
-    ? generateDistractorQuotes(correctQuote, allScriptures)
-    : shuffleArray([...COMMON_THEMES] as string[]).slice(0, 4);
-
+export function generateContentQuestion(
+  scripture: Scripture,
+  allScriptures: Scripture[]
+): Question {
+  const correctQuote = scripture.text;
+  const otherScriptures = allScriptures.filter(s => s.id !== scripture.id);
+  const distractors = shuffleArray(otherScriptures.map(s => s.text)).slice(0, 4);
+  
+  // Ensure exactly 5 options
   const options = buildOptions(correctQuote, distractors);
+
+  const correctMap: Record<string, 'T' | 'F'> = {};
+  options.forEach(o => {
+    correctMap[o.label] = o.isCorrect ? 'T' : 'F';
+  });
 
   return {
     id: uuidv4(),
-    type: 'content',
-    text: `The following quotations can be found in ${scripture.reference}:`,
+    type: 'true-false-list',
+    text: `Which of the following quotes can be gleaned from ${scripture.reference}?`,
     options,
-    correctAnswer: correctQuote,
-    explanation: `This quotation appears in ${scripture.reference}.`,
+    correctAnswer: correctMap,
+    explanation: `The correct text for ${scripture.reference} is: "${scripture.text}"`,
     scriptureIds: [scripture.id],
   };
 }
@@ -455,341 +320,70 @@ export function generateInferenceQuestion(scripture: Scripture): Question {
   const paraphrase = generateParaphrase(scripture);
   const correctRef = scripture.reference;
   const distractors = generateDistractorReferences(correctRef);
-  const options = buildOptions(correctRef, distractors);
+  
+  // Ensure exactly 5 options
+  const options = buildOptions(correctRef, distractors.slice(0, 4));
+
+  const correctMap: Record<string, 'T' | 'F'> = {};
+  options.forEach(o => {
+    correctMap[o.label] = o.isCorrect ? 'T' : 'F';
+  });
 
   return {
     id: uuidv4(),
-    type: 'inference',
-    text: `The statement "${paraphrase.substring(0, 80)}${paraphrase.length > 80 ? '...' : ''}" can be gleaned from`,
+    type: 'true-false-list',
+    text: `Evaluate whether the internal message "${getMeaningfulTruncation(paraphrase, 300)}" can be gleaned from the following:`,
     options,
-    correctAnswer: correctRef,
+    correctAnswer: correctMap,
     explanation: `This teaching is derived from ${scripture.reference}.`,
     scriptureIds: [scripture.id],
   };
 }
 
-export function generateThematicQuestion(scripture: Scripture): Question {
-  const themes = identifyThemes(scripture);
-  const correctCount = Math.min(themes.length, 3);
-  const correctThemes = themes.slice(0, correctCount);
-  const distractors = generateDistractorThemes(correctThemes);
 
-  const options = buildMultiSelectOptions(correctThemes, distractors);
-  const correctLabels = options.filter(o => o.isCorrect).map(o => o.label);
-
-  return {
-    id: uuidv4(),
-    type: 'multiple-select',
-    text: `${scripture.reference} talks about`,
-    options,
-    correctAnswer: correctLabels,
-    explanation: `This scripture addresses themes including: ${correctThemes.join(', ')}.`,
-    scriptureIds: [scripture.id],
-  };
-}
-
-function generateFactsQuestion(scripture: Scripture): Question | null {
-  const themes = identifyThemes(scripture);
-  if (themes.length < 2) return null;
-
-  const topic = themes[0];
-  const text = scripture.text.toLowerCase();
-
-  const factPatterns: Record<string, string[]> = {
-    'Faith and Trust': [
-      'Believers are called to walk by faith',
-      'Faith is the assurance of things hoped for',
-      'Without faith it is impossible to please God',
-      'Faith comes by hearing the word of God',
-    ],
-    'Love and Compassion': [
-      'Love is patient and kind',
-      'God demonstrated His love through sacrifice',
-      'Love never fails',
-      'We are commanded to love one another',
-    ],
-    'Obedience to God': [
-      'Obedience is better than sacrifice',
-      'Those who love God keep His commandments',
-      'Blessed are those who hear and obey',
-      'Obedience demonstrates faith',
-    ],
-    'Prayer and Worship': [
-      'Believers should pray without ceasing',
-      'The prayer of a righteous person is powerful',
-      'God hears the prayers of His people',
-      'Prayer should be offered in faith',
-    ],
-    'Salvation and Redemption': [
-      'Salvation is found in no one else',
-      'Whoever calls on the name of the Lord will be saved',
-      'Salvation is a gift from God',
-      'God so loved the world that He provided salvation',
-    ],
-    'Wisdom and Understanding': [
-      'The fear of the Lord is the beginning of wisdom',
-      'Wisdom is more precious than rubies',
-      'God gives wisdom generously to those who ask',
-      'Wisdom builds her house',
-    ],
-    'Courage and Strength': [
-      'Be strong and courageous',
-      'God has not given us a spirit of fear',
-      'The Lord is my strength and my shield',
-      'Do not be afraid, for God is with you',
-    ],
-    'Forgiveness and Mercy': [
-      'God forgives those who confess their sins',
-      'We must forgive others as God forgave us',
-      'Forgiveness is found in the blood of Christ',
-      'God removes our transgressions far from us',
-    ],
-    'Righteousness and Justice': [
-      'The righteous shall live by faith',
-      'God imputes righteousness to believers',
-      'Righteousness exalts a nation',
-      'We become the righteousness of God in Christ',
-    ],
-    'Hope and Perseverance': [
-      'Hope does not disappoint',
-      'We are saved in hope',
-      'Hope anchors the soul',
-      'God is the God of hope',
-    ],
-    'Humility and Service': [
-      'God opposes the proud but gives grace to the humble',
-      'Humble yourselves under God\'s mighty hand',
-      'Whoever humbles himself will be exalted',
-      'Humility comes before honor',
-    ],
-    'Spiritual Warfare': [
-      'Believers must put on the full armor of God',
-      'Our weapons are not carnal but mighty',
-      'We wrestle not against flesh and blood',
-      'The armor includes the shield of faith',
-    ],
-    'God\'s Promises': [
-      'God\'s promises are yes and amen',
-      'God cannot lie',
-      'All God\'s promises are fulfilled in Christ',
-      'God is faithful to His promises',
-    ],
-    'Repentance': [
-      'Repent and be baptized for the forgiveness of sins',
-      'Godly sorrow produces repentance',
-      'Repentance leads to life',
-      'Turn from your wicked ways and seek the Lord',
-    ],
-    'The Holy Spirit': [
-      'The Holy Spirit empowers believers',
-      'The Spirit intercedes for us',
-      'Believers are sealed by the Holy Spirit',
-      'The Spirit produces fruit in our lives',
-    ],
-    'Kingdom of God': [
-      'The kingdom of God is within you',
-      'Seek first the kingdom of God',
-      'The kingdom of God is not eating and drinking',
-      'The kingdom of God belongs to such as these',
-    ],
-    'Grace and Truth': [
-      'Salvation is by grace through faith',
-      'God\'s grace is sufficient for all',
-      'Grace and truth came through Jesus Christ',
-      'We are justified freely by His grace',
-    ],
-    'Peace and Unity': [
-      'The peace of God surpasses understanding',
-      'God is the author of peace',
-      'Peace is a fruit of the Spirit',
-      'Christ is our peace',
-    ],
-    'Discipleship': [
-      'Disciples must deny themselves',
-      'A disciple is not above his teacher',
-      'By this all will know you are My disciples',
-      'Discipleship requires counting the cost',
-    ],
-    'Prophecy and Fulfillment': [
-      'Prophecy is a gift to be exercised',
-      'No prophecy comes from one\'s own interpretation',
-      'Prophecy confirms the word of God',
-      'The testimony of Jesus is the spirit of prophecy',
-    ],
-    'The Gospel': [
-      'The gospel is the power of God for salvation',
-      'The gospel was preached to every creature',
-      'I am not ashamed of the gospel',
-      'The gospel reveals God\'s righteousness',
-    ],
-    'Eternal Life': [
-      'Eternal life is a gift from God',
-      'Whoever believes has eternal life',
-      'Eternal life begins now',
-      'God promises eternal life to those who believe',
-    ],
-    'The Cross': [
-      'The message of the cross is foolishness to those perishing',
-      'Christ redeemed us from the curse of the law',
-      'By His wounds we are healed',
-      'The cross reconciles us to God',
-    ],
-    'Resurrection': [
-      'Christ has been raised from the dead',
-      'We too will be raised',
-      'The resurrection proves our justification',
-      'If Christ has not been raised, faith is futile',
-    ],
-    'Sin and Death': [
-      'All have sinned and fall short of God\'s glory',
-      'The wages of sin is death',
-      'Sin separates us from God',
-      'If we confess our sins, He is faithful to forgive',
-    ],
-    'Judgment': [
-      'We will all stand before God\'s judgment seat',
-      'God will judge the world in righteousness',
-      'Judgment begins with the household of God',
-      'There is a day appointed for judgment',
-    ],
-    'Blessing': [
-      'God blesses those who trust in Him',
-      'The blessing of the Lord makes rich',
-      'Blessed are those who hunger for righteousness',
-      'Every spiritual blessing is ours in Christ',
-    ],
-    'Suffering': [
-      'Suffering produces perseverance',
-      'We share in Christ\'s sufferings',
-      'Suffering is part of the Christian walk',
-      'God comforts us in all our suffering',
-    ],
-    'Joy': [
-      'The joy of the Lord is our strength',
-      'Rejoice in the Lord always',
-      'Joy comes in the morning',
-      'My soul magnifies the Lord and my spirit rejoices',
-    ],
-    'Patience': [
-      'Patience is a fruit of the Spirit',
-      'Be patient and stand firm',
-      'The Lord is patient, not wanting anyone to perish',
-      'Patience produces character',
-    ],
-    'Self-Control': [
-      'Self-control is a fruit of the Spirit',
-      'A person without self-control is like a city broken into',
-      'Exercise self-control in all things',
-      'The Spirit helps us master our desires',
-    ],
-    'Gentleness': [
-      'Gentleness is a fruit of the Spirit',
-      'Answer with gentleness',
-      'The gentleness of Christ',
-      'Let your gentleness be evident to all',
-    ],
-    'Goodness': [
-      'Goodness is a fruit of the Spirit',
-      'Do good to all people',
-      'God is good and His mercy endures forever',
-      'Let us not grow weary in doing good',
-    ],
-    'Kindness': [
-      'Be kind to one another',
-      'Kindness is a mark of God\'s children',
-      'God\'s kindness leads to repentance',
-      'Clothe yourselves with kindness',
-    ],
-    'Thankfulness': [
-      'Give thanks in all circumstances',
-      'Enter His gates with thanksgiving',
-      'Thankfulness should overflow from believers',
-      'Let thankfulness mark your prayers',
-    ],
-    'Generosity': [
-      'God loves a cheerful giver',
-      'It is more blessed to give than to receive',
-      'Generosity supplies the needs of saints',
-      'Whoever sows generously will reap generously',
-    ],
-    'Holiness': [
-      'Be holy, for I am holy',
-      'Without holiness no one will see the Lord',
-      'God has called us to holiness',
-      'Holiness adorns the house of the Lord',
-    ],
-    'God\'s Sovereignty': [
-      'God works all things according to His will',
-      'The Lord establishes the steps of the righteous',
-      'God\'s ways are higher than our ways',
-      'He does according to His will in the heavens',
-    ],
-    'God\'s Faithfulness': [
-      'Great is God\'s faithfulness',
-      'God remains faithful even when we are faithless',
-      'He who promised is faithful',
-      'God\'s faithfulness endures to all generations',
-    ],
-  };
-
-  const statements: { text: string; isCorrect: boolean }[] = [];
-
-  for (const theme of themes) {
-    const facts = factPatterns[theme];
-    if (facts) {
-      const fact = facts[Math.floor(Math.random() * facts.length)];
-      statements.push({ text: fact, isCorrect: true });
-    }
-  }
-
-  const incorrectThemes = (COMMON_THEMES as readonly string[]).filter(t => !themes.includes(t));
-  const shuffledIncorrect = shuffleArray([...incorrectThemes]);
-
-  for (const theme of shuffledIncorrect.slice(0, 3)) {
-    const facts = factPatterns[theme];
-    if (facts) {
-      const fact = facts[Math.floor(Math.random() * facts.length)];
-      statements.push({ text: fact, isCorrect: false });
-    }
-  }
-
-  while (statements.filter(s => s.isCorrect).length < 2) {
-    statements.push({ text: `This passage addresses ${themes[0]}`, isCorrect: true });
-  }
-
-  while (statements.filter(s => !s.isCorrect).length < 2) {
-    const randTheme = shuffledIncorrect[Math.floor(Math.random() * shuffledIncorrect.length)];
-    statements.push({ text: `This passage primarily addresses ${randTheme}`, isCorrect: false });
-  }
-
-  const correctStatements = statements.filter(s => s.isCorrect).slice(0, 3);
-  const incorrectStatements = statements.filter(s => !s.isCorrect).slice(0, 3);
-
-  const allOptions = shuffleArray([
-    ...correctStatements.map(s => ({ label: s.text, isCorrect: true })),
-    ...incorrectStatements.map(s => ({ label: s.text, isCorrect: false })),
+export function generateTrueFalseListQuestion(scripture: Scripture): Question {
+  const phrases = extractKeyPhrases(scripture.text, 3);
+  
+  const allStatements = shuffleArray([
+    ...phrases.map(p => ({ 
+      label: `"${p}" can be gleaned from this passage`, 
+      isCorrect: true 
+    })),
+    ...generateDistractorReferences(scripture.reference).slice(0, 2).map(r => ({
+      label: `This passage appears in ${r}`,
+      isCorrect: false
+    }))
   ]).slice(0, 5);
 
-  const hasCorrect = allOptions.some(o => o.isCorrect);
-  const hasIncorrect = allOptions.some(o => !o.isCorrect);
-  if (!hasCorrect || !hasIncorrect) return null;
+  // If we still need more distractors to reach 5
+  while (allStatements.length < 5) {
+      const randRef = generateRandomReferences(scripture.reference, 1)[0];
+      allStatements.push({
+          label: `This passage is found in ${randRef}`,
+          isCorrect: false
+      });
+  }
 
-  const correctLabels = allOptions.filter(o => o.isCorrect).map(o => o.label);
+  const correctMap: Record<string, 'T' | 'F'> = {};
+  allStatements.forEach(s => {
+    correctMap[s.label] = s.isCorrect ? 'T' : 'F';
+  });
 
   return {
     id: uuidv4(),
-    type: 'facts',
-    text: `According to ${scripture.reference}, the following are Facts About ${topic}`,
-    options: allOptions,
-    correctAnswer: correctLabels,
-    explanation: `These truths are taught in ${scripture.reference}.`,
+    type: 'true-false-list',
+    text: `Evaluate whether the following can be gleaned from ${scripture.reference}:`,
+    options: allStatements,
+    correctAnswer: correctMap,
+    explanation: `These evaluations test your comprehension of ${scripture.reference}.`,
     scriptureIds: [scripture.id],
   };
 }
 
 export function generateCollectionQuestions(
   scriptures: Scripture[],
-  collectionId: string
+  collectionId: string,
+  limit: number = 20
 ): QuestionSet {
   const questions: Question[] = [];
 
@@ -816,26 +410,20 @@ export function generateCollectionQuestions(
     }
 
     try {
-      const thematicQuestion = generateThematicQuestion(scripture);
-      questions.push(thematicQuestion);
+      const tfQuestion = generateTrueFalseListQuestion(scripture);
+      questions.push(tfQuestion);
     } catch (e) {
-      console.error(`Failed to generate thematic question for ${scripture.id}:`, e);
-    }
-
-    try {
-      const factsQuestion = generateFactsQuestion(scripture);
-      if (factsQuestion) {
-        questions.push(factsQuestion);
-      }
-    } catch (e) {
-      console.error(`Failed to generate facts question for ${scripture.id}:`, e);
+      console.error(`Failed to generate true-false question for ${scripture.id}:`, e);
     }
   }
+
+  const shuffled = shuffleArray(questions);
+  const finalQuestions = shuffled.slice(0, limit);
 
   return {
     id: `qs_${collectionId}_${Date.now()}`,
     collectionId,
-    questions,
+    questions: finalQuestions,
     generatedAt: new Date().toISOString(),
   };
 }

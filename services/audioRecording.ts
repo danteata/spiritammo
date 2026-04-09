@@ -29,13 +29,20 @@ export function useAudioRecording() {
   const [recordingResult, setRecordingResult] = useState<AudioRecordingResult | null>(null);
   const [recordingUri, setRecordingUri] = useState<string | undefined>();
 
-  // Initialize audio recorder from @siteed/expo-audio-stream
+  // Initialize audio recorder from @siteed/expo-audio-stream with safety fallback
+  const recorder = useAudioRecorder ? useAudioRecorder({}) : {
+    startRecording: async () => {},
+    stopRecording: async () => {},
+    isRecording: false,
+    durationMs: 0
+  };
+
   const {
     startRecording: startStreamRecording,
     stopRecording: stopStreamRecording,
     isRecording,
     durationMs
-  } = useAudioRecorder({});
+  } = recorder;
 
   // Start recording
   const startRecording = useCallback(async (options: AudioRecordingOptions = {}) => {

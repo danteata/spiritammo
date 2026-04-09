@@ -1,6 +1,36 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from 'expo-speech-recognition';
 import type { ExpoSpeechRecognitionOptions } from 'expo-speech-recognition';
+
+/**
+ * Lazy-load native tools to prevent crashes during route scanning.
+ * This catches errors from the native module loader itself.
+ */
+const getNativeTools = () => {
+  try {
+    // We use require instead of import to delay evaluation
+    const module = require('expo-speech-recognition');
+    return {
+      ExpoSpeechRecognitionModule: module.ExpoSpeechRecognitionModule,
+      useSpeechRecognitionEvent: module.useSpeechRecognitionEvent
+    };
+  } catch (e) {
+    console.warn('ExpoSpeechRecognition native module not found or failed to load.');
+    return {
+      ExpoSpeechRecognitionModule: null,
+      useSpeechRecognitionEvent: null
+    };
+  }
+};
+
+const { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent: rawUseSpeechRecognitionEvent } = getNativeTools();
+
+// Define a stable hook reference that swaps implementation based on module availability
+const useSafeSpeechRecognitionEvent = (ExpoSpeechRecognitionModule && rawUseSpeechRecognitionEvent)
+  ? rawUseSpeechRecognitionEvent 
+  : (_eventName: string, _callback: (event: any) => void) => {
+      // No-op hook to satisfy rules of hooks when native module is missing
+      useEffect(() => {}, []);
+    };
 
 interface UseSpeechRecognitionOptions {
   lang?: string;
@@ -30,6 +60,10 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   }, []);
 
   const checkAvailability = async () => {
+    if (!ExpoSpeechRecognitionModule) {
+      setIsAvailable(false);
+      return;
+    }
     try {
       const available = await ExpoSpeechRecognitionModule.isRecognitionAvailable();
       setIsAvailable(available);
@@ -45,19 +79,19 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   };
 
   // Event listeners
-  useSpeechRecognitionEvent('start', () => {
+  useSafeSpeechRecognitionEvent('start', () => {
     setIsRecognizing(true);
     setError(null);
     optionsRef.current.onStart?.();
   });
 
-  useSpeechRecognitionEvent('end', () => {
+  useSafeSpeechRecognitionEvent('end', () => {
     setIsRecognizing(false);
     setInterimTranscript('');
     optionsRef.current.onEnd?.();
   });
 
-  useSpeechRecognitionEvent('result', (event) => {
+  useSafeSpeechRecognitionEvent('result', (event) => {
     if (event.results && event.results.length > 0) {
       const result = event.results[0];
       const resultTranscript = result.transcript;
@@ -73,7 +107,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
     }
   });
 
-  useSpeechRecognitionEvent('error', (event) => {
+  useSafeSpeechRecognitionEvent('error', (event) => {
     const errorMessage = event.message || `Speech recognition error: ${event.error}`;
     setError(errorMessage);
     setIsRecognizing(false);
@@ -81,6 +115,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   });
 
   const requestPermissions = useCallback(async (): Promise<boolean> => {
+    if (!ExpoSpeechRecognitionModule) return false;
     try {
       const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
       setHasPermission(result.granted);
@@ -98,7 +133,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
       return false;
     }
 
-    if (!isAvailable) {
+    if (!isAvailable || !ExpoSpeechRecognitionModule) {
       setError('Speech recognition is not available on this device');
       return false;
     }
@@ -134,7 +169,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   }, [isRecognizing, isAvailable, hasPermission, requestPermissions]);
 
   const stop = useCallback(() => {
-    if (!isRecognizing) {
+    if (!isRecognizing || !ExpoSpeechRecognitionModule) {
       return;
     }
 
@@ -147,6 +182,7 @@ export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) 
   }, [isRecognizing]);
 
   const abort = useCallback(() => {
+    if (!ExpoSpeechRecognitionModule) return;
     try {
       ExpoSpeechRecognitionModule.abort();
       setIsRecognizing(false);

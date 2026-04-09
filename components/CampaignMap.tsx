@@ -198,7 +198,7 @@ export default function CampaignMap({ campaign, onNodeSelect, containerHeight }:
     return (
         <View style={styles.container}>
             <ImageBackground
-                source={require('@/assets/images/icon.png')}
+                source={require('@/assets/images/icon.jpeg')}
                 style={styles.mapBackground}
                 imageStyle={{ opacity: 0.03, resizeMode: 'repeat' }}
             >

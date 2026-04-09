@@ -46,6 +46,7 @@ export default function CollectionDrillScreen() {
         scriptureIndex,
         collectionScriptures,
         loadNextScripture,
+        loadPreviousScripture,
     } = useCollectionPractice({
         collectionId: params.collectionId as string | undefined,
         initialChapterIds: params.chapterIds ? (Array.isArray(params.chapterIds) ? params.chapterIds : [params.chapterIds]) : [],
@@ -146,8 +147,8 @@ export default function CollectionDrillScreen() {
     return (
         <ThemedContainer style={styles.container}>
             <ScreenHeader
-                title="COLLECTION DRILL"
-                subtitle="PRACTICE MODE"
+                title="LIVE FIRE DRILL"
+                subtitle="TACTICAL PRACTICE"
             />
 
             <ScrollView
@@ -207,7 +208,7 @@ export default function CollectionDrillScreen() {
                             style={[styles.quizButton, { backgroundColor: theme.accent }]}
                             onPress={() => {
                                 router.push({
-                                    pathname: '/(tabs)/train/quiz',
+                                    pathname: '/train/quiz',
                                     params: { collectionId: selectedCollection.id }
                                 })
                                 trackEvent(AnalyticsEventType.QUIZ_STARTED, {
@@ -215,27 +216,9 @@ export default function CollectionDrillScreen() {
                                 })
                             }}
                         >
-                            <Ionicons name="help-circle" size={20} color={theme.accentContrastText} />
+                            <Ionicons name="rocket" size={20} color={theme.accentContrastText} />
                             <ThemedText variant="body" style={[styles.quizButtonText, { color: theme.accentContrastText }]}>
-                                TEST KNOWLEDGE
-                            </ThemedText>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            style={[styles.quizButton, { backgroundColor: theme.accent }]}
-                            onPress={() => {
-                                router.push({
-                                    pathname: '/(tabs)/train/quiz',
-                                    params: { collectionId: selectedCollection.id }
-                                })
-                                trackEvent(AnalyticsEventType.QUIZ_STARTED, {
-                                    collection_id: selectedCollection.id,
-                                })
-                            }}
-                        >
-                            <Ionicons name="help-circle" size={20} color={theme.accentContrastText} />
-                            <ThemedText variant="body" style={[styles.quizButtonText, { color: theme.accentContrastText }]}>
-                                TEST KNOWLEDGE
+                                DEPLOY DRILL
                             </ThemedText>
                         </TouchableOpacity>
 
@@ -272,6 +255,27 @@ export default function CollectionDrillScreen() {
                                     onStealth={handleStartStealthPractice}
                                     onIntel={handleIntelPress}
                                 />
+
+                                {/* Manual Navigation */}
+                                <View style={styles.navRow}>
+                                    <TouchableOpacity 
+                                        style={[styles.navButton, { borderColor: theme.border }]}
+                                        onPress={loadPreviousScripture}
+                                        disabled={scriptureIndex === 0}
+                                    >
+                                        <Ionicons name="chevron-back" size={24} color={scriptureIndex === 0 ? theme.textSecondary : theme.accent} />
+                                        <ThemedText variant="caption" style={{ color: scriptureIndex === 0 ? theme.textSecondary : theme.accent }}>PREV</ThemedText>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity 
+                                        style={[styles.navButton, { backgroundColor: theme.surfaceHighlight, borderColor: theme.accent }]}
+                                        onPress={loadNextScripture}
+                                        disabled={scriptureIndex >= collectionScriptures.length - 1}
+                                    >
+                                        <ThemedText variant="caption" style={{ color: theme.accent, fontWeight: '700' }}>NEXT TARGET</ThemedText>
+                                        <Ionicons name="chevron-forward" size={24} color={theme.accent} />
+                                    </TouchableOpacity>
+                                </View>
                             </>
                         )}
                     </View>
@@ -434,5 +438,21 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         fontSize: 16,
         letterSpacing: 1,
+    },
+    navRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginTop: 24,
+        gap: 12,
+    },
+    navButton: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        gap: 8,
     },
 })

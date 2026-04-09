@@ -483,9 +483,9 @@ const CollectionDetailModal = React.memo(({
       console.log('🔵 [CollectionDetailModal] Using onChapterNavigate callback')
       onChapterNavigate(collection.id, chapterId)
     } else {
-      console.log('🔵 [CollectionDetailModal] Navigating to /train/collection with:', collection.id, chapterId)
+      console.log('🔵 [CollectionDetailModal] Navigating to /train/drill with:', collection.id, chapterId)
       router.push({
-        pathname: '/train/collection',
+        pathname: '/train/drill',
         params: {
           collectionId: collection.id,
           chapterIds: chapterId,

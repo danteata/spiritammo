@@ -43,28 +43,33 @@ export default function QuizScreen() {
 
     const [questionSet, setQuestionSet] = useState<QuestionSet | null>(null)
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0)
-    const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string | string[]>>({})
+    const [selectedAnswers, setSelectedAnswers] = useState<Record<string, any>>({})
     const [showResults, setShowResults] = useState(false)
-    const [score, setScore] = useState({ correct: 0, total: 0 })
+    const [points, setPoints] = useState(0)
+    const [totalPointsPossible, setTotalPointsPossible] = useState(0)
     const [isGenerating, setIsGenerating] = useState(false)
+    const [showExplanation, setShowExplanation] = useState(false)
+    const [questionLimit, setQuestionLimit] = useState(20)
+    const [showConfig, setShowConfig] = useState(true)
 
-    useEffect(() => {
-        if (collectionScriptures.length > 0 && !questionSet) {
-            generateQuestions()
-        }
-    }, [collectionScriptures])
-
-    const generateQuestions = useCallback(async () => {
+    const generateQuestions = useCallback(async (limit: number = questionLimit) => {
         if (collectionScriptures.length === 0) return
 
         setIsGenerating(true)
+        setShowConfig(false)
         try {
-            const qs = generateCollectionQuestions(collectionScriptures, collectionId)
+            const qs = generateCollectionQuestions(collectionScriptures, collectionId, limit)
             setQuestionSet(qs)
+
+            // Each question has exactly 5 options now
+            const totalOptions = qs.questions.length * 5
+            setTotalPointsPossible(totalOptions)
+
             setCurrentQuestionIndex(0)
             setSelectedAnswers({})
             setShowResults(false)
-            setScore({ correct: 0, total: 0 })
+            setPoints(0)
+            setShowExplanation(false)
 
             trackEvent(AnalyticsEventType.QUIZ_GENERATED, {
                 collection_id: collectionId,
@@ -80,79 +85,157 @@ export default function QuizScreen() {
 
     const currentQuestion = questionSet?.questions[currentQuestionIndex]
 
-    const handleSelectAnswer = useCallback((questionId: string, answer: string | string[]) => {
+    const handleSelectAnswer = useCallback((questionId: string, answer: any) => {
         setSelectedAnswers(prev => ({
             ...prev,
             [questionId]: answer,
         }))
     }, [])
 
+    const handleOptionSelect = useCallback((questionId: string, optionLabel: string, value: 'T' | 'F' | 'S') => {
+        setSelectedAnswers(prev => {
+            const currentAnswers = (prev[questionId] as Record<string, 'T' | 'F' | 'S'>) || {}
+            return {
+                ...prev,
+                [questionId]: {
+                    ...currentAnswers,
+                    [optionLabel]: value
+                }
+            }
+        })
+    }, [])
+
+    const calculateRunningScore = useCallback((answers: Record<string, any>, questions: Question[]) => {
+        let totalPoints = 0
+
+        questions.forEach(q => {
+            const answer = answers[q.id]
+            if (!answer) return
+
+            if (q.type === 'true-false-list') {
+                const correctAnswer = q.correctAnswer as Record<string, 'T' | 'F' | 'S'>
+                const userAnswers = answer as Record<string, 'T' | 'F' | 'S'>
+
+                Object.entries(correctAnswer).forEach(([label, correctChoice]) => {
+                    const userChoice = userAnswers[label] || 'S'
+                    if (userChoice === 'S') return // Skip = 0
+                    if (userChoice === correctChoice) {
+                        totalPoints += 1
+                    } else {
+                        totalPoints -= 1
+                    }
+                })
+            } else if (q.type === 'multiple-select' || q.type === 'facts') {
+                if (Array.isArray(q.correctAnswer) && Array.isArray(answer)) {
+                    const correctSet = new Set(q.correctAnswer.map(a => a.toLowerCase()))
+                    const answerSet = new Set(answer.map(a => a.toLowerCase()))
+                    const isCorrect = correctSet.size === answerSet.size &&
+                        [...correctSet].every(a => answerSet.has(a))
+                    if (isCorrect) totalPoints += 1
+                }
+            } else {
+                if (typeof q.correctAnswer === 'string' && typeof answer === 'string') {
+                    const isCorrect = q.correctAnswer.toLowerCase() === answer.toLowerCase()
+                    if (isCorrect) totalPoints += 1
+                }
+            }
+        })
+        return totalPoints
+    }, [])
+
     const handleNextQuestion = useCallback(() => {
         if (!questionSet || !currentQuestion) return
 
-        const answer = selectedAnswers[currentQuestion.id]
-        if (!answer) {
-            Toast.warning('No Answer Selected', 'Please select an answer before proceeding.')
-            return
-        }
-
-        let isCorrect = false
-        if (currentQuestion.type === 'multiple-select' || currentQuestion.type === 'facts') {
-            if (Array.isArray(currentQuestion.correctAnswer) && Array.isArray(answer)) {
-                const correctSet = new Set(currentQuestion.correctAnswer.map(a => a.toLowerCase()))
-                const answerSet = new Set(answer.map(a => a.toLowerCase()))
-                isCorrect = correctSet.size === answerSet.size &&
-                    [...correctSet].every(a => answerSet.has(a))
-            }
-        } else {
-            if (typeof currentQuestion.correctAnswer === 'string' && typeof answer === 'string') {
-                isCorrect = currentQuestion.correctAnswer.toLowerCase() === answer.toLowerCase()
-            }
-        }
-
-        if (isCorrect) {
-            setScore(prev => ({ correct: prev.correct + 1, total: prev.total + 1 }))
-        } else {
-            setScore(prev => ({ ...prev, total: prev.total + 1 }))
-        }
-
-        trackEvent(AnalyticsEventType.QUIZ_QUESTION_ANSWERED, {
-            question_id: currentQuestion.id,
-            is_correct: isCorrect,
-            question_type: currentQuestion.type,
-        })
+        const newPoints = calculateRunningScore(selectedAnswers, questionSet.questions)
+        setPoints(newPoints)
 
         if (currentQuestionIndex < questionSet.questions.length - 1) {
             setCurrentQuestionIndex(prev => prev + 1)
+            setShowExplanation(false)
         } else {
             setShowResults(true)
             trackEvent(AnalyticsEventType.QUIZ_COMPLETED, {
                 collection_id: collectionId,
-                score: score.correct + (isCorrect ? 1 : 0),
-                total: score.total + 1,
-                total_questions: questionSet.questions.length,
+                points_earned: newPoints,
+                total_possible: totalPointsPossible,
             })
         }
-    }, [questionSet, currentQuestion, selectedAnswers, currentQuestionIndex, score, collectionId, trackEvent])
+    }, [questionSet, currentQuestion, selectedAnswers, currentQuestionIndex, totalPointsPossible, collectionId, trackEvent, calculateRunningScore])
 
     const handlePreviousQuestion = useCallback(() => {
         if (currentQuestionIndex > 0) {
             setCurrentQuestionIndex(prev => prev - 1)
+            setShowExplanation(false)
         }
     }, [currentQuestionIndex])
 
     const handleRestartQuiz = useCallback(() => {
-        generateQuestions()
-    }, [generateQuestions])
+        setShowConfig(true)
+        setQuestionSet(null)
+        setShowResults(false)
+    }, [])
 
     const handleBackToCollection = useCallback(() => {
         router.back()
     }, [router])
 
+    if (showConfig) {
+        return (
+            <ThemedContainer style={styles.container}>
+                <ScreenHeader title="PRE-DRILL BRIEFING" subtitle={collection?.name} />
+                <ScrollView contentContainerStyle={styles.scrollContent}>
+                    <View style={[styles.resultsCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                        <Ionicons name="fitness" size={48} color={theme.accent} style={{ marginBottom: 16 }} />
+                        <ThemedText variant="subheading" style={{ marginBottom: 8 }}>Select Mission Length</ThemedText>
+                        <ThemedText variant="body" style={{ textAlign: 'center', opacity: 0.7, marginBottom: 24 }}>
+                            How many questions per drill?
+                        </ThemedText>
+
+                        <View style={styles.resultsActions}>
+                            {[20, 50, 100].map(limit => (
+                                <TouchableOpacity
+                                    key={limit}
+                                    style={[
+                                        styles.actionButton,
+                                        {
+                                            backgroundColor: questionLimit === limit ? theme.accent : 'transparent',
+                                            borderColor: theme.border,
+                                            borderWidth: 1
+                                        }
+                                    ]}
+                                    onPress={() => setQuestionLimit(limit)}
+                                >
+                                    <ThemedText variant="body" style={{ color: questionLimit === limit ? theme.accentContrastText : theme.text }}>
+                                        {limit} QUESTIONS
+                                    </ThemedText>
+                                </TouchableOpacity>
+                            ))}
+
+                            <TouchableOpacity
+                                style={[styles.actionButton, { backgroundColor: theme.success, marginTop: 24 }]}
+                                onPress={() => generateQuestions(questionLimit)}
+                            >
+                                <Ionicons name="rocket" size={20} color="#FFF" />
+                                <ThemedText variant="body" style={{ color: '#FFF', fontWeight: '700' }}>BEGIN DRILL</ThemedText>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.actionButton, { backgroundColor: 'transparent' }]}
+                                onPress={handleBackToCollection}
+                            >
+                                <ThemedText variant="body" style={{ color: theme.textSecondary }}>CANCEL</ThemedText>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </ScrollView>
+            </ThemedContainer>
+        )
+    }
+
     if (isGenerating || !questionSet) {
         return (
             <ThemedContainer style={styles.container}>
-                <ScreenHeader title="GENERATING QUIZ" subtitle="Preparing ammunition..." />
+                <ScreenHeader title="DRILL DEPLOYMENT" subtitle="Calibrating targets..." />
                 <View style={styles.loadingContainer}>
                     <ActivityIndicator size="large" color={theme.accent} />
                     <ThemedText variant="body" style={styles.loadingText}>
@@ -164,18 +247,18 @@ export default function QuizScreen() {
     }
 
     if (showResults) {
-        const percentage = score.total > 0 ? (score.correct / score.total) * 100 : 0
+        const percentage = totalPointsPossible > 0 ? (points / totalPointsPossible) * 100 : 0
         return (
             <ThemedContainer style={styles.container}>
-                <ScreenHeader title="MISSION REPORT" subtitle="Quiz Results" />
+                <ScreenHeader title="AFTER-ACTION REPORT" subtitle="Mission Complete" />
                 <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
                     <View style={[styles.resultsCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                         <View style={styles.scoreCircle}>
                             <ThemedText variant="title" style={[styles.scoreText, { color: theme.accent }]}>
-                                {percentage.toFixed(0)}%
+                                {Math.max(0, Math.floor(percentage))}%
                             </ThemedText>
                             <ThemedText variant="body" style={styles.scoreLabel}>
-                                {score.correct}/{score.total} Correct
+                                {points}/{totalPointsPossible} Points
                             </ThemedText>
                         </View>
 
@@ -193,7 +276,7 @@ export default function QuizScreen() {
                             ) : percentage >= 70 ? (
                                 <>
                                     <Ionicons name="star" size={48} color={theme.warning} />
-                                    <ThemedText variant="h3" style={[styles.resultsTitle, { color: theme.warning }]}>
+                                    <ThemedText variant="subheading" style={[styles.resultsTitle, { color: theme.warning }]}>
                                         Good Progress!
                                     </ThemedText>
                                     <ThemedText variant="body" style={styles.resultsDesc}>
@@ -203,7 +286,7 @@ export default function QuizScreen() {
                             ) : (
                                 <>
                                     <Ionicons name="refresh" size={48} color={theme.error} />
-                                    <ThemedText variant="h3" style={[styles.resultsTitle, { color: theme.error }]}>
+                                    <ThemedText variant="subheading" style={[styles.resultsTitle, { color: theme.error }]}>
                                         More Training Needed
                                     </ThemedText>
                                     <ThemedText variant="body" style={styles.resultsDesc}>
@@ -220,7 +303,7 @@ export default function QuizScreen() {
                             >
                                 <Ionicons name="refresh" size={20} color={theme.accentContrastText} />
                                 <ThemedText variant="body" style={[styles.actionButtonText, { color: theme.accentContrastText }]}>
-                                    RETRY MISSION
+                                    DEPLOY NEW DRILL
                                 </ThemedText>
                             </TouchableOpacity>
 
@@ -234,6 +317,50 @@ export default function QuizScreen() {
                                 </ThemedText>
                             </TouchableOpacity>
                         </View>
+                    </View>
+
+                    <View style={{ marginTop: 24 }}>
+                        <ThemedText variant="subheading" style={{ marginBottom: 16 }}>Mission Review</ThemedText>
+                        {questionSet.questions.map((q, idx) => {
+                            const userAnswer = selectedAnswers[q.id]
+                            const correctAnswer = q.correctAnswer
+
+                            return (
+                                <View key={q.id} style={[styles.reviewItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                                        <ThemedText variant="caption" style={{ color: theme.accent }}>Q{idx + 1}: {q.type.toUpperCase()}</ThemedText>
+                                    </View>
+                                    <ThemedText variant="body" style={{ marginBottom: 12 }}>{q.text}</ThemedText>
+
+                                    {q.type === 'true-false-list' ? (
+                                        <View style={{ gap: 4 }}>
+                                            {q.options.map(opt => {
+                                                const userChoice = (userAnswer as Record<string, string>)?.[opt.label] || 'S'
+                                                const correctChoice = (correctAnswer as Record<string, string>)[opt.label]
+                                                const isCorrect = userChoice === correctChoice
+
+                                                return (
+                                                    <View key={opt.label} style={styles.reviewOptionRow}>
+                                                        <ThemedText variant="caption" style={{ flex: 1 }}>{opt.label}</ThemedText>
+                                                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                                                            <ThemedText variant="caption" style={{ color: theme.textSecondary }}>YOU: {userChoice}</ThemedText>
+                                                            <ThemedText variant="caption" style={{ color: isCorrect ? theme.success : theme.error }}>
+                                                                ACTUAL: {correctChoice}
+                                                            </ThemedText>
+                                                        </View>
+                                                    </View>
+                                                )
+                                            })}
+                                        </View>
+                                    ) : (
+                                        <View style={styles.reviewOptionRow}>
+                                            <ThemedText variant="caption" style={{ color: theme.textSecondary }}>YOUR ANSWER: {JSON.stringify(userAnswer)}</ThemedText>
+                                            <ThemedText variant="caption" style={{ color: theme.success }}>CORRECT: {JSON.stringify(correctAnswer)}</ThemedText>
+                                        </View>
+                                    )}
+                                </View>
+                            )
+                        })}
                     </View>
                 </ScrollView>
             </ThemedContainer>
@@ -272,6 +399,26 @@ export default function QuizScreen() {
 
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
                 <View style={[styles.progressContainer, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                    <TouchableOpacity
+                        style={{ paddingRight: 12, borderRightWidth: 1, borderRightColor: theme.border }}
+                        onPress={() => {
+                            Alert.alert("ABORT MISSION", "Are you sure you want to end this training session? Points from your current answer will be included.", [
+                                { text: "CONTINUE DRILL", style: "cancel" },
+                                {
+                                    text: "ABORT & REPORT",
+                                    style: "destructive",
+                                    onPress: () => {
+                                        const finalPoints = calculateRunningScore(selectedAnswers, questionSet.questions)
+                                        setPoints(finalPoints)
+                                        setShowResults(true)
+                                    }
+                                }
+                            ])
+                        }}
+                    >
+                        <Ionicons name="close-circle" size={24} color={theme.error} />
+                    </TouchableOpacity>
+
                     <View style={styles.progressBar}>
                         <View
                             style={[
@@ -284,7 +431,7 @@ export default function QuizScreen() {
                         />
                     </View>
                     <ThemedText variant="caption" style={styles.progressText}>
-                        Score: {score.correct}/{score.total}
+                        Points: {points}/{totalPointsPossible}
                     </ThemedText>
                 </View>
 
@@ -293,20 +440,21 @@ export default function QuizScreen() {
                         <Ionicons
                             name={
                                 currentQuestion.type === 'reference' ? 'book' :
-                                currentQuestion.type === 'content' ? 'chatbox' :
-                                currentQuestion.type === 'inference' ? 'bulb' :
-                                currentQuestion.type === 'multiple-select' ? 'checkbox' :
-                                'list'
+                                    currentQuestion.type === 'content' ? 'chatbox' :
+                                        currentQuestion.type === 'inference' ? 'bulb' :
+                                            currentQuestion.type === 'multiple-select' ? 'checkbox' :
+                                                'list'
                             }
                             size={16}
                             color={theme.accent}
                         />
                         <ThemedText variant="caption" style={[styles.questionTypeText, { color: theme.accent }]}>
                             {currentQuestion.type === 'reference' ? 'SCRIPTURE REFERENCE' :
-                             currentQuestion.type === 'content' ? 'QUOTE IDENTIFICATION' :
-                             currentQuestion.type === 'inference' ? 'INFERENCE' :
-                             currentQuestion.type === 'multiple-select' ? 'MULTIPLE SELECT' :
-                             'FACTS'}
+                                currentQuestion.type === 'content' ? 'QUOTE IDENTIFICATION' :
+                                    currentQuestion.type === 'inference' ? 'INFERENCE' :
+                                        currentQuestion.type === 'multiple-select' ? 'MULTIPLE SELECT' :
+                                            currentQuestion.type === 'true-false-list' ? 'COLLECTION DRILL' :
+                                                'FACTS'}
                         </ThemedText>
                     </View>
 
@@ -315,82 +463,157 @@ export default function QuizScreen() {
                     </ThemedText>
 
                     <View style={styles.optionsContainer}>
-                        {currentQuestion.options.map((option, index) => {
-                            const isSelected = isMultiSelect
-                                ? selectedArray.includes(option.label)
-                                : currentAnswer === option.label
+                        {currentQuestion.type === 'true-false-list' ? (
+                            // Render T/F/Skip buttons for each option
+                            currentQuestion.options.map((option, index) => {
+                                const answers = (selectedAnswers[currentQuestion.id] as Record<string, 'T' | 'F' | 'S'>) || {}
+                                const currentChoice = answers[option.label];
 
-                            return (
-                                <TouchableOpacity
-                                    key={index}
-                                    style={[
-                                        styles.optionButton,
-                                        {
-                                            backgroundColor: isSelected
-                                                ? theme.accent
-                                                : isDark
-                                                ? 'rgba(255,255,255,0.05)'
-                                                : 'rgba(0,0,0,0.02)',
-                                            borderColor: isSelected
-                                                ? theme.accent
-                                                : theme.border,
-                                        },
-                                    ]}
-                                    onPress={() => {
-                                        if (isMultiSelect) {
-                                            const newSelection = isSelected
-                                                ? selectedArray.filter(a => a !== option.label)
-                                                : [...selectedArray, option.label]
-                                            handleSelectAnswer(currentQuestion.id, newSelection)
-                                        } else {
-                                            handleSelectAnswer(currentQuestion.id, option.label)
-                                        }
-                                    }}
-                                >
-                                    <View style={styles.optionLabel}>
+                                return (
+                                    <View key={index} style={[styles.tfRow, { borderBottomColor: theme.border }]}>
+                                        <ThemedText variant="body" style={styles.tfOptionText}>
+                                            {String.fromCharCode(97 + index)}. {option.label}
+                                        </ThemedText>
+                                        <View style={styles.tfButtonGroup}>
+                                            {(['T', 'F', 'S'] as const).map(value => {
+                                                const isSelected = currentChoice === value;
+                                                return (
+                                                    <TouchableOpacity
+                                                        key={value}
+                                                        style={[
+                                                            styles.tfButton,
+                                                            {
+                                                                backgroundColor: isSelected
+                                                                    ? (value === 'T' ? theme.success : value === 'F' ? theme.error : theme.accent)
+                                                                    : 'transparent',
+                                                                borderColor: isSelected ? 'transparent' : theme.border,
+                                                                flexDirection: 'row',
+                                                                gap: 4,
+                                                            }
+                                                        ]}
+                                                        onPress={() => handleOptionSelect(currentQuestion.id, option.label, value)}
+                                                    >
+                                                        {isSelected && (
+                                                            <Ionicons
+                                                                name="checkmark-circle"
+                                                                size={12}
+                                                                color={value === 'S' ? theme.accentContrastText : '#FFF'}
+                                                            />
+                                                        )}
+                                                        <ThemedText
+                                                            variant="caption"
+                                                            style={[
+                                                                styles.tfButtonText,
+                                                                {
+                                                                    color: isSelected
+                                                                        ? (value === 'S' ? theme.accentContrastText : '#FFF')
+                                                                        : theme.text
+                                                                }
+                                                            ]}
+                                                        >
+                                                            {value === 'T' ? 'TRUE' : value === 'F' ? 'FALSE' : 'SKIP'}
+                                                        </ThemedText>
+                                                    </TouchableOpacity>
+                                                );
+                                            })}
+                                        </View>
+                                    </View>
+                                );
+                            })
+                        ) : (
+                            // Existing multiple choice logic
+                            currentQuestion.options.map((option, index) => {
+                                const isMultiSelect = currentQuestion.type === 'multiple-select' || currentQuestion.type === 'facts'
+                                const currentAnswer = selectedAnswers[currentQuestion.id]
+                                const selectedArray = Array.isArray(currentAnswer) ? currentAnswer : []
+                                const isSelected = isMultiSelect
+                                    ? selectedArray.includes(option.label)
+                                    : currentAnswer === option.label
+
+                                return (
+                                    <TouchableOpacity
+                                        key={index}
+                                        style={[
+                                            styles.optionButton,
+                                            {
+                                                backgroundColor: isSelected
+                                                    ? theme.accent
+                                                    : isDark
+                                                        ? 'rgba(255,255,255,0.05)'
+                                                        : 'rgba(0,0,0,0.02)',
+                                                borderColor: isSelected
+                                                    ? theme.accent
+                                                    : theme.border,
+                                            },
+                                        ]}
+                                        onPress={() => {
+                                            if (isMultiSelect) {
+                                                const newSelection = isSelected
+                                                    ? selectedArray.filter(a => a !== option.label)
+                                                    : [...selectedArray, option.label]
+                                                handleSelectAnswer(currentQuestion.id, newSelection)
+                                            } else {
+                                                handleSelectAnswer(currentQuestion.id, option.label)
+                                            }
+                                        }}
+                                    >
+                                        <View style={styles.optionLabel}>
+                                            <ThemedText
+                                                variant="body"
+                                                style={[
+                                                    styles.optionLabelText,
+                                                    {
+                                                        color: isSelected
+                                                            ? theme.accentContrastText
+                                                            : theme.text,
+                                                        fontWeight: isSelected ? '700' : '500',
+                                                    },
+                                                ]}
+                                            >
+                                                {String.fromCharCode(97 + index)}.
+                                            </ThemedText>
+                                        </View>
                                         <ThemedText
                                             variant="body"
                                             style={[
-                                                styles.optionLabelText,
-                                                {
-                                                    color: isSelected
-                                                        ? theme.accentContrastText
-                                                        : theme.text,
-                                                    fontWeight: isSelected ? '700' : '500',
-                                                },
+                                                styles.optionText,
+                                                { color: isSelected ? theme.accentContrastText : theme.text },
                                             ]}
+                                            numberOfLines={2}
                                         >
-                                            {String.fromCharCode(97 + index)}.
+                                            {option.label}
                                         </ThemedText>
-                                    </View>
-                                    <ThemedText
-                                        variant="body"
-                                        style={[
-                                            styles.optionText,
-                                            { color: isSelected ? theme.accentContrastText : theme.text },
-                                        ]}
-                                        numberOfLines={2}
-                                    >
-                                        {option.label}
-                                    </ThemedText>
-                                    {isSelected && (
-                                        <Ionicons
-                                            name={isMultiSelect ? 'checkbox' : 'radio-button-on'}
-                                            size={20}
-                                            color={theme.accentContrastText}
-                                        />
-                                    )}
-                                </TouchableOpacity>
-                            )
-                        })}
+                                        {isSelected && (
+                                            <Ionicons
+                                                name={isMultiSelect ? 'checkbox' : 'radio-button-on'}
+                                                size={20}
+                                                color={theme.accentContrastText}
+                                            />
+                                        )}
+                                    </TouchableOpacity>
+                                )
+                            })
+                        )}
                     </View>
 
                     {currentQuestion.explanation && (
-                        <View style={[styles.explanationBox, { backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.05)' }]}>
-                            <Ionicons name="information-circle" size={16} color={theme.info} />
-                            <ThemedText variant="caption" style={[styles.explanationText, { color: theme.info }]}>
-                                {currentQuestion.explanation}
-                            </ThemedText>
+                        <View style={styles.hintContainer}>
+                            {!showExplanation ? (
+                                <TouchableOpacity
+                                    style={[styles.revealButton, { borderColor: theme.info }]}
+                                    onPress={() => setShowExplanation(true)}
+                                >
+                                    <Ionicons name="eye" size={16} color={theme.info} />
+                                    <ThemedText variant="caption" style={{ color: theme.info, fontWeight: '700' }}>REVEAL HUD HINT</ThemedText>
+                                </TouchableOpacity>
+                            ) : (
+                                <View style={[styles.explanationBox, { backgroundColor: isDark ? 'rgba(59,130,246,0.1)' : 'rgba(59,130,246,0.05)' }]}>
+                                    <Ionicons name="information-circle" size={16} color={theme.info} />
+                                    <ThemedText variant="caption" style={[styles.explanationText, { color: theme.info }]}>
+                                        {currentQuestion.explanation}
+                                    </ThemedText>
+                                </View>
+                            )}
                         </View>
                     )}
                 </View>
@@ -498,6 +721,51 @@ const styles = StyleSheet.create({
     optionsContainer: {
         gap: 12,
     },
+    tfRow: {
+        flexDirection: 'column',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+        gap: 8,
+    },
+    tfOptionText: {
+        fontSize: 14,
+        lineHeight: 20,
+    },
+    tfButtonGroup: {
+        flexDirection: 'row',
+        gap: 8,
+    },
+    tfButton: {
+        flex: 1,
+        height: 36,
+        borderRadius: 8,
+        borderWidth: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    tfButtonText: {
+        fontWeight: '700',
+        fontSize: 10,
+    },
+    hintContainer: {
+        marginTop: 16,
+    },
+    revealButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 8,
+        borderRadius: 8,
+        borderWidth: 1,
+        borderStyle: 'dashed',
+        gap: 8,
+    },
+    explanationBox: {
+        flexDirection: 'row',
+        padding: 12,
+        borderRadius: 10,
+        gap: 8,
+    },
     optionButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -589,5 +857,19 @@ const styles = StyleSheet.create({
     actionButtonText: {
         fontWeight: '700',
         letterSpacing: 1,
+    },
+    reviewItem: {
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1,
+        marginBottom: 12,
+    },
+    reviewOptionRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 4,
+        borderBottomWidth: 0.5,
+        borderBottomColor: 'rgba(255,255,255,0.05)',
     },
 })
