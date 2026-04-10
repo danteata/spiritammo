@@ -237,6 +237,91 @@ export default function QuizScreen() {
         router.back()
     }, [router])
 
+    const missionIntel = useMemo(() => {
+        if (!questionSet) return { wrongIds: [] as string[], distractorCounts: new Map<string, number>() }
+
+        const wrongIds = new Set<string>()
+        const distractorCounts = new Map<string, number>()
+
+        questionSet.questions.forEach(q => {
+            const userAnswer = selectedAnswers[q.id]
+            const correctAnswer = q.correctAnswer
+
+            if (q.type === 'true-false-list') {
+                const correctMap = correctAnswer as Record<string, 'T' | 'F'>
+                const userMap = (userAnswer as Record<string, 'T' | 'F' | 'S'>) || {}
+
+                let anyWrong = false
+                q.options.forEach(opt => {
+                    const userChoice = userMap[opt.label] || 'S'
+                    const correctChoice = correctMap[opt.label]
+                    if (userChoice !== 'S' && userChoice !== correctChoice) {
+                        anyWrong = true
+                        if (userChoice === 'T' && correctChoice === 'F' && opt.scriptureId) {
+                            distractorCounts.set(opt.scriptureId, (distractorCounts.get(opt.scriptureId) || 0) + 1)
+                        }
+                    }
+                })
+                if (anyWrong) {
+                    q.scriptureIds.forEach(id => wrongIds.add(id))
+                }
+            } else if (JSON.stringify(userAnswer) !== JSON.stringify(correctAnswer)) {
+                q.scriptureIds.forEach(id => wrongIds.add(id))
+            }
+        })
+
+        return { wrongIds: [...wrongIds], distractorCounts }
+    }, [questionSet, selectedAnswers])
+
+    const handleRedeployPriorityDrill = useCallback(() => {
+        if (!questionSet) return
+
+        const confusingDistractorIds = [...missionIntel.distractorCounts.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([id]) => id)
+
+        const priorityIds = Array.from(new Set([
+            ...missionIntel.wrongIds,
+            ...confusingDistractorIds,
+        ]))
+
+        if (priorityIds.length === 0) {
+            Toast.success('No missed verses yet', 'Great work.')
+            return
+        }
+
+        const priorityScriptures = priorityIds
+            .map(id => scriptures.find(s => s.id === id))
+            .filter((s): s is NonNullable<typeof s> => !!s)
+
+        if (priorityScriptures.length === 0) {
+            Toast.error('Unable to build priority drill right now.')
+            return
+        }
+
+        setIsGenerating(true)
+        try {
+            const targetLimit = Math.min(Math.max(priorityScriptures.length * 4, 8), 40)
+            const qs = generateCollectionQuestions(priorityScriptures, collectionId, targetLimit)
+            setQuestionSet(qs)
+            setTotalPointsPossible(qs.questions.length * 5)
+            setCurrentQuestionIndex(0)
+            setSelectedAnswers({})
+            setShowResults(false)
+            setShowExplanation(false)
+            setElapsedTime(0)
+            setTimedOut(false)
+            setTimerActive(true)
+            Toast.success('Priority drill ready', `${priorityScriptures.length} focus verse${priorityScriptures.length !== 1 ? 's' : ''}.`)
+        } catch (error) {
+            console.error('Failed to redeploy priority drill:', error)
+            Toast.error('Failed to redeploy priority drill', 'Please try again.')
+        } finally {
+            setIsGenerating(false)
+        }
+    }, [questionSet, missionIntel, scriptures, collectionId])
+
     useEffect(() => {
         let interval: NodeJS.Timeout
         if (timerActive) {
@@ -401,46 +486,6 @@ export default function QuizScreen() {
     if (showResults) {
         const percentage = totalPointsPossible > 0 ? (points / totalPointsPossible) * 100 : 0
 
-        const missionIntel = (() => {
-            if (!questionSet) return { wrongIds: [] as string[], distractorCounts: new Map<string, number>() }
-
-            const wrongIds = new Set<string>()
-            const distractorCounts = new Map<string, number>()
-
-            questionSet.questions.forEach(q => {
-                const userAnswer = selectedAnswers[q.id]
-                const correctAnswer = q.correctAnswer
-
-                if (q.type === 'true-false-list') {
-                    const correctMap = correctAnswer as Record<string, 'T' | 'F'>
-                    const userMap = (userAnswer as Record<string, 'T' | 'F' | 'S'>) || {}
-
-                    let anyWrong = false
-                    q.options.forEach(opt => {
-                        const userChoice = userMap[opt.label] || 'S'
-                        const correctChoice = correctMap[opt.label]
-                        if (userChoice !== 'S' && userChoice !== correctChoice) {
-                            anyWrong = true
-                            // Confusing distractor: user marked TRUE for an incorrect option that maps to a verse
-                            if (userChoice === 'T' && correctChoice === 'F' && opt.scriptureId) {
-                                distractorCounts.set(opt.scriptureId, (distractorCounts.get(opt.scriptureId) || 0) + 1)
-                            }
-                        }
-                    })
-                    if (anyWrong) {
-                        q.scriptureIds.forEach(id => wrongIds.add(id))
-                    }
-                } else {
-                    // Best-effort for future question types
-                    if (JSON.stringify(userAnswer) !== JSON.stringify(correctAnswer)) {
-                        q.scriptureIds.forEach(id => wrongIds.add(id))
-                    }
-                }
-            })
-
-            return { wrongIds: [...wrongIds], distractorCounts }
-        })()
-
         const wrongVerses = missionIntel.wrongIds
             .map(id => scriptures.find(s => s.id === id))
             .filter((s): s is NonNullable<typeof s> => !!s)
@@ -518,6 +563,16 @@ export default function QuizScreen() {
                         </View>
 
                         <View style={styles.resultsActions}>
+                            <TouchableOpacity
+                                style={[styles.actionButton, { backgroundColor: theme.warning }]}
+                                onPress={handleRedeployPriorityDrill}
+                            >
+                                <Ionicons name="flash" size={20} color="#111827" />
+                                <ThemedText variant="body" style={[styles.actionButtonText, { color: '#111827' }]}>
+                                    REDEPLOY PRIORITY DRILL
+                                </ThemedText>
+                            </TouchableOpacity>
+
                             <TouchableOpacity
                                 style={[styles.actionButton, { backgroundColor: theme.accent }]}
                                 onPress={handleRestartQuiz}
