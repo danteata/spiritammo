@@ -65,6 +65,8 @@ export default function QuizScreen() {
     const [quickAddScriptureId, setQuickAddScriptureId] = useState<string | null>(null)
     const [showQuickAdd, setShowQuickAdd] = useState(false)
     const [showCollectionPicker, setShowCollectionPicker] = useState(false)
+    const [isCreatingCollection, setIsCreatingCollection] = useState(false)
+    const [newCollectionName, setNewCollectionName] = useState('')
 
     const customCollections = collections.filter(c => !c.isSystem)
 
@@ -138,6 +140,29 @@ export default function QuizScreen() {
         } catch (error) {
             console.error('Quick Add failed:', error)
             Toast.missionFailed('Intel bridging failed. Please retry.')
+        }
+    }
+
+    const handleCreateAndQuickAdd = async () => {
+        if (!previewScriptureId || previewScriptureId === 'telemetry-unavailable') return
+        const name = newCollectionName.trim()
+        if (!name) return
+
+        try {
+            const newCollection = {
+                id: `quick_${Date.now()}`,
+                name,
+                scriptures: [],
+                createdAt: new Date().toISOString(),
+                tags: ['quick-add'],
+            }
+            await addCollection(newCollection)
+            await handleQuickAddToCollection(newCollection.id)
+            setIsCreatingCollection(false)
+            setNewCollectionName('')
+        } catch (error) {
+            console.error('Failed to create and add:', error)
+            Toast.missionFailed('Implementation failed. Please retry.')
         }
     }
 
@@ -1162,25 +1187,63 @@ export default function QuizScreen() {
                                 ) : (
                                     <View style={styles.collectionPickerContainer}>
                                         <ThemedText variant="caption" style={styles.pickerTitle}>SELECT ARSENAL BUCKET:</ThemedText>
-                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pickerScroll}>
-                                            <TouchableOpacity 
-                                                style={[styles.cancelQuickAdd, { borderColor: theme.border }]}
-                                                onPress={() => setShowCollectionPicker(false)}
-                                            >
-                                                <Ionicons name="close" size={16} color={theme.textSecondary} />
-                                            </TouchableOpacity>
-                                            {customCollections.length === 0 ? (
-                                                <ThemedText variant="caption" style={{ opacity: 0.5, marginLeft: 8 }}>No custom collections found</ThemedText>
-                                            ) : customCollections.map(c => (
+                                        {!isCreatingCollection ? (
+                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pickerScroll}>
                                                 <TouchableOpacity 
-                                                    key={c.id} 
-                                                    style={[styles.pickerItem, { backgroundColor: theme.border + '30' }]}
-                                                    onPress={() => handleQuickAddToCollection(c.id)}
+                                                    style={[styles.cancelQuickAdd, { borderColor: theme.border }]}
+                                                    onPress={() => setShowCollectionPicker(false)}
                                                 >
-                                                    <ThemedText variant="caption" style={{ fontWeight: '600' }}>{c.name}</ThemedText>
+                                                    <Ionicons name="close" size={16} color={theme.textSecondary} />
                                                 </TouchableOpacity>
-                                            ))}
-                                        </ScrollView>
+                                                
+                                                <TouchableOpacity 
+                                                    style={[styles.pickerItem, { backgroundColor: theme.accent, paddingHorizontal: 12, marginRight: 8, flexDirection: 'row', alignItems: 'center' }]}
+                                                    onPress={() => setIsCreatingCollection(true)}
+                                                >
+                                                    <Ionicons name="add" size={16} color={theme.accentContrastText} />
+                                                    <ThemedText variant="caption" style={{ fontWeight: '600', color: theme.accentContrastText, marginLeft: 4 }}>New</ThemedText>
+                                                </TouchableOpacity>
+
+                                                {customCollections.length === 0 ? (
+                                                    <ThemedText variant="caption" style={{ opacity: 0.5, marginLeft: 8 }}>No custom collections found</ThemedText>
+                                                ) : customCollections.map(c => (
+                                                    <TouchableOpacity 
+                                                        key={c.id} 
+                                                        style={[styles.pickerItem, { backgroundColor: theme.border + '30' }]}
+                                                        onPress={() => handleQuickAddToCollection(c.id)}
+                                                    >
+                                                        <ThemedText variant="caption" style={{ fontWeight: '600' }}>{c.name}</ThemedText>
+                                                    </TouchableOpacity>
+                                                ))}
+                                            </ScrollView>
+                                        ) : (
+                                            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 4 }}>
+                                                <TouchableOpacity 
+                                                    style={[styles.cancelQuickAdd, { borderColor: theme.border }]}
+                                                    onPress={() => {
+                                                        setIsCreatingCollection(false)
+                                                        setNewCollectionName('')
+                                                    }}
+                                                >
+                                                    <Ionicons name="arrow-back" size={16} color={theme.textSecondary} />
+                                                </TouchableOpacity>
+                                                <TextInput
+                                                    style={{ flex: 1, borderWidth: 1, borderColor: theme.border, borderRadius: 16, paddingHorizontal: 12, height: 36, color: theme.text, fontSize: 14 }}
+                                                    placeholder="New Collection Name..."
+                                                    placeholderTextColor={theme.textSecondary}
+                                                    value={newCollectionName}
+                                                    onChangeText={setNewCollectionName}
+                                                    autoFocus
+                                                />
+                                                <TouchableOpacity
+                                                    style={[styles.pickerItem, { backgroundColor: theme.accent, paddingHorizontal: 16, marginRight: 0 }]}
+                                                    onPress={handleCreateAndQuickAdd}
+                                                    disabled={!newCollectionName.trim()}
+                                                >
+                                                    <ThemedText variant="caption" style={{ color: theme.accentContrastText, fontWeight: 'bold' }}>CREATE</ThemedText>
+                                                </TouchableOpacity>
+                                            </View>
+                                        )}
                                     </View>
                                 )}
                             </View>

@@ -20,7 +20,7 @@ import { Collection } from '@/types/scripture'
 
 const { width } = Dimensions.get('window')
 
-type TrainingMode = 'single' | 'burst' | 'automatic'
+type TrainingMode = 'single' | 'burst' | 'automatic' | 'voice'
 
 export default function TrainingScreen() {
     const { isLoading, theme, isDark, userStats, scriptures, collections } = useAppStore()
@@ -42,9 +42,9 @@ export default function TrainingScreen() {
             collection_id: selectedCollection?.id,
             chapter_ids: selectedChapterIds.length > 0 ? selectedChapterIds.join(',') : undefined
         })
-        // Navigate to training practice screen with collection and chapter info
+        // Navigate to appropriate screen based on mode
         router.push({
-            pathname: '/train/practice',
+            pathname: mode === 'voice' ? '/train/voice' : '/train/practice',
             params: {
                 mode,
                 collectionId: selectedCollection?.id,
@@ -222,6 +222,33 @@ export default function TrainingScreen() {
                                 </ThemedText>
                                 <View style={[styles.modeTag, { backgroundColor: `${theme.warning}15` }]}>
                                     <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.warning }]}>Passive Learning</ThemedText>
+                                </View>
+                            </View>
+                            <View style={styles.modeArrow}>
+                                <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
+                            </View>
+                        </ThemedCard>
+                    </TouchableOpacity>
+
+                    {/* Voice Ops Mode - Hands-free */}
+                    <TouchableOpacity
+                        style={styles.modeCard}
+                        onPress={() => handleModeSelect('voice')}
+                        activeOpacity={0.9}
+                    >
+                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.info }]}>
+                            <View style={styles.modeIconContainer}>
+                                <View style={[styles.modeIcon, { backgroundColor: `${theme.info}15` }]}>
+                                    <Ionicons name="mic" size={28} color={theme.info || '#4dabf7'} />
+                                </View>
+                            </View>
+                            <View style={styles.modeContent}>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.info || '#4dabf7' }]}>VOICE OPS</ThemedText>
+                                <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
+                                    Hands-free drill. Listen to the target and recite the passage aloud to engage.
+                                </ThemedText>
+                                <View style={[styles.modeTag, { backgroundColor: `${theme.info || '#4dabf7'}15` }]}>
+                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.info || '#4dabf7' }]}>Audio Comms</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>

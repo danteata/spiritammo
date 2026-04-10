@@ -33,36 +33,38 @@ export default function ScriptureActionRow({
 
     return (
         <View style={styles.container}>
-            {hasStealth && (
-                <TouchableOpacity
-                    style={[styles.button, { backgroundColor: subtleBg, borderColor: subtleBorder }]}
-                    onPress={onStealth}
-                >
-                    <MaterialCommunityIcons name="incognito" size={18} color={theme.text} />
-                    <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.caption, { color: theme.text }]}>STEALTH DRILL</Text>
-                </TouchableOpacity>
-            )}
+            <View style={styles.topRow}>
+                {hasStealth && (
+                    <TouchableOpacity
+                        style={[styles.button, { backgroundColor: subtleBg, borderColor: subtleBorder }]}
+                        onPress={onStealth}
+                    >
+                        <MaterialCommunityIcons name="incognito" size={18} color={theme.text} />
+                        <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.caption, { color: theme.text }]}>STEALTH DRILL</Text>
+                    </TouchableOpacity>
+                )}
+                {hasIntel && (
+                    <TouchableOpacity
+                        style={[styles.button, { backgroundColor: buttonColor, borderColor: buttonColor }]}
+                        onPress={onIntel}
+                        disabled={isLoadingIntel}
+                    >
+                        {isLoadingIntel ? (
+                            <ActivityIndicator size="small" color={theme.accentContrastText} />
+                        ) : (
+                            <FontAwesome5 name="brain" size={16} color={theme.accentContrastText} />
+                        )}
+                        <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.caption, { color: theme.accentContrastText }]}>TACTICAL INTEL</Text>
+                    </TouchableOpacity>
+                )}
+            </View>
             {hasQuickAdd && (
                 <TouchableOpacity
-                    style={[styles.button, { backgroundColor: subtleBg, borderColor: subtleBorder }]}
+                    style={[styles.button, { backgroundColor: subtleBg, borderColor: subtleBorder, marginBottom: 0 }]}
                     onPress={onQuickAddToCollection}
                 >
                     <Ionicons name="add-circle-outline" size={18} color={theme.text} />
                     <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.caption, { color: theme.text }]}>ADD TO COLLECTION</Text>
-                </TouchableOpacity>
-            )}
-            {hasIntel && (
-                <TouchableOpacity
-                    style={[styles.button, { backgroundColor: buttonColor, borderColor: buttonColor }]}
-                    onPress={onIntel}
-                    disabled={isLoadingIntel}
-                >
-                    {isLoadingIntel ? (
-                        <ActivityIndicator size="small" color={theme.accentContrastText} />
-                    ) : (
-                        <FontAwesome5 name="brain" size={16} color={theme.accentContrastText} />
-                    )}
-                    <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.caption, { color: theme.accentContrastText }]}>TACTICAL INTEL</Text>
                 </TouchableOpacity>
             )}
         </View>
@@ -71,10 +73,14 @@ export default function ScriptureActionRow({
 
 const styles = StyleSheet.create({
     container: {
-        flexDirection: 'row',
+        flexDirection: 'column',
         gap: 12,
         marginBottom: 12,
         paddingHorizontal: 16,
+    },
+    topRow: {
+        flexDirection: 'row',
+        gap: 12,
     },
     button: {
         flex: 1,
