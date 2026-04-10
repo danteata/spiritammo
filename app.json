@@ -26,7 +26,7 @@
         "backgroundImage": "./assets/images/adaptive-icon/background.png"
       },
       "package": "com.danteata.spiritammo",
-      "versionCode": 4,
+      "versionCode": 6,
       "permissions": [
         "RECORD_AUDIO"
       ]

@@ -27,7 +27,7 @@ import { Toast } from '@/components/ui/Toast'
 import QuickAddCollectionModal from '@/components/QuickAddCollectionModal'
 
 export default function QuizScreen() {
-    const { scriptures, collections, isDark, theme, userSettings, recordQuizResults, versePerformance } = useAppStore()
+    const { scriptures, collections, isDark, theme, userSettings, recordQuizResults, versePerformance, addCollection, updateCollection } = useAppStore()
     const params = useLocalSearchParams()
     const router = useRouter()
     const { trackEvent } = useAnalytics()
@@ -272,6 +272,53 @@ export default function QuizScreen() {
 
         return { wrongIds: [...wrongIds], distractorCounts }
     }, [questionSet, selectedAnswers])
+
+    const handleAutoBuildStrugglingCollection = useCallback(async () => {
+        if (!questionSet || !collection) return
+
+        const confusingDistractorIds = [...missionIntel.distractorCounts.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([id]) => id)
+
+        const priorityIds = Array.from(new Set([
+            ...missionIntel.wrongIds,
+            ...confusingDistractorIds,
+        ]))
+
+        if (priorityIds.length === 0) {
+            Toast.success('No missed verses yet', 'Great work.')
+            return
+        }
+
+        const strugglingId = `struggling-${collection.id}`
+        const strugglingName = `Struggling: ${collection.name}`
+        
+        const existingStruggling = collections.find(c => c.id === strugglingId)
+
+        if (existingStruggling) {
+            const combinedScriptures = Array.from(new Set([...existingStruggling.scriptures, ...priorityIds]))
+            const success = await updateCollection({
+                ...existingStruggling,
+                scriptures: combinedScriptures
+            })
+            if (success) {
+                Toast.success('Struggling collection updated', `${priorityIds.length} new targets merged.`)
+            }
+        } else {
+            const success = await addCollection({
+                id: strugglingId,
+                name: strugglingName,
+                description: `Automatically identified targets from training missions on ${collection.name}.`,
+                scriptures: priorityIds,
+                createdAt: new Date().toISOString(),
+                tags: ['struggling', collection.name]
+            })
+            if (success) {
+                Toast.success('Struggling collection created', `${priorityIds.length} focus verses identified.`)
+            }
+        }
+    }, [questionSet, missionIntel, collection, collections, addCollection, updateCollection])
 
     const handleRedeployPriorityDrill = useCallback(() => {
         if (!questionSet) return
@@ -570,6 +617,16 @@ export default function QuizScreen() {
                                 <Ionicons name="flash" size={20} color="#111827" />
                                 <ThemedText variant="body" style={[styles.actionButtonText, { color: '#111827' }]}>
                                     REDEPLOY PRIORITY DRILL
+                                </ThemedText>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.actionButton, { backgroundColor: theme.warning, opacity: 0.9, marginTop: 8 }]}
+                                onPress={handleAutoBuildStrugglingCollection}
+                            >
+                                <Ionicons name="save" size={20} color="#111827" />
+                                <ThemedText variant="body" style={[styles.actionButtonText, { color: '#111827' }]}>
+                                    AUTO-BUILD STRUGGLING COLLECTION
                                 </ThemedText>
                             </TouchableOpacity>
 
