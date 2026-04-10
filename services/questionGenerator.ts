@@ -11,6 +11,7 @@ import { BOOKS } from '@/mocks/books';
 export interface QuestionOption {
   label: string;
   isCorrect: boolean;
+  scriptureId?: string;
 }
 
 export interface Question {
@@ -245,45 +246,74 @@ export function ensureUniqueOptions(options: QuestionOption[]): QuestionOption[]
   return unique;
 }
 
-function buildOptions(correctLabel: string, distractors: string[], type: 'REFERENCE' | 'CONTENT', allScriptures: Scripture[] = []): QuestionOption[] {
+function buildReferenceOptions(
+  correctLabel: string,
+  correctScriptureId: string,
+  distractors: string[],
+  scripturesInScope: Scripture[] = []
+): QuestionOption[] {
   const allOptions: QuestionOption[] = [
-    { label: correctLabel, isCorrect: true },
-    ...distractors.slice(0, 4).map(d => ({ label: d, isCorrect: false })),
-  ];
+    { label: correctLabel, isCorrect: true, scriptureId: correctScriptureId },
+    ...distractors.slice(0, 4).map(d => {
+      const match = scripturesInScope.find(s => s.reference.trim().toLowerCase() === d.trim().toLowerCase())
+      return { label: d, isCorrect: false, scriptureId: match?.id }
+    }),
+  ]
 
   const unique = ensureUniqueOptions(allOptions);
 
   while (unique.length < 5) {
-    let filler = '';
-    if (type === 'REFERENCE') {
-      const randomBook = BOOKS[Math.floor(Math.random() * BOOKS.length)];
-      const ch = Math.floor(Math.random() * randomBook.chapters) + 1;
-      const v = Math.floor(Math.random() * 20) + 1;
-      filler = `${randomBook.name} ${ch}:${v}`;
-    } else {
-      // Content filler
-      if (allScriptures.length > 5) {
-        const randIdx = Math.floor(Math.random() * allScriptures.length);
-        filler = getMeaningfulTruncation(allScriptures[randIdx].text, 100);
-      } else {
-        filler = "Follow the path of righteousness and truth in all things.";
-      }
-    }
+    const randomBook = BOOKS[Math.floor(Math.random() * BOOKS.length)]
+    const ch = Math.floor(Math.random() * randomBook.chapters) + 1
+    const v = Math.floor(Math.random() * 20) + 1
+    const filler = `${randomBook.name} ${ch}:${v}`
 
     if (!unique.some(o => o.label.toLowerCase() === filler.toLowerCase())) {
-      unique.push({ label: filler, isCorrect: false });
+      const match = scripturesInScope.find(s => s.reference.trim().toLowerCase() === filler.trim().toLowerCase())
+      unique.push({ label: filler, isCorrect: false, scriptureId: match?.id })
     }
   }
 
   return shuffleArray(unique.slice(0, 5));
 }
 
-export function generateReferenceQuestion(scripture: Scripture): Question {
+function buildContentOptions(
+  correctScripture: Scripture,
+  scripturesInScope: Scripture[],
+): QuestionOption[] {
+  const otherScriptures = scripturesInScope.filter(s => s.id !== correctScripture.id)
+  const shuffled = shuffleArray(otherScriptures)
+
+  const distractors: QuestionOption[] = shuffled.slice(0, 4).map(s => ({
+    label: s.text,
+    isCorrect: false,
+    scriptureId: s.id,
+  }))
+
+  const allOptions: QuestionOption[] = [
+    { label: correctScripture.text, isCorrect: true, scriptureId: correctScripture.id },
+    ...distractors,
+  ]
+
+  const unique = ensureUniqueOptions(allOptions)
+  while (unique.length < 5) {
+    // Fallback filler: prefer scripture-backed text if we can, otherwise a generic statement
+    const fillerScripture = scripturesInScope[Math.floor(Math.random() * Math.max(1, scripturesInScope.length))]
+    const filler = fillerScripture?.text || "Follow the path of righteousness and truth in all things."
+    if (!unique.some(o => o.label.toLowerCase() === filler.toLowerCase())) {
+      unique.push({ label: filler, isCorrect: false, scriptureId: fillerScripture?.id })
+    }
+  }
+
+  return shuffleArray(unique.slice(0, 5))
+}
+
+export function generateReferenceQuestion(scripture: Scripture, scripturesInScope: Scripture[] = []): Question {
   const correctRef = scripture.reference;
   const distractors = generateDistractorReferences(correctRef);
   
   // Ensure we have exactly 5 options (1 correct, 4 distractors)
-  const options = buildOptions(correctRef, distractors.slice(0, 4), 'REFERENCE');
+  const options = buildReferenceOptions(correctRef, scripture.id, distractors.slice(0, 4), scripturesInScope);
 
   const correctMap: Record<string, 'T' | 'F'> = {};
   options.forEach(o => {
@@ -296,7 +326,7 @@ export function generateReferenceQuestion(scripture: Scripture): Question {
     text: `Evaluate whether the following passage can be found in these references: "${getMeaningfulTruncation(scripture.text, 300)}"`,
     options,
     correctAnswer: correctMap,
-    explanation: `This passage is actually from ${scripture.reference}.`,
+    explanation: `${scripture.reference}: ${scripture.text}`,
     scriptureIds: [scripture.id],
   };
 }
@@ -305,12 +335,7 @@ export function generateContentQuestion(
   scripture: Scripture,
   allScriptures: Scripture[]
 ): Question {
-  const correctQuote = scripture.text;
-  const otherScriptures = allScriptures.filter(s => s.id !== scripture.id);
-  const distractors = shuffleArray(otherScriptures.map(s => s.text)).slice(0, 4);
-  
-  // Ensure exactly 5 options
-  const options = buildOptions(correctQuote, distractors, 'CONTENT', allScriptures);
+  const options = buildContentOptions(scripture, allScriptures)
 
   const correctMap: Record<string, 'T' | 'F'> = {};
   options.forEach(o => {
@@ -323,18 +348,17 @@ export function generateContentQuestion(
     text: `Which of the following quotes can be gleaned from ${scripture.reference}?`,
     options,
     correctAnswer: correctMap,
-    explanation: `The correct text for ${scripture.reference} is: "${scripture.text}"`,
+    explanation: `${scripture.reference}: ${scripture.text}`,
     scriptureIds: [scripture.id],
   };
 }
 
-export function generateInferenceQuestion(scripture: Scripture): Question {
-  const paraphrase = generateParaphrase(scripture);
+export function generateInferenceQuestion(scripture: Scripture, scripturesInScope: Scripture[] = []): Question {
   const correctRef = scripture.reference;
   const distractors = generateDistractorReferences(correctRef);
   
   // Ensure exactly 5 options
-  const options = buildOptions(correctRef, distractors.slice(0, 4), 'REFERENCE');
+  const options = buildReferenceOptions(correctRef, scripture.id, distractors.slice(0, 4), scripturesInScope);
 
   const correctMap: Record<string, 'T' | 'F'> = {};
   options.forEach(o => {
@@ -344,10 +368,10 @@ export function generateInferenceQuestion(scripture: Scripture): Question {
   return {
     id: uuidv4(),
     type: 'true-false-list',
-    text: `Evaluate whether the internal message "${getMeaningfulTruncation(paraphrase, 300)}" can be gleaned from the following:`,
+    text: `Evaluate whether the following passage can be gleaned from the following: "${getMeaningfulTruncation(scripture.text, 300)}"`,
     options,
     correctAnswer: correctMap,
-    explanation: `This teaching is derived from ${scripture.reference}.`,
+    explanation: `${scripture.reference}: ${scripture.text}`,
     scriptureIds: [scripture.id],
   };
 }
@@ -389,7 +413,7 @@ export function generateTrueFalseListQuestion(scripture: Scripture, allScripture
     text: `Evaluate whether the following can be gleaned from ${scripture.reference}:`,
     options: allStatements,
     correctAnswer: correctMap,
-    explanation: `These evaluations test your comprehension of ${scripture.reference}.`,
+    explanation: `${scripture.reference}: ${scripture.text}`,
     scriptureIds: [scripture.id],
   };
 }
@@ -403,7 +427,7 @@ export function generateCollectionQuestions(
 
   for (const scripture of scriptures) {
     try {
-      const refQuestion = generateReferenceQuestion(scripture);
+      const refQuestion = generateReferenceQuestion(scripture, scriptures);
       questions.push(refQuestion);
     } catch (e) {
       console.error(`Failed to generate reference question for ${scripture.id}:`, e);
@@ -417,7 +441,7 @@ export function generateCollectionQuestions(
     }
 
     try {
-      const inferenceQuestion = generateInferenceQuestion(scripture);
+      const inferenceQuestion = generateInferenceQuestion(scripture, scriptures);
       questions.push(inferenceQuestion);
     } catch (e) {
       console.error(`Failed to generate inference question for ${scripture.id}:`, e);

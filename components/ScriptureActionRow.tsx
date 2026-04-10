@@ -7,6 +7,7 @@ import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 interface ScriptureActionRowProps {
     onStealth?: () => void
     onIntel?: () => void
+    onQuickAddToCollection?: () => void
     isLoadingIntel?: boolean
     accentColor?: string
 }
@@ -14,6 +15,7 @@ interface ScriptureActionRowProps {
 export default function ScriptureActionRow({
     onStealth,
     onIntel,
+    onQuickAddToCollection,
     isLoadingIntel = false,
     accentColor,
 }: ScriptureActionRowProps) {
@@ -21,8 +23,9 @@ export default function ScriptureActionRow({
 
     const hasStealth = Boolean(onStealth)
     const hasIntel = Boolean(onIntel)
+    const hasQuickAdd = Boolean(onQuickAddToCollection)
 
-    if (!hasStealth && !hasIntel) return null
+    if (!hasStealth && !hasIntel && !hasQuickAdd) return null
 
     const buttonColor = accentColor || theme.accent
     const subtleBg = isDark ? 'rgba(255,255,255,0.12)' : `${theme.accent}99`
@@ -37,6 +40,15 @@ export default function ScriptureActionRow({
                 >
                     <MaterialCommunityIcons name="incognito" size={18} color={theme.text} />
                     <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.caption, { color: theme.text }]}>STEALTH DRILL</Text>
+                </TouchableOpacity>
+            )}
+            {hasQuickAdd && (
+                <TouchableOpacity
+                    style={[styles.button, { backgroundColor: subtleBg, borderColor: subtleBorder }]}
+                    onPress={onQuickAddToCollection}
+                >
+                    <Ionicons name="add-circle-outline" size={18} color={theme.text} />
+                    <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.caption, { color: theme.text }]}>ADD TO COLLECTION</Text>
                 </TouchableOpacity>
             )}
             {hasIntel && (

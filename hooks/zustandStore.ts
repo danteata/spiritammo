@@ -31,6 +31,7 @@ import { createCollectionSlice, CollectionSlice } from '@/hooks/stores/createCol
 import { createUserSlice, UserSlice } from '@/hooks/stores/createUserSlice'
 import { createCampaignSlice, CampaignSlice } from '@/hooks/stores/createCampaignSlice'
 import { analytics, AnalyticsEvents } from '@/services/analytics'
+import type { Question } from '@/services/questionGenerator'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,11 @@ type AppState = AvatarSlice &
     isLoading: boolean
     squadMembers: SquadMember[]
     squadChallenges: SquadChallenge[]
+
+    // Quiz intelligence (local-only)
+    versePerformance: Record<string, { seen: number; wrong: number; lastWrongAt?: string }>
+    distractorPerformance: Record<string, { timesFooled: number; lastFooledAt?: string }>
+    recordQuizResults: (questions: Question[], selectedAnswers: Record<string, any>) => Promise<void>
 
     // Init
     initializeAppData: () => Promise<void>
@@ -68,6 +74,58 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
   isLoading: true,
   squadMembers: [],
   squadChallenges: [],
+  versePerformance: {},
+  distractorPerformance: {},
+
+  recordQuizResults: async (questions, selectedAnswers) => {
+    const versePerf = { ...get().versePerformance }
+    const distractorPerf = { ...get().distractorPerformance }
+    const nowIso = new Date().toISOString()
+
+    questions.forEach((q) => {
+      const userAnswer = selectedAnswers[q.id]
+      const correctAnswer = q.correctAnswer
+
+      let gotWrong = false
+
+      if (q.type === 'true-false-list') {
+        const correctMap = correctAnswer as Record<string, 'T' | 'F'>
+        const userMap = (userAnswer as Record<string, 'T' | 'F' | 'S'>) || {}
+        q.options.forEach((opt) => {
+          const userChoice = userMap[opt.label] || 'S'
+          const correctChoice = correctMap[opt.label]
+          if (userChoice !== 'S' && userChoice !== correctChoice) {
+            gotWrong = true
+
+            if (userChoice === 'T' && correctChoice === 'F' && opt.scriptureId) {
+              const prev = distractorPerf[opt.scriptureId] || { timesFooled: 0 }
+              distractorPerf[opt.scriptureId] = {
+                timesFooled: prev.timesFooled + 1,
+                lastFooledAt: nowIso,
+              }
+            }
+          }
+        })
+      } else {
+        gotWrong = JSON.stringify(userAnswer) !== JSON.stringify(correctAnswer)
+      }
+
+      q.scriptureIds.forEach((sid) => {
+        const prev = versePerf[sid] || { seen: 0, wrong: 0 }
+        versePerf[sid] = {
+          seen: prev.seen + 1,
+          wrong: prev.wrong + (gotWrong ? 1 : 0),
+          lastWrongAt: gotWrong ? nowIso : prev.lastWrongAt,
+        }
+      })
+    })
+
+    set({ versePerformance: versePerf, distractorPerformance: distractorPerf })
+    await AsyncStorage.multiSet([
+      ['quiz_verse_perf', JSON.stringify(versePerf)],
+      ['quiz_distractor_perf', JSON.stringify(distractorPerf)],
+    ])
+  },
 
   // ─── Initialization ───────────────────────────────────────────────────────
 
@@ -82,8 +140,19 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
         await get().loadAvatarData()
 
         // Batch all AsyncStorage reads into a single call (perf: 3 round-trips → 1)
-        const [[, storedSettings], [, storedCampaigns], [, storedStats]] =
-          await AsyncStorage.multiGet(['user_settings', 'user_campaigns', 'user_stats'])
+        const [
+          [, storedSettings],
+          [, storedCampaigns],
+          [, storedStats],
+          [, storedVersePerf],
+          [, storedDistractorPerf],
+        ] = await AsyncStorage.multiGet([
+          'user_settings',
+          'user_campaigns',
+          'user_stats',
+          'quiz_verse_perf',
+          'quiz_distractor_perf',
+        ])
 
         // Load user settings
         if (storedSettings) {
@@ -133,6 +202,24 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
               await AsyncStorage.setItem('user_stats', JSON.stringify(stats))
               set({ userStats: stats })
             }
+          }
+        }
+
+        if (storedVersePerf) {
+          try {
+            set({ versePerformance: JSON.parse(storedVersePerf) })
+          } catch {
+            await AsyncStorage.removeItem('quiz_verse_perf')
+            set({ versePerformance: {} })
+          }
+        }
+
+        if (storedDistractorPerf) {
+          try {
+            set({ distractorPerformance: JSON.parse(storedDistractorPerf) })
+          } catch {
+            await AsyncStorage.removeItem('quiz_distractor_perf')
+            set({ distractorPerformance: {} })
           }
         }
 

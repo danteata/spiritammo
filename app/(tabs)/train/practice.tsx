@@ -27,6 +27,7 @@ import { generateBattleIntel } from '@/services/battleIntelligence'
 import { militaryRankingService } from '@/services/militaryRanking'
 import ValorPointsService from '@/services/valorPoints'
 import { Toast } from '@/components/ui/Toast'
+import QuickAddCollectionModal from '@/components/QuickAddCollectionModal'
 
 const AUTO_ADVANCE_DELAY = 3000 // ms delay between auto-pilot verses
 
@@ -38,6 +39,7 @@ export default function TrainingPracticeScreen() {
         theme,
         userSettings,
         userStats,
+        versePerformance,
     } = useAppStore()
 
     const params = useLocalSearchParams()
@@ -137,6 +139,7 @@ export default function TrainingPracticeScreen() {
     const [isAutoReading, setIsAutoReading] = useState(false)
     const [autoVersesCount, setAutoVersesCount] = useState(0)
     const [isAutoPaused, setIsAutoPaused] = useState(false)
+    const [showQuickAdd, setShowQuickAdd] = useState(false)
 
     // Refs
     const burstTimerRef = useRef<NodeJS.Timeout | null>(null)
@@ -161,9 +164,36 @@ export default function TrainingPracticeScreen() {
 
         setIsLoadingScripture(true)
 
-        // Find a random scripture not equal to current if possible
+        const pickWeighted = () => {
+            // Prefer weak verses in automatic/collection modes
+            if (!(trainingMode === 'automatic' || trainingMode === 'collection')) return null
+            if (!versePerformance) return null
+
+            const candidates = scriptures.filter(s => !currentScripture || s.id !== currentScripture.id)
+            if (candidates.length === 0) return null
+
+            const weights = candidates.map(s => {
+                const perf = versePerformance[s.id]
+                const seen = perf?.seen ?? 0
+                const wrong = perf?.wrong ?? 0
+                const weakness = (wrong + 1) / (seen + 2) // 0..1-ish, higher = weaker
+                return Math.max(0.15, Math.min(2.5, weakness * 2.2))
+            })
+
+            const total = weights.reduce((sum, w) => sum + w, 0)
+            let r = Math.random() * total
+            for (let i = 0; i < candidates.length; i++) {
+                r -= weights[i]
+                if (r <= 0) return candidates[i]
+            }
+            return candidates[candidates.length - 1]
+        }
+
+        const weighted = pickWeighted()
         let nextScripture: Scripture
-        if (scriptures.length > 1) {
+        if (weighted) {
+            nextScripture = weighted
+        } else if (scriptures.length > 1) {
             let randomIndex = Math.floor(Math.random() * scriptures.length)
             while (currentScripture && scriptures[randomIndex].id === currentScripture.id) {
                 randomIndex = Math.floor(Math.random() * scriptures.length)
@@ -183,7 +213,7 @@ export default function TrainingPracticeScreen() {
         setHistory(prev => [...prev.slice(0, historyIndex + 1), nextScripture])
         setHistoryIndex(prev => prev + 1)
         setIsLoadingScripture(false)
-    }, [scriptures, currentScripture, historyIndex])
+    }, [scriptures, currentScripture, historyIndex, trainingMode, versePerformance])
 
     const loadPreviousScripture = useCallback(() => {
         if (historyIndex <= 0) return
@@ -706,6 +736,7 @@ export default function TrainingPracticeScreen() {
                         <ScriptureActionRow
                             onStealth={handleStartStealthPractice}
                             onIntel={handleShowIntel}
+                            onQuickAddToCollection={() => setShowQuickAdd(true)}
                             isLoadingIntel={isLoadingIntel}
                             accentColor="#EF4444"
                         />
@@ -728,6 +759,12 @@ export default function TrainingPracticeScreen() {
                     </View>
                 )}
             </ScrollView>
+
+            <QuickAddCollectionModal
+                isVisible={showQuickAdd}
+                scriptureId={currentScripture?.id || null}
+                onClose={() => setShowQuickAdd(false)}
+            />
 
             {selectedCollection?.isChapterBased && selectedCollection.chapters && (
                 <CollectionChapterSelector

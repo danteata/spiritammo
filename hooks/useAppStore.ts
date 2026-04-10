@@ -37,6 +37,8 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const squadMembers = useZustandStore((s) => s.squadMembers)
   const squadChallenges = useZustandStore((s) => s.squadChallenges)
   const isLoading = useZustandStore((s) => s.isLoading)
+  const versePerformance = useZustandStore((s) => s.versePerformance)
+  const distractorPerformance = useZustandStore((s) => s.distractorPerformance)
 
   // Avatar selectors
   const avatarInventory = useZustandStore((s) => s.avatarInventory)
@@ -67,6 +69,7 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const updateChallengeProgress = useZustandStore((s) => s.updateChallengeProgress)
   const addSquadMember = useZustandStore((s) => s.addSquadMember)
   const addSquadChallenge = useZustandStore((s) => s.addSquadChallenge)
+  const recordQuizResults = useZustandStore((s) => s.recordQuizResults)
 
   // Avatar actions
   const purchaseItem = useZustandStore((s) => s.purchaseItem)
@@ -98,6 +101,8 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     squadMembers,
     squadChallenges,
     isLoading,
+    versePerformance,
+    distractorPerformance,
 
     // Avatar Data
     avatarInventory,
@@ -128,6 +133,7 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     updateChallengeProgress,
     addSquadMember,
     addSquadChallenge,
+    recordQuizResults,
 
     // Avatar Actions
     purchaseItem,

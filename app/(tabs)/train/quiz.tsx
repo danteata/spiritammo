@@ -4,6 +4,7 @@ import {
     View,
     ScrollView,
     TouchableOpacity,
+    Modal,
     ActivityIndicator,
     Alert,
     Platform,
@@ -23,9 +24,10 @@ import {
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
 import { Toast } from '@/components/ui/Toast'
+import QuickAddCollectionModal from '@/components/QuickAddCollectionModal'
 
 export default function QuizScreen() {
-    const { scriptures, collections, isDark, theme, userSettings } = useAppStore()
+    const { scriptures, collections, isDark, theme, userSettings, recordQuizResults, versePerformance } = useAppStore()
     const params = useLocalSearchParams()
     const router = useRouter()
     const { trackEvent } = useAnalytics()
@@ -59,6 +61,14 @@ export default function QuizScreen() {
     const [timedOut, setTimedOut] = useState(false)
     const [isCustomTime, setIsCustomTime] = useState(false)
     const [customMins, setCustomMins] = useState('')
+    const [previewScriptureId, setPreviewScriptureId] = useState<string | null>(null)
+    const [quickAddScriptureId, setQuickAddScriptureId] = useState<string | null>(null)
+    const [showQuickAdd, setShowQuickAdd] = useState(false)
+
+    const previewScripture = useMemo(() => {
+        if (!previewScriptureId) return null
+        return scriptures.find(s => s.id === previewScriptureId) || null
+    }, [previewScriptureId, scriptures])
 
 
     const formatTime = useCallback((seconds: number) => {
@@ -74,6 +84,19 @@ export default function QuizScreen() {
         setShowConfig(false)
         try {
             const qs = generateCollectionQuestions(collectionScriptures, collectionId, limit)
+            if (versePerformance && Object.keys(versePerformance).length > 0) {
+                const weakness = (scriptureId: string) => {
+                    const perf = versePerformance[scriptureId]
+                    const seen = perf?.seen ?? 0
+                    const wrong = perf?.wrong ?? 0
+                    return (wrong + 1) / (seen + 2)
+                }
+                qs.questions = [...qs.questions].sort((a, b) => {
+                    const wa = Math.max(...a.scriptureIds.map(weakness))
+                    const wb = Math.max(...b.scriptureIds.map(weakness))
+                    return wb - wa
+                })
+            }
             setQuestionSet(qs)
 
             // Each question has exactly 5 options now
@@ -168,13 +191,18 @@ export default function QuizScreen() {
         setShowResults(true)
         setTimedOut(isTimedOut)
 
+        // Persist lightweight local training intel (wrong verses + confusing distractors)
+        recordQuizResults(questionSet.questions, selectedAnswers).catch((e) => {
+            console.warn('Failed to record quiz results:', e)
+        })
+
         trackEvent(AnalyticsEventType.QUIZ_COMPLETED, {
             collection_id: collectionId,
             points_earned: finalPoints,
             total_possible: totalPointsPossible,
             timed_out: isTimedOut
         })
-    }, [questionSet, selectedAnswers, calculateRunningScore, collectionId, trackEvent, totalPointsPossible])
+    }, [questionSet, selectedAnswers, calculateRunningScore, collectionId, trackEvent, totalPointsPossible, recordQuizResults])
 
     const handleNextQuestion = useCallback(() => {
         if (!questionSet || !currentQuestion) return
@@ -372,6 +400,57 @@ export default function QuizScreen() {
 
     if (showResults) {
         const percentage = totalPointsPossible > 0 ? (points / totalPointsPossible) * 100 : 0
+
+        const missionIntel = (() => {
+            if (!questionSet) return { wrongIds: [] as string[], distractorCounts: new Map<string, number>() }
+
+            const wrongIds = new Set<string>()
+            const distractorCounts = new Map<string, number>()
+
+            questionSet.questions.forEach(q => {
+                const userAnswer = selectedAnswers[q.id]
+                const correctAnswer = q.correctAnswer
+
+                if (q.type === 'true-false-list') {
+                    const correctMap = correctAnswer as Record<string, 'T' | 'F'>
+                    const userMap = (userAnswer as Record<string, 'T' | 'F' | 'S'>) || {}
+
+                    let anyWrong = false
+                    q.options.forEach(opt => {
+                        const userChoice = userMap[opt.label] || 'S'
+                        const correctChoice = correctMap[opt.label]
+                        if (userChoice !== 'S' && userChoice !== correctChoice) {
+                            anyWrong = true
+                            // Confusing distractor: user marked TRUE for an incorrect option that maps to a verse
+                            if (userChoice === 'T' && correctChoice === 'F' && opt.scriptureId) {
+                                distractorCounts.set(opt.scriptureId, (distractorCounts.get(opt.scriptureId) || 0) + 1)
+                            }
+                        }
+                    })
+                    if (anyWrong) {
+                        q.scriptureIds.forEach(id => wrongIds.add(id))
+                    }
+                } else {
+                    // Best-effort for future question types
+                    if (JSON.stringify(userAnswer) !== JSON.stringify(correctAnswer)) {
+                        q.scriptureIds.forEach(id => wrongIds.add(id))
+                    }
+                }
+            })
+
+            return { wrongIds: [...wrongIds], distractorCounts }
+        })()
+
+        const wrongVerses = missionIntel.wrongIds
+            .map(id => scriptures.find(s => s.id === id))
+            .filter((s): s is NonNullable<typeof s> => !!s)
+
+        const confusingDistractors = [...missionIntel.distractorCounts.entries()]
+            .map(([id, count]) => ({ scripture: scriptures.find(s => s.id === id), count }))
+            .filter((x): x is { scripture: NonNullable<typeof x.scripture>; count: number } => !!x.scripture)
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 8)
+
         return (
             <ThemedContainer style={styles.container}>
                 <ScreenHeader title="AFTER-ACTION REPORT" subtitle="Mission Complete" />
@@ -463,6 +542,64 @@ export default function QuizScreen() {
 
                     <View style={{ marginTop: 24 }}>
                         <ThemedText variant="subheading" style={{ marginBottom: 16 }}>Mission Review</ThemedText>
+
+                        {(wrongVerses.length > 0 || confusingDistractors.length > 0) && (
+                            <View style={[styles.reviewItem, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                                <ThemedText variant="caption" style={{ color: theme.accent, marginBottom: 8 }}>
+                                    TRAINING PRIORITIES
+                                </ThemedText>
+
+                                {wrongVerses.length > 0 && (
+                                    <View style={{ marginBottom: 12 }}>
+                                        <ThemedText variant="body" style={{ fontWeight: '700', marginBottom: 6 }}>
+                                            Verses Missed
+                                        </ThemedText>
+                                        {wrongVerses.slice(0, 8).map(v => (
+                                            <View key={v.id} style={styles.reviewOptionRow}>
+                                                <ThemedText variant="caption" style={{ flex: 1 }}>{v.reference}</ThemedText>
+                                                <TouchableOpacity
+                                                    onPress={() => {
+                                                        setQuickAddScriptureId(v.id)
+                                                        setShowQuickAdd(true)
+                                                    }}
+                                                    style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+                                                >
+                                                    <Ionicons name="add-circle" size={18} color={theme.accent} />
+                                                </TouchableOpacity>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )}
+
+                                {confusingDistractors.length > 0 && (
+                                    <View>
+                                        <ThemedText variant="body" style={{ fontWeight: '700', marginBottom: 6 }}>
+                                            Distractors That Fooled You
+                                        </ThemedText>
+                                        {confusingDistractors.map(({ scripture, count }) => (
+                                            <View key={scripture.id} style={styles.reviewOptionRow}>
+                                                <ThemedText variant="caption" style={{ flex: 1 }}>
+                                                    {scripture.reference}
+                                                </ThemedText>
+                                                <ThemedText variant="caption" style={{ opacity: 0.7, marginRight: 8 }}>
+                                                    x{count}
+                                                </ThemedText>
+                                                <TouchableOpacity
+                                                    onPress={() => {
+                                                        setQuickAddScriptureId(scripture.id)
+                                                        setShowQuickAdd(true)
+                                                    }}
+                                                    style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+                                                >
+                                                    <Ionicons name="add-circle" size={18} color={theme.accent} />
+                                                </TouchableOpacity>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )}
+                            </View>
+                        )}
+
                         {questionSet.questions.map((q, idx) => {
                             const userAnswer = selectedAnswers[q.id]
                             const correctAnswer = q.correctAnswer
@@ -484,6 +621,17 @@ export default function QuizScreen() {
                                                 return (
                                                     <View key={opt.label} style={styles.reviewOptionRow}>
                                                         <ThemedText variant="caption" style={{ flex: 1 }}>{opt.label}</ThemedText>
+                                                        {!!opt.scriptureId && (
+                                                            <TouchableOpacity
+                                                                onPress={() => {
+                                                                    setQuickAddScriptureId(opt.scriptureId!)
+                                                                    setShowQuickAdd(true)
+                                                                }}
+                                                                style={{ paddingHorizontal: 8, paddingVertical: 4 }}
+                                                            >
+                                                                <Ionicons name="add-circle-outline" size={16} color={theme.accent} />
+                                                            </TouchableOpacity>
+                                                        )}
                                                         <View style={{ flexDirection: 'row', gap: 8 }}>
                                                             <ThemedText variant="caption" style={{ color: theme.textSecondary }}>YOU: {userChoice}</ThemedText>
                                                             <ThemedText variant="caption" style={{ color: isCorrect ? theme.success : theme.error }}>
@@ -505,6 +653,15 @@ export default function QuizScreen() {
                         })}
                     </View>
                 </ScrollView>
+
+                <QuickAddCollectionModal
+                    isVisible={showQuickAdd}
+                    scriptureId={quickAddScriptureId}
+                    onClose={() => {
+                        setShowQuickAdd(false)
+                        setQuickAddScriptureId(null)
+                    }}
+                />
             </ThemedContainer>
         )
     }
@@ -628,9 +785,19 @@ export default function QuizScreen() {
 
                                 return (
                                     <View key={index} style={[styles.tfRow, { borderBottomColor: theme.border }]}>
-                                        <ThemedText variant="body" style={styles.tfOptionText}>
-                                            {String.fromCharCode(97 + index)}. {option.label}
-                                        </ThemedText>
+                                        <View style={styles.tfLabelRow}>
+                                            <ThemedText variant="body" style={[styles.tfOptionText, { flex: 1 }]}>
+                                                {String.fromCharCode(97 + index)}. {option.label}
+                                            </ThemedText>
+                                            {!!option.scriptureId && (
+                                                <TouchableOpacity
+                                                    style={[styles.infoIconButton, { borderColor: theme.border }]}
+                                                    onPress={() => setPreviewScriptureId(option.scriptureId!)}
+                                                >
+                                                    <Ionicons name="information" size={14} color={theme.textSecondary} />
+                                                </TouchableOpacity>
+                                            )}
+                                        </View>
                                         <View style={styles.tfButtonGroup}>
                                             {(['T', 'F', 'S'] as const).map(value => {
                                                 const isSelected = currentChoice === value;
@@ -740,6 +907,18 @@ export default function QuizScreen() {
                                         >
                                             {option.label}
                                         </ThemedText>
+                                        {!!option.scriptureId && (
+                                            <TouchableOpacity
+                                                style={[styles.infoIconButton, { borderColor: isSelected ? 'transparent' : theme.border }]}
+                                                onPress={() => setPreviewScriptureId(option.scriptureId!)}
+                                            >
+                                                <Ionicons
+                                                    name="information"
+                                                    size={14}
+                                                    color={isSelected ? theme.accentContrastText : theme.textSecondary}
+                                                />
+                                            </TouchableOpacity>
+                                        )}
                                         {isSelected && (
                                             <Ionicons
                                                 name={isMultiSelect ? 'checkbox' : 'radio-button-on'}
@@ -766,7 +945,7 @@ export default function QuizScreen() {
                             ) : (
                                 <View style={[styles.explanationBox, { backgroundColor: `${theme.info}15` }]}>
                                     <Ionicons name="information-circle" size={16} color={theme.info} />
-                                    <ThemedText variant="caption" style={[styles.explanationText, { color: theme.info }]}>
+                                    <ThemedText variant="body" style={[styles.explanationText, { color: theme.info }]}>
                                         {currentQuestion.explanation}
                                     </ThemedText>
                                 </View>
@@ -804,6 +983,31 @@ export default function QuizScreen() {
                     </TouchableOpacity>
                 </View>
             </ScrollView>
+
+            <Modal
+                visible={!!previewScripture}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setPreviewScriptureId(null)}
+            >
+                <View style={styles.previewBackdrop}>
+                    <View style={[styles.previewCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+                        <View style={styles.previewHeader}>
+                            <ThemedText variant="subheading" style={{ flex: 1 }}>
+                                {previewScripture?.reference || 'Scripture Preview'}
+                            </ThemedText>
+                            <TouchableOpacity onPress={() => setPreviewScriptureId(null)}>
+                                <Ionicons name="close" size={22} color={theme.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+                        <ScrollView style={{ maxHeight: 320 }}>
+                            <ThemedText variant="body" style={{ lineHeight: 22 }}>
+                                {previewScripture?.text}
+                            </ThemedText>
+                        </ScrollView>
+                    </View>
+                </View>
+            </Modal>
         </ThemedContainer>
     )
 }
@@ -884,9 +1088,22 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         gap: 8,
     },
+    tfLabelRow: {
+        flexDirection: 'row',
+        alignItems: 'flex-start',
+        gap: 8,
+    },
     tfOptionText: {
         fontSize: 14,
         lineHeight: 20,
+    },
+    infoIconButton: {
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     tfButtonGroup: {
         flexDirection: 'row',
@@ -915,12 +1132,6 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         borderWidth: 1,
         borderStyle: 'dashed',
-        gap: 8,
-    },
-    explanationBox: {
-        flexDirection: 'row',
-        padding: 12,
-        borderRadius: 10,
         gap: 8,
     },
     optionButton: {
@@ -952,8 +1163,28 @@ const styles = StyleSheet.create({
     },
     explanationText: {
         flex: 1,
-        fontSize: 12,
-        lineHeight: 18,
+        fontSize: 14,
+        lineHeight: 20,
+    },
+    previewBackdrop: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.55)',
+        padding: 20,
+        justifyContent: 'center',
+    },
+    previewCard: {
+        borderRadius: 16,
+        borderWidth: 1,
+        padding: 16,
+        maxWidth: 520,
+        alignSelf: 'center',
+        width: '100%',
+    },
+    previewHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        marginBottom: 12,
     },
     navigationButtons: {
         flexDirection: 'row',
