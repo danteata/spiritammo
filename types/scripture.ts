@@ -78,6 +78,7 @@ export interface UserSettings {
   voiceEngine: 'whisper' | 'native'
   soldierName?: string
   isTimedMission?: boolean
+  stealthInputMode?: 'bank' | 'tactical'
 }
 
 export interface UserStats {

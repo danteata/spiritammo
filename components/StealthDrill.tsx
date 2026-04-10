@@ -10,6 +10,7 @@ import {
     Platform,
     TextInput,
     Keyboard,
+    Modal,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Ionicons, MaterialCommunityIcons, MaterialIcons } from '@expo/vector-icons'
@@ -52,7 +53,7 @@ export default function StealthDrill({
         'GHOST': { label: 'GHOST', percent: 1.00, icon: 'ghost', color: '#9C27B0' }
     }
 
-    const { isDark, theme } = useAppStore()
+    const { isDark, theme, userSettings } = useAppStore()
 
     const [difficulty, setDifficulty] = useState<DifficultyLevel | null>(null)
     const [tokens, setTokens] = useState<WordToken[]>([])
@@ -61,7 +62,7 @@ export default function StealthDrill({
     const [selectedBankWord, setSelectedBankWord] = useState<string | null>(null)
     const [drillComplete, setDrillComplete] = useState(false)
     const [accuracy, setAccuracy] = useState(0)
-    const [isTacticalMode, setIsTacticalMode] = useState(false)
+    const [isTacticalMode, setIsTacticalMode] = useState(userSettings.stealthInputMode === 'tactical')
 
     // Animations
     const fadeAnim = useRef(new Animated.Value(0)).current
@@ -77,6 +78,8 @@ export default function StealthDrill({
             setFilledBlanks({})
             setDrillComplete(false)
             setAccuracy(0)
+
+            setIsTacticalMode(userSettings.stealthInputMode === 'tactical')
 
             Animated.timing(fadeAnim, {
                 toValue: 1,

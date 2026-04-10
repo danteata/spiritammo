@@ -61,6 +61,20 @@ export default function SettingsScreen() {
       new_value: engine
     })
   }
+  
+  const handleStealthInputModeChange = (mode: 'bank' | 'tactical') => {
+    const oldMode = userSettings.stealthInputMode || 'bank'
+    saveUserSettings({
+      ...userSettings,
+      stealthInputMode: mode,
+    })
+
+    trackEvent(AnalyticsEventType.SETTING_CHANGED, {
+      setting_name: 'stealth_input_mode',
+      old_value: oldMode,
+      new_value: mode
+    })
+  }
 
   const handleSaveSoldierName = async () => {
     const trimmedName = tempName.trim()
@@ -208,6 +222,60 @@ export default function SettingsScreen() {
               thumbColor={userSettings.isTimedMission ? theme.accent : '#f4f3f4'}
             />
           </View>
+        </ThemedCard>
+
+        {/* Stealth Mode Configuration */}
+        <ThemedCard style={styles.card} variant="default">
+          <View style={styles.cardHeader}>
+            <MaterialCommunityIcons name="incognito" size={20} color={theme.accent} />
+            <ThemedText variant="subheading" style={styles.cardTitle}>
+              STEALTH OPERATIONS
+            </ThemedText>
+          </View>
+
+          <ThemedText variant="body" style={styles.sectionDescription}>
+            Standardize your infiltration method for Stealth Drills.
+          </ThemedText>
+
+          <TouchableOpacity
+            style={[
+              styles.optionButton,
+              (userSettings.stealthInputMode || 'bank') === 'bank' && styles.selectedOption,
+              { borderColor: (userSettings.stealthInputMode || 'bank') === 'bank' ? theme.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'), backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)' }
+            ]}
+            onPress={() => handleStealthInputModeChange('bank')}
+          >
+            <View style={styles.optionHeader}>
+              <View style={styles.optionTitleRow}>
+                <MaterialCommunityIcons name="format-list-bulleted" size={18} color={(userSettings.stealthInputMode || 'bank') === 'bank' ? theme.accent : (isDark ? '#888' : '#666')} />
+                <ThemedText variant="body" style={styles.optionTitle}>Supply Cache (Word Bank)</ThemedText>
+              </View>
+              {(userSettings.stealthInputMode || 'bank') === 'bank' && <View style={styles.activeDot} />}
+            </View>
+            <ThemedText variant="caption" style={styles.optionDescription}>
+              Select words from a visible supply cache. Best for initial training and recon.
+            </ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.optionButton,
+              userSettings.stealthInputMode === 'tactical' && styles.selectedOption,
+              { borderColor: userSettings.stealthInputMode === 'tactical' ? theme.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'), backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)' }
+            ]}
+            onPress={() => handleStealthInputModeChange('tactical')}
+          >
+            <View style={styles.optionHeader}>
+              <View style={styles.optionTitleRow}>
+                <MaterialCommunityIcons name="keyboard-outline" size={18} color={userSettings.stealthInputMode === 'tactical' ? theme.accent : (isDark ? '#888' : '#666')} />
+                <ThemedText variant="body" style={styles.optionTitle}>Tactical Typing (First Letter)</ThemedText>
+              </View>
+              {userSettings.stealthInputMode === 'tactical' && <View style={styles.activeDot} />}
+            </View>
+            <ThemedText variant="caption" style={styles.optionDescription}>
+              Type only the first letter of missing intel. Elite protocol for hardened special forces.
+            </ThemedText>
+          </TouchableOpacity>
         </ThemedCard>
 
         {/* Soldier Identity */}

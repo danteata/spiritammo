@@ -16,6 +16,7 @@ const DEFAULT_USER_SETTINGS: UserSettings = {
     trainingMode: 'single',
     voiceEngine: 'native',
     isTimedMission: false,
+    stealthInputMode: 'bank',
 }
 
 const DEFAULT_USER_STATS: UserStats = {
