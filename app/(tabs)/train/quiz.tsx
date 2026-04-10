@@ -27,7 +27,7 @@ import { Toast } from '@/components/ui/Toast'
 import QuickAddCollectionModal from '@/components/QuickAddCollectionModal'
 
 export default function QuizScreen() {
-    const { scriptures, collections, isDark, theme, userSettings, recordQuizResults, versePerformance, addCollection, updateCollection } = useAppStore()
+    const { scriptures, collections, isDark, theme, userSettings, recordQuizResults, versePerformance, addCollection, updateCollection, addScripturesToCollection } = useAppStore()
     const params = useLocalSearchParams()
     const router = useRouter()
     const { trackEvent } = useAnalytics()
@@ -64,6 +64,9 @@ export default function QuizScreen() {
     const [previewScriptureId, setPreviewScriptureId] = useState<string | null>(null)
     const [quickAddScriptureId, setQuickAddScriptureId] = useState<string | null>(null)
     const [showQuickAdd, setShowQuickAdd] = useState(false)
+    const [showCollectionPicker, setShowCollectionPicker] = useState(false)
+
+    const customCollections = collections.filter(c => !c.isSystem)
 
     const previewScripture = useMemo(() => {
         if (!previewScriptureId) return null
@@ -121,6 +124,22 @@ export default function QuizScreen() {
             setIsGenerating(false)
         }
     }, [collectionScriptures, collectionId, trackEvent])
+
+    const handleQuickAddToCollection = async (collectionId: string) => {
+        if (!previewScriptureId || previewScriptureId === 'telemetry-unavailable') return
+
+        try {
+            const success = await addScripturesToCollection(collectionId, [previewScriptureId])
+            if (success) {
+                const targetColl = collections.find(c => c.id === collectionId)
+                Toast.missionSuccess(`Target briefed to ${targetColl?.name || 'arsenal'}`)
+                setShowCollectionPicker(false)
+            }
+        } catch (error) {
+            console.error('Quick Add failed:', error)
+            Toast.missionFailed('Intel bridging failed. Please retry.')
+        }
+    }
 
     const currentQuestion = questionSet?.questions[currentQuestionIndex]
 
@@ -393,7 +412,7 @@ export default function QuizScreen() {
                 <ScrollView contentContainerStyle={styles.scrollContent}>
                     <View style={[styles.resultsCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                         <Ionicons name="fitness" size={48} color={theme.accent} style={{ marginBottom: 16 }} />
-                        
+
                         <View style={{ width: '100%' }}>
                             <ThemedText variant="subheading" style={{ marginBottom: 8, textAlign: 'center' }}>1. MISSION LENGTH</ThemedText>
                             <ThemedText variant="body" style={{ textAlign: 'center', opacity: 0.7, marginBottom: 16 }}>
@@ -843,15 +862,15 @@ export default function QuizScreen() {
 
                     {(timeLimit !== null || userSettings.isTimedMission) && (
                         <View style={[styles.timerHud, timeLimit !== null && (timeLimit - elapsedTime < 60) && { borderLeftColor: theme.error }]}>
-                            <Ionicons 
-                                name={timeLimit !== null ? (timeLimit - elapsedTime < 60 ? 'alert-circle' : 'hourglass-outline') : 'timer'} 
-                                size={14} 
-                                color={timeLimit !== null && (timeLimit - elapsedTime < 60) ? theme.error : theme.accent} 
+                            <Ionicons
+                                name={timeLimit !== null ? (timeLimit - elapsedTime < 60 ? 'alert-circle' : 'hourglass-outline') : 'timer'}
+                                size={14}
+                                color={timeLimit !== null && (timeLimit - elapsedTime < 60) ? theme.error : theme.accent}
                             />
-                            <ThemedText 
-                                variant="caption" 
+                            <ThemedText
+                                variant="caption"
                                 style={[
-                                    styles.timerText, 
+                                    styles.timerText,
                                     { color: timeLimit !== null && (timeLimit - elapsedTime < 60) ? theme.error : theme.accent }
                                 ]}
                             >
@@ -901,14 +920,18 @@ export default function QuizScreen() {
                                             <ThemedText variant="body" style={[styles.tfOptionText, { flex: 1 }]}>
                                                 {String.fromCharCode(97 + index)}. {option.label}
                                             </ThemedText>
-                                            {!!option.scriptureId && (
-                                                <TouchableOpacity
-                                                    style={[styles.infoIconButton, { borderColor: theme.border }]}
-                                                    onPress={() => setPreviewScriptureId(option.scriptureId!)}
-                                                >
-                                                    <Ionicons name="information" size={14} color={theme.textSecondary} />
-                                                </TouchableOpacity>
-                                            )}
+                                            <TouchableOpacity
+                                                style={[styles.infoIconButton, { borderColor: theme.border }]}
+                                                onPress={() => {
+                                                    if (option.scriptureId) {
+                                                        setPreviewScriptureId(option.scriptureId)
+                                                    } else {
+                                                        setPreviewScriptureId('telemetry-unavailable')
+                                                    }
+                                                }}
+                                            >
+                                                <Ionicons name="information" size={14} color={theme.textSecondary} />
+                                            </TouchableOpacity>
                                         </View>
                                         <View style={styles.tfButtonGroup}>
                                             {(['T', 'F', 'S'] as const).map(value => {
@@ -1019,18 +1042,22 @@ export default function QuizScreen() {
                                         >
                                             {option.label}
                                         </ThemedText>
-                                        {!!option.scriptureId && (
-                                            <TouchableOpacity
-                                                style={[styles.infoIconButton, { borderColor: isSelected ? 'transparent' : theme.border }]}
-                                                onPress={() => setPreviewScriptureId(option.scriptureId!)}
-                                            >
-                                                <Ionicons
-                                                    name="information"
-                                                    size={14}
-                                                    color={isSelected ? theme.accentContrastText : theme.textSecondary}
-                                                />
-                                            </TouchableOpacity>
-                                        )}
+                                        <TouchableOpacity
+                                            style={[styles.infoIconButton, { borderColor: isSelected ? 'transparent' : theme.border }]}
+                                            onPress={() => {
+                                                if (option.scriptureId) {
+                                                    setPreviewScriptureId(option.scriptureId)
+                                                } else {
+                                                    setPreviewScriptureId('telemetry-unavailable')
+                                                }
+                                            }}
+                                        >
+                                            <Ionicons
+                                                name="information"
+                                                size={14}
+                                                color={isSelected ? theme.accentContrastText : theme.textSecondary}
+                                            />
+                                        </TouchableOpacity>
                                         {isSelected && (
                                             <Ionicons
                                                 name={isMultiSelect ? 'checkbox' : 'radio-button-on'}
@@ -1097,7 +1124,7 @@ export default function QuizScreen() {
             </ScrollView>
 
             <Modal
-                visible={!!previewScripture}
+                visible={!!previewScripture || previewScriptureId === 'telemetry-unavailable'}
                 transparent
                 animationType="fade"
                 onRequestClose={() => setPreviewScriptureId(null)}
@@ -1106,7 +1133,7 @@ export default function QuizScreen() {
                     <View style={[styles.previewCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                         <View style={styles.previewHeader}>
                             <ThemedText variant="subheading" style={{ flex: 1 }}>
-                                {previewScripture?.reference || 'Scripture Preview'}
+                                {previewScriptureId === 'telemetry-unavailable' ? 'TACTICAL TELEMETRY' : (previewScripture?.reference || 'Scripture Preview')}
                             </ThemedText>
                             <TouchableOpacity onPress={() => setPreviewScriptureId(null)}>
                                 <Ionicons name="close" size={22} color={theme.textSecondary} />
@@ -1114,9 +1141,50 @@ export default function QuizScreen() {
                         </View>
                         <ScrollView style={{ maxHeight: 320 }}>
                             <ThemedText variant="body" style={{ lineHeight: 22 }}>
-                                {previewScripture?.text}
+                                {previewScriptureId === 'telemetry-unavailable' 
+                                    ? "This option is a distractor. It is either a made-up reference or a phrase not found in your current collection." 
+                                    : previewScripture?.text}
                             </ThemedText>
                         </ScrollView>
+
+                        {previewScriptureId !== 'telemetry-unavailable' && previewScripture && (
+                            <View style={styles.previewActions}>
+                                {!showCollectionPicker ? (
+                                    <TouchableOpacity 
+                                        style={[styles.quickAddButton, { backgroundColor: theme.accent }]}
+                                        onPress={() => setShowCollectionPicker(true)}
+                                    >
+                                        <Ionicons name="add-circle" size={18} color={theme.accentContrastText} />
+                                        <ThemedText variant="caption" style={{ color: theme.accentContrastText, fontWeight: '700' }}>
+                                            QUICK-ADD TO ARSENAL
+                                        </ThemedText>
+                                    </TouchableOpacity>
+                                ) : (
+                                    <View style={styles.collectionPickerContainer}>
+                                        <ThemedText variant="caption" style={styles.pickerTitle}>SELECT ARSENAL BUCKET:</ThemedText>
+                                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pickerScroll}>
+                                            <TouchableOpacity 
+                                                style={[styles.cancelQuickAdd, { borderColor: theme.border }]}
+                                                onPress={() => setShowCollectionPicker(false)}
+                                            >
+                                                <Ionicons name="close" size={16} color={theme.textSecondary} />
+                                            </TouchableOpacity>
+                                            {customCollections.length === 0 ? (
+                                                <ThemedText variant="caption" style={{ opacity: 0.5, marginLeft: 8 }}>No custom collections found</ThemedText>
+                                            ) : customCollections.map(c => (
+                                                <TouchableOpacity 
+                                                    key={c.id} 
+                                                    style={[styles.pickerItem, { backgroundColor: theme.border + '30' }]}
+                                                    onPress={() => handleQuickAddToCollection(c.id)}
+                                                >
+                                                    <ThemedText variant="caption" style={{ fontWeight: '600' }}>{c.name}</ThemedText>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </ScrollView>
+                                    </View>
+                                )}
+                            </View>
+                        )}
                     </View>
                 </View>
             </Modal>
@@ -1297,6 +1365,47 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 12,
         marginBottom: 12,
+    },
+    previewActions: {
+        marginTop: 16,
+        paddingTop: 16,
+        borderTopWidth: 1,
+        borderColor: 'rgba(150, 150, 150, 0.2)',
+    },
+    quickAddButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 12,
+        borderRadius: 8,
+        gap: 8,
+    },
+    collectionPickerContainer: {
+        marginTop: 8,
+    },
+    pickerTitle: {
+        marginBottom: 8,
+        opacity: 0.7,
+        fontWeight: '700',
+    },
+    pickerScroll: {
+        flexDirection: 'row',
+    },
+    cancelQuickAdd: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        borderWidth: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginRight: 8,
+    },
+    pickerItem: {
+        paddingHorizontal: 16,
+        height: 36,
+        borderRadius: 18,
+        justifyContent: 'center',
+        marginRight: 8,
     },
     navigationButtons: {
         flexDirection: 'row',

@@ -246,6 +246,31 @@ export function ensureUniqueOptions(options: QuestionOption[]): QuestionOption[]
   return unique;
 }
 
+/**
+ * Enhanced lookup for scripture IDs based on reference or text content.
+ * Used to ensure distractors can also provide tactical data (full verse preview).
+ */
+function lookupScriptureId(textOrRef: string, allScriptures: Scripture[]): string | undefined {
+  if (!textOrRef) return undefined;
+  const normalized = textOrRef.trim().toLowerCase();
+  
+  // 1. Try exact reference match (e.g., "John 3:16")
+  const refMatch = allScriptures.find(s => s.reference.trim().toLowerCase() === normalized);
+  if (refMatch) return refMatch.id;
+  
+  // 2. Try exact text match
+  const textMatch = allScriptures.find(s => s.text.trim().toLowerCase() === normalized);
+  if (textMatch) return textMatch.id;
+  
+  // 3. Try partial text match for phrases (min 15 chars to avoid noise)
+  if (normalized.length > 15) {
+      const partialMatch = allScriptures.find(s => s.text.toLowerCase().includes(normalized));
+      if (partialMatch) return partialMatch.id;
+  }
+  
+  return undefined;
+}
+
 function buildReferenceOptions(
   correctLabel: string,
   correctScriptureId: string,
@@ -255,8 +280,9 @@ function buildReferenceOptions(
   const allOptions: QuestionOption[] = [
     { label: correctLabel, isCorrect: true, scriptureId: correctScriptureId },
     ...distractors.slice(0, 4).map(d => {
-      const match = scripturesInScope.find(s => s.reference.trim().toLowerCase() === d.trim().toLowerCase())
-      return { label: d, isCorrect: false, scriptureId: match?.id }
+      // Enhanced lookup for reference-based distractors
+      const sid = lookupScriptureId(d, scripturesInScope)
+      return { label: d, isCorrect: false, scriptureId: sid }
     }),
   ]
 
@@ -269,8 +295,8 @@ function buildReferenceOptions(
     const filler = `${randomBook.name} ${ch}:${v}`
 
     if (!unique.some(o => o.label.toLowerCase() === filler.toLowerCase())) {
-      const match = scripturesInScope.find(s => s.reference.trim().toLowerCase() === filler.trim().toLowerCase())
-      unique.push({ label: filler, isCorrect: false, scriptureId: match?.id })
+      const sid = lookupScriptureId(filler, scripturesInScope)
+      unique.push({ label: filler, isCorrect: false, scriptureId: sid })
     }
   }
 
@@ -297,8 +323,8 @@ function buildContentOptions(
 
   const unique = ensureUniqueOptions(allOptions)
   while (unique.length < 5) {
-    // Fallback filler: prefer scripture-backed text if we can, otherwise a generic statement
-    const fillerScripture = scripturesInScope[Math.floor(Math.random() * Math.max(1, scripturesInScope.length))]
+    const randIdx = Math.floor(Math.random() * scripturesInScope.length)
+    const fillerScripture = scripturesInScope[randIdx]
     const filler = fillerScripture?.text || "Follow the path of righteousness and truth in all things."
     if (!unique.some(o => o.label.toLowerCase() === filler.toLowerCase())) {
       unique.push({ label: filler, isCorrect: false, scriptureId: fillerScripture?.id })
@@ -309,6 +335,7 @@ function buildContentOptions(
 }
 
 export function generateReferenceQuestion(scripture: Scripture, scripturesInScope: Scripture[] = []): Question {
+  const isNegative = Math.random() < 0.25;
   const correctRef = scripture.reference;
   const distractors = generateDistractorReferences(correctRef);
   
@@ -320,10 +347,14 @@ export function generateReferenceQuestion(scripture: Scripture, scripturesInScop
     correctMap[o.label] = o.isCorrect ? 'T' : 'F';
   });
 
+  const prompt = isNegative
+    ? `Identify which of the following references DOES NOT contain this passage: "${getMeaningfulTruncation(scripture.text, 300)}"`
+    : `Evaluate whether the following passage can be found in these references: "${getMeaningfulTruncation(scripture.text, 300)}"`;
+
   return {
     id: uuidv4(),
     type: 'true-false-list',
-    text: `Evaluate whether the following passage can be found in these references: "${getMeaningfulTruncation(scripture.text, 300)}"`,
+    text: prompt,
     options,
     correctAnswer: correctMap,
     explanation: `${scripture.reference}: ${scripture.text}`,
@@ -335,17 +366,25 @@ export function generateContentQuestion(
   scripture: Scripture,
   allScriptures: Scripture[]
 ): Question {
+  const isNegative = Math.random() < 0.25; // 25% chance for "cannot be gleaned"
   const options = buildContentOptions(scripture, allScriptures)
 
   const correctMap: Record<string, 'T' | 'F'> = {};
   options.forEach(o => {
+    // If it's a negative question, 'T' means it CANNOT be gleaned (so it's a distractor usually)
+    // Actually, it's simpler: 'T' always means the statement is TRUE.
+    // The prompt changes.
     correctMap[o.label] = o.isCorrect ? 'T' : 'F';
   });
+
+  const prompt = isNegative 
+    ? `Identify which of the following quotes CANNOT be gleaned from ${scripture.reference}:`
+    : `Which of the following quotes can be gleaned from ${scripture.reference}?`;
 
   return {
     id: uuidv4(),
     type: 'true-false-list',
-    text: `Which of the following quotes can be gleaned from ${scripture.reference}?`,
+    text: prompt,
     options,
     correctAnswer: correctMap,
     explanation: `${scripture.reference}: ${scripture.text}`,
@@ -354,6 +393,7 @@ export function generateContentQuestion(
 }
 
 export function generateInferenceQuestion(scripture: Scripture, scripturesInScope: Scripture[] = []): Question {
+  const isNegative = Math.random() < 0.25;
   const correctRef = scripture.reference;
   const distractors = generateDistractorReferences(correctRef);
   
@@ -365,10 +405,14 @@ export function generateInferenceQuestion(scripture: Scripture, scripturesInScop
     correctMap[o.label] = o.isCorrect ? 'T' : 'F';
   });
 
+  const prompt = isNegative
+    ? `Evaluate whether the following passage CANNOT be gleaned from these references: "${getMeaningfulTruncation(scripture.text, 300)}"`
+    : `Evaluate whether the following passage can be gleaned from the following: "${getMeaningfulTruncation(scripture.text, 300)}"`;
+
   return {
     id: uuidv4(),
     type: 'true-false-list',
-    text: `Evaluate whether the following passage can be gleaned from the following: "${getMeaningfulTruncation(scripture.text, 300)}"`,
+    text: prompt,
     options,
     correctAnswer: correctMap,
     explanation: `${scripture.reference}: ${scripture.text}`,
@@ -378,40 +422,51 @@ export function generateInferenceQuestion(scripture: Scripture, scripturesInScop
 
 
 export function generateTrueFalseListQuestion(scripture: Scripture, allScriptures: Scripture[]): Question {
+  const isNegative = Math.random() < 0.25;
   const phrases = extractKeyPhrases(scripture.text, 3);
   const otherScriptures = allScriptures.filter(s => s.id !== scripture.id);
   
   const allStatements = shuffleArray([
     ...phrases.map(p => ({ 
       label: `"${p}" is a truth revealed in this passage`, 
-      isCorrect: true 
+      isCorrect: true,
+      scriptureId: scripture.id
     })),
     ...shuffleArray(otherScriptures).slice(0, 2).map(s => ({
       label: `"${getMeaningfulTruncation(s.text, 100)}" is the primary subject here`,
-      isCorrect: false
+      isCorrect: false,
+      scriptureId: s.id
     }))
-  ]).slice(0, 5);
+  ]);
 
   // If we still need more distractors to reach 5
   while (allStatements.length < 5) {
       const randIdx = Math.floor(Math.random() * otherScriptures.length);
       const randText = otherScriptures.length > 0 ? otherScriptures[randIdx].text : "Hold fast to the teachings of the faithful.";
+      const sid = otherScriptures.length > 0 ? otherScriptures[randIdx].id : undefined;
       allStatements.push({
           label: `This passage implies that "${getMeaningfulTruncation(randText, 80)}"`,
-          isCorrect: false
+          isCorrect: false,
+          scriptureId: sid
       });
   }
 
+  const finalOptions = shuffleArray(allStatements).slice(0, 5);
+
   const correctMap: Record<string, 'T' | 'F'> = {};
-  allStatements.forEach(s => {
+  finalOptions.forEach(s => {
     correctMap[s.label] = s.isCorrect ? 'T' : 'F';
   });
+
+  const prompt = isNegative
+    ? `Analyze ${scripture.reference} and identify which of these statements are FALSE or CANNOT be gleaned:`
+    : `Evaluate whether the following can be gleaned from ${scripture.reference}:`;
 
   return {
     id: uuidv4(),
     type: 'true-false-list',
-    text: `Evaluate whether the following can be gleaned from ${scripture.reference}:`,
-    options: allStatements,
+    text: prompt,
+    options: finalOptions,
     correctAnswer: correctMap,
     explanation: `${scripture.reference}: ${scripture.text}`,
     scriptureIds: [scripture.id],
