@@ -1,215 +1,233 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { ExpoSpeechRecognitionOptions } from 'expo-speech-recognition';
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from 'expo-speech-recognition';
 
-/**
- * Lazy-load native tools to prevent crashes during route scanning.
- * This catches errors from the native module loader itself.
- */
-const getNativeTools = () => {
-  try {
-    // We use require instead of import to delay evaluation
-    const module = require('expo-speech-recognition');
-    return {
-      ExpoSpeechRecognitionModule: module.ExpoSpeechRecognitionModule,
-      useSpeechRecognitionEvent: module.useSpeechRecognitionEvent
-    };
-  } catch (e) {
-    console.warn('ExpoSpeechRecognition native module not found or failed to load.');
-    return {
-      ExpoSpeechRecognitionModule: null,
-      useSpeechRecognitionEvent: null
-    };
-  }
-};
-
-const { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent: rawUseSpeechRecognitionEvent } = getNativeTools();
-
-// Define a stable hook reference that swaps implementation based on module availability
-const useSafeSpeechRecognitionEvent = (ExpoSpeechRecognitionModule && rawUseSpeechRecognitionEvent)
-  ? rawUseSpeechRecognitionEvent 
+const useSafeSpeechRecognitionEvent = ExpoSpeechRecognitionModule
+  ? useSpeechRecognitionEvent
   : (_eventName: string, _callback: (event: any) => void) => {
-      // No-op hook to satisfy rules of hooks when native module is missing
       useEffect(() => {}, []);
     };
 
-interface UseSpeechRecognitionOptions {
+interface SpeechRecognitionOptions {
   lang?: string;
   interimResults?: boolean;
   continuous?: boolean;
-  maxAlternatives?: number;
-  onStart?: () => void;
-  onEnd?: () => void;
-  onResult?: (transcript: string, isFinal: boolean) => void;
+  onResult?: (text: string, isFinal: boolean) => void;
   onError?: (error: string) => void;
+  onEnd?: () => void;
 }
 
-export function useSpeechRecognition(options: UseSpeechRecognitionOptions = {}) {
+interface SpeechRecognitionReturn {
+  isRecognizing: boolean;
+  transcript: string;
+  interimTranscript: string;
+  error: string | null;
+  isAvailable: boolean;
+  hasPermission: boolean;
+  supportsOffline: boolean;
+  start: () => Promise<boolean>;
+  stop: () => Promise<void>;
+  resetTranscript: () => void;
+  requestPermissions: () => Promise<boolean>;
+}
+
+export function useSpeechRecognition(
+  options: SpeechRecognitionOptions = {}
+): SpeechRecognitionReturn {
+  const {
+    lang = 'en-US',
+    interimResults = true,
+    continuous = false,
+    onResult,
+    onError,
+    onEnd,
+  } = options;
+
   const [isRecognizing, setIsRecognizing] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [interimTranscript, setInterimTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isAvailable, setIsAvailable] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
+  const [supportsOffline, setSupportsOffline] = useState(false);
 
-  const optionsRef = useRef(options);
-  optionsRef.current = options;
+  const isStartingRef = useRef(false);
+  const isStoppingRef = useRef(false);
+  const mountedRef = useRef(true);
 
-  // Check availability on mount
   useEffect(() => {
+    mountedRef.current = true;
     checkAvailability();
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const checkAvailability = async () => {
     if (!ExpoSpeechRecognitionModule) {
-      setIsAvailable(false);
+      if (mountedRef.current) {
+        setIsAvailable(false);
+        setSupportsOffline(false);
+      }
       return;
     }
     try {
-      const available = await ExpoSpeechRecognitionModule.isRecognitionAvailable();
-      setIsAvailable(available);
-      
-      if (available) {
-        const permissions = await ExpoSpeechRecognitionModule.getPermissionsAsync();
-        setHasPermission(permissions.granted);
+      const status = await ExpoSpeechRecognitionModule.getPermissionsAsync();
+      if (mountedRef.current) setHasPermission(status.granted);
+
+      if (!status.granted) {
+        try {
+          const requestResult = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+          if (mountedRef.current) setHasPermission(requestResult.granted);
+        } catch (permError) {
+          console.warn('[useSpeechRecognition] Permission request failed:', permError);
+        }
       }
-    } catch (err) {
-      console.error('Failed to check speech recognition availability:', err);
-      setIsAvailable(false);
+
+      const available = await ExpoSpeechRecognitionModule.isRecognitionAvailable();
+      if (!mountedRef.current) return;
+      setIsAvailable(available);
+
+      if (available) {
+        try {
+          const onDevice = await (ExpoSpeechRecognitionModule as any).isOnDeviceRecognitionAvailable?.();
+          if (mountedRef.current) setSupportsOffline(!!onDevice);
+        } catch {
+          if (mountedRef.current) setSupportsOffline(false);
+        }
+      } else {
+        if (mountedRef.current) setSupportsOffline(false);
+      }
+    } catch (e) {
+      console.warn('[useSpeechRecognition] Availability check failed:', e);
+      if (mountedRef.current) {
+        setIsAvailable(false);
+        setSupportsOffline(false);
+      }
     }
   };
 
-  // Event listeners
   useSafeSpeechRecognitionEvent('start', () => {
+    if (!mountedRef.current) return;
     setIsRecognizing(true);
     setError(null);
-    optionsRef.current.onStart?.();
+    isStartingRef.current = false;
   });
 
   useSafeSpeechRecognitionEvent('end', () => {
+    if (!mountedRef.current) return;
     setIsRecognizing(false);
     setInterimTranscript('');
-    optionsRef.current.onEnd?.();
+    isStoppingRef.current = false;
+    onEnd?.();
   });
 
-  useSafeSpeechRecognitionEvent('result', (event) => {
-    if (event.results && event.results.length > 0) {
-      const result = event.results[0];
-      const resultTranscript = result.transcript;
-      
-      if (event.isFinal) {
-        setTranscript(resultTranscript);
-        setInterimTranscript('');
-        optionsRef.current.onResult?.(resultTranscript, true);
-      } else {
-        setInterimTranscript(resultTranscript);
-        optionsRef.current.onResult?.(resultTranscript, false);
-      }
+  useSafeSpeechRecognitionEvent('result', (event: any) => {
+    if (!mountedRef.current) return;
+    if (!event.results || event.results.length === 0) return;
+
+    const firstResult = event.results[0];
+    const text = firstResult.transcript ?? '';
+    const isFinal = event.isFinal ?? false;
+
+    if (isFinal) {
+      setTranscript((prev) => (prev ? `${prev} ${text}` : text).trim());
+      setInterimTranscript('');
+    } else {
+      setInterimTranscript(text);
     }
+
+    onResult?.(text, isFinal);
   });
 
-  useSafeSpeechRecognitionEvent('error', (event) => {
-    const errorMessage = event.message || `Speech recognition error: ${event.error}`;
-    setError(errorMessage);
+  useSafeSpeechRecognitionEvent('error', (event: any) => {
+    if (!mountedRef.current) return;
+    const msg = event.message ?? event.error ?? 'Unknown STT error';
+    console.warn('[useSpeechRecognition] Error event:', msg);
+    setError(msg);
     setIsRecognizing(false);
-    optionsRef.current.onError?.(errorMessage);
+    isStartingRef.current = false;
+    onError?.(msg);
   });
 
-  const requestPermissions = useCallback(async (): Promise<boolean> => {
-    if (!ExpoSpeechRecognitionModule) return false;
-    try {
-      const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
-      setHasPermission(result.granted);
-      return result.granted;
-    } catch (err) {
-      console.error('Failed to request permissions:', err);
-      setError('Failed to request permissions');
-      return false;
-    }
-  }, []);
-
-  const start = useCallback(async (overrideOptions?: Partial<ExpoSpeechRecognitionOptions>): Promise<boolean> => {
-    if (isRecognizing) {
-      console.warn('Speech recognition already in progress');
-      return false;
-    }
-
-    if (!isAvailable || !ExpoSpeechRecognitionModule) {
-      setError('Speech recognition is not available on this device');
+  // ── start — minimal options like VoiceRecorder uses ─────────
+  const start = useCallback(async (): Promise<boolean> => {
+    if (isStartingRef.current || isRecognizing) {
+      console.warn('[useSpeechRecognition] Already starting/recognizing');
       return false;
     }
 
     if (!hasPermission) {
       const granted = await requestPermissions();
       if (!granted) {
-        setError('Microphone permission not granted');
+        setError('Microphone permission denied');
         return false;
       }
     }
 
     try {
+      isStartingRef.current = true;
       setError(null);
-      setTranscript('');
-      setInterimTranscript('');
 
-      const recognitionOptions: ExpoSpeechRecognitionOptions = {
-        lang: overrideOptions?.lang ?? optionsRef.current.lang ?? 'en-US',
-        interimResults: overrideOptions?.interimResults ?? optionsRef.current.interimResults ?? true,
-        continuous: overrideOptions?.continuous ?? optionsRef.current.continuous ?? false,
-        maxAlternatives: overrideOptions?.maxAlternatives ?? optionsRef.current.maxAlternatives ?? 1,
-      };
+      // Use the same minimal options VoiceRecorder uses — no iosCategory,
+      // no androidIntentOptions — let the native module manage audio itself
+      await ExpoSpeechRecognitionModule.start({
+        lang,
+        interimResults,
+        continuous,
+        maxAlternatives: 1,
+      });
 
-      ExpoSpeechRecognitionModule.start(recognitionOptions);
       return true;
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to start speech recognition';
-      setError(errorMessage);
-      console.error('Failed to start speech recognition:', err);
+    } catch (e: any) {
+      console.warn('[useSpeechRecognition] start() failed:', e?.message);
+      isStartingRef.current = false;
+      setError(e?.message ?? 'Failed to start STT');
       return false;
     }
-  }, [isRecognizing, isAvailable, hasPermission, requestPermissions]);
+  }, [hasPermission, isRecognizing, lang, interimResults, continuous]);
 
-  const stop = useCallback(() => {
-    if (!isRecognizing || !ExpoSpeechRecognitionModule) {
-      return;
-    }
-
+  const stop = useCallback(async (): Promise<void> => {
+    if (isStoppingRef.current) return;
     try {
-      ExpoSpeechRecognitionModule.stop();
-    } catch (err) {
-      console.error('Failed to stop speech recognition:', err);
-      setError('Failed to stop speech recognition');
-    }
-  }, [isRecognizing]);
-
-  const abort = useCallback(() => {
-    if (!ExpoSpeechRecognitionModule) return;
-    try {
-      ExpoSpeechRecognitionModule.abort();
-      setIsRecognizing(false);
-      setInterimTranscript('');
-    } catch (err) {
-      console.error('Failed to abort speech recognition:', err);
+      isStoppingRef.current = true;
+      await ExpoSpeechRecognitionModule.stop();
+    } catch (e) {
+      console.warn('[useSpeechRecognition] stop() threw:', e);
+    } finally {
+      isStoppingRef.current = false;
     }
   }, []);
 
   const resetTranscript = useCallback(() => {
     setTranscript('');
     setInterimTranscript('');
+    setError(null);
+  }, []);
+
+  const requestPermissions = useCallback(async (): Promise<boolean> => {
+    try {
+      const result = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
+      if (mountedRef.current) setHasPermission(result.granted);
+      return result.granted;
+    } catch (e) {
+      console.warn('[useSpeechRecognition] Permission request failed:', e);
+      return false;
+    }
   }, []);
 
   return {
-    // State
     isRecognizing,
     transcript,
     interimTranscript,
     error,
     isAvailable,
     hasPermission,
-    
-    // Methods
+    supportsOffline,
     start,
     stop,
-    abort,
     resetTranscript,
     requestPermissions,
   };

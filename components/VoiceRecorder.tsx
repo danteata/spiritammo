@@ -147,21 +147,27 @@ export default function VoiceRecorder({
       console.error('Speech recognition error:', errorMessage);
     },
     onEnd: () => {
-      // Debounce restart to prevent rapid restarts on short pauses
+      // Clear any pending restart
       if (restartTimeoutRef.current) {
         clearTimeout(restartTimeoutRef.current);
+        restartTimeoutRef.current = null;
       }
 
-      if (!manualStopRef.current && keepListeningRef.current && activeEngineRef.current === 'native') {
-        restartTimeoutRef.current = setTimeout(async () => {
-          try {
-            await startSpeechRecognition();
-          } catch (error) {
-            console.warn('Failed to restart speech recognition:', error);
+      // Check we're still mounted and in recording state
+      restartTimeoutRef.current = setTimeout(async () => {
+        if (manualStopRef.current || !keepListeningRef.current) return;
+        try {
+          const ok = await startSpeechRecognition();
+          if (!ok) {
+            console.warn('[VoiceRecorder] STT restart failed — stopping session');
             keepListeningRef.current = false;
+            setStatusMessage('Speech recognition ended');
           }
-        }, 500); // Small delay to prevent rapid restarts
-      }
+        } catch (error) {
+          console.warn('[VoiceRecorder] Failed to restart STT:', error);
+          keepListeningRef.current = false;
+        }
+      }, 800); // Increased from 500ms
     },
   });
 

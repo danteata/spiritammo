@@ -413,22 +413,23 @@ export default function QuizScreen() {
         }
     }, [questionSet, missionIntel, scriptures, collectionId])
 
-    useEffect(() => {
-        let interval: NodeJS.Timeout
-        if (timerActive) {
-            interval = setInterval(() => {
-                setElapsedTime(prev => {
-                    const nextTime = prev + 1
-                    if (timeLimit !== null && nextTime >= timeLimit) {
-                        finishMission(true)
-                        return timeLimit
-                    }
-                    return nextTime
-                })
-            }, 1000)
-        }
-        return () => clearInterval(interval)
-    }, [timerActive, timeLimit, finishMission])
+useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (timerActive) {
+      interval = setInterval(() => {
+        setElapsedTime(prev => {
+          const nextTime = prev + 1
+          if (timeLimit !== null && nextTime >= timeLimit) {
+            // Defer finishMission to avoid Zustand set() during React render phase
+            queueMicrotask(() => finishMission(true))
+            return timeLimit
+          }
+          return nextTime
+        })
+      }, 1000)
+    }
+    return () => clearInterval(interval)
+  }, [timerActive, timeLimit, finishMission])
 
     if (showConfig) {
         return (

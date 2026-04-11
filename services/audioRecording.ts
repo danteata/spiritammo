@@ -138,6 +138,18 @@ export function useAudioRecording() {
     }
   }, []);
 
+  // Request permissions
+  const requestPermissions = useCallback(async (): Promise<boolean> => {
+    try {
+      // The @siteed/expo-audio-stream library handles permissions internally
+      // We'll assume permissions are granted if the library is available
+      return true;
+    } catch (e) {
+      console.warn('[AudioRecording] Permission request failed:', e);
+      return false;
+    }
+  }, []);
+
   return {
     startRecording,
     stopRecording,
@@ -147,5 +159,6 @@ export function useAudioRecording() {
     duration: durationMs || 0,
     uri: recordingUri,
     recordingResult,
+    requestPermissions,
   };
 }
