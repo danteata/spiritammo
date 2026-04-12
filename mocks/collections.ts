@@ -1,7 +1,29 @@
 import { Collection } from '@/types/scripture';
 
 export const COLLECTIONS: Collection[] = [
-  // Default collections for new users (system collections)
+  // ─── Starter Collection (pre-loaded for all new users) ───────────────────
+  {
+    id: 'basic-training',
+    name: 'Basic Training',
+    abbreviation: 'BT',
+    description: '10 essential scriptures to start your memorization journey',
+    scriptures: [
+      'john-3-16',
+      'psalm-23-1',
+      'romans-8-28',
+      'phil-4-13',
+      'prov-3-5-6',
+      'isaiah-41-10',
+      'jer-29-11',
+      'romans-6-23',
+      'ephes-2-8-9',
+      'matt-28-19-20',
+    ],
+    isSystem: true,
+    tags: ['STARTER'],
+    createdAt: new Date().toISOString(),
+  },
+  // ─── System Collections ──────────────────────────────────────────────────
   {
     id: 'lords-prayer',
     name: 'The Lord\'s Prayer',

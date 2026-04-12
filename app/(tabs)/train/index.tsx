@@ -5,9 +5,10 @@ import {
     ScrollView,
     TouchableOpacity,
     Dimensions,
+    Text,
 } from 'react-native'
 import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
-import { useLocalSearchParams, useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
@@ -25,14 +26,12 @@ type TrainingMode = 'single' | 'burst' | 'automatic' | 'voice'
 export default function TrainingScreen() {
     const { isLoading, theme, isDark, userStats, scriptures, collections } = useAppStore()
     const router = useRouter()
-    const params = useLocalSearchParams()
     const { trackEvent } = useAnalytics()
 
     const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
     const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
     const [showChapterSelector, setShowChapterSelector] = useState(false)
 
-    // Track screen view
     useScreenTracking('training')
 
     const handleModeSelect = (mode: TrainingMode) => {
@@ -42,7 +41,6 @@ export default function TrainingScreen() {
             collection_id: selectedCollection?.id,
             chapter_ids: selectedChapterIds.length > 0 ? selectedChapterIds.join(',') : undefined
         })
-        // Navigate to appropriate screen based on mode
         router.push({
             pathname: mode === 'voice' ? '/train/voice' : '/train/practice',
             params: {
@@ -67,6 +65,40 @@ export default function TrainingScreen() {
     const displayVerseCount = selectedCollection
         ? selectedCollection.scriptures.length
         : verseCount
+
+    const totalSessions = userStats?.totalPracticed || 0
+
+    if (!isLoading && verseCount === 0) {
+        return (
+            <ThemedContainer style={styles.container}>
+                <ScreenHeader
+                    title="ENGAGEMENT RANGE"
+                    subtitle="COMBAT READINESS TRAINING"
+                />
+                <View style={styles.emptyStateContainer}>
+                    <View style={[styles.emptyIconContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                        <FontAwesome5 name="box-open" size={48} color={isDark ? '#64748b' : '#94a3b8'} />
+                    </View>
+                    <ThemedText variant="heading" style={styles.emptyTitle}>
+                        No Verses Yet
+                    </ThemedText>
+                    <ThemedText variant="body" style={styles.emptySubtitle}>
+                        You need verses in your Arsenal before you can train. Add verses to start practicing.
+                    </ThemedText>
+                    <TouchableOpacity
+                        style={[styles.emptyCtaButton, { backgroundColor: theme.accent }]}
+                        onPress={() => router.push('/(tabs)/arsenal')}
+                        activeOpacity={0.8}
+                    >
+                        <FontAwesome5 name="plus" size={16} color={isDark ? '#000' : '#fff'} style={{ marginRight: 8 }} />
+                        <Text style={[styles.emptyCtaText, { color: isDark ? '#000' : '#fff' }]}>
+                            Go to Arsenal
+                        </Text>
+                    </TouchableOpacity>
+                </View>
+            </ThemedContainer>
+        )
+    }
 
     return (
         <ThemedContainer style={styles.container}>
@@ -142,6 +174,20 @@ export default function TrainingScreen() {
                         </>
                     )}
                 </View>
+
+                {/* Low verse count banner */}
+                {verseCount > 0 && verseCount < 5 && (
+                    <TouchableOpacity
+                        style={[styles.lowVerseBanner, { backgroundColor: isDark ? `${theme.warning}15` : `${theme.warning}10`, borderColor: `${theme.warning}40` }]}
+                        onPress={() => router.push('/(tabs)/arsenal')}
+                        activeOpacity={0.8}
+                    >
+                        <Ionicons name="add-circle" size={18} color={theme.warning} />
+                        <ThemedText variant="caption" style={[styles.lowVerseBannerText, { color: theme.warning }]}>
+                            Add more verses to unlock Burst Fire and Live Fire Drill
+                        </ThemedText>
+                    </TouchableOpacity>
+                )}
 
                 {/* Training Mode Selection */}
                 <View style={[styles.modesSection, { marginTop: 10 }]}>
@@ -454,5 +500,60 @@ const styles = StyleSheet.create({
         fontSize: 13,
         opacity: 0.8,
         flex: 1,
+    },
+    emptyStateContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: 32,
+        paddingTop: 60,
+    },
+    emptyIconContainer: {
+        width: 100,
+        height: 100,
+        borderRadius: 50,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    emptyTitle: {
+        fontSize: 22,
+        fontWeight: '800',
+        textAlign: 'center',
+        marginBottom: 8,
+    },
+    emptySubtitle: {
+        fontSize: 15,
+        textAlign: 'center',
+        lineHeight: 22,
+        opacity: 0.7,
+        marginBottom: 32,
+    },
+    emptyCtaButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 28,
+        paddingVertical: 16,
+        borderRadius: 14,
+    },
+    emptyCtaText: {
+        fontSize: 16,
+        fontWeight: '800',
+        letterSpacing: 0.5,
+    },
+    lowVerseBanner: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 12,
+        borderRadius: 12,
+        borderWidth: 1,
+        marginBottom: 12,
+        gap: 8,
+    },
+    lowVerseBannerText: {
+        flex: 1,
+        fontSize: 13,
+        lineHeight: 18,
+        fontWeight: '600',
     },
 })

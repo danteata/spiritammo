@@ -11,7 +11,6 @@ import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { SkeletonHomeScreen } from '@/components/ui/Skeleton'
 import SoldierAvatar from '@/components/SoldierAvatar'
 import WelcomeModal from '@/components/WelcomeModal'
-import TutorialOverlay, { TutorialStep } from '@/components/TutorialOverlay'
 import { AnalyticsEventType } from '@/services/analytics'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { streakManager, DailyChallenge } from '@/services/streakManager'
@@ -81,8 +80,15 @@ const TypewriterText: React.FC<TypewriterTextProps> = ({ text, style, delay = 0,
     return () => clearInterval(interval)
   }, [started, text])
 
+  const handleTapReveal = () => {
+    if (!isComplete) {
+      setDisplayedText(text)
+      setIsComplete(true)
+    }
+  }
+
   return (
-    <Text style={[style, { fontFamily: 'monospace', color: theme.textSecondary }]}>
+    <Text style={[style, { fontFamily: 'monospace', color: theme.textSecondary }]} onPress={handleTapReveal}>
       {displayedText}
       {(!isComplete || showCursor) && <Text style={{ opacity: showCursor ? 1 : 0 }}>█</Text>}
     </Text>
@@ -127,8 +133,6 @@ export default function HomeScreen() {
   const { isLoading, theme, isDark, userStats, scriptures, collections, userSettings } = useAppStore()
   const router = useRouter()
   const [showWelcome, setShowWelcome] = useState(false)
-  const [showTutorial, setShowTutorial] = useState(false)
-  const [tutorialStep, setTutorialStep] = useState(0)
   const [dailyCompleted, setDailyCompleted] = useState(false)
   const [dailyChallenge, setDailyChallenge] = useState<DailyChallenge | null>(null)
   const { trackEvent } = useAnalytics()
@@ -203,7 +207,14 @@ export default function HomeScreen() {
   const handleStartDrill = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => { })
     trackEvent(AnalyticsEventType.PRACTICE_START, { source: 'home_quick_start' })
-    router.push('/train')
+    if (verseCount === 0) {
+      router.push('/(tabs)/arsenal')
+    } else {
+      router.push({
+        pathname: '/train/practice',
+        params: { mode: 'single' },
+      })
+    }
   }
 
   const checkFirstLaunch = async () => {
@@ -225,12 +236,12 @@ export default function HomeScreen() {
     const isNewUser = verseCount === 0 && streak === 0
     const timeGreeting = getTimeBasedGreeting()
 
-    if (isNewUser) {
+    if (verseCount === 0) {
       return {
-        title: 'START FIRST DRILL',
-        subtitle: 'Begin your scripture memorization journey',
-        icon: 'rocket' as const,
-        color: theme.success,
+        title: 'ADD YOUR FIRST VERSE',
+        subtitle: 'You need verses before you can practice. Head to your Arsenal.',
+        icon: 'plus-circle' as const,
+        color: theme.accent,
         greeting: 'Welcome, Recruit!',
         subtext: 'Your training begins now.'
       }
@@ -263,16 +274,6 @@ export default function HomeScreen() {
       }
     }
   }, [verseCount, streak, dailyCompleted, theme])
-
-  const tutorialSteps: TutorialStep[] = [
-    {
-      id: 'start-drill',
-      title: 'Start Your First Drill',
-      description: 'Tap the button below to begin practicing your first verse.',
-      position: 'center',
-      canSkip: true,
-    },
-  ]
 
   return (
     <ThemedContainer style={styles.container}>
@@ -402,26 +403,29 @@ export default function HomeScreen() {
             </Animated.View>
 
             {/* Secondary Operations */}
-            <View style={styles.operationsHeader}>
-              <ThemedText variant="subheading" style={styles.operationsTitle}>RECENT OPERATIONS</ThemedText>
-              <TouchableOpacity onPress={() => router.push('/(tabs)/train')}>
-                <ThemedText variant="caption" style={{ color: theme.accent }}>GO TO TRAIN</ThemedText>
-              </TouchableOpacity>
-            </View>
+            {verseCount > 0 && (
+              <View style={styles.operationsHeader}>
+                <ThemedText variant="subheading" style={styles.operationsTitle}>RECENT OPERATIONS</ThemedText>
+                <TouchableOpacity onPress={() => router.push('/(tabs)/train')}>
+                  <ThemedText variant="caption" style={{ color: theme.accent }}>GO TO TRAIN</ThemedText>
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         )}
       </ScrollView>
 
-      <WelcomeModal isVisible={showWelcome} onClose={() => { setShowWelcome(false); setTimeout(() => setShowTutorial(true), 500); }} />
-      <TutorialOverlay
-        isVisible={showTutorial}
-        steps={tutorialSteps}
-        currentStep={tutorialStep}
-        onStepChange={setTutorialStep}
-        onComplete={() => setShowTutorial(false)}
-        onSkip={() => setShowTutorial(false)}
-        theme="military"
-      />
+      <WelcomeModal isVisible={showWelcome} onClose={(completedOnboarding) => {
+        setShowWelcome(false)
+        if (completedOnboarding && verseCount > 0) {
+          setTimeout(() => {
+            router.push({
+              pathname: '/train/practice',
+              params: { mode: 'single' },
+            })
+          }, 300)
+        }
+      }} />
       <LoadingOverlay visible={isLoading} message="Mobilizing forces..." />
     </ThemedContainer>
   )
