@@ -46,6 +46,8 @@ const AmmunitionCard = React.memo(({
   isBattleMode = false,
 }: AmmunitionCardProps) => {
   const { theme, isDark, userSettings } = useAppStore()
+  const showPlain = userSettings?.showPlainLabels !== false
+  const [isExpanded, setIsExpanded] = useState(false)
   const styles = getStyles(theme)
   const fireAnimation = useRef(new Animated.Value(1)).current
   const [pulseAnimation] = useState(new Animated.Value(1))
@@ -148,42 +150,86 @@ const AmmunitionCard = React.memo(({
   )
 
   function renderCardContent() {
+    if (!isExpanded) {
+      return (
+        <>
+          <TouchableOpacity
+            onPress={() => setIsExpanded(true)}
+            activeOpacity={0.8}
+            style={styles.collapsedRow}
+          >
+            <View style={styles.ammunitionInfo}>
+              <Text
+                style={[
+                  MILITARY_TYPOGRAPHY.heading,
+                  { color: isDark ? theme.text : GARRISON_THEME.text, marginBottom: 4 },
+                ]}
+              >
+                {scripture.reference}
+              </Text>
+              <View style={styles.collapsedMeta}>
+                <FontAwesome name="bullseye" size={12} color={getAccuracyColor(accuracy)} />
+                <View style={styles.collapsedAccuracyBar}>
+                  <View
+                    style={[
+                      styles.collapsedAccuracyFill,
+                      { width: `${accuracy}%`, backgroundColor: getAccuracyColor(accuracy) },
+                    ]}
+                  />
+                </View>
+                <Text style={[MILITARY_TYPOGRAPHY.caption, { color: isDark ? theme.textSecondary : '#64748b', fontSize: 11 }]}>
+                  {accuracy > 0 ? `${accuracy.toFixed(0)}%` : 'New'}
+                </Text>
+              </View>
+            </View>
+            <Animated.View style={{ transform: [{ scale: pulseAnimation }] }}>
+              <TouchableOpacity
+                style={[styles.fireButton, { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 10, gap: 8 }]}
+                onPress={(e) => { e.stopPropagation(); handleFire(); }}
+                disabled={isLoading}
+                testID="fire-button"
+              >
+                <Ionicons name="flash" size={18} color={theme.accentContrastText} />
+                <Text style={[styles.fireButtonText, MILITARY_TYPOGRAPHY.button]}>
+                  {showPlain ? 'FIRE! (Record)' : 'FIRE!'}
+                </Text>
+              </TouchableOpacity>
+            </Animated.View>
+          </TouchableOpacity>
+        </>
+      )
+    }
+
     return (
       <>
         {/* Header with ammunition info */}
         <View style={styles.header}>
           <View style={styles.ammunitionInfo}>
-            <Text
-              style={[
-                MILITARY_TYPOGRAPHY.heading,
-                {
-                  color: isDark ? theme.text : GARRISON_THEME.text,
-                  marginBottom: 4,
-                },
-              ]}
-            >
-              {scripture.reference}
-            </Text>
+            <TouchableOpacity onPress={() => setIsExpanded(false)}>
+              <Text
+                style={[
+                  MILITARY_TYPOGRAPHY.heading,
+                  {
+                    color: isDark ? theme.text : GARRISON_THEME.text,
+                    marginBottom: 4,
+                  },
+                ]}
+              >
+                {scripture.reference}
+              </Text>
+            </TouchableOpacity>
             <Text style={[styles.roundsCount, MILITARY_TYPOGRAPHY.caption]}>
-              ROUNDS: {roundsCount.toString().padStart(3, '0')}
+              {showPlain ? `Practice: ${roundsCount}` : `ROUNDS: ${roundsCount.toString().padStart(3, '0')}`}
             </Text>
           </View>
 
           <View style={styles.statusIndicators}>
-            {/* Reveal/Hide Button - Only in practice mode */}
             {allowBlur && (
               <TouchableOpacity
                 style={[styles.iconButton, { marginRight: 12 }]}
                 onPress={() => {
                   if (isBattleMode && !revealed) {
-                    Alert.alert(
-                      'UNAUTHORIZED DISCLOSURE',
-                      'Manual scripture reveal is not encouraged during active combat operations. Do you wish to proceed?',
-                      [
-                        { text: 'ABORT', style: 'cancel' },
-                        { text: 'PROCEED', onPress: () => setRevealed(true) }
-                      ]
-                    )
+                    setRevealed(true)
                   } else {
                     setRevealed(!revealed)
                   }
@@ -211,10 +257,20 @@ const AmmunitionCard = React.memo(({
               ]}
             />
             <Text style={[styles.statusText, MILITARY_TYPOGRAPHY.caption]}>
-              {roundsCount > 0 ? 'LOADED' : 'EMPTY'}
+              {roundsCount > 0 ? (showPlain ? 'Practiced' : 'LOADED') : 'New'}
             </Text>
           </View>
         </View>
+
+        {/* Peek penalty banner for battle mode */}
+        {isBattleMode && revealed && allowBlur && (
+          <View style={[styles.peekBanner, { backgroundColor: `${theme.warning}15`, borderColor: `${theme.warning}40` }]}>
+            <FontAwesome5 name="exclamation-triangle" size={12} color={theme.warning} />
+            <Text style={[styles.peekBannerText, { color: theme.warning }]}>
+              Peek penalty: 0 VP for this verse
+            </Text>
+          </View>
+        )}
 
         {/* Scripture text with conditional blur */}
         <View style={[
@@ -254,7 +310,7 @@ const AmmunitionCard = React.memo(({
               <View style={styles.mnemonicTitle}>
                 <FontAwesome5 name="brain" size={16} color={theme.accent} />
                 <Text style={[styles.mnemonicLabel, MILITARY_TYPOGRAPHY.caption]}>
-                  BATTLE INTEL
+                  {showPlain ? 'STUDY NOTES (Intel)' : 'BATTLE INTEL'}
                 </Text>
               </View>
               <TouchableOpacity
@@ -307,7 +363,7 @@ const AmmunitionCard = React.memo(({
               MILITARY_TYPOGRAPHY.caption,
               { color: isDark ? theme.text : GARRISON_THEME.text }
             ]}>
-              ACCURACY: {accuracy.toFixed(1)}%
+              {showPlain ? `Accuracy: ${accuracy.toFixed(1)}%` : `ACCURACY: ${accuracy.toFixed(1)}%`}
             </Text>
             <Text
               style={[
@@ -334,9 +390,7 @@ const AmmunitionCard = React.memo(({
         </View>
 
         {/* Action buttons */}
-        {/* Action buttons - 2x2 Grid */}
         <View style={styles.actionGrid}>
-          {/* Row 1: Combat Actions */}
           <View style={styles.actionRow}>
             <Animated.View style={{ flex: 1, transform: [{ scale: pulseAnimation }] }}>
               <TouchableOpacity
@@ -347,7 +401,7 @@ const AmmunitionCard = React.memo(({
               >
                 <Ionicons name="flash" size={20} color={theme.accentContrastText} />
                 <Text style={[styles.fireButtonText, MILITARY_TYPOGRAPHY.button]}>
-                  FIRE!
+                  {showPlain ? 'FIRE! (Record)' : 'FIRE!'}
                 </Text>
               </TouchableOpacity>
             </Animated.View>
@@ -361,18 +415,16 @@ const AmmunitionCard = React.memo(({
               >
                 <MaterialCommunityIcons name="incognito" size={20} color={theme.text} />
                 <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
-                  STEALTH
+                  {showPlain ? 'STEALTH (Fill-in)' : 'STEALTH'}
                 </Text>
               </TouchableOpacity>
             )}
           </View>
 
-          {/* Row 2: Tactical Actions */}
           <View style={styles.actionRow}>
             <TouchableOpacity
               style={[styles.actionButton, styles.intelButton]}
               onPress={async () => {
-                // First, speak the verse
                 await VoicePlaybackService.playScripture(
                   scripture.id,
                   `${scripture.reference}. ${scripture.text}`,
@@ -382,7 +434,6 @@ const AmmunitionCard = React.memo(({
                     language: userSettings?.language || 'en-US',
                   }
                 );
-                // Then show intel after a short delay
                 setTimeout(() => {
                   onIntel(false);
                 }, 500);
@@ -396,7 +447,7 @@ const AmmunitionCard = React.memo(({
                 <>
                   <FontAwesome5 name="brain" size={20} color={theme.text} />
                   <Text style={[styles.buttonText, MILITARY_TYPOGRAPHY.button]}>
-                    INTEL
+                    {showPlain ? 'INTEL (Listen)' : 'INTEL'}
                   </Text>
                 </>
               )}
@@ -404,7 +455,6 @@ const AmmunitionCard = React.memo(({
           </View>
         </View>
 
-        {/* Damage/wear indicators */}
         {roundsCount > 50 && (
           <View style={styles.wearIndicator}>
             <Text style={[styles.wearText, MILITARY_TYPOGRAPHY.caption]}>

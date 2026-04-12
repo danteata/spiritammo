@@ -79,6 +79,7 @@ export interface UserSettings {
   soldierName?: string
   isTimedMission?: boolean
   stealthInputMode?: 'bank' | 'tactical'
+  showPlainLabels?: boolean
 }
 
 export interface UserStats {

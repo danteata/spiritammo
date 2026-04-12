@@ -17,6 +17,7 @@ const DEFAULT_USER_SETTINGS: UserSettings = {
     voiceEngine: 'native',
     isTimedMission: false,
     stealthInputMode: 'bank',
+    showPlainLabels: true,
 }
 
 const DEFAULT_USER_STATS: UserStats = {
@@ -98,6 +99,14 @@ export const createUserSlice: StateCreator<UserSlice & ScriptureSlice, [], [], U
 
             updatedStats.lastPracticeDate = new Date().toISOString()
             updatedStats.rank = calculateRank(updatedStats.totalPracticed, updatedStats.averageAccuracy)
+
+            // Fade out plain labels after 5 sessions
+            const settings = get().userSettings
+            if (settings.showPlainLabels && updatedStats.totalPracticed >= 5) {
+                const updatedSettings = { ...settings, showPlainLabels: false }
+                await AsyncStorage.setItem(USER_SETTINGS_KEY, JSON.stringify(updatedSettings))
+                set({ userSettings: updatedSettings })
+            }
 
             // Sync with Military Ranking Service
             try {
