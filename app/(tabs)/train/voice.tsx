@@ -4,6 +4,7 @@ import {
     ActivityIndicator, Alert, ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import BlurredTextOverlay from '@/components/ui/BlurredTextOverlay';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAppStore } from '@/hooks/useAppStore';
 import { ThemedContainer, ThemedText } from '@/components/Themed';
@@ -458,13 +459,18 @@ export default function VoiceOpsScreen() {
                     </View>
                 )}
 
-                {/* Current target — reference only during briefing/listening, full verse only when skipping */}
+                {/* Current target — reference + blurred verse text during briefing/listening */}
                 {currentScripture && isRunning && (phase === 'listening' || phase === 'briefing') && !showVerseText && (
                     <View style={styles.targetCard}>
                         <ThemedText variant="caption" style={styles.label}>CURRENT TARGET</ThemedText>
                         <ThemedText variant="heading" style={[styles.reference, { color: accentColor }]}>
                             {currentScripture.reference}
                         </ThemedText>
+                        <BlurredTextOverlay containerStyle={styles.hiddenTextWrapper}>
+                            <ThemedText variant="body" style={styles.blurredVerseText}>
+                                {currentScripture.text}
+                            </ThemedText>
+                        </BlurredTextOverlay>
                     </View>
                 )}
 
@@ -618,6 +624,8 @@ const styles = StyleSheet.create({
     label: { letterSpacing: 2, opacity: 0.6, marginBottom: 4, fontSize: 10 },
     reference: { fontSize: 24, fontWeight: '800', letterSpacing: 1 },
     verseText: { textAlign: 'center', marginTop: 6, opacity: 0.7, fontStyle: 'italic', lineHeight: 20, paddingHorizontal: 8 },
+    hiddenTextWrapper: { marginTop: 6, width: '100%' },
+    blurredVerseText: { textAlign: 'center', fontStyle: 'italic', lineHeight: 20, paddingHorizontal: 8 },
     centerStage: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8 },
     stageContent: { alignItems: 'center', gap: 12 },
     instruction: { opacity: 0.7, letterSpacing: 1 },

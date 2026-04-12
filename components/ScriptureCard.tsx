@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import {
   StyleSheet,
   Text,
@@ -8,10 +8,10 @@ import {
   Alert,
 } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons';
-import { BlurView, BlurTargetView } from 'expo-blur'
 import { Scripture } from '@/types/scripture'
 import { useAppStore } from '@/hooks/useAppStore'
 import ScriptureText from './ScriptureText'
+import BlurredTextOverlay from './ui/BlurredTextOverlay'
 
 interface ScriptureCardProps {
   scripture: Scripture
@@ -33,13 +33,11 @@ export default function ScriptureCard({
   const { theme, isDark } = useAppStore()
   const [revealed, setRevealed] = useState(false)
 
-  // Auto-blur when recording starts in Battle Mode
   useEffect(() => {
     if (isBattleMode && isRecording && revealed) {
       setRevealed(false)
     }
   }, [isRecording, isBattleMode])
-  const blurTargetRef = useRef(null)
 
   const handleReveal = () => {
     setRevealed(true)
@@ -102,25 +100,13 @@ export default function ScriptureCard({
           style={[styles.text, { color: textColor }]}
         />
       ) : (
-        <View style={styles.hiddenTextWrapper}>
-          <BlurTargetView
-            ref={blurTargetRef}
-            style={styles.hiddenTextContainer}
-          >
-            <ScriptureText
-              text={scripture.text}
-              isJesusWords={scripture.isJesusWords}
-              style={[styles.text, styles.hiddenText, { color: textColor }]}
-            />
-          </BlurTargetView>
-          <BlurView
-            blurTarget={blurTargetRef}
-            blurMethod="dimezisBlurViewSdk31Plus"
-            style={styles.blurOverlay}
-            intensity={Platform.OS === 'ios' ? 15 : 14}
-            tint={isDark ? "dark" : "light"}
+        <BlurredTextOverlay>
+          <ScriptureText
+            text={scripture.text}
+            isJesusWords={scripture.isJesusWords}
+            style={[styles.text, styles.hiddenText, { color: textColor }]}
           />
-        </View>
+        </BlurredTextOverlay>
       )}
     </>
   )
@@ -192,22 +178,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginRight: 4,
   },
-  hiddenTextWrapper: {
-    position: 'relative',
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  hiddenTextContainer: {
-    padding: 2,
-  },
   hiddenText: {
     fontSize: 18,
     lineHeight: 26,
     userSelect: 'none',
-    opacity: 0.5,
-  },
-  blurOverlay: {
-    ...StyleSheet.absoluteFill,
   },
   buttonContainer: {
     flexDirection: 'row',

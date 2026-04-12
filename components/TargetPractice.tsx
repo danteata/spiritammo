@@ -11,7 +11,7 @@ import {
   ActivityIndicator,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { BlurView, BlurTargetView } from 'expo-blur'
+import BlurredTextOverlay from '@/components/ui/BlurredTextOverlay'
 import { FontAwesome, Feather, Ionicons } from '@expo/vector-icons'
 import * as Speech from 'expo-speech'
 import {
@@ -134,7 +134,6 @@ export default function TargetPractice({
   // Animations
   const targetAnimation = useRef(new Animated.Value(1)).current
   const shakeAnimation = useRef(new Animated.Value(0)).current
-  const blurTargetRef = useRef(null)
 
   // Track target practice start
   useEffect(() => {
@@ -964,23 +963,11 @@ export default function TargetPractice({
 
         {/* Blurred verse text */}
         <View style={styles.verseContent}>
-          <View style={styles.hiddenTextWrapper}>
-            <BlurTargetView
-              ref={blurTargetRef}
-              style={styles.verseTarget}
-            >
-              <Text style={[styles.targetText, styles.blurredText, { color: textColor }]}>
-                {targetVerse}
-              </Text>
-            </BlurTargetView>
-            <BlurView
-              blurTarget={blurTargetRef}
-              blurMethod="dimezisBlurViewSdk31Plus"
-              intensity={Platform.OS === 'ios' ? 15 : 12}
-              style={styles.blurOverlay}
-              tint={isDark ? "dark" : "light"}
-            />
-          </View>
+          <BlurredTextOverlay containerStyle={styles.hiddenTextWrapper}>
+            <Text style={[styles.targetText, styles.blurredText, { color: textColor }]}>
+              {targetVerse}
+            </Text>
+          </BlurredTextOverlay>
         </View>
 
         <Text style={[styles.hintText, { color: theme.textSecondary }]}>
@@ -1417,18 +1404,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
   },
-  verseTarget: {
-    padding: 2,
-  },
-  blurOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 10,
-  },
   targetText: {
     fontSize: 16,
     textAlign: 'center',
   },
   blurredText: {
-    opacity: 0.8,
   },
 })

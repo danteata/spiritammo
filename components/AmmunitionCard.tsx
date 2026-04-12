@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native'
 import { FontAwesome, Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
-import { BlurView, BlurTargetView } from 'expo-blur'
+import BlurredTextOverlay from './ui/BlurredTextOverlay'
 import {
   COLORS,
   MILITARY_TYPOGRAPHY,
@@ -49,8 +49,7 @@ const AmmunitionCard = React.memo(({
   const styles = getStyles(theme)
   const fireAnimation = useRef(new Animated.Value(1)).current
   const [pulseAnimation] = useState(new Animated.Value(1))
-  const [revealed, setRevealed] = useState(!allowBlur) // Default to revealed if blur is not allowed
-  const blurTargetRef = useRef(null)
+  const [revealed, setRevealed] = useState(!allowBlur)
 
   useEffect(() => {
     // Start pulsing animation for the FIRE button
@@ -233,30 +232,18 @@ const AmmunitionCard = React.memo(({
               ]}
             />
           ) : (
-            <View style={styles.hiddenTextWrapper}>
-              <BlurTargetView
-                ref={blurTargetRef}
-                style={styles.hiddenTextContainer}
-              >
-                <ScriptureText
-                  text={scripture.text}
-                  isJesusWords={scripture.isJesusWords}
-                  style={[
-                    styles.scriptureText,
-                    styles.hiddenText,
-                    MILITARY_TYPOGRAPHY.body,
-                    { color: isDark ? theme.text : GARRISON_THEME.text }
-                  ]}
-                />
-              </BlurTargetView>
-              <BlurView
-                blurTarget={blurTargetRef}
-                blurMethod="dimezisBlurViewSdk31Plus"
-                intensity={Platform.OS === 'ios' ? 15 : 5}
-                style={styles.blurOverlay}
-                tint={isDark ? "dark" : "light"}
+            <BlurredTextOverlay containerStyle={styles.hiddenTextWrapper}>
+              <ScriptureText
+                text={scripture.text}
+                isJesusWords={scripture.isJesusWords}
+                style={[
+                  styles.scriptureText,
+                  styles.hiddenText,
+                  MILITARY_TYPOGRAPHY.body,
+                  { color: isDark ? theme.text : GARRISON_THEME.text }
+                ]}
               />
-            </View>
+            </BlurredTextOverlay>
           )}
         </View>
 
@@ -491,14 +478,7 @@ const getStyles = (theme: any) => StyleSheet.create({
     borderRadius: 8,
     overflow: 'hidden',
   },
-  hiddenTextContainer: {
-    padding: 2, // Minor padding to avoid clipping
-  },
   hiddenText: {
-    opacity: 0.5,
-  },
-  blurOverlay: {
-    ...StyleSheet.absoluteFillObject,
   },
   scriptureText: {
     lineHeight: 24,
