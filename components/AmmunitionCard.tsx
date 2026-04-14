@@ -7,7 +7,6 @@ import {
   Animated,
   ActivityIndicator,
   Platform,
-  Alert,
 } from 'react-native'
 import { FontAwesome, Ionicons, FontAwesome5, MaterialCommunityIcons } from '@expo/vector-icons';
 import BlurredTextOverlay from './ui/BlurredTextOverlay'
@@ -669,5 +668,41 @@ const getStyles = (theme: any) => StyleSheet.create({
   wearText: {
     color: theme.warning,
     textAlign: 'center',
+  },
+  collapsedRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  collapsedMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  collapsedAccuracyBar: {
+    flex: 1,
+    height: 4,
+    backgroundColor: theme.border,
+    borderRadius: 2,
+    overflow: 'hidden',
+    maxWidth: 80,
+  },
+  collapsedAccuracyFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  peekBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 12,
+    gap: 8,
+  },
+  peekBannerText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 })

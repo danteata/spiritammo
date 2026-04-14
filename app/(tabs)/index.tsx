@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { StyleSheet, Text, ScrollView, View, TouchableOpacity, Dimensions, Animated } from 'react-native'
-import { FontAwesome5 } from '@expo/vector-icons'
+import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRouter } from 'expo-router'
 import * as Haptics from 'expo-haptics'
@@ -130,7 +130,7 @@ const PulsingGlow: React.FC<PulsingGlowProps> = ({ children, color, style }: Pul
 }
 
 export default function HomeScreen() {
-  const { isLoading, theme, isDark, userStats, scriptures, collections, userSettings } = useAppStore()
+  const { isLoading, theme, isDark, userStats, scriptures, collections, userSettings, startTraining } = useAppStore()
   const router = useRouter()
   const [showWelcome, setShowWelcome] = useState(false)
   const [dailyCompleted, setDailyCompleted] = useState(false)
@@ -210,10 +210,9 @@ export default function HomeScreen() {
     if (verseCount === 0) {
       router.push('/(tabs)/arsenal')
     } else {
-      router.push({
-        pathname: '/train/practice',
-        params: { mode: 'single' },
-      })
+      console.log('[HOME] startTraining(single) then router.push(/(tabs)/train)')
+      startTraining('single')
+      router.push('/(tabs)/train')
     }
   }
 
@@ -402,13 +401,51 @@ export default function HomeScreen() {
               </PulsingGlow>
             </Animated.View>
 
-            {/* Secondary Operations */}
+            {/* Quick Start Cards */}
             {verseCount > 0 && (
-              <View style={styles.operationsHeader}>
-                <ThemedText variant="subheading" style={styles.operationsTitle}>RECENT OPERATIONS</ThemedText>
-                <TouchableOpacity onPress={() => router.push('/(tabs)/train')}>
-                  <ThemedText variant="caption" style={{ color: theme.accent }}>GO TO TRAIN</ThemedText>
-                </TouchableOpacity>
+              <View style={styles.quickStartSection}>
+                <ThemedText variant="subheading" style={styles.operationsTitle}>QUICK START</ThemedText>
+                <View style={styles.quickStartRow}>
+                  <TouchableOpacity
+                    style={[styles.quickCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : theme.surface, borderColor: theme.border }]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+                      console.log('[HOME] startTraining(single) then router.push(/(tabs)/train)')
+                      startTraining('single')
+                      router.push('/(tabs)/train')
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="eye" size={20} color={theme.accent} />
+                    <ThemedText variant="caption" style={styles.quickCardLabel}>Single Focus</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.quickCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : theme.surface, borderColor: theme.border }]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+                      console.log('[HOME] startTraining(automatic) then router.push(/(tabs)/train)')
+                      startTraining('automatic')
+                      router.push('/(tabs)/train')
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="infinite" size={20} color={theme.warning} />
+                    <ThemedText variant="caption" style={styles.quickCardLabel}>Auto Pilot</ThemedText>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.quickCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : theme.surface, borderColor: theme.border }]}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
+                      console.log('[HOME] startTraining(burst) then router.push(/(tabs)/train)')
+                      startTraining('burst')
+                      router.push('/(tabs)/train')
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="flash" size={20} color={theme.success} />
+                    <ThemedText variant="caption" style={styles.quickCardLabel}>Burst Fire</ThemedText>
+                  </TouchableOpacity>
+                </View>
               </View>
             )}
           </>
@@ -419,10 +456,8 @@ export default function HomeScreen() {
         setShowWelcome(false)
         if (completedOnboarding && verseCount > 0) {
           setTimeout(() => {
-            router.push({
-              pathname: '/train/practice',
-              params: { mode: 'single' },
-            })
+            startTraining('single')
+            router.push('/(tabs)/train')
           }, 300)
         }
       }} />
@@ -498,4 +533,8 @@ const styles = StyleSheet.create({
   ctaArrow: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.05)' },
   operationsHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, paddingHorizontal: 4 },
   operationsTitle: { fontSize: 14, fontWeight: '900', letterSpacing: 1.5 },
+  quickStartSection: { marginTop: 8, marginBottom: 16 },
+  quickStartRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
+  quickCard: { flex: 1, alignItems: 'center', paddingVertical: 16, borderRadius: 12, borderWidth: 1, gap: 8 },
+  quickCardLabel: { fontWeight: '700', letterSpacing: 0.5 },
 })

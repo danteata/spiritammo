@@ -12,6 +12,7 @@ import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { ThemedText, ThemedCard } from './Themed'
 import { useAppStore } from '@/hooks/useAppStore'
+import { useZustandStore } from '@/hooks/zustandStore'
 import VoiceRecordingService from '@/services/voiceRecording'
 import { VoiceRecording, VoiceRecordingStats } from '@/types/scripture'
 
@@ -203,7 +204,10 @@ export const VoiceLibrary: React.FC<VoiceLibraryProps> = ({ isDark, theme }) => 
                     </ThemedText>
                     <TouchableOpacity
                         style={[styles.emptyButton, { backgroundColor: theme.accent }]}
-                        onPress={() => router.push('/train/campaign')}
+                        onPress={() => {
+                            useZustandStore.getState().startTraining('voice')
+                            router.push('/(tabs)/train')
+                        }}
                     >
                         <Ionicons name="play-circle" size={18} color={theme.accentContrastText} />
                         <Text style={[styles.emptyButtonText, { color: theme.accentContrastText }]}>Start Practice</Text>

@@ -35,6 +35,8 @@ import type { Question } from '@/services/questionGenerator'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+export type TrainingMode = 'single' | 'burst' | 'automatic' | 'voice'
+
 type AppState = AvatarSlice &
   ScriptureSlice &
   CollectionSlice &
@@ -44,6 +46,13 @@ type AppState = AvatarSlice &
     isLoading: boolean
     squadMembers: SquadMember[]
     squadChallenges: SquadChallenge[]
+
+    // Pending cross-tab navigation for training modes
+    pendingTrainingMode: TrainingMode | null
+    pendingCollectionId: string | null
+    pendingChapterIds: string | null
+    startTraining: (mode: TrainingMode, collectionId?: string, chapterIds?: string) => void
+    consumeTrainingIntent: () => { mode: TrainingMode | null; collectionId: string | null; chapterIds: string | null }
 
     // Quiz intelligence (local-only)
     versePerformance: Record<string, { seen: number; wrong: number; lastWrongAt?: string }>
@@ -76,6 +85,28 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
   squadChallenges: [],
   versePerformance: {},
   distractorPerformance: {},
+
+  // Pending cross-tab navigation for training modes
+  pendingTrainingMode: null,
+  pendingCollectionId: null,
+  pendingChapterIds: null,
+
+  startTraining: (mode, collectionId, chapterIds) => {
+    console.log('[STORE] startTraining called with mode:', mode, 'collectionId:', collectionId, 'chapterIds:', chapterIds)
+    set({
+      pendingTrainingMode: mode,
+      pendingCollectionId: collectionId ?? null,
+      pendingChapterIds: chapterIds ?? null,
+    })
+    console.log('[STORE] startTraining — pendingTrainingMode is now:', get().pendingTrainingMode)
+  },
+
+  consumeTrainingIntent: () => {
+    const { pendingTrainingMode, pendingCollectionId, pendingChapterIds } = get()
+    console.log('[STORE] consumeTrainingIntent — pendingTrainingMode:', pendingTrainingMode)
+    set({ pendingTrainingMode: null, pendingCollectionId: null, pendingChapterIds: null })
+    return { mode: pendingTrainingMode, collectionId: pendingCollectionId, chapterIds: pendingChapterIds }
+  },
 
   recordQuizResults: async (questions, selectedAnswers) => {
     const versePerf = { ...get().versePerformance }

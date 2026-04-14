@@ -73,7 +73,7 @@ export const createAvatarSlice: AvatarSliceCreator = (set, get) => ({
                         ...DEFAULT_EQUIPPED_ITEMS,
                         ...parsedData.avatarInventory?.equippedItems
                     },
-                    valorPoints: parsedData.avatarInventory?.valorPoints || 100
+                    valorPoints: parsedData.avatarInventory?.valorPoints ?? 100
                 }
 
                 const avatarStats: AvatarStats = {

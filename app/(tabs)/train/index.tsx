@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
     StyleSheet,
     View,
@@ -8,8 +8,10 @@ import {
     Text,
 } from 'react-native'
 import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
+import ContextualTooltip from '@/components/ui/ContextualTooltip'
+import { useRouter, useFocusEffect } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
+import { useZustandStore, TrainingMode } from '@/hooks/zustandStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
@@ -21,8 +23,6 @@ import { Collection } from '@/types/scripture'
 
 const { width } = Dimensions.get('window')
 
-type TrainingMode = 'single' | 'burst' | 'automatic' | 'voice'
-
 export default function TrainingScreen() {
     const { isLoading, theme, isDark, userStats, scriptures, collections } = useAppStore()
     const router = useRouter()
@@ -33,6 +33,41 @@ export default function TrainingScreen() {
     const [showChapterSelector, setShowChapterSelector] = useState(false)
 
     useScreenTracking('training')
+
+    // When this screen gains focus, check if another screen (e.g. Home)
+    // queued a pending training mode via the store. We dismiss any screens
+    // above the index first (from previous cross-tab navigations), then
+    // replace the index itself with the target — this makes the target the
+    // stack root so NativeTabs can't pop it, and avoids stacking stale screens.
+    useFocusEffect(
+        useCallback(() => {
+            console.log('[TRAIN-INDEX] useFocusEffect fired')
+            const state = useZustandStore.getState()
+            console.log('[TRAIN-INDEX] pendingTrainingMode =', state.pendingTrainingMode)
+            const intent = state.consumeTrainingIntent()
+            console.log('[TRAIN-INDEX] consumeTrainingIntent returned:', JSON.stringify(intent))
+            if (intent.mode) {
+                const target = intent.mode === 'voice' ? '/train/voice' : '/train/practice'
+                console.log('[TRAIN-INDEX] dismissAll, then replacing with:', target, 'mode:', intent.mode)
+                // Pop any screens above the index first (e.g. a previous
+                // practice screen from a prior cross-tab navigation).
+                router.dismissAll()
+                // Small delay to let the dismiss settle before we replace.
+                requestAnimationFrame(() => {
+                    router.replace({
+                        pathname: target,
+                        params: {
+                            mode: intent.mode,
+                            collectionId: intent.collectionId ?? undefined,
+                            chapterIds: intent.chapterIds ?? undefined,
+                        },
+                    })
+                })
+            } else {
+                console.log('[TRAIN-INDEX] no pending mode — showing mode selector')
+            }
+        }, [router])
+    )
 
     const handleModeSelect = (mode: TrainingMode) => {
         trackEvent(AnalyticsEventType.PRACTICE_START, {
@@ -189,13 +224,19 @@ export default function TrainingScreen() {
                     </TouchableOpacity>
                 )}
 
+                <ContextualTooltip
+                    id="train_modes"
+                    title="Choose a Drill"
+                    message="Start with Single Focus for deep memorization, or Auto Pilot to listen passively. More modes unlock as you practice."
+                />
+
                 {/* Training Mode Selection */}
                 <View style={[styles.modesSection, { marginTop: 10 }]}>
                     <ThemedText variant="caption" style={styles.sectionTitle}>
                         CHOOSE DRILL
                     </ThemedText>
 
-                    {/* Single Mode - Focus on one verse */}
+                    {/* Single Mode - Always available */}
                     <TouchableOpacity
                         style={styles.modeCard}
                         onPress={() => handleModeSelect('single')}
@@ -210,10 +251,10 @@ export default function TrainingScreen() {
                             <View style={styles.modeContent}>
                                 <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.accent }]}>SINGLE FOCUS</ThemedText>
                                 <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
-                                    Deep memorization drill. Master one target verse at a time before advancing.
+                                    Deep memorization drill. Master one verse at a time before advancing.
                                 </ThemedText>
                                 <View style={[styles.modeTag, { backgroundColor: `${theme.accent}15` }]}>
-                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.accent }]}>Deep Focus</ThemedText>
+                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.accent }]}>Best for starting</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
@@ -222,34 +263,7 @@ export default function TrainingScreen() {
                         </ThemedCard>
                     </TouchableOpacity>
 
-                    {/* Burst Mode - Rapid fire */}
-                    <TouchableOpacity
-                        style={styles.modeCard}
-                        onPress={() => handleModeSelect('burst')}
-                        activeOpacity={0.9}
-                    >
-                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.success }]}>
-                            <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: `${theme.success}15` }]}>
-                                    <Ionicons name="flash" size={28} color={theme.success} />
-                                </View>
-                            </View>
-                            <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.success }]}>BURST FIRE</ThemedText>
-                                <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
-                                    Rapid-fire tactical drill for quick recall. Engage multiple familiar verses in succession.
-                                </ThemedText>
-                                <View style={[styles.modeTag, { backgroundColor: `${theme.success}15` }]}>
-                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.success }]}>Quick Review</ThemedText>
-                                </View>
-                            </View>
-                            <View style={styles.modeArrow}>
-                                <FontAwesome5 name="chevron-right" size={14} color={isDark ? theme.textSecondary : '#6B7B3A'} />
-                            </View>
-                        </ThemedCard>
-                    </TouchableOpacity>
-
-                    {/* Automatic Mode - Hands-free */}
+                    {/* Auto Pilot - Always available */}
                     <TouchableOpacity
                         style={styles.modeCard}
                         onPress={() => handleModeSelect('automatic')}
@@ -264,10 +278,10 @@ export default function TrainingScreen() {
                             <View style={styles.modeContent}>
                                 <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.warning }]}>AUTO PILOT</ThemedText>
                                 <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
-                                    Verses read aloud automatically, one after another. Just listen and absorb.
+                                    Verses read aloud automatically. Just listen and absorb.
                                 </ThemedText>
                                 <View style={[styles.modeTag, { backgroundColor: `${theme.warning}15` }]}>
-                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.warning }]}>Passive Learning</ThemedText>
+                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.warning }]}>Hands-free</ThemedText>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
@@ -276,93 +290,139 @@ export default function TrainingScreen() {
                         </ThemedCard>
                     </TouchableOpacity>
 
-                    {/* Voice Ops Mode - Hands-free */}
-                    <TouchableOpacity
-                        style={styles.modeCard}
-                        onPress={() => handleModeSelect('voice')}
-                        activeOpacity={0.9}
-                    >
-                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.info }]}>
+                    {/* Burst Mode - Unlocked after 1 session */}
+                    {totalSessions >= 1 ? (
+                        <TouchableOpacity
+                            style={styles.modeCard}
+                            onPress={() => handleModeSelect('burst')}
+                            activeOpacity={0.9}
+                        >
+                            <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.success }]}>
+                                <View style={styles.modeIconContainer}>
+                                    <View style={[styles.modeIcon, { backgroundColor: `${theme.success}15` }]}>
+                                        <Ionicons name="flash" size={28} color={theme.success} />
+                                    </View>
+                                </View>
+                                <View style={styles.modeContent}>
+                                    <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.success }]}>BURST FIRE</ThemedText>
+                                    <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
+                                        Rapid-fire drill for quick recall. Practice multiple verses in succession.
+                                    </ThemedText>
+                                    <View style={[styles.modeTag, { backgroundColor: `${theme.success}15` }]}>
+                                        <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.success }]}>Quick Review</ThemedText>
+                                    </View>
+                                </View>
+                                <View style={styles.modeArrow}>
+                                    <FontAwesome5 name="chevron-right" size={14} color={isDark ? theme.textSecondary : '#6B7B3A'} />
+                                </View>
+                            </ThemedCard>
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={[styles.lockedCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}>
                             <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: `${theme.info}15` }]}>
-                                    <Ionicons name="mic" size={28} color={theme.info || '#4dabf7'} />
+                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }]}>
+                                    <Ionicons name="flash" size={28} color={isDark ? '#475569' : '#94a3b8'} />
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.info || '#4dabf7' }]}>VOICE OPS</ThemedText>
-                                <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
-                                    Hands-free drill. Listen to the target and recite the passage aloud to engage.
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: isDark ? '#475569' : '#94a3b8' }]}>BURST FIRE</ThemedText>
+                                <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? '#334155' : '#94a3b8' }]}>
+                                    Complete 1 drill to unlock
                                 </ThemedText>
-                                <View style={[styles.modeTag, { backgroundColor: `${theme.info || '#4dabf7'}15` }]}>
-                                    <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.info || '#4dabf7' }]}>Audio Comms</ThemedText>
-                                </View>
                             </View>
-                            <View style={styles.modeArrow}>
-                                <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
-                            </View>
-                        </ThemedCard>
-                    </TouchableOpacity>
+                            <FontAwesome5 name="lock" size={16} color={isDark ? '#475569' : '#94a3b8'} />
+                        </View>
+                    )}
 
-                    {/* Collection Drill - Structured Practice & Quiz */}
-                    <TouchableOpacity
-                        style={styles.modeCard}
-                        onPress={handleCollectionPractice}
-                        activeOpacity={0.9}
-                    >
-                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.accent }]}>
+                    {/* Voice Ops - Unlocked after 3 sessions */}
+                    {totalSessions >= 3 ? (
+                        <TouchableOpacity
+                            style={styles.modeCard}
+                            onPress={() => handleModeSelect('voice')}
+                            activeOpacity={0.9}
+                        >
+                            <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.info }]}>
+                                <View style={styles.modeIconContainer}>
+                                    <View style={[styles.modeIcon, { backgroundColor: `${theme.info}15` }]}>
+                                        <Ionicons name="mic" size={28} color={theme.info || '#4dabf7'} />
+                                    </View>
+                                </View>
+                                <View style={styles.modeContent}>
+                                    <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.info || '#4dabf7' }]}>VOICE OPS</ThemedText>
+                                    <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
+                                        Listen to the verse and recite it aloud from memory.
+                                    </ThemedText>
+                                    <View style={[styles.modeTag, { backgroundColor: `${theme.info || '#4dabf7'}15` }]}>
+                                        <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.info || '#4dabf7' }]}>Speech Recognition</ThemedText>
+                                    </View>
+                                </View>
+                                <View style={styles.modeArrow}>
+                                    <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
+                                </View>
+                            </ThemedCard>
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={[styles.lockedCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}>
                             <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: `${theme.accent}15` }]}>
-                                    <Ionicons name="folder" size={28} color={theme.accent} />
+                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }]}>
+                                    <Ionicons name="mic" size={28} color={isDark ? '#475569' : '#94a3b8'} />
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.accent }]}>LIVE FIRE DRILL</ThemedText>
-                                <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
-                                    Focus on specific collections. Practice recording or test yourself with a quiz.
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: isDark ? '#475569' : '#94a3b8' }]}>VOICE OPS</ThemedText>
+                                <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? '#334155' : '#94a3b8' }]}>
+                                    Complete {3 - totalSessions} more drill{3 - totalSessions !== 1 ? 's' : ''} to unlock
                                 </ThemedText>
-                                <View style={[styles.modeTag, { backgroundColor: `${theme.accent}15` }]}>
-                                <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.accent }]}>Tactical Drill</ThemedText>
+                            </View>
+                            <FontAwesome5 name="lock" size={16} color={isDark ? '#475569' : '#94a3b8'} />
+                        </View>
+                    )}
+
+                    {/* Live Fire Drill - Unlocked after 5 sessions */}
+                    {totalSessions >= 5 ? (
+                        <TouchableOpacity
+                            style={styles.modeCard}
+                            onPress={handleCollectionPractice}
+                            activeOpacity={0.9}
+                        >
+                            <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.accent }]}>
+                                <View style={styles.modeIconContainer}>
+                                    <View style={[styles.modeIcon, { backgroundColor: `${theme.accent}15` }]}>
+                                        <Ionicons name="folder" size={28} color={theme.accent} />
+                                    </View>
+                                </View>
+                                <View style={styles.modeContent}>
+                                    <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.accent }]}>LIVE FIRE DRILL</ThemedText>
+                                    <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
+                                        Practice specific collections with recording or a quiz.
+                                    </ThemedText>
+                                    <View style={[styles.modeTag, { backgroundColor: `${theme.accent}15` }]}>
+                                        <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.accent }]}>Tactical Drill</ThemedText>
+                                    </View>
+                                </View>
+                                <View style={styles.modeArrow}>
+                                    <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
+                                </View>
+                            </ThemedCard>
+                        </TouchableOpacity>
+                    ) : (
+                        <View style={[styles.lockedCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}>
+                            <View style={styles.modeIconContainer}>
+                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }]}>
+                                    <Ionicons name="folder" size={28} color={isDark ? '#475569' : '#94a3b8'} />
                                 </View>
                             </View>
-                            <View style={styles.modeArrow}>
-                                <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
+                            <View style={styles.modeContent}>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: isDark ? '#475569' : '#94a3b8' }]}>LIVE FIRE DRILL</ThemedText>
+                                <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? '#334155' : '#94a3b8' }]}>
+                                    Complete {5 - totalSessions} more drill{5 - totalSessions !== 1 ? 's' : ''} to unlock
+                                </ThemedText>
                             </View>
-                        </ThemedCard>
-                    </TouchableOpacity>
+                            <FontAwesome5 name="lock" size={16} color={isDark ? '#475569' : '#94a3b8'} />
+                        </View>
+                    )}
                 </View>
 
-                {/* Tips Section */}
-                <View style={styles.tipsSection}>
-                    <ThemedText variant="caption" style={styles.sectionTitle}>
-                        TRAINING INTEL
-                    </ThemedText>
-                    <ThemedCard variant="glass" style={styles.tipCard}>
-                        <View style={styles.tipItem}>
-                            <FontAwesome5 name="bullseye" size={14} color={theme.accent} />
-                            <ThemedText variant="body" style={styles.tipText}>
-                                Use Single Focus for deep coordinate precision
-                            </ThemedText>
-                        </View>
-                        <View style={styles.tipItem}>
-                            <FontAwesome5 name="bullseye" size={14} color={theme.accent} />
-                            <ThemedText variant="body" style={styles.tipText}>
-                                Switch to Burst Fire for rapid-fire review sessions
-                            </ThemedText>
-                        </View>
-                        <View style={styles.tipItem}>
-                            <FontAwesome5 name="bullseye" size={14} color={theme.accent} />
-                            <ThemedText variant="body" style={styles.tipText}>
-                                Use Auto Pilot for passive reconnaissance & absorption
-                            </ThemedText>
-                        </View>
-                        <View style={styles.tipItem}>
-                            <FontAwesome5 name="bullseye" size={14} color={theme.accent} />
-                            <ThemedText variant="body" style={styles.tipText}>
-                                Ready for combat? Deploy to Battle Mode!
-                            </ThemedText>
-                        </View>
-                    </ThemedCard>
-                </View>
             </ScrollView>
 
             <LoadingOverlay visible={isLoading} />
@@ -433,6 +493,15 @@ const styles = StyleSheet.create({
     modeCard: {
         marginBottom: 4,
     },
+    lockedCard: {
+        flexDirection: 'row',
+        padding: 16,
+        alignItems: 'center',
+        borderRadius: 16,
+        borderWidth: 1,
+        marginBottom: 4,
+        opacity: 0.6,
+    },
     modeCardInner: {
         flexDirection: 'row',
         padding: 16,
@@ -482,24 +551,6 @@ const styles = StyleSheet.create({
     modeArrow: {
         marginLeft: 8,
         opacity: 0.5,
-    },
-    tipsSection: {
-        marginTop: 30,
-    },
-    tipCard: {
-        padding: 20,
-        borderRadius: 16,
-        gap: 16,
-    },
-    tipItem: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 12,
-    },
-    tipText: {
-        fontSize: 13,
-        opacity: 0.8,
-        flex: 1,
     },
     emptyStateContainer: {
         flex: 1,

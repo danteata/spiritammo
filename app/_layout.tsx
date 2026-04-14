@@ -27,9 +27,13 @@ if (!publishableKey) {
 }
 
 export default function RootLayout() {
+  const isLoading = useZustandStore((s) => s.isLoading)
+
   useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
+    if (!isLoading) {
+      SplashScreen.hideAsync();
+    }
+  }, [isLoading]);
 
   // Handle Deep Links
   useEffect(() => {

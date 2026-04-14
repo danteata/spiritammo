@@ -76,6 +76,11 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const equipItem = useZustandStore((s) => s.equipItem)
   const addValorPoints = useZustandStore((s) => s.addValorPoints)
 
+  // Cross-tab training navigation
+  const pendingTrainingMode = useZustandStore((s) => s.pendingTrainingMode)
+  const startTraining = useZustandStore((s) => s.startTraining)
+  const consumeTrainingIntent = useZustandStore((s) => s.consumeTrainingIntent)
+
   return {
     // Theme
     themeMode,
@@ -139,5 +144,10 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     purchaseItem,
     equipItem,
     addValorPoints,
+
+    // Cross-tab training navigation
+    pendingTrainingMode,
+    startTraining,
+    consumeTrainingIntent,
   }
 })

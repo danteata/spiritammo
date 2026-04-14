@@ -116,9 +116,7 @@ export default function TrainingPracticeScreen() {
     useScreenTracking('training_practice')
 
     const [currentScripture, setCurrentScripture] = useState<Scripture | null>(null)
-    const [trainingMode] = useState<'single' | 'burst' | 'automatic' | 'collection'>(
-        (params.mode as 'single' | 'burst' | 'automatic' | 'collection') || 'single'
-    )
+    const trainingMode = (params.mode as 'single' | 'burst' | 'automatic' | 'collection') || 'single'
     const [showStealthDrill, setShowStealthDrill] = useState(false)
     const [isLoadingScripture, setIsLoadingScripture] = useState(false)
     const [isLoadingIntel, setIsLoadingIntel] = useState(false)
@@ -146,6 +144,28 @@ export default function TrainingPracticeScreen() {
     const autoTimerRef = useRef<NodeJS.Timeout | null>(null)
     const fadeAnim = useRef(new Animated.Value(1)).current
     const isMountedRef = useRef(true)
+
+    // Reset mode-specific state when trainingMode changes (e.g. cross-tab replace)
+    useEffect(() => {
+        console.log('[PRACTICE] trainingMode changed to:', trainingMode)
+        setCurrentScripture(null)
+        setHistory([])
+        setHistoryIndex(-1)
+        setShowStealthDrill(false)
+        setTacticalIntel(null)
+        // Reset burst state
+        if (burstTimerRef.current) clearTimeout(burstTimerRef.current)
+        setBurstQueue([])
+        setBurstIndex(0)
+        setIsBurstActive(false)
+        setBurstScore({ correct: 0, total: 0 })
+        // Reset auto-pilot state
+        if (autoTimerRef.current) clearTimeout(autoTimerRef.current)
+        setIsAutoPlaying(false)
+        setIsAutoReading(false)
+        setAutoVersesCount(0)
+        setIsAutoPaused(false)
+    }, [trainingMode])
 
     // Cleanup on unmount
     useEffect(() => {
@@ -274,7 +294,7 @@ export default function TrainingPracticeScreen() {
                 `You scored ${newScore.correct}/${burstQueue.length}!`,
                 [
                     { text: 'New Burst', onPress: initBurstMode },
-                    { text: 'Exit', onPress: () => router.back() },
+                    { text: 'Exit', onPress: () => router.replace('/train') },
                 ]
             )
         }
@@ -546,6 +566,17 @@ export default function TrainingPracticeScreen() {
             <ScreenHeader
                 title={modeInfo.title}
                 subtitle={modeInfo.subtitle}
+                rightAction={
+                    <TouchableOpacity
+                        onPress={() => router.replace('/train')}
+                        style={styles.headerBackButton}
+                    >
+                        <Ionicons name="grid" size={20} color={theme.textSecondary} />
+                        <ThemedText variant="caption" style={[styles.headerBackText, { color: theme.textSecondary }]}>
+                            Modes
+                        </ThemedText>
+                    </TouchableOpacity>
+                }
             />
 
             <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -794,6 +825,17 @@ export default function TrainingPracticeScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    headerBackButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+    },
+    headerBackText: {
+        letterSpacing: 1,
+        fontSize: 11,
     },
     scrollView: {
         flex: 1,

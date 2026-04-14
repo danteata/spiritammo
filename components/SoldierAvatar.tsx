@@ -1,5 +1,3 @@
-// Soldier Avatar Component - Layered paper doll system for The Barracks
-
 import React from 'react'
 import {
     View,
@@ -15,11 +13,19 @@ import { getItemById } from '@/constants/avatarItems'
 import { EquipmentSlot } from '@/types/avatar'
 
 const { width } = Dimensions.get('window')
-const AVATAR_SIZE = 120 // Main avatar size
-const LAYER_OFFSET = 2 // Small offset between layers
+const AVATAR_SIZE = 120
+
+const SLOT_COLORS: Record<string, { bg: string; border: string; label: string }> = {
+    head: { bg: 'rgba(59, 130, 246, 0.35)', border: '#3B82F6', label: 'H' },
+    body: { bg: 'rgba(34, 197, 94, 0.35)', border: '#22C55E', label: 'B' },
+    legs: { bg: 'rgba(168, 85, 247, 0.35)', border: '#A855F7', label: 'L' },
+    primary: { bg: 'rgba(239, 68, 68, 0.35)', border: '#EF4444', label: 'W' },
+    communications: { bg: 'rgba(234, 179, 8, 0.35)', border: '#EAB308', label: 'C' },
+    background: { bg: 'rgba(14, 165, 233, 0.25)', border: '#0EA5E9', label: 'BG' },
+}
 
 interface SoldierAvatarProps {
-    size?: 'small' | 'medium' | 'large' // Default medium
+    size?: 'small' | 'medium' | 'large'
     showStats?: boolean
     style?: any
 }
@@ -32,12 +38,11 @@ export default function SoldierAvatar({
 
     const { avatarInventory, isLoadingAvatar, userSettings, isDark, theme } = useAppStore()
 
-    // Size mappings
     const getSize = () => {
         switch (size) {
             case 'small': return 80
             case 'large': return 160
-            default: return AVATAR_SIZE // medium
+            default: return AVATAR_SIZE
         }
     }
 
@@ -51,7 +56,6 @@ export default function SoldierAvatar({
         )
     }
 
-    // Get equipped items with fallback for when avatar data is not loaded yet
     const equippedItems = avatarInventory?.equippedItems || {
         head: 'helmet_basic',
         body: 'vest_basic',
@@ -66,138 +70,140 @@ export default function SoldierAvatar({
     const primaryItem = getItemById(equippedItems.primary)
     const backgroundItem = getItemById(equippedItems.background)
 
-    // Background layer (bottom)
+    const hasCustomHead = headItem && headItem.id !== 'helmet_basic'
+    const hasCustomBody = bodyItem && bodyItem.id !== 'vest_basic'
+    const hasCustomLegs = legsItem && legsItem.id !== 'pants_basic'
+    const hasCustomPrimary = primaryItem && primaryItem.id !== 'rifle_basic'
+    const hasCustomBackground = backgroundItem && backgroundItem.id !== 'background_basic'
+    const hasAnyEquipped = hasCustomHead || hasCustomBody || hasCustomLegs || hasCustomPrimary || hasCustomBackground
+
     const renderBackground = () => {
-        if (!backgroundItem) {
-            return (
-                <View style={[styles.defaultLayer, {
-                    width: avatarSize,
-                    height: avatarSize,
-                    backgroundColor: 'rgba(0,100,0,0.3)', // Forest green background
-                    borderRadius: avatarSize / 2,
-                }]} />
+        const bgColor = hasCustomBackground && backgroundItem
+            ? `${SLOT_COLORS.background.bg}`
+            : 'rgba(0,100,0,0.3)'
+
+        return (
+            <View style={[styles.defaultLayer, {
+                width: avatarSize,
+                height: avatarSize,
+                backgroundColor: bgColor,
+                borderRadius: avatarSize / 2,
+            }]} />
+        )
+    }
+
+    const renderEquipmentOverlays = () => {
+        if (!hasAnyEquipped) return null
+
+        const overlaySize = avatarSize * 0.35
+        const overlays = []
+
+        if (hasCustomHead && headItem) {
+            overlays.push(
+                <View key="head" style={[styles.equipBadge, {
+                    top: avatarSize * 0.05,
+                    left: avatarSize * 0.5 - overlaySize / 2,
+                    backgroundColor: SLOT_COLORS.head.bg,
+                    borderColor: SLOT_COLORS.head.border,
+                    width: overlaySize,
+                    height: overlaySize * 0.6,
+                    borderRadius: overlaySize * 0.15,
+                }]}>
+                    <Text style={[styles.equipBadgeLabel, { color: SLOT_COLORS.head.border, fontSize: overlaySize * 0.25 }]}>
+                        {headItem.name.split(' ').pop()?.charAt(0) || 'H'}
+                    </Text>
+                </View>
             )
         }
 
-        return (
-            <View style={[styles.layerContainer, {
-                width: avatarSize,
-                height: avatarSize,
-            }]}>
-                <View style={[styles.placeholderGear, {
-                    backgroundColor: '#4a90e2', // Blue background environment
-                    borderColor: '#357abd',
-                    borderWidth: 2,
-                    borderRadius: avatarSize / 2,
-                }]} />
-            </View>
-        )
+        if (hasCustomBody && bodyItem) {
+            overlays.push(
+                <View key="body" style={[styles.equipBadge, {
+                    top: avatarSize * 0.3,
+                    left: avatarSize * 0.5 - overlaySize / 2,
+                    backgroundColor: SLOT_COLORS.body.bg,
+                    borderColor: SLOT_COLORS.body.border,
+                    width: overlaySize,
+                    height: overlaySize * 0.7,
+                    borderRadius: overlaySize * 0.15,
+                }]}>
+                    <Text style={[styles.equipBadgeLabel, { color: SLOT_COLORS.body.border, fontSize: overlaySize * 0.2 }]}>
+                        {bodyItem.name.split(' ').pop()?.charAt(0) || 'B'}
+                    </Text>
+                </View>
+            )
+        }
+
+        if (hasCustomLegs && legsItem) {
+            overlays.push(
+                <View key="legs" style={[styles.equipBadge, {
+                    top: avatarSize * 0.58,
+                    left: avatarSize * 0.5 - overlaySize / 2,
+                    backgroundColor: SLOT_COLORS.legs.bg,
+                    borderColor: SLOT_COLORS.legs.border,
+                    width: overlaySize,
+                    height: overlaySize * 0.6,
+                    borderRadius: overlaySize * 0.15,
+                }]}>
+                    <Text style={[styles.equipBadgeLabel, { color: SLOT_COLORS.legs.border, fontSize: overlaySize * 0.2 }]}>
+                        {legsItem.name.split(' ').pop()?.charAt(0) || 'L'}
+                    </Text>
+                </View>
+            )
+        }
+
+        if (hasCustomPrimary && primaryItem) {
+            overlays.push(
+                <View key="primary" style={[styles.equipBadge, {
+                    top: avatarSize * 0.35,
+                    right: avatarSize * 0.02,
+                    backgroundColor: SLOT_COLORS.primary.bg,
+                    borderColor: SLOT_COLORS.primary.border,
+                    width: overlaySize * 0.35,
+                    height: overlaySize * 0.9,
+                    borderRadius: overlaySize * 0.1,
+                }]}>
+                    <Text style={[styles.equipBadgeLabel, { color: SLOT_COLORS.primary.border, fontSize: overlaySize * 0.2 }]}>
+                        {primaryItem.name.split(' ').pop()?.charAt(0) || 'W'}
+                    </Text>
+                </View>
+            )
+        }
+
+        return <View style={styles.equipOverlayContainer} pointerEvents="none">{overlays}</View>
     }
 
-    // Body base (mannequin image)
-    const renderBodyBase = () => {
-        return (
-            <View style={[styles.layerContainer, {
-                width: avatarSize,
-                height: avatarSize,
-            }]}>
-                <Image
-                    source={require('@/assets/images/barracks/mannequin.png')}
-                    style={[styles.mannequinImage, {
-                        width: avatarSize,
-                        height: avatarSize,
-                    }]}
-                    resizeMode="contain"
-                />
-            </View>
-        )
-    }
-
-    // Simplified static soldier render
-    const renderSoldier = () => {
-        return (
-            <View style={[styles.layerContainer, {
-                width: avatarSize,
-                height: avatarSize,
-            }]}>
-                <Image
-                    source={require('@/assets/images/barracks/mannequin.png')}
-                    style={[styles.mannequinImage, {
-                        width: avatarSize * 0.9, // Slightly smaller to fit in ring
-                        height: avatarSize * 0.9,
-                    }]}
-                    resizeMode="contain"
-                />
-            </View>
-        )
-    }
-
-    // Valor Points badge with theme-aware colors and animations
     const renderVPBadge = () => {
         if (size === 'small' || !showStats) return null
 
-        const valorPoints = avatarInventory?.valorPoints || 100 // Default starting VP
-        const scaleValue = new Animated.Value(1)
-
-        // Create a subtle pulse animation for the VP badge
-        React.useEffect(() => {
-            const pulseAnimation = Animated.loop(
-                Animated.sequence([
-                    Animated.timing(scaleValue, {
-                        toValue: 1.05,
-                        duration: 1000,
-                        easing: Easing.inOut(Easing.quad),
-                        useNativeDriver: true,
-                    }),
-                    Animated.timing(scaleValue, {
-                        toValue: 1,
-                        duration: 1000,
-                        easing: Easing.inOut(Easing.quad),
-                        useNativeDriver: true,
-                    }),
-                ])
-            )
-
-            pulseAnimation.start()
-            return () => pulseAnimation.stop()
-        }, [scaleValue])
-
-        // Determine text color based on theme for better legibility
-        const vpTextColor = isDark ? '#000000' : theme.text // Black on light gold, dark text on dark themes
+        const valorPoints = avatarInventory?.valorPoints ?? 0
 
         return (
             <View style={[styles.vpBadge, { right: -10, top: -10 }]}>
-                <Animated.View style={[styles.vpCoin, { transform: [{ scale: scaleValue }] }]}>
-                    <Text style={[styles.vpText, { color: vpTextColor }]}>{valorPoints}</Text>
-                </Animated.View>
-                {/* Add a subtle glow effect */}
-                <View style={[styles.vpGlow, {
-                    backgroundColor: isDark ? 'rgba(255, 215, 0, 0.2)' : 'rgba(255, 215, 0, 0.3)'
-                }]} />
+                <View style={styles.vpCoin}>
+                    <Text style={[styles.vpText, { color: isDark ? '#000' : theme.text }]}>{valorPoints}</Text>
+                </View>
             </View>
         )
     }
 
     return (
         <View style={[styles.container, style]}>
-            {/* Main avatar layers */}
             <View style={[styles.avatarFrame, { width: avatarSize, height: avatarSize }]}>
-
-                {/* Background (Bottom layer) */}
                 {renderBackground()}
-
-                {/* Body Base (Static Soldier) */}
                 <View style={styles.overlayContainer}>
-                    {renderSoldier()}
+                    <Image
+                        source={require('@/assets/images/barracks/mannequin.png')}
+                        style={[styles.mannequinImage, {
+                            width: avatarSize * 0.9,
+                            height: avatarSize * 0.9,
+                        }]}
+                        resizeMode="contain"
+                    />
+                    {renderEquipmentOverlays()}
                 </View>
-
-                {/* Border frame */}
-                {/* <View style={[styles.avatarBorder, { width: avatarSize, height: avatarSize }]}>
-                    <View style={[styles.avatarBorderInner, { borderRadius: avatarSize / 2 }]} />
-                </View> */}
             </View>
 
-            {/* Soldier Name/Call Sign */}
             {userSettings?.soldierName && size !== 'small' && (
                 <View style={styles.nameContainer}>
                     <Text style={[styles.soldierName, { color: '#FFD700' }]}>
@@ -206,9 +212,7 @@ export default function SoldierAvatar({
                 </View>
             )}
 
-            {/* VP Badge */}
             {renderVPBadge()}
-
         </View>
     )
 }
@@ -233,20 +237,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'center',
     },
-    avatarBorder: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    avatarBorderInner: {
-        width: '98%',
-        height: '98%',
-        borderWidth: 2,
-        borderColor: 'rgba(255,255,255,0.3)',
-        backgroundColor: 'transparent',
-    },
     overlayContainer: {
         position: 'absolute',
         top: 0,
@@ -256,73 +246,28 @@ const styles = StyleSheet.create({
         width: '100%',
         height: '100%',
     },
-    layerContainer: {
-        position: 'absolute',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
     defaultLayer: {
         alignItems: 'center',
         justifyContent: 'center',
     },
-    placeholderGear: {
+    mannequinImage: {
+        borderRadius: 10,
+    },
+    equipOverlayContainer: {
         position: 'absolute',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    soldierSilhouette: {
-        alignItems: 'center',
-        position: 'relative',
-    },
-    soldierHead: {
-        backgroundColor: '#F5DEB3', // Wheat color for skin
-        borderWidth: 1,
-        borderColor: '#D2B48C',
-    },
-    soldierBody: {
-        backgroundColor: '#8B4513', // Saddle brown for uniform
-        borderWidth: 1,
-        borderColor: '#654321',
-        position: 'absolute',
-        left: '50%',
-        marginLeft: -10,
-        top: 30,
-    },
-    soldierLegs: {
-        position: 'absolute',
-        bottom: 0,
-    },
-    leg: {
-        backgroundColor: '#654321',
-        borderWidth: 1,
-        borderColor: '#4B0000',
-        borderRadius: 1,
-    },
-    soldierArms: {
-        position: 'relative',
-    },
-    arm: {
-        backgroundColor: '#F5DEB3',
-        borderRadius: 2,
-        position: 'absolute',
+        top: 0,
         left: 0,
+        width: '100%',
+        height: '100%',
     },
-    weaponHand: {
-        backgroundColor: '#F5DEB3',
-        borderWidth: 1,
-        borderColor: '#D2B48C',
+    equipBadge: {
         position: 'absolute',
-        right: 0,
-    },
-    swordHilt: {
-        position: 'absolute',
-        right: -5,
-        height: '60%',
-        alignItems: 'flex-end',
+        borderWidth: 1.5,
+        alignItems: 'center',
         justifyContent: 'center',
     },
-    hilt: {
-        borderRadius: 1,
+    equipBadgeLabel: {
+        fontWeight: '800',
     },
     vpBadge: {
         position: 'absolute',
@@ -341,33 +286,12 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.3,
         shadowRadius: 4,
         elevation: 5,
-        // Enhanced styling
         paddingHorizontal: 8,
         paddingVertical: 4,
     },
     vpText: {
         fontSize: 12,
         fontWeight: 'bold',
-        textShadowColor: 'rgba(0, 0, 0, 0.2)',
-        textShadowOffset: { width: 0, height: 1 },
-        textShadowRadius: 1,
-    },
-    vpGlow: {
-        position: 'absolute',
-        width: 40,
-        height: 40,
-        borderRadius: 20,
-        opacity: 0.8,
-        zIndex: -1,
-        top: -5,
-        left: -5,
-    },
-    mannequinImage: {
-        borderRadius: 10,
-    },
-    equipmentImage: {
-        position: 'absolute',
-        borderRadius: 5,
     },
     nameContainer: {
         marginTop: 8,

@@ -18,6 +18,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome, Feather, MaterialCommunityIcons, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router'
+import { useZustandStore } from '@/hooks/zustandStore'
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Collection, Scripture } from '@/types/scripture'
 import { useAppStore } from '@/hooks/useAppStore'
@@ -483,14 +484,9 @@ const CollectionDetailModal = React.memo(({
       console.log('🔵 [CollectionDetailModal] Using onChapterNavigate callback')
       onChapterNavigate(collection.id, chapterId)
     } else {
-      console.log('🔵 [CollectionDetailModal] Navigating to /train/drill with:', collection.id, chapterId)
-      router.push({
-        pathname: '/train/drill',
-        params: {
-          collectionId: collection.id,
-          chapterIds: chapterId,
-        }
-      })
+      console.log('🔵 [CollectionDetailModal] Using store to navigate with collection:', collection.id, chapterId)
+      useZustandStore.getState().startTraining('single', collection.id, chapterId)
+      router.push('/(tabs)/train')
     }
     setIsProcessing(false)
     console.log('🔵 [CollectionDetailModal] Navigation complete, isProcessing=false')

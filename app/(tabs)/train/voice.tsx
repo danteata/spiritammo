@@ -56,6 +56,8 @@ export default function VoiceOpsScreen() {
     const [versesHit, setVersesHit] = useState(0);
     const [skippedCount, setSkippedCount] = useState(0);
     const [showVerseText, setShowVerseText] = useState(false);
+    const [sessionLength, setSessionLength] = useState<number>(0);
+    const [verseProgress, setVerseProgress] = useState(0);
 
     const [pulseAnim] = useState(new Animated.Value(1));
     const pulseRef = useRef<Animated.CompositeAnimation | null>(null);
@@ -389,6 +391,13 @@ export default function VoiceOpsScreen() {
     const advanceToNext = useCallback(() => {
         if (!isMountedRef.current) return;
         isCycleRunningRef.current = false;
+
+        if (sessionLength > 0 && versesAttempted >= sessionLength) {
+            setPhase('idle');
+            setIsRunning(false);
+            return;
+        }
+
         const next = pickNextScripture();
         if (next) {
             beginVerseCycle(next);
@@ -396,7 +405,7 @@ export default function VoiceOpsScreen() {
             setPhase('idle');
             setIsRunning(false);
         }
-    }, [pickNextScripture, beginVerseCycle]);
+    }, [pickNextScripture, beginVerseCycle, sessionLength, versesAttempted]);
 
     // ─── Start Mission ───────────────────────────────────────────
     const handleStartMission = async () => {
@@ -416,6 +425,7 @@ export default function VoiceOpsScreen() {
         setVersesAttempted(0);
         setVersesHit(0);
         setSkippedCount(0);
+        setVerseProgress(0);
 
         const first = pickNextScripture();
         if (first) beginVerseCycle(first);
@@ -459,6 +469,23 @@ export default function VoiceOpsScreen() {
                     </View>
                 )}
 
+                {/* Progress bar */}
+                {isRunning && sessionLength > 0 && (
+                    <View style={styles.progressSection}>
+                        <ThemedText variant="caption" style={styles.progressLabel}>
+                            Verse {versesAttempted} of {sessionLength}
+                        </ThemedText>
+                        <View style={[styles.progressBarBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                            <View
+                                style={[styles.progressBarFill, {
+                                    width: `${Math.min((versesAttempted / sessionLength) * 100, 100)}%`,
+                                    backgroundColor: accentColor,
+                                }]}
+                            />
+                        </View>
+                    </View>
+                )}
+
                 {/* Current target — reference + blurred verse text during briefing/listening */}
                 {currentScripture && isRunning && (phase === 'listening' || phase === 'briefing') && !showVerseText && (
                     <View style={styles.targetCard}>
@@ -492,19 +519,56 @@ export default function VoiceOpsScreen() {
 
                     {/* IDLE */}
                     {phase === 'idle' && !isRunning && (
-                        <TouchableOpacity
-                            style={[styles.startButton, { backgroundColor: accentColor }]}
-                            onPress={handleStartMission}
-                            activeOpacity={0.85}
-                        >
-                            <Ionicons name="mic" size={56} color={theme.background} />
-                            <ThemedText variant="heading" style={[styles.startLabel, { color: theme.background }]}>
-                                START MISSION
-                            </ThemedText>
-                            <ThemedText variant="caption" style={[styles.startHint, { color: theme.background }]}>
-                                Fully hands-free. Just listen and speak.
-                            </ThemedText>
-                        </TouchableOpacity>
+                        <View style={styles.startContainer}>
+                            <TouchableOpacity
+                                style={[styles.startButton, { backgroundColor: accentColor }]}
+                                onPress={handleStartMission}
+                                activeOpacity={0.85}
+                            >
+                                <Ionicons name="mic" size={56} color={theme.background} />
+                                <ThemedText variant="heading" style={[styles.startLabel, { color: theme.background }]}>
+                                    START MISSION
+                                </ThemedText>
+                                <ThemedText variant="caption" style={[styles.startHint, { color: theme.background }]}>
+                                    Fully hands-free. Just listen and speak.
+                                </ThemedText>
+                            </TouchableOpacity>
+
+                            <View style={styles.sessionLengthSection}>
+                                <ThemedText variant="caption" style={styles.sessionLengthLabel}>
+                                    VERSES PER SESSION
+                                </ThemedText>
+                                <View style={styles.sessionLengthOptions}>
+                                    {[
+                                        { label: '5', value: 5 },
+                                        { label: '10', value: 10 },
+                                        { label: 'Unlimited', value: 0 },
+                                    ].map((opt) => (
+                                        <TouchableOpacity
+                                            key={opt.value}
+                                            style={[
+                                                styles.sessionOption,
+                                                {
+                                                    backgroundColor: sessionLength === opt.value ? accentColor : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'),
+                                                    borderColor: sessionLength === opt.value ? accentColor : 'transparent',
+                                                },
+                                            ]}
+                                            onPress={() => setSessionLength(opt.value)}
+                                        >
+                                            <ThemedText
+                                                variant="caption"
+                                                style={{
+                                                    fontWeight: '700',
+                                                    color: sessionLength === opt.value ? theme.background : theme.text,
+                                                }}
+                                            >
+                                                {opt.label}
+                                            </ThemedText>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                        </View>
                     )}
 
                     {/* BRIEFING */}
@@ -603,7 +667,7 @@ export default function VoiceOpsScreen() {
                     >
                         <Ionicons name="close-circle" size={18} color={theme.error} />
                         <ThemedText variant="caption" style={[styles.abortText, { color: theme.error }]}>
-                            ABORT MISSION
+                            END SESSION
                         </ThemedText>
                     </TouchableOpacity>
                 )}
@@ -653,4 +717,13 @@ const styles = StyleSheet.create({
     expectedVal: { lineHeight: 20, opacity: 0.8 },
     abortButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 8, borderWidth: 1.5, gap: 6, marginTop: 12 },
     abortText: { fontWeight: '700', letterSpacing: 1.5, fontSize: 12 },
+    startContainer: { alignItems: 'center' },
+    sessionLengthSection: { marginTop: 24, alignItems: 'center' },
+    sessionLengthLabel: { letterSpacing: 1.5, opacity: 0.6, marginBottom: 12, fontSize: 10 },
+    sessionLengthOptions: { flexDirection: 'row', gap: 10 },
+    sessionOption: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5 },
+    progressSection: { marginBottom: 8 },
+    progressLabel: { letterSpacing: 1, opacity: 0.6, marginBottom: 6, textAlign: 'center' },
+    progressBarBg: { height: 4, borderRadius: 2, overflow: 'hidden' },
+    progressBarFill: { height: '100%', borderRadius: 2 },
 });

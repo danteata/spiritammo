@@ -94,6 +94,7 @@ export default function TargetPractice({
   const [localTranscript, setLocalTranscript] = useState('')
   const [whisperReady, setWhisperReady] = useState(false)
   const [isInitializing, setIsInitializing] = useState(true)
+  const [isReady, setIsReady] = useState(false)
 
   // Audio recording hook for mobile fallback
   const {
@@ -146,16 +147,16 @@ export default function TargetPractice({
     }
   }, [isVisible])
 
-  // Auto-start recording when appearing or scripture changes
   useEffect(() => {
-    if (isVisible && !isInitializing && !audioIsRecording && !isRecognizing && !showAccuracy) {
-      // Small delay for UI to settle
-      const timer = setTimeout(() => {
-        startRecording()
-      }, 600)
-      return () => clearTimeout(timer)
+    if (isVisible && !isInitializing && !isReady && !audioIsRecording && !isRecognizing && !showAccuracy) {
+      setIsReady(true)
     }
   }, [isVisible, isInitializing, targetVerse])
+
+  const handleReadyStart = () => {
+    setIsReady(false)
+    startRecording()
+  }
 
   // Initialize Whisper and check availability
   useEffect(() => {
@@ -798,11 +799,11 @@ export default function TargetPractice({
   const getWindDescription = () => {
     switch (windCondition) {
       case 'calm':
-        return 'CALM CONDITIONS'
+        return 'MIC: STANDARD'
       case 'light':
-        return 'LIGHT CROSSWIND'
+        return 'MIC: MODERATE'
       case 'strong':
-        return 'STRONG HEADWIND'
+        return 'MIC: SENSITIVE'
     }
   }
 
@@ -1003,7 +1004,16 @@ export default function TargetPractice({
 
       {/* Controls */}
       <View style={styles.controls}>
-        {isProcessing ? (
+        {isReady ? (
+           <ActionButton
+             title="READY — Tap to Begin"
+             onPress={handleReadyStart}
+             variant="primary"
+             icon="microphone"
+             style={[styles.controlButton, { flex: 1 }]}
+             testID="ready-start-button"
+           />
+        ) : isProcessing ? (
            <ActionButton
              title="ANALYZING INTEL..."
              onPress={() => {}}

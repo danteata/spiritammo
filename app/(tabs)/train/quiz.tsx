@@ -55,6 +55,7 @@ export default function QuizScreen() {
     const [showExplanation, setShowExplanation] = useState(false)
     const [questionLimit, setQuestionLimit] = useState(20)
     const [showConfig, setShowConfig] = useState(true)
+    const [showAdvanced, setShowAdvanced] = useState(false)
     const [elapsedTime, setElapsedTime] = useState(0)
     const [timerActive, setTimerActive] = useState(false)
     const [timeLimit, setTimeLimit] = useState<number | null>(null) // in seconds
@@ -64,11 +65,6 @@ export default function QuizScreen() {
     const [previewScriptureId, setPreviewScriptureId] = useState<string | null>(null)
     const [quickAddScriptureId, setQuickAddScriptureId] = useState<string | null>(null)
     const [showQuickAdd, setShowQuickAdd] = useState(false)
-    const [showCollectionPicker, setShowCollectionPicker] = useState(false)
-    const [isCreatingCollection, setIsCreatingCollection] = useState(false)
-    const [newCollectionName, setNewCollectionName] = useState('')
-
-    const customCollections = collections.filter(c => !c.isSystem)
 
     const previewScripture = useMemo(() => {
         if (!previewScriptureId) return null
@@ -126,145 +122,6 @@ export default function QuizScreen() {
             setIsGenerating(false)
         }
     }, [collectionScriptures, collectionId, trackEvent])
-
-    const handleQuickAddToCollection = async (collectionId: string) => {
-        if (!previewScriptureId || previewScriptureId === 'telemetry-unavailable') return
-
-        try {
-            const success = await addScripturesToCollection(collectionId, [previewScriptureId])
-            if (success) {
-                const targetColl = collections.find(c => c.id === collectionId)
-                Toast.missionSuccess(`Target briefed to ${targetColl?.name || 'arsenal'}`)
-                setShowCollectionPicker(false)
-            }
-        } catch (error) {
-            console.error('Quick Add failed:', error)
-            Toast.missionFailed('Intel bridging failed. Please retry.')
-        }
-    }
-
-    const handleCreateAndQuickAdd = async () => {
-        if (!previewScriptureId || previewScriptureId === 'telemetry-unavailable') return
-        const name = newCollectionName.trim()
-        if (!name) return
-
-        try {
-            const newCollection = {
-                id: `quick_${Date.now()}`,
-                name,
-                scriptures: [],
-                createdAt: new Date().toISOString(),
-                tags: ['quick-add'],
-            }
-            await addCollection(newCollection)
-            await handleQuickAddToCollection(newCollection.id)
-            setIsCreatingCollection(false)
-            setNewCollectionName('')
-        } catch (error) {
-            console.error('Failed to create and add:', error)
-            Toast.missionFailed('Implementation failed. Please retry.')
-        }
-    }
-
-    const currentQuestion = questionSet?.questions[currentQuestionIndex]
-
-    const handleSelectAnswer = useCallback((questionId: string, answer: any) => {
-        setSelectedAnswers(prev => ({
-            ...prev,
-            [questionId]: answer,
-        }))
-    }, [])
-
-    const handleOptionSelect = useCallback((questionId: string, optionLabel: string, value: 'T' | 'F' | 'S') => {
-        setSelectedAnswers(prev => {
-            const currentAnswers = (prev[questionId] as Record<string, 'T' | 'F' | 'S'>) || {}
-            return {
-                ...prev,
-                [questionId]: {
-                    ...currentAnswers,
-                    [optionLabel]: value
-                }
-            }
-        })
-    }, [])
-
-    const calculateRunningScore = useCallback((answers: Record<string, any>, questions: Question[]) => {
-        let totalPoints = 0
-
-        questions.forEach(q => {
-            const answer = answers[q.id]
-            if (!answer) return
-
-            if (q.type === 'true-false-list') {
-                const correctAnswer = q.correctAnswer as Record<string, 'T' | 'F' | 'S'>
-                const userAnswers = answer as Record<string, 'T' | 'F' | 'S'>
-
-                Object.entries(correctAnswer).forEach(([label, correctChoice]) => {
-                    const userChoice = userAnswers[label] || 'S'
-                    if (userChoice === 'S') return // Skip = 0
-                    if (userChoice === correctChoice) {
-                        totalPoints += 1
-                    } else {
-                        totalPoints -= 1
-                    }
-                })
-            } else if (q.type === 'multiple-select' || q.type === 'facts') {
-                if (Array.isArray(q.correctAnswer) && Array.isArray(answer)) {
-                    const correctSet = new Set(q.correctAnswer.map(a => a.toLowerCase()))
-                    const answerSet = new Set(answer.map(a => a.toLowerCase()))
-                    const isCorrect = correctSet.size === answerSet.size &&
-                        [...correctSet].every(a => answerSet.has(a))
-                    if (isCorrect) totalPoints += 1
-                }
-            } else {
-                if (typeof q.correctAnswer === 'string' && typeof answer === 'string') {
-                    const isCorrect = q.correctAnswer.toLowerCase() === answer.toLowerCase()
-                    if (isCorrect) totalPoints += 1
-                }
-            }
-        })
-        return totalPoints
-    }, [])
-
-    const finishMission = useCallback((isTimedOut = false) => {
-        setTimerActive(false)
-        if (!questionSet) return
-
-        const finalPoints = calculateRunningScore(selectedAnswers, questionSet.questions)
-        setPoints(finalPoints)
-        setShowResults(true)
-        setTimedOut(isTimedOut)
-
-        // Persist lightweight local training intel (wrong verses + confusing distractors)
-        recordQuizResults(questionSet.questions, selectedAnswers).catch((e) => {
-            console.warn('Failed to record quiz results:', e)
-        })
-
-        trackEvent(AnalyticsEventType.QUIZ_COMPLETED, {
-            collection_id: collectionId,
-            points_earned: finalPoints,
-            total_possible: totalPointsPossible,
-            timed_out: isTimedOut
-        })
-    }, [questionSet, selectedAnswers, calculateRunningScore, collectionId, trackEvent, totalPointsPossible, recordQuizResults])
-
-    const handleNextQuestion = useCallback(() => {
-        if (!questionSet || !currentQuestion) return
-
-        if (currentQuestionIndex < questionSet.questions.length - 1) {
-            setCurrentQuestionIndex(prev => prev + 1)
-            setShowExplanation(false)
-        } else {
-            finishMission(false)
-        }
-    }, [questionSet, currentQuestion, currentQuestionIndex, finishMission])
-
-    const handlePreviousQuestion = useCallback(() => {
-        if (currentQuestionIndex > 0) {
-            setCurrentQuestionIndex(prev => prev - 1)
-            setShowExplanation(false)
-        }
-    }, [currentQuestionIndex])
 
     const handleRestartQuiz = useCallback(() => {
         setShowConfig(true)
@@ -439,122 +296,147 @@ useEffect(() => {
                     <View style={[styles.resultsCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
                         <Ionicons name="fitness" size={48} color={theme.accent} style={{ marginBottom: 16 }} />
 
-                        <View style={{ width: '100%' }}>
-                            <ThemedText variant="subheading" style={{ marginBottom: 8, textAlign: 'center' }}>1. MISSION LENGTH</ThemedText>
-                            <ThemedText variant="body" style={{ textAlign: 'center', opacity: 0.7, marginBottom: 16 }}>
-                                How many questions per drill?
-                            </ThemedText>
-                        </View>
+                        {/* Quick Drill - Primary CTA */}
+                        <TouchableOpacity
+                            style={[styles.actionButton, { backgroundColor: theme.success, marginBottom: 16 }]}
+                            onPress={() => generateQuestions(10)}
+                        >
+                            <Ionicons name="flash" size={20} color="#FFF" />
+                            <ThemedText variant="body" style={{ color: '#FFF', fontWeight: '700' }}>QUICK DRILL (10 questions)</ThemedText>
+                        </TouchableOpacity>
 
-                        <View style={styles.resultsActions}>
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 24 }}>
-                                {[20, 50, 100].map(limit => (
-                                    <TouchableOpacity
-                                        key={limit}
-                                        style={[
-                                            styles.configOption,
-                                            {
-                                                backgroundColor: questionLimit === limit ? theme.accent : theme.surface,
-                                                borderColor: theme.border,
-                                            }
-                                        ]}
-                                        onPress={() => setQuestionLimit(limit)}
-                                    >
-                                        <ThemedText variant="body" style={{ fontWeight: 'bold', color: questionLimit === limit ? theme.accentContrastText : theme.text }}>
-                                            {limit}
-                                        </ThemedText>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
+                        <ThemedText variant="caption" style={{ textAlign: 'center', opacity: 0.6, marginBottom: 20 }}>
+                            For each statement, tap True if it matches the scripture, False if it doesn't, or Skip.
+                        </ThemedText>
 
-                            <View style={styles.separator} />
+                        <View style={styles.separator} />
 
-                            <View style={{ width: '100%', marginTop: 24 }}>
-                                <ThemedText variant="subheading" style={{ marginBottom: 8, textAlign: 'center' }}>2. MISSION DEADLINE</ThemedText>
-                                <ThemedText variant="body" style={{ textAlign: 'center', opacity: 0.7, marginBottom: 16 }}>
-                                    Establish a hard cutoff for this drill.
-                                </ThemedText>
-                            </View>
+                        {/* Advanced toggle */}
+                        <TouchableOpacity
+                            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 12, gap: 8 }}
+                            onPress={() => setShowAdvanced(!showAdvanced)}
+                        >
+                            <Ionicons name={showAdvanced ? 'chevron-up' : 'chevron-down'} size={16} color={theme.textSecondary} />
+                            <ThemedText variant="caption" style={{ color: theme.textSecondary }}>Custom Drill Options</ThemedText>
+                        </TouchableOpacity>
 
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
-                                {[null, 5, 15, 30].map(mins => (
-                                    <TouchableOpacity
-                                        key={mins === null ? 'none' : mins}
-                                        style={[
-                                            styles.configOption,
-                                            {
-                                                width: mins === null ? '48%' : '23%',
-                                                backgroundColor: (!isCustomTime && (mins === null ? timeLimit === null : timeLimit === mins * 60)) ? theme.accent : theme.surface,
-                                                borderColor: theme.border,
-                                            }
-                                        ]}
-                                        onPress={() => {
-                                            setIsCustomTime(false)
-                                            setTimeLimit(mins === null ? null : mins * 60)
-                                        }}
-                                    >
-                                        <ThemedText variant="body" style={{ fontWeight: 'bold', fontSize: 13, color: (!isCustomTime && (mins === null ? timeLimit === null : timeLimit === mins * 60)) ? theme.accentContrastText : theme.text }}>
-                                            {mins === null ? 'UNLIMITED' : `${mins}M`}
-                                        </ThemedText>
-                                    </TouchableOpacity>
-                                ))}
-                                <TouchableOpacity
-                                    style={[
-                                        styles.configOption,
-                                        {
-                                            width: '48%',
-                                            backgroundColor: isCustomTime ? theme.accent : theme.surface,
-                                            borderColor: theme.border,
-                                        }
-                                    ]}
-                                    onPress={() => setIsCustomTime(true)}
-                                >
-                                    <ThemedText variant="body" style={{ fontWeight: 'bold', fontSize: 13, color: isCustomTime ? theme.accentContrastText : theme.text }}>
-                                        CUSTOM
+                        {showAdvanced && (
+                            <View style={{ width: '100%' }}>
+                                <View style={{ width: '100%' }}>
+                                    <ThemedText variant="subheading" style={{ marginBottom: 8, textAlign: 'center' }}>1. MISSION LENGTH</ThemedText>
+                                    <ThemedText variant="body" style={{ textAlign: 'center', opacity: 0.7, marginBottom: 16 }}>
+                                        How many questions per drill?
                                     </ThemedText>
-                                </TouchableOpacity>
-                            </View>
-
-                            {isCustomTime && (
-                                <View style={{ width: '100%', alignItems: 'center', marginBottom: 24 }}>
-                                    <TextInput
-                                        style={[styles.customInput, { color: theme.text, borderColor: theme.accent, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
-                                        placeholder="MINUTES"
-                                        placeholderTextColor={theme.textSecondary}
-                                        keyboardType="numeric"
-                                        value={customMins}
-                                        maxLength={3}
-                                        onChangeText={(val) => {
-                                            const numericVal = val.replace(/[^0-9]/g, '')
-                                            setCustomMins(numericVal)
-                                            const mins = parseInt(numericVal)
-                                            if (!isNaN(mins) && mins > 0) {
-                                                setTimeLimit(mins * 60)
-                                            } else {
-                                                setTimeLimit(null)
-                                            }
-                                        }}
-                                        autoFocus
-                                    />
-                                    <ThemedText variant="caption" style={{ marginTop: 8, opacity: 0.6 }}>SPECIFY EXACT DURATION (1-999 MIN)</ThemedText>
                                 </View>
-                            )}
 
-                            <TouchableOpacity
-                                style={[styles.actionButton, { backgroundColor: theme.success, marginTop: 24 }]}
-                                onPress={() => generateQuestions(questionLimit)}
-                            >
-                                <Ionicons name="rocket" size={20} color="#FFF" />
-                                <ThemedText variant="body" style={{ color: '#FFF', fontWeight: '700' }}>BEGIN DRILL</ThemedText>
-                            </TouchableOpacity>
+                                <View style={styles.resultsActions}>
+                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 24 }}>
+                                        {[10, 20, 50, 100].map(limit => (
+                                            <TouchableOpacity
+                                                key={limit}
+                                                style={[
+                                                    styles.configOption,
+                                                    {
+                                                        backgroundColor: questionLimit === limit ? theme.accent : theme.surface,
+                                                        borderColor: theme.border,
+                                                    }
+                                                ]}
+                                                onPress={() => setQuestionLimit(limit)}
+                                            >
+                                                <ThemedText variant="body" style={{ fontWeight: 'bold', color: questionLimit === limit ? theme.accentContrastText : theme.text }}>
+                                                    {limit}
+                                                </ThemedText>
+                                            </TouchableOpacity>
+                                        ))}
+                                    </View>
 
-                            <TouchableOpacity
-                                style={[styles.actionButton, { backgroundColor: 'transparent' }]}
-                                onPress={handleBackToCollection}
-                            >
-                                <ThemedText variant="body" style={{ color: theme.textSecondary }}>CANCEL</ThemedText>
-                            </TouchableOpacity>
-                        </View>
+                                    <View style={styles.separator} />
+
+                                    <View style={{ width: '100%', marginTop: 24 }}>
+                                        <ThemedText variant="subheading" style={{ marginBottom: 8, textAlign: 'center' }}>2. TIME LIMIT</ThemedText>
+                                    </View>
+
+                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 16 }}>
+                                        {[null, 5, 15, 30].map(mins => (
+                                            <TouchableOpacity
+                                                key={mins === null ? 'none' : mins}
+                                                style={[
+                                                    styles.configOption,
+                                                    {
+                                                        width: mins === null ? '48%' : '23%',
+                                                        backgroundColor: (!isCustomTime && (mins === null ? timeLimit === null : timeLimit === mins * 60)) ? theme.accent : theme.surface,
+                                                        borderColor: theme.border,
+                                                    }
+                                                ]}
+                                                onPress={() => {
+                                                    setIsCustomTime(false)
+                                                    setTimeLimit(mins === null ? null : mins * 60)
+                                                }}
+                                            >
+                                                <ThemedText variant="body" style={{ fontWeight: 'bold', fontSize: 13, color: (!isCustomTime && (mins === null ? timeLimit === null : timeLimit === mins * 60)) ? theme.accentContrastText : theme.text }}>
+                                                    {mins === null ? 'UNLIMITED' : `${mins}M`}
+                                                </ThemedText>
+                                            </TouchableOpacity>
+                                        ))}
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.configOption,
+                                                {
+                                                    width: '48%',
+                                                    backgroundColor: isCustomTime ? theme.accent : theme.surface,
+                                                    borderColor: theme.border,
+                                                }
+                                            ]}
+                                            onPress={() => setIsCustomTime(true)}
+                                        >
+                                            <ThemedText variant="body" style={{ fontWeight: 'bold', fontSize: 13, color: isCustomTime ? theme.accentContrastText : theme.text }}>
+                                                CUSTOM
+                                            </ThemedText>
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    {isCustomTime && (
+                                        <View style={{ width: '100%', alignItems: 'center', marginBottom: 24 }}>
+                                            <TextInput
+                                                style={[styles.customInput, { color: theme.text, borderColor: theme.accent, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
+                                                placeholder="MINUTES"
+                                                placeholderTextColor={theme.textSecondary}
+                                                keyboardType="numeric"
+                                                value={customMins}
+                                                maxLength={3}
+                                                onChangeText={(val) => {
+                                                    const numericVal = val.replace(/[^0-9]/g, '')
+                                                    setCustomMins(numericVal)
+                                                    const mins = parseInt(numericVal)
+                                                    if (!isNaN(mins) && mins > 0) {
+                                                        setTimeLimit(mins * 60)
+                                                    } else {
+                                                        setTimeLimit(null)
+                                                    }
+                                                }}
+                                                autoFocus
+                                            />
+                                            <ThemedText variant="caption" style={{ marginTop: 8, opacity: 0.6 }}>Duration (1-999 min)</ThemedText>
+                                        </View>
+                                    )}
+
+                                    <TouchableOpacity
+                                        style={[styles.actionButton, { backgroundColor: theme.accent, marginTop: 24 }]}
+                                        onPress={() => generateQuestions(questionLimit)}
+                                    >
+                                        <Ionicons name="rocket" size={20} color={theme.accentContrastText} />
+                                        <ThemedText variant="body" style={{ color: theme.accentContrastText, fontWeight: '700' }}>BEGIN CUSTOM DRILL</ThemedText>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+                        )}
+
+                        <TouchableOpacity
+                            style={[styles.actionButton, { backgroundColor: 'transparent' }]}
+                            onPress={handleBackToCollection}
+                        >
+                            <ThemedText variant="body" style={{ color: theme.textSecondary }}>CANCEL</ThemedText>
+                        </TouchableOpacity>
                     </View>
                 </ScrollView>
             </ThemedContainer>
@@ -656,32 +538,12 @@ useEffect(() => {
 
                         <View style={styles.resultsActions}>
                             <TouchableOpacity
-                                style={[styles.actionButton, { backgroundColor: theme.warning }]}
-                                onPress={handleRedeployPriorityDrill}
-                            >
-                                <Ionicons name="flash" size={20} color="#111827" />
-                                <ThemedText variant="body" style={[styles.actionButtonText, { color: '#111827' }]}>
-                                    REDEPLOY PRIORITY DRILL
-                                </ThemedText>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                                style={[styles.actionButton, { backgroundColor: theme.warning, opacity: 0.9, marginTop: 8 }]}
-                                onPress={handleAutoBuildStrugglingCollection}
-                            >
-                                <Ionicons name="save" size={20} color="#111827" />
-                                <ThemedText variant="body" style={[styles.actionButtonText, { color: '#111827' }]}>
-                                    AUTO-BUILD STRUGGLING COLLECTION
-                                </ThemedText>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
                                 style={[styles.actionButton, { backgroundColor: theme.accent }]}
                                 onPress={handleRestartQuiz}
                             >
                                 <Ionicons name="refresh" size={20} color={theme.accentContrastText} />
                                 <ThemedText variant="body" style={[styles.actionButtonText, { color: theme.accentContrastText }]}>
-                                    DEPLOY NEW DRILL
+                                    NEW DRILL
                                 </ThemedText>
                             </TouchableOpacity>
 
@@ -692,6 +554,28 @@ useEffect(() => {
                                 <Ionicons name="arrow-back" size={20} color={theme.text} />
                                 <ThemedText variant="body" style={[styles.actionButtonText, { color: theme.text }]}>
                                     BACK TO COLLECTION
+                                </ThemedText>
+                            </TouchableOpacity>
+
+                            <View style={styles.separator} />
+
+                            <TouchableOpacity
+                                style={[styles.actionButton, { backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1 }]}
+                                onPress={handleRedeployPriorityDrill}
+                            >
+                                <Ionicons name="flash" size={20} color={theme.text} />
+                                <ThemedText variant="body" style={[styles.actionButtonText, { color: theme.text }]}>
+                                    PRIORITY DRILL (missed verses)
+                                </ThemedText>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                                style={[styles.actionButton, { backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1 }]}
+                                onPress={handleAutoBuildStrugglingCollection}
+                            >
+                                <Ionicons name="save" size={20} color={theme.text} />
+                                <ThemedText variant="body" style={[styles.actionButtonText, { color: theme.text }]}>
+                                    SAVE STRUGGLING COLLECTION
                                 </ThemedText>
                             </TouchableOpacity>
                         </View>
@@ -858,10 +742,10 @@ useEffect(() => {
                     <TouchableOpacity
                         style={{ paddingRight: 12, borderRightWidth: 1, borderRightColor: theme.border }}
                         onPress={() => {
-                            Alert.alert("ABORT MISSION", "Are you sure you want to end this training session? Points from your current answer will be included.", [
-                                { text: "CONTINUE DRILL", style: "cancel" },
+                            Alert.alert("End Session", "Are you sure you want to end this drill? Your current answers will be included.", [
+                                { text: "Continue Drill", style: "cancel" },
                                 {
-                                    text: "ABORT & REPORT",
+                                    text: "End Session",
                                     style: "destructive",
                                     onPress: () => finishMission(false)
                                 }
@@ -1175,78 +1059,19 @@ useEffect(() => {
 
                         {previewScriptureId !== 'telemetry-unavailable' && previewScripture && (
                             <View style={styles.previewActions}>
-                                {!showCollectionPicker ? (
-                                    <TouchableOpacity 
-                                        style={[styles.quickAddButton, { backgroundColor: theme.accent }]}
-                                        onPress={() => setShowCollectionPicker(true)}
-                                    >
-                                        <Ionicons name="add-circle" size={18} color={theme.accentContrastText} />
-                                        <ThemedText variant="caption" style={{ color: theme.accentContrastText, fontWeight: '700' }}>
-                                            QUICK-ADD TO ARSENAL
-                                        </ThemedText>
-                                    </TouchableOpacity>
-                                ) : (
-                                    <View style={styles.collectionPickerContainer}>
-                                        <ThemedText variant="caption" style={styles.pickerTitle}>SELECT ARSENAL BUCKET:</ThemedText>
-                                        {!isCreatingCollection ? (
-                                            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.pickerScroll}>
-                                                <TouchableOpacity 
-                                                    style={[styles.cancelQuickAdd, { borderColor: theme.border }]}
-                                                    onPress={() => setShowCollectionPicker(false)}
-                                                >
-                                                    <Ionicons name="close" size={16} color={theme.textSecondary} />
-                                                </TouchableOpacity>
-                                                
-                                                <TouchableOpacity 
-                                                    style={[styles.pickerItem, { backgroundColor: theme.accent, paddingHorizontal: 12, marginRight: 8, flexDirection: 'row', alignItems: 'center' }]}
-                                                    onPress={() => setIsCreatingCollection(true)}
-                                                >
-                                                    <Ionicons name="add" size={16} color={theme.accentContrastText} />
-                                                    <ThemedText variant="caption" style={{ fontWeight: '600', color: theme.accentContrastText, marginLeft: 4 }}>New</ThemedText>
-                                                </TouchableOpacity>
-
-                                                {customCollections.length === 0 ? (
-                                                    <ThemedText variant="caption" style={{ opacity: 0.5, marginLeft: 8 }}>No custom collections found</ThemedText>
-                                                ) : customCollections.map(c => (
-                                                    <TouchableOpacity 
-                                                        key={c.id} 
-                                                        style={[styles.pickerItem, { backgroundColor: theme.border + '30' }]}
-                                                        onPress={() => handleQuickAddToCollection(c.id)}
-                                                    >
-                                                        <ThemedText variant="caption" style={{ fontWeight: '600' }}>{c.name}</ThemedText>
-                                                    </TouchableOpacity>
-                                                ))}
-                                            </ScrollView>
-                                        ) : (
-                                            <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', marginTop: 4 }}>
-                                                <TouchableOpacity 
-                                                    style={[styles.cancelQuickAdd, { borderColor: theme.border }]}
-                                                    onPress={() => {
-                                                        setIsCreatingCollection(false)
-                                                        setNewCollectionName('')
-                                                    }}
-                                                >
-                                                    <Ionicons name="arrow-back" size={16} color={theme.textSecondary} />
-                                                </TouchableOpacity>
-                                                <TextInput
-                                                    style={{ flex: 1, borderWidth: 1, borderColor: theme.border, borderRadius: 16, paddingHorizontal: 12, height: 36, color: theme.text, fontSize: 14 }}
-                                                    placeholder="New Collection Name..."
-                                                    placeholderTextColor={theme.textSecondary}
-                                                    value={newCollectionName}
-                                                    onChangeText={setNewCollectionName}
-                                                    autoFocus
-                                                />
-                                                <TouchableOpacity
-                                                    style={[styles.pickerItem, { backgroundColor: theme.accent, paddingHorizontal: 16, marginRight: 0 }]}
-                                                    onPress={handleCreateAndQuickAdd}
-                                                    disabled={!newCollectionName.trim()}
-                                                >
-                                                    <ThemedText variant="caption" style={{ color: theme.accentContrastText, fontWeight: 'bold' }}>CREATE</ThemedText>
-                                                </TouchableOpacity>
-                                            </View>
-                                        )}
-                                    </View>
-                                )}
+                                <TouchableOpacity 
+                                    style={[styles.quickAddButton, { backgroundColor: theme.accent }]}
+                                    onPress={() => {
+                                        setQuickAddScriptureId(previewScriptureId!)
+                                        setShowQuickAdd(true)
+                                        setPreviewScriptureId(null)
+                                    }}
+                                >
+                                    <Ionicons name="add-circle" size={18} color={theme.accentContrastText} />
+                                    <ThemedText variant="caption" style={{ color: theme.accentContrastText, fontWeight: '700' }}>
+                                        ADD TO COLLECTION
+                                    </ThemedText>
+                                </TouchableOpacity>
                             </View>
                         )}
                     </View>

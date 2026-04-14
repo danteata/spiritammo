@@ -10,10 +10,12 @@ import {
     Dimensions,
 } from 'react-native'
 import { FontAwesome, FontAwesome5, Ionicons } from '@expo/vector-icons'
+import ContextualTooltip from '@/components/ui/ContextualTooltip'
 import { useRouter, useLocalSearchParams } from 'expo-router'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { VoiceLibrary } from '@/components/VoiceLibrary'
 import { useAppStore } from '@/hooks/useAppStore'
+import { useZustandStore } from '@/hooks/zustandStore'
 import { Collection, Scripture } from '@/types/scripture'
 import ScreenHeader from '@/components/ScreenHeader'
 import { LoadingOverlay } from '@/components/LoadingOverlay'
@@ -110,6 +112,12 @@ export default function ArsenalScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
+                <ContextualTooltip
+                    id="arsenal"
+                    title="Your Verse Library"
+                    message="Manage your verse collections here. Add verses manually, import from a PDF, or use the starter collection."
+                />
+
                 {/* Quick Stats */}
                 <View style={styles.statsContainer}>
                     <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : theme.surface, borderColor: theme.border, borderWidth: isDark ? 0 : 1.5 }]}>
@@ -277,16 +285,9 @@ export default function ArsenalScreen() {
                     }}
                     onChapterNavigate={(collectionId, chapterId) => {
                         console.log('🟡 [Arsenal] onChapterNavigate called:', collectionId, chapterId)
-                        // Don't clear collection when navigating - let the navigation handle it
                         setShowCollectionDetail(false)
-                        console.log('🟡 [Arsenal] Navigating to /train/collection with:', collectionId, chapterId)
-                        router.push({
-                            pathname: '/train/collection',
-                            params: {
-                                collectionId,
-                                chapterIds: chapterId,
-                            }
-                        })
+                        useZustandStore.getState().startTraining('single', collectionId, chapterId)
+                        router.push('/(tabs)/train')
                     }}
                 />
             )}

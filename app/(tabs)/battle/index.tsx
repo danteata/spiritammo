@@ -9,6 +9,7 @@ import {
     Alert,
 } from 'react-native'
 import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
+import ContextualTooltip from '@/components/ui/ContextualTooltip'
 import { useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
@@ -79,6 +80,12 @@ export default function BattleScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
+                <ContextualTooltip
+                    id="battle"
+                    title="Test Your Memory"
+                    message="Battles test your memory under pressure. You earn Valor Points based on accuracy."
+                />
+
                 {/* Valor Points & Rank Display */}
                 <View style={styles.statsRow}>
                     <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : '#D4CBAB', borderWidth: isDark ? 0 : 1.5 }]}>
