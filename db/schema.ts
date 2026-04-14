@@ -64,3 +64,37 @@ export const battleIntel = sqliteTable('battle_intel', {
     dateCreated: text('date_created').notNull(),
     missionType: text('mission_type'),
 });
+
+// Mnemonics Arsenal
+export const mnemonics = sqliteTable('mnemonics', {
+    id: text('id').primaryKey(),
+    scriptureId: text('scripture_id').references(() => scriptures.id).notNull(),
+    type: text('type').notNull(), // 'acrostic' | 'visual' | 'story-chain' | 'acronym' | 'keyword'
+    content: text('content').notNull(),
+    source: text('source').notNull(), // 'ai' | 'community' | 'user'
+    authorUserId: text('author_user_id'),
+    upvotes: integer('upvotes').default(0),
+    downvotes: integer('downvotes').default(0),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at'),
+}, (table) => ({
+    scriptureIdx: index('idx_mnemonics_scripture').on(table.scriptureId),
+    sourceIdx: index('idx_mnemonics_source').on(table.source),
+}));
+
+// SRS State (Spaced Repetition)
+export const srsStates = sqliteTable('srs_states', {
+    id: text('id').primaryKey(),
+    scriptureId: text('scripture_id').references(() => scriptures.id).notNull(),
+    interval: integer('interval').notNull().default(1),
+    easeFactor: real('ease_factor').notNull().default(2.5),
+    dueDate: text('due_date').notNull(),
+    reps: integer('reps').notNull().default(0),
+    lapses: integer('lapses').notNull().default(0),
+    lastReviewDate: text('last_review_date'),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at'),
+}, (table) => ({
+    scriptureIdx: index('idx_srs_scripture').on(table.scriptureId),
+    dueDateIdx: index('idx_srs_due_date').on(table.dueDate),
+}));

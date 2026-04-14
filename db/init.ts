@@ -72,6 +72,39 @@ export const initializeDatabase = async () => {
             CREATE INDEX IF NOT EXISTS idx_book_chapter ON scriptures(book, chapter);
             CREATE INDEX IF NOT EXISTS idx_reference ON scriptures(reference);
             CREATE INDEX IF NOT EXISTS idx_accuracy ON scriptures(accuracy);
+
+            CREATE TABLE IF NOT EXISTS mnemonics (
+                id TEXT PRIMARY KEY NOT NULL,
+                scripture_id TEXT NOT NULL,
+                type TEXT NOT NULL,
+                content TEXT NOT NULL,
+                source TEXT NOT NULL,
+                author_user_id TEXT,
+                upvotes INTEGER DEFAULT 0,
+                downvotes INTEGER DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT,
+                FOREIGN KEY (scripture_id) REFERENCES scriptures(id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS srs_states (
+                id TEXT PRIMARY KEY NOT NULL,
+                scripture_id TEXT NOT NULL,
+                interval INTEGER NOT NULL DEFAULT 1,
+                ease_factor REAL NOT NULL DEFAULT 2.5,
+                due_date TEXT NOT NULL,
+                reps INTEGER NOT NULL DEFAULT 0,
+                lapses INTEGER NOT NULL DEFAULT 0,
+                last_review_date TEXT,
+                created_at TEXT NOT NULL,
+                updated_at TEXT,
+                FOREIGN KEY (scripture_id) REFERENCES scriptures(id) ON DELETE CASCADE
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_mnemonics_scripture ON mnemonics(scripture_id);
+            CREATE INDEX IF NOT EXISTS idx_mnemonics_source ON mnemonics(source);
+            CREATE INDEX IF NOT EXISTS idx_srs_scripture ON srs_states(scripture_id);
+            CREATE INDEX IF NOT EXISTS idx_srs_due_date ON srs_states(due_date);
         `);
 
         console.log('Database initialized successfully');

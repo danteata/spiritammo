@@ -117,4 +117,77 @@ export default defineSchema({
         .index("byType", ["type"])
         .index("byTypeAndUser", ["type", "userId"])
         .index("byTypeAndScore", ["type", "score"]),
+
+    // Shared mnemonics (community arsenal)
+    sharedMnemonics: defineTable({
+        scriptureReference: v.string(),
+        scriptureId: v.string(),
+        type: v.union(v.literal("acrostic"), v.literal("visual"), v.literal("story-chain"), v.literal("acronym"), v.literal("keyword")),
+        content: v.string(),
+        authorUserId: v.id("users"),
+        upvotes: v.number(),
+        downvotes: v.number(),
+        createdAt: v.number(),
+    })
+        .index("byScriptureId", ["scriptureId"])
+        .index("byAuthor", ["authorUserId"])
+        .index("byUpvotes", ["upvotes"]),
+
+    // Squad Operations (Live Squad Operations feature)
+    squadOperations: defineTable({
+        squadId: v.id("squads"),
+        type: v.union(v.literal("skirmish"), v.literal("raid"), v.literal("war")),
+        status: v.union(v.literal("waiting"), v.literal("active"), v.literal("completed"), v.literal("cancelled")),
+        creatorId: v.id("users"),
+        participants: v.array(v.object({
+            userId: v.id("users"),
+            displayName: v.string(),
+            score: v.optional(v.number()),
+            accuracy: v.optional(v.number()),
+            completedAt: v.optional(v.number()),
+            ready: v.boolean(),
+        })),
+        config: v.optional(v.object({
+            scriptureReferences: v.optional(v.array(v.string())),
+            accuracyThreshold: v.optional(v.number()),
+            timeLimitSec: v.optional(v.number()),
+            vpReward: v.optional(v.number()),
+            campaignId: v.optional(v.string()),
+            nodeId: v.optional(v.string()),
+        })),
+        results: v.optional(v.object({
+            winnerId: v.optional(v.id("users")),
+            participants: v.array(v.object({
+                userId: v.id("users"),
+                score: v.number(),
+                accuracy: v.number(),
+                versesCompleted: v.number(),
+            })),
+            vpAwarded: v.number(),
+            completedAt: v.number(),
+        })),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    })
+        .index("bySquadId", ["squadId"])
+        .index("byStatus", ["status"])
+        .index("bySquadAndStatus", ["squadId", "status"]),
+
+    // Squad Wars (weekly competitions between squads)
+    squadWars: defineTable({
+        challengerSquadId: v.id("squads"),
+        defenderSquadId: v.id("squads"),
+        status: v.union(v.literal("declared"), v.literal("active"), v.literal("completed")),
+        scoringMetric: v.union(v.literal("accuracy"), v.literal("verse_count"), v.literal("total_xp")),
+        vpBounty: v.number(),
+        challengerScore: v.number(),
+        defenderScore: v.number(),
+        startDate: v.number(),
+        endDate: v.number(),
+        createdAt: v.number(),
+        updatedAt: v.number(),
+    })
+        .index("byChallenger", ["challengerSquadId"])
+        .index("byDefender", ["defenderSquadId"])
+        .index("byStatus", ["status"]),
 });
