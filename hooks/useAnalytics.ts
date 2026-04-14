@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { analytics, AnalyticsEvents, AnalyticsEventType } from '@/services/analytics'
-import { useAppStore } from './useAppStore'
+import useZustandStore from './zustandStore'
 
 // Performance timing helper
 const usePerformanceTimer = () => {
@@ -28,7 +28,7 @@ const usePerformanceTimer = () => {
 
 // Main analytics hook
 export const useAnalytics = () => {
-    const { userStats } = useAppStore()
+    const userStats = useZustandStore((s) => s.userStats)
     const performanceTimer = usePerformanceTimer()
     const currentScreenRef = useRef<string | undefined>(undefined)
 
