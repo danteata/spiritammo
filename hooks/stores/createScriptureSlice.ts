@@ -125,6 +125,16 @@ export const createScriptureSlice: StateCreator<ScriptureSlice & { updateUserSta
 
             // Note: updateUserStats is expected to be in the merged store
             await get().updateUserStats(accuracy)
+
+            // Update SRS state after practice (if SRS slice is available)
+            if (typeof (get() as any).updateSRSWithRating === 'function') {
+                try {
+                    await (get() as any).updateSRSWithRating(scriptureId, accuracy)
+                } catch (srsError) {
+                    console.warn('SRS update failed (non-fatal):', srsError)
+                }
+            }
+
             return true
         } catch (error) {
             await errorHandler.handleError(

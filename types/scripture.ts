@@ -15,6 +15,8 @@ export interface Scripture {
   // Collection chapter info for EPUB-based collections
   collectionChapter?: number // Which chapter in the collection this verse came from
   collectionChapterName?: string // Name of the chapter from the table of contents
+  // SRS state (populated at runtime, not persisted directly)
+  srsState?: import('./srs').SRSState | null
 }
 
 export interface Book {
@@ -74,7 +76,7 @@ export interface UserSettings {
   voiceRate: number
   voicePitch: number
   language: string
-  trainingMode: 'single' | 'burst' | 'automatic'
+  trainingMode: 'single' | 'automatic'
   voiceEngine: 'whisper' | 'native'
   soldierName?: string
   isTimedMission?: boolean

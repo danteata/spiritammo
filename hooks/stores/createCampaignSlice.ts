@@ -3,6 +3,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Campaign, CampaignNode, NodeStatus } from '@/types/campaign'
 import { INITIAL_CAMPAIGNS } from '@/data/campaigns'
 import { bibleApiService } from '@/services/bibleApi'
+import { generateAutoCampaign, generateThematicCampaign, escalateCampaign, findAvailableThemes } from '@/services/campaignEngine'
+import { Scripture } from '@/types/scripture'
 
 export interface CampaignSlice {
     campaigns: Campaign[]
@@ -14,7 +16,14 @@ export interface CampaignSlice {
     unlockNode: (campaignId: string, nodeId: string) => void
     completeNode: (campaignId: string, nodeId: string, accuracy: number) => Promise<boolean>
     resetCampaignProgress: (campaignId: string) => void
+    deleteCampaign: (campaignId: string) => void
+    clearActiveCampaign: () => void
     provisionCampaignScripture: (node: any) => Promise<any | null>
+    // Auto-campaign & escalation
+    generateAutoCampaign: () => Campaign | null
+    generateThematicCampaign: (theme: string) => Campaign | null
+    findAvailableThemes: () => string[]
+    escalateCampaign: (campaignId: string, level?: number) => Campaign | null
 }
 
 export const createCampaignSlice: StateCreator<CampaignSlice & { scriptures: any[]; addScriptures: any }, [], [], CampaignSlice> = (set, get) => ({
@@ -157,6 +166,19 @@ export const createCampaignSlice: StateCreator<CampaignSlice & { scriptures: any
         AsyncStorage.setItem('user_campaigns', JSON.stringify(updatedCampaigns))
     },
 
+    deleteCampaign: (campaignId: string) => {
+        const { campaigns, activeCampaignId } = get()
+        const updatedCampaigns = campaigns.filter(c => c.id !== campaignId)
+        const updatedActiveId = activeCampaignId === campaignId ? null : activeCampaignId
+
+        set({ campaigns: updatedCampaigns, activeCampaignId: updatedActiveId })
+        AsyncStorage.setItem('user_campaigns', JSON.stringify(updatedCampaigns))
+    },
+
+    clearActiveCampaign: () => {
+        set({ activeCampaignId: null })
+    },
+
     provisionCampaignScripture: async (node: any) => {
         try {
             if (node.status === 'LOCKED') {
@@ -198,5 +220,50 @@ export const createCampaignSlice: StateCreator<CampaignSlice & { scriptures: any
             console.error('Failed to provision campaign scripture:', error)
             return null
         }
+    },
+
+    generateAutoCampaign: () => {
+        const scriptures: Scripture[] = (get() as any).scriptures || []
+        const existingAuto = get().campaigns.filter(c => c.id.startsWith('auto_campaign_'))
+        if (existingAuto.length >= 3) return null
+
+        const campaign = generateAutoCampaign(scriptures)
+        if (!campaign) return null
+
+        const updated = [...get().campaigns, campaign]
+        set({ campaigns: updated })
+        AsyncStorage.setItem('user_campaigns', JSON.stringify(updated))
+        return campaign
+    },
+
+    generateThematicCampaign: (theme: string) => {
+        const scriptures: Scripture[] = (get() as any).scriptures || []
+        const existingThemes = get().campaigns.filter(c => c.id.startsWith('theme_campaign_'))
+        if (existingThemes.some(c => c.id.includes(`_${theme}_`))) return null
+
+        const campaign = generateThematicCampaign(scriptures, theme)
+        if (!campaign) return null
+
+        const updated = [...get().campaigns, campaign]
+        set({ campaigns: updated })
+        AsyncStorage.setItem('user_campaigns', JSON.stringify(updated))
+        return campaign
+    },
+
+    findAvailableThemes: () => {
+        const scriptures: Scripture[] = (get() as any).scriptures || []
+        return findAvailableThemes(scriptures)
+    },
+
+    escalateCampaign: (campaignId: string, level: number = 1) => {
+        const { campaigns } = get()
+        const campaign = campaigns.find(c => c.id === campaignId)
+        if (!campaign) return null
+
+        const escalated = escalateCampaign(campaign, level)
+        const finalCampaigns = [...campaigns, escalated]
+        set({ campaigns: finalCampaigns })
+        AsyncStorage.setItem('user_campaigns', JSON.stringify(finalCampaigns))
+        return escalated
     },
 })
