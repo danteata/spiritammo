@@ -7,7 +7,8 @@ import {
   scriptures as scripturesTable,
   collections as collectionsTable,
   collectionScriptures as collectionScripturesTable,
-  practiceLogs as practiceLogsTable
+  practiceLogs as practiceLogsTable,
+  srsStates as srsStatesTable,
 } from '@/db/schema'
 import {
   Book,
@@ -30,18 +31,24 @@ import { createScriptureSlice, ScriptureSlice } from '@/hooks/stores/createScrip
 import { createCollectionSlice, CollectionSlice } from '@/hooks/stores/createCollectionSlice'
 import { createUserSlice, UserSlice } from '@/hooks/stores/createUserSlice'
 import { createCampaignSlice, CampaignSlice } from '@/hooks/stores/createCampaignSlice'
+import { createSRSSlice, SRSSlice } from '@/hooks/stores/createSRSSlice'
+import { createBriefingSlice, BriefingSlice } from '@/hooks/stores/createBriefingSlice'
+import { createMnemonicSlice, MnemonicSlice } from '@/hooks/stores/createMnemonicSlice'
 import { analytics, AnalyticsEvents } from '@/services/analytics'
 import type { Question } from '@/services/questionGenerator'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-export type TrainingMode = 'single' | 'burst' | 'automatic' | 'voice'
+export type TrainingMode = 'single' | 'automatic' | 'voice'
 
 type AppState = AvatarSlice &
   ScriptureSlice &
   CollectionSlice &
   UserSlice &
-  CampaignSlice & {
+  CampaignSlice &
+  SRSSlice &
+  BriefingSlice &
+  MnemonicSlice & {
     // Additional state not in slices
     isLoading: boolean
     squadMembers: SquadMember[]
@@ -78,6 +85,9 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
   ...createCollectionSlice(set, get, store),
   ...createUserSlice(set, get, store),
   ...createCampaignSlice(set, get, store),
+  ...createSRSSlice(set, get, store),
+  ...createBriefingSlice(set, get, store),
+  ...createMnemonicSlice(set, get, store),
 
   // Additional state
   isLoading: true,
@@ -92,18 +102,15 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
   pendingChapterIds: null,
 
   startTraining: (mode, collectionId, chapterIds) => {
-    console.log('[STORE] startTraining called with mode:', mode, 'collectionId:', collectionId, 'chapterIds:', chapterIds)
     set({
       pendingTrainingMode: mode,
       pendingCollectionId: collectionId ?? null,
       pendingChapterIds: chapterIds ?? null,
     })
-    console.log('[STORE] startTraining — pendingTrainingMode is now:', get().pendingTrainingMode)
   },
 
   consumeTrainingIntent: () => {
     const { pendingTrainingMode, pendingCollectionId, pendingChapterIds } = get()
-    console.log('[STORE] consumeTrainingIntent — pendingTrainingMode:', pendingTrainingMode)
     set({ pendingTrainingMode: null, pendingCollectionId: null, pendingChapterIds: null })
     return { mode: pendingTrainingMode, collectionId: pendingCollectionId, chapterIds: pendingChapterIds }
   },
@@ -168,22 +175,26 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
       try {
         set({ isLoading: true })
         await initializeDatabase()
-        await get().loadAvatarData()
 
-        // Batch all AsyncStorage reads into a single call (perf: 3 round-trips → 1)
+        // Run independent async operations in parallel for faster startup
+        const [avatarResult, storageResult] = await Promise.all([
+          get().loadAvatarData().then(() => true).catch((e) => { console.warn('Avatar load failed:', e); return false }),
+          AsyncStorage.multiGet([
+            'user_settings',
+            'user_campaigns',
+            'user_stats',
+            'quiz_verse_perf',
+            'quiz_distractor_perf',
+          ]),
+        ])
+
         const [
           [, storedSettings],
           [, storedCampaigns],
           [, storedStats],
           [, storedVersePerf],
           [, storedDistractorPerf],
-        ] = await AsyncStorage.multiGet([
-          'user_settings',
-          'user_campaigns',
-          'user_stats',
-          'quiz_verse_perf',
-          'quiz_distractor_perf',
-        ])
+        ] = storageResult
 
         // Load user settings
         if (storedSettings) {
@@ -293,8 +304,7 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
           const systemCollections = COLLECTIONS.filter(c => c.isSystem)
           const existingSystemIds = new Set(mergedCollections.map(c => c.id))
           const missingSystemCollections = systemCollections.filter(c => !existingSystemIds.has(c.id))
-          const existingSystemCollections = mergedCollections.filter(c => systemCollectionIds.has(c.id))
-          const systemCollectionsNeedingRelationships = existingSystemCollections.filter(
+          const systemCollectionsNeedingRelationships = mergedCollections.filter(
             sysCol => !sysCol.scriptures || sysCol.scriptures.length === 0
           )
           const systemCollectionDataMap = new Map(COLLECTIONS.filter(c => c.isSystem).map(c => [c.id, c]))
@@ -403,64 +413,80 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
           set({ scriptures: initialScriptures, collections: initialCollections })
         }
 
-        // Load sample EPUB collections
-        try {
-          const existingCollections = get().collections
-          const sampleResult = await sampleCollectionsLoader.loadSampleCollections(existingCollections)
-          if (sampleResult.loaded) {
-            const existingSampleIds = sampleResult.collections
-              .filter(c => existingCollections.some(ec => ec.id === c.id))
-              .map(c => c.id)
-
-            if (existingSampleIds.length > 0) {
-              for (const colId of existingSampleIds) {
-                await db.delete(collectionScripturesTable).where(eq(collectionScripturesTable.collectionId, colId))
-              }
-              await db.delete(collectionsTable).where(inArray(collectionsTable.id, existingSampleIds))
-              const oldIds = existingCollections.filter(c => existingSampleIds.includes(c.id)).flatMap(c => c.scriptures)
-              if (oldIds.length > 0) await db.delete(scripturesTable).where(inArray(scripturesTable.id, oldIds))
-            }
-
-            if (sampleResult.scriptures.length > 0) {
-              await db.insert(scripturesTable).values(sampleResult.scriptures.map(s => ({
-                id: s.id, book: s.book, chapter: s.chapter, verse: s.verse,
-                endVerse: s.endVerse, text: s.text, reference: s.reference,
-                mnemonic: s.mnemonic, lastPracticed: s.lastPracticed,
-                accuracy: s.accuracy, practiceCount: s.practiceCount, isJesusWords: s.isJesusWords
-              })))
-            }
-
-            for (const col of sampleResult.collections) {
-              const { scriptures: _scriptures, ...cd } = col
-              await db.insert(collectionsTable).values({
-                id: cd.id, name: cd.name, abbreviation: cd.abbreviation, description: cd.description,
-                createdAt: cd.createdAt, tags: cd.tags, isChapterBased: cd.isChapterBased,
-                sourceBook: cd.sourceBook, bookInfo: cd.bookInfo, chapters: cd.chapters,
-              })
-              if (col.scriptures.length > 0) {
-                await db.insert(collectionScripturesTable).values(
-                  col.scriptures.map(sid => ({ collectionId: col.id, scriptureId: sid }))
-                )
-              }
-            }
-
-            const colIdSet = new Set(sampleResult.collections.map(c => c.id))
-            const scrIdSet = new Set(sampleResult.scriptures.map(s => s.id))
-            set({
-              collections: [...get().collections.filter(c => !colIdSet.has(c.id)), ...sampleResult.collections],
-              scriptures: [...get().scriptures.filter(s => !scrIdSet.has(s.id)), ...sampleResult.scriptures],
-            })
-          }
-        } catch (sampleError) {
-          console.warn('📚 Sample collection loading failed (non-fatal):', sampleError)
-        }
-
         // Set initial scripture
         if (get().scriptures.length > 0 && !get().currentScripture) {
           set({ currentScripture: get().scriptures[0] })
         }
 
+        // Mark app as loaded — screens can render while non-critical data finishes
         set({ isLoading: false })
+
+        // Deferred: load non-critical data after UI is interactive
+        // SRS states, briefings, and mnemonics are not needed on first paint
+        await Promise.all([
+          get().loadSRSStates(),
+          get().loadBriefings(),
+          get().loadMnemonics(),
+        ])
+
+        // Deferred: load sample EPUB collections in background (expensive extraction)
+        sampleCollectionsLoader.loadSampleCollections(get().collections).then(async (sampleResult) => {
+          try {
+            if (sampleResult.loaded) {
+              const existingCollections = get().collections
+              const existingSampleIds = sampleResult.collections
+                .filter(c => existingCollections.some(ec => ec.id === c.id))
+                .map(c => c.id)
+
+              const currentDb = await getDb()
+              if (!currentDb) return
+
+              if (existingSampleIds.length > 0) {
+                for (const colId of existingSampleIds) {
+                  await currentDb.delete(collectionScripturesTable).where(eq(collectionScripturesTable.collectionId, colId))
+                }
+                await currentDb.delete(collectionsTable).where(inArray(collectionsTable.id, existingSampleIds))
+                const oldIds = existingCollections.filter(c => existingSampleIds.includes(c.id)).flatMap(c => c.scriptures)
+                if (oldIds.length > 0) await currentDb.delete(scripturesTable).where(inArray(scripturesTable.id, oldIds))
+              }
+
+              if (sampleResult.scriptures.length > 0) {
+                await currentDb.insert(scripturesTable).values(sampleResult.scriptures.map(s => ({
+                  id: s.id, book: s.book, chapter: s.chapter, verse: s.verse,
+                  endVerse: s.endVerse, text: s.text, reference: s.reference,
+                  mnemonic: s.mnemonic, lastPracticed: s.lastPracticed,
+                  accuracy: s.accuracy, practiceCount: s.practiceCount, isJesusWords: s.isJesusWords
+                })))
+              }
+
+              for (const col of sampleResult.collections) {
+                const { scriptures: _scriptures, ...cd } = col
+                await currentDb.insert(collectionsTable).values({
+                  id: cd.id, name: cd.name, abbreviation: cd.abbreviation, description: cd.description,
+                  createdAt: cd.createdAt, tags: cd.tags, isChapterBased: cd.isChapterBased,
+                  sourceBook: cd.sourceBook, bookInfo: cd.bookInfo, chapters: cd.chapters,
+                })
+                if (col.scriptures.length > 0) {
+                  await currentDb.insert(collectionScripturesTable).values(
+                    col.scriptures.map(sid => ({ collectionId: col.id, scriptureId: sid }))
+                  )
+                }
+              }
+
+              const colIdSet = new Set(sampleResult.collections.map(c => c.id))
+              const scrIdSet = new Set(sampleResult.scriptures.map(s => s.id))
+              set({
+                collections: [...get().collections.filter(c => !colIdSet.has(c.id)), ...sampleResult.collections],
+                scriptures: [...get().scriptures.filter(s => !scrIdSet.has(s.id)), ...sampleResult.scriptures],
+              })
+            }
+          } catch (sampleError) {
+            console.warn('📚 Sample collection background update failed (non-fatal):', sampleError)
+          }
+        }).catch((sampleError) => {
+          console.warn('📚 Sample collection loading failed (non-fatal):', sampleError)
+        })
+
         break
       } catch (error) {
         await errorHandler.handleError(error, `Initialize App Data (Attempt ${retryCount + 1}/${maxRetries})`, { silent: true })
