@@ -5,9 +5,9 @@ import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { useAudioPlayer } from 'expo-audio';
 import { COLORS } from '@/constants/colors';
 import { useAppStore } from '@/hooks/useAppStore';
-import * as Speech from 'expo-speech';
 import whisperService from '@/services/whisper';
 import neuralTTSService, { speakWithNeuralTTS, TTSProgress } from '@/services/neuralTTS';
+import TTSEngine from '@/services/ttsEngine';
 import Constants from 'expo-constants';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useAudioRecording, AudioRecordingResult } from '@/services/audioRecording';
@@ -297,9 +297,16 @@ export default function VoiceRecorder({
   const speakVerse = async () => {
     try {
       if (!scriptureText) return;
-      await Speech.stop();
+      await TTSEngine.stop();
       await neuralTTSService.stop();
       setStatusMessage('Preparing speech...');
+
+      const ttsEngine = userSettings.ttsEngine || 'native';
+      const voiceId = ttsEngine === 'elevenlabs'
+        ? (userSettings.useClonedVoice && userSettings.clonedVoiceId
+            ? userSettings.clonedVoiceId
+            : userSettings.elevenLabsVoiceId)
+        : undefined;
 
       await speakWithNeuralTTS(scriptureText, {
         onProgress: (progress: TTSProgress) => {
@@ -316,7 +323,7 @@ export default function VoiceRecorder({
           setStatusMessage('Listening to targets...');
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_START, {
             recording_id: 'tts_verse',
-            playback_type: 'neural_tts',
+            playback_type: ttsEngine === 'elevenlabs' ? 'elevenlabs_tts' : 'neural_tts',
             text_length: scriptureText.length
           });
         },
@@ -325,7 +332,7 @@ export default function VoiceRecorder({
           setStatusMessage('Ready to record');
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_COMPLETE, {
             recording_id: 'tts_verse',
-            playback_type: 'neural_tts',
+            playback_type: ttsEngine === 'elevenlabs' ? 'elevenlabs_tts' : 'neural_tts',
             duration: 0
           });
         },
@@ -334,6 +341,11 @@ export default function VoiceRecorder({
           setStatusMessage('Error reading verse');
           trackError(error, 'speakVerse_TTS_error');
         }
+      }, {
+        ttsEngine,
+        voiceId,
+        apiKey: userSettings.elevenLabsApiKey,
+        scriptureId,
       });
     } catch (error: any) {
       console.error('Error in speakVerse:', error);
@@ -349,10 +361,17 @@ export default function VoiceRecorder({
         new_voice: userSettings.language || 'en-US',
         language: userSettings.language || 'en-US'
       });
-      await Speech.stop();
+      await TTSEngine.stop();
       await neuralTTSService.stop();
       const textToSpeak = intelText || "No tactical intel available for this target.";
       setStatusMessage('Preparing speech...');
+
+      const ttsEngine = userSettings.ttsEngine || 'native';
+      const voiceId = ttsEngine === 'elevenlabs'
+        ? (userSettings.useClonedVoice && userSettings.clonedVoiceId
+            ? userSettings.clonedVoiceId
+            : userSettings.elevenLabsVoiceId)
+        : undefined;
 
       await speakWithNeuralTTS(textToSpeak, {
         onProgress: (progress: TTSProgress) => {
@@ -369,7 +388,7 @@ export default function VoiceRecorder({
           setStatusMessage('Reading intel...');
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_START, {
             recording_id: 'tts_intel',
-            playback_type: 'neural_tts',
+            playback_type: ttsEngine === 'elevenlabs' ? 'elevenlabs_tts' : 'neural_tts',
             text_length: textToSpeak.length
           });
         },
@@ -378,7 +397,7 @@ export default function VoiceRecorder({
           setStatusMessage('Ready to record');
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_COMPLETE, {
             recording_id: 'tts_intel',
-            playback_type: 'neural_tts',
+            playback_type: ttsEngine === 'elevenlabs' ? 'elevenlabs_tts' : 'neural_tts',
             duration: 0
           });
         },
@@ -387,6 +406,11 @@ export default function VoiceRecorder({
           setStatusMessage('Error reading intel');
           trackError(error, 'speakIntel_TTS_error');
         }
+      }, {
+        ttsEngine,
+        voiceId,
+        apiKey: userSettings.elevenLabsApiKey,
+        scriptureId: scriptureId ? `intel_${scriptureId}` : undefined,
       });
     } catch (error: any) {
       console.error('Error in speakIntel:', error);
@@ -396,8 +420,7 @@ export default function VoiceRecorder({
   const startRecording = async () => {
     try {
       await VoicePlaybackService.stopPlayback()
-      await Speech.stop()
-      await neuralTTSService.stop()
+      await TTSEngine.stop()
       if (isPlaying) {
         player.pause()
         setIsPlaying(false)

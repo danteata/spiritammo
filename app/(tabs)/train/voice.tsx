@@ -11,27 +11,51 @@ import { ThemedContainer, ThemedText } from '@/components/Themed';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import VoicePlaybackService from '@/services/voicePlayback';
+import TTSEngine, { TTSOptions } from '@/services/ttsEngine';
 import { evaluateRecitation } from '@/utils/similarity';
-import { Scripture } from '@/types/scripture';
+import { Scripture, TTSEngineType } from '@/types/scripture';
 import { useScriptureScope } from '@/hooks/useScriptureScope';
 import { usePracticeCompletion } from '@/hooks/usePracticeCompletion';
 import * as Haptics from 'expo-haptics';
-import * as Speech from 'expo-speech';
+
+const getTTSSettings = (userSettings: any) => {
+    const engine = userSettings.ttsEngine || 'native';
+    const voiceId = engine === 'elevenlabs'
+        ? (userSettings.useClonedVoice && userSettings.clonedVoiceId
+            ? userSettings.clonedVoiceId
+            : userSettings.elevenLabsVoiceId)
+        : undefined;
+    return {
+        ttsEngine: engine as TTSEngineType | undefined,
+        voiceId,
+        apiKey: userSettings.elevenLabsApiKey,
+    };
+};
 
 const speakAndWait = (
     text: string,
-    options?: { rate?: number; pitch?: number; language?: string },
-): Promise<void> =>
-    new Promise((resolve) => {
-        Speech.speak(text, {
-            rate: options?.rate ?? 0.9,
-            pitch: options?.pitch ?? 1.0,
-            language: options?.language || 'en-US',
-            onDone: resolve,
-            onStopped: resolve,
-            onError: () => resolve(),
-        });
-    });
+    options?: {
+        rate?: number;
+        pitch?: number;
+        language?: string;
+        ttsEngine?: TTSEngineType;
+        voiceId?: string;
+        apiKey?: string;
+        scriptureId?: string;
+    },
+): Promise<void> => {
+    const ttsOptions: TTSOptions = {
+        text,
+        rate: options?.rate ?? 0.9,
+        pitch: options?.pitch ?? 1.0,
+        language: options?.language || 'en-US',
+        ttsEngine: options?.ttsEngine,
+        voiceId: options?.voiceId,
+        elevenLabsApiKey: options?.apiKey,
+        scriptureId: options?.scriptureId,
+    };
+    return TTSEngine.speak(ttsOptions);
+};
 
 const SILENCE_TIMEOUT_MS = 3000;
 const RADIO_SILENCE_MS = 6000;
@@ -229,6 +253,8 @@ export default function VoiceOpsScreen() {
             rate: userSettings.voiceRate || 0.9,
             pitch: userSettings.voicePitch || 1.0,
             language: userSettings.language || 'en-US',
+            scriptureId: scripture.id,
+            ...getTTSSettings(userSettings),
         });
 
         await new Promise((r) => setTimeout(r, POST_RESULT_DELAY_MS));
@@ -268,14 +294,15 @@ export default function VoiceOpsScreen() {
                 rate: userSettings.voiceRate || 0.9,
                 pitch: userSettings.voicePitch || 1.0,
                 language: userSettings.language || 'en-US',
+                ...getTTSSettings(userSettings),
             });
             if (!isMountedRef.current) return;
 
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => { });
-            await speakAndWait('Go', { rate: 1.2, pitch: 1.3, language: userSettings.language || 'en-US' });
+            await speakAndWait('Go', { rate: 1.2, pitch: 1.3, language: userSettings.language || 'en-US', ...getTTSSettings(userSettings) });
 
             // ── Stop TTS and drain ──────────────────────────────
-            await Speech.stop();
+            await TTSEngine.stop();
             await new Promise((r) => setTimeout(r, TTS_DRAIN_MS));
             resetTranscript();
             nativeTranscriptRef.current = '';
@@ -364,6 +391,7 @@ export default function VoiceOpsScreen() {
             rate: userSettings.voiceRate || 0.9,
             pitch: userSettings.voicePitch || 1.0,
             language: userSettings.language || 'en-US',
+            ...getTTSSettings(userSettings),
         });
 
         await new Promise((r) => setTimeout(r, POST_RESULT_DELAY_MS));
@@ -424,7 +452,7 @@ export default function VoiceOpsScreen() {
         setIsRunning(false);
         clearAllTimers();
         stopSTT();
-        Speech.stop();
+        TTSEngine.stop();
         VoicePlaybackService.stopPlayback();
         setPhase('idle');
     };

@@ -26,6 +26,7 @@ import { bibleApiService } from '@/services/bibleApi'
 import { errorHandler } from '@/services/errorHandler'
 import { CollectionChapterService } from '@/services/collectionChapters'
 import { sampleCollectionsLoader } from '@/services/sampleCollectionsLoader'
+import TTSCache from '@/services/ttsCache'
 import { createAvatarSlice, AvatarSlice } from '@/hooks/stores/createAvatarSlice'
 import { createScriptureSlice, ScriptureSlice } from '@/hooks/stores/createScriptureSlice'
 import { createCollectionSlice, CollectionSlice } from '@/hooks/stores/createCollectionSlice'
@@ -198,7 +199,11 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
 
         // Load user settings
         if (storedSettings) {
-          set({ userSettings: JSON.parse(storedSettings) })
+          const parsed = JSON.parse(storedSettings)
+          if (parsed.elevenLabsVoiceId === '21m00Tcm4TlvDq8ikWAM' || parsed.elevenLabsVoiceId === 'JBFpfCBYomT7L7iX63mr') {
+            parsed.elevenLabsVoiceId = 'onwK4e9ZLuTAKqWW03F9'
+          }
+          set({ userSettings: parsed })
         } else {
           await AsyncStorage.setItem('user_settings', JSON.stringify(get().userSettings))
         }
@@ -428,6 +433,9 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
           get().loadBriefings(),
           get().loadMnemonics(),
         ])
+
+        // Deferred: initialize TTS cache (non-critical)
+        TTSCache.initialize().catch((e) => console.warn('TTS cache init failed (non-fatal):', e))
 
         // Deferred: load sample EPUB collections in background (expensive extraction)
         sampleCollectionsLoader.loadSampleCollections(get().collections).then(async (sampleResult) => {

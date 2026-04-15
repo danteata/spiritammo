@@ -2,6 +2,9 @@ import createContextHook from '@nkzw/create-context-hook'
 import { useEffect, useMemo, useRef } from 'react'
 import { useTheme } from './useTheme'
 import useZustandStore from './zustandStore'
+import VoicePlaybackService from '@/services/voicePlayback'
+import TTSEngine from '@/services/ttsEngine'
+import elevenLabsTTSService from '@/services/elevenLabsTTS'
 
 export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const { themeMode, themeColor, isDark, theme, gradients, setTheme, setThemeColor, toggleTheme } = useTheme()
@@ -12,13 +15,28 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     initializeAppData()
   }, [initializeAppData])
 
+  const userSettings = useZustandStore((s) => s.userSettings)
+  useEffect(() => {
+    const apiKey = userSettings.elevenLabsApiKey?.replace(/\s/g, '') || ''
+    if (apiKey) {
+      elevenLabsTTSService.setApiKey(apiKey)
+    }
+    VoicePlaybackService.configureTTS({
+      engine: userSettings.ttsEngine || 'native',
+      voiceId: userSettings.elevenLabsVoiceId,
+      apiKey,
+      voiceRate: userSettings.voiceRate,
+      voicePitch: userSettings.voicePitch,
+      language: userSettings.language,
+    })
+  }, [userSettings.ttsEngine, userSettings.elevenLabsVoiceId, userSettings.elevenLabsApiKey, userSettings.voiceRate, userSettings.voicePitch, userSettings.language])
+
   const books = useZustandStore((s) => s.books)
   const scriptures = useZustandStore((s) => s.scriptures)
   const collections = useZustandStore((s) => s.collections)
   const selectedBook = useZustandStore((s) => s.selectedBook)
   const selectedChapters = useZustandStore((s) => s.selectedChapters)
   const currentScripture = useZustandStore((s) => s.currentScripture)
-  const userSettings = useZustandStore((s) => s.userSettings)
   const userStats = useZustandStore((s) => s.userStats)
   const campaigns = useZustandStore((s) => s.campaigns)
   const activeCampaignId = useZustandStore((s) => s.activeCampaignId)

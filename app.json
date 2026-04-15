@@ -68,7 +68,8 @@
       },
       "eas": {
         "projectId": "15f1c643-7dd6-4d9d-840f-9f518bfb3484"
-      }
+      },
+      "elevenLabsApiKey": ""
     }
   }
 }

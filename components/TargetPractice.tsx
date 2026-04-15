@@ -13,7 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient'
 import BlurredTextOverlay from '@/components/ui/BlurredTextOverlay'
 import { FontAwesome, Feather, Ionicons } from '@expo/vector-icons'
-import * as Speech from 'expo-speech'
+import TTSEngine from '@/services/ttsEngine'
 import {
   MILITARY_TYPOGRAPHY,
   ACCURACY_COLORS,
@@ -238,7 +238,7 @@ export default function TargetPractice({
   const speakVerse = async () => {
     try {
       if (!targetVerse) return
-      await Speech.stop()
+      await TTSEngine.stop()
       await VoicePlaybackService.stopPlayback()
       setStatusMessage('Preparing speech...')
 

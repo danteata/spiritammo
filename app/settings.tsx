@@ -5,6 +5,7 @@ import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { useAppStore } from '@/hooks/useAppStore'
 import { FontAwesome, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { VoicePlaybackToggle } from '@/components/ui/VoicePlaybackToggle'
+import { VoiceSettingsModal } from '@/components/VoiceSettingsModal'
 import ScreenHeader from '@/components/ScreenHeader'
 
 import { useAuth } from '@clerk/clerk-expo'
@@ -16,6 +17,7 @@ export default function SettingsScreen() {
   const { isDark, setTheme, setThemeColor, themeColor, userSettings, saveUserSettings, theme } = useAppStore()
   const { trackEvent } = useAnalytics()
   const [showNameModal, setShowNameModal] = useState(false)
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false)
   const [tempName, setTempName] = useState('')
   const styles = getStyles(theme)
 
@@ -389,6 +391,36 @@ export default function SettingsScreen() {
           <VoicePlaybackToggle isDark={isDark} theme={theme} />
         </ThemedCard>
 
+        {/* TTS Voice Settings */}
+        <ThemedCard style={styles.card} variant="default">
+          <View style={styles.cardHeader}>
+            <MaterialCommunityIcons name="account-voice" size={20} color={theme.accent} />
+            <ThemedText variant="subheading" style={styles.cardTitle}>
+              TTS VOICE
+            </ThemedText>
+          </View>
+
+          <ThemedText variant="body" style={styles.sectionDescription}>
+            Configure text-to-speech voice, speed, and natural voice engine.
+          </ThemedText>
+
+          <TouchableOpacity
+            style={[styles.optionButton, { borderColor: theme.accent, backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)' }]}
+            onPress={() => setShowVoiceSettings(true)}
+          >
+            <View style={styles.optionHeader}>
+              <View style={styles.optionTitleRow}>
+                <MaterialCommunityIcons name="tune-vertical" size={18} color={theme.accent} />
+                <ThemedText variant="body" style={styles.optionTitle}>Voice Configuration</ThemedText>
+              </View>
+              <Feather name="chevron-right" size={18} color={theme.textSecondary} />
+            </View>
+            <ThemedText variant="caption" style={styles.optionDescription}>
+              {userSettings.ttsEngine === 'elevenlabs' ? 'Natural Voice (ElevenLabs)' : 'Device Voice (Native)'} • {userSettings.voiceRate.toFixed(1)}x speed
+            </ThemedText>
+          </TouchableOpacity>
+        </ThemedCard>
+
 
         {/* About */}
         <ThemedCard style={styles.card} variant="default">
@@ -483,6 +515,13 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      <VoiceSettingsModal
+        visible={showVoiceSettings}
+        onClose={() => setShowVoiceSettings(false)}
+        isDark={isDark}
+        theme={theme}
+      />
     </ThemedContainer>
   )
 }

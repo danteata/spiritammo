@@ -70,6 +70,8 @@ export interface CollectionChapter {
 export type ThemeMode = 'light' | 'dark' | 'auto'
 export type ThemeColor = 'slate' | 'jungle'
 
+export type TTSEngineType = 'native' | 'elevenlabs'
+
 export interface UserSettings {
   themeMode: ThemeMode
   themeColor?: ThemeColor
@@ -78,6 +80,12 @@ export interface UserSettings {
   language: string
   trainingMode: 'single' | 'automatic'
   voiceEngine: 'whisper' | 'native'
+  ttsEngine?: TTSEngineType
+  elevenLabsVoiceId?: string
+  elevenLabsApiKey?: string
+  useClonedVoice?: boolean
+  clonedVoiceId?: string | null
+  ttsCacheEnabled?: boolean
   soldierName?: string
   isTimedMission?: boolean
   stealthInputMode?: 'bank' | 'tactical'
