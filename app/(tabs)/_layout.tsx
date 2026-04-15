@@ -24,6 +24,11 @@ export default function TabsLayout() {
         <NativeTabs.Trigger.Icon sf="scope" md="gps_fixed" />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="bible">
+        <NativeTabs.Trigger.Label>Bible</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="text.book.closed.fill" md="auto_stories" />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="arsenal">
         <NativeTabs.Trigger.Label>Arsenal</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="book.fill" md="menu_book" />

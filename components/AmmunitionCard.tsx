@@ -461,6 +461,30 @@ const AmmunitionCard = React.memo(({
             </Text>
           </View>
         )}
+
+        {/* View in Context — deep link to Bible reader */}
+        <TouchableOpacity
+          style={[styles.contextButton, { borderColor: theme.border }]}
+          onPress={() => {
+            try {
+              // Lazy import to avoid circular dependency
+              const bibleTab = require('@/app/(tabs)/bible');
+              bibleTab.navigateToBibleVerse?.({
+                book: scripture.book,
+                chapter: scripture.chapter,
+                verse: scripture.verse,
+              });
+            } catch (e) {
+              console.warn('Bible tab not available for deep link:', e);
+            }
+          }}
+          activeOpacity={0.75}
+        >
+          <FontAwesome5 name="bible" size={13} color={theme.textSecondary} />
+          <Text style={[styles.contextButtonText, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>
+            {showPlain ? 'View in Bible' : 'VIEW IN CONTEXT'}
+          </Text>
+        </TouchableOpacity>
       </>
     )
   }
@@ -704,5 +728,19 @@ const getStyles = (theme: any) => StyleSheet.create({
   peekBannerText: {
     fontSize: 12,
     fontWeight: '600',
+  },
+  contextButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 6,
+  },
+  contextButtonText: {
+    fontSize: 11,
+    letterSpacing: 0.8,
   },
 })

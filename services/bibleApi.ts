@@ -49,6 +49,149 @@ interface OSISData {
   };
 }
 
+export interface ParsedReference {
+  book: string;
+  chapter: number;
+  startVerse?: number;
+  endVerse?: number;
+}
+
+// Comprehensive abbreviation map for smart reference parsing
+const BOOK_ABBREVIATION_MAP: Record<string, string> = {
+  // Genesis
+  'gen': 'Genesis', 'ge': 'Genesis', 'gn': 'Genesis',
+  // Exodus
+  'ex': 'Exodus', 'exo': 'Exodus', 'exod': 'Exodus',
+  // Leviticus
+  'lev': 'Leviticus', 'le': 'Leviticus', 'lv': 'Leviticus',
+  // Numbers
+  'num': 'Numbers', 'nu': 'Numbers', 'nm': 'Numbers', 'nb': 'Numbers',
+  // Deuteronomy
+  'deut': 'Deuteronomy', 'dt': 'Deuteronomy', 'deu': 'Deuteronomy',
+  // Joshua
+  'josh': 'Joshua', 'jos': 'Joshua', 'jsh': 'Joshua',
+  // Judges
+  'judg': 'Judges', 'jdg': 'Judges', 'jg': 'Judges',
+  // Ruth
+  'ruth': 'Ruth', 'rth': 'Ruth', 'ru': 'Ruth',
+  // 1 Samuel
+  '1sam': '1 Samuel', '1sa': '1 Samuel', '1s': '1 Samuel',
+  // 2 Samuel
+  '2sam': '2 Samuel', '2sa': '2 Samuel', '2s': '2 Samuel',
+  // 1 Kings
+  '1kgs': '1 Kings', '1ki': '1 Kings', '1k': '1 Kings',
+  // 2 Kings
+  '2kgs': '2 Kings', '2ki': '2 Kings', '2k': '2 Kings',
+  // 1 Chronicles
+  '1chr': '1 Chronicles', '1ch': '1 Chronicles', '1chron': '1 Chronicles',
+  // 2 Chronicles
+  '2chr': '2 Chronicles', '2ch': '2 Chronicles', '2chron': '2 Chronicles',
+  // Ezra
+  'ezra': 'Ezra', 'ezr': 'Ezra',
+  // Nehemiah
+  'neh': 'Nehemiah', 'ne': 'Nehemiah',
+  // Esther
+  'esth': 'Esther', 'est': 'Esther', 'es': 'Esther',
+  // Job
+  'job': 'Job', 'jb': 'Job',
+  // Psalms
+  'ps': 'Psalms', 'psa': 'Psalms', 'psalm': 'Psalms', 'psalms': 'Psalms',
+  // Proverbs
+  'prov': 'Proverbs', 'pro': 'Proverbs', 'prv': 'Proverbs', 'pr': 'Proverbs',
+  // Ecclesiastes
+  'eccl': 'Ecclesiastes', 'ecc': 'Ecclesiastes', 'ec': 'Ecclesiastes',
+  // Song of Solomon
+  'song': 'Song of Solomon', 'sos': 'Song of Solomon', 'ss': 'Song of Solomon',
+  // Isaiah
+  'isa': 'Isaiah', 'is': 'Isaiah',
+  // Jeremiah
+  'jer': 'Jeremiah', 'je': 'Jeremiah', 'jr': 'Jeremiah',
+  // Lamentations
+  'lam': 'Lamentations', 'la': 'Lamentations',
+  // Ezekiel
+  'ezek': 'Ezekiel', 'eze': 'Ezekiel', 'ezk': 'Ezekiel',
+  // Daniel
+  'dan': 'Daniel', 'da': 'Daniel', 'dn': 'Daniel',
+  // Hosea
+  'hos': 'Hosea', 'ho': 'Hosea',
+  // Joel
+  'joel': 'Joel', 'jl': 'Joel',
+  // Amos
+  'amos': 'Amos', 'am': 'Amos',
+  // Obadiah
+  'obad': 'Obadiah', 'ob': 'Obadiah',
+  // Jonah
+  'jonah': 'Jonah', 'jon': 'Jonah', 'jnh': 'Jonah',
+  // Micah
+  'mic': 'Micah', 'mi': 'Micah',
+  // Nahum
+  'nah': 'Nahum', 'na': 'Nahum',
+  // Habakkuk
+  'hab': 'Habakkuk', 'hb': 'Habakkuk',
+  // Zephaniah
+  'zeph': 'Zephaniah', 'zep': 'Zephaniah', 'zp': 'Zephaniah',
+  // Haggai
+  'hag': 'Haggai', 'hg': 'Haggai',
+  // Zechariah
+  'zech': 'Zechariah', 'zec': 'Zechariah', 'zc': 'Zechariah',
+  // Malachi
+  'mal': 'Malachi', 'ml': 'Malachi',
+  // Matthew
+  'matt': 'Matthew', 'mt': 'Matthew',
+  // Mark
+  'mark': 'Mark', 'mrk': 'Mark', 'mk': 'Mark', 'mr': 'Mark',
+  // Luke
+  'luke': 'Luke', 'lk': 'Luke', 'luk': 'Luke',
+  // John
+  'john': 'John', 'jn': 'John', 'jhn': 'John',
+  // Acts
+  'acts': 'Acts', 'ac': 'Acts', 'act': 'Acts',
+  // Romans
+  'rom': 'Romans', 'ro': 'Romans', 'rm': 'Romans',
+  // 1 Corinthians
+  '1cor': '1 Corinthians', '1co': '1 Corinthians',
+  // 2 Corinthians
+  '2cor': '2 Corinthians', '2co': '2 Corinthians',
+  // Galatians
+  'gal': 'Galatians', 'ga': 'Galatians',
+  // Ephesians
+  'eph': 'Ephesians', 'ephes': 'Ephesians',
+  // Philippians
+  'phil': 'Philippians', 'php': 'Philippians', 'pp': 'Philippians',
+  // Colossians
+  'col': 'Colossians',
+  // 1 Thessalonians
+  '1thess': '1 Thessalonians', '1th': '1 Thessalonians',
+  // 2 Thessalonians
+  '2thess': '2 Thessalonians', '2th': '2 Thessalonians',
+  // 1 Timothy
+  '1tim': '1 Timothy', '1ti': '1 Timothy',
+  // 2 Timothy
+  '2tim': '2 Timothy', '2ti': '2 Timothy',
+  // Titus
+  'titus': 'Titus', 'tit': 'Titus',
+  // Philemon
+  'philem': 'Philemon', 'phm': 'Philemon', 'phlm': 'Philemon',
+  // Hebrews
+  'heb': 'Hebrews',
+  // James
+  'james': 'James', 'jas': 'James', 'jm': 'James',
+  // 1 Peter
+  '1pet': '1 Peter', '1pe': '1 Peter', '1pt': '1 Peter',
+  // 2 Peter
+  '2pet': '2 Peter', '2pe': '2 Peter', '2pt': '2 Peter',
+  // 1 John
+  '1john': '1 John', '1jn': '1 John', '1jhn': '1 John',
+  // 2 John
+  '2john': '2 John', '2jn': '2 John',
+  // 3 John
+  '3john': '3 John', '3jn': '3 John',
+  // Jude
+  'jude': 'Jude', 'jd': 'Jude',
+  // Revelation
+  'rev': 'Revelation', 're': 'Revelation', 'revelations': 'Revelation', 'revelation': 'Revelation',
+};
+
 export class BibleApiService {
   private xmlData: OSISData | null = null;
   private parsedVerses: Map<string, BibleVerse> = new Map();
@@ -572,6 +715,120 @@ export class BibleApiService {
     } catch {
       return 0;
     }
+  }
+  /**
+   * Parse a smart reference string into structured book/chapter/verse data.
+   * Handles formats: "John 3:16", "Jn 3:16-18", "Gen 1", "1 Cor 13:4-8", "Ps 23"
+   */
+  static parseReference(input: string): ParsedReference | null {
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+
+    // Normalize: collapse spaces, lowercase
+    const normalized = trimmed.toLowerCase().replace(/\s+/g, ' ');
+
+    // Pattern 1: "Book Chapter:Verse-Verse" or "Book Chapter:Verse"
+    // Handles numbered books: "1 John 3:16", "2cor 13:4"
+    const withVersePattern = /^((?:\d\s?)?[a-z]+(?:\s[a-z]+)*)\s+(\d+):(\d+)(?:-(\d+))?$/;
+    const withVerseMatch = normalized.match(withVersePattern);
+
+    if (withVerseMatch) {
+      const bookInput = withVerseMatch[1].replace(/\s/g, '');
+      const chapter = parseInt(withVerseMatch[2]);
+      const startVerse = parseInt(withVerseMatch[3]);
+      const endVerse = withVerseMatch[4] ? parseInt(withVerseMatch[4]) : startVerse;
+
+      // Try exact abbreviation lookup first
+      let bookName = BOOK_ABBREVIATION_MAP[bookInput];
+
+      // Then try with spaces removed from a numbered book like "1 john" → "1john"
+      if (!bookName) {
+        const withoutSpaces = withVerseMatch[1].replace(/\s/g, '');
+        bookName = BOOK_ABBREVIATION_MAP[withoutSpaces];
+      }
+
+      // Fuzzy: find any book name that starts with the input
+      if (!bookName) {
+        const allBooks = Object.values(BOOK_ABBREVIATION_MAP);
+        const unique = [...new Set(allBooks)];
+        bookName = unique.find(b => b.toLowerCase().startsWith(withVerseMatch[1].trim())) || '';
+      }
+
+      if (bookName) {
+        return { book: bookName, chapter, startVerse, endVerse };
+      }
+    }
+
+    // Pattern 2: "Book Chapter" (no verse)
+    const chapterOnlyPattern = /^((?:\d\s?)?[a-z]+(?:\s[a-z]+)*)\s+(\d+)$/;
+    const chapterOnlyMatch = normalized.match(chapterOnlyPattern);
+
+    if (chapterOnlyMatch) {
+      const bookInput = chapterOnlyMatch[1].replace(/\s/g, '');
+      const chapter = parseInt(chapterOnlyMatch[2]);
+      let bookName = BOOK_ABBREVIATION_MAP[bookInput];
+
+      if (!bookName) {
+        const allBooks = [...new Set(Object.values(BOOK_ABBREVIATION_MAP))];
+        bookName = allBooks.find(b => b.toLowerCase().startsWith(chapterOnlyMatch[1].trim())) || '';
+      }
+
+      if (bookName) {
+        return { book: bookName, chapter };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Full-text search across all loaded verses. Fast — searches in-memory Map.
+   * Returns verses containing the query string (case-insensitive).
+   */
+  async searchVerses(query: string, limit: number = 50): Promise<BibleVerse[]> {
+    await this.waitForInitialization();
+
+    if (!query || query.trim().length < 2) return [];
+
+    const lowerQuery = query.toLowerCase().trim();
+    const results: BibleVerse[] = [];
+
+    for (const verse of this.parsedVerses.values()) {
+      if (verse.text.toLowerCase().includes(lowerQuery)) {
+        results.push(verse);
+        if (results.length >= limit) break;
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Get all unique book names loaded in the Bible data.
+   */
+  getAvailableBooks(): string[] {
+    const books = new Set<string>();
+    for (const verse of this.parsedVerses.values()) {
+      books.add(verse.book);
+    }
+    return Array.from(books);
+  }
+
+  /**
+   * Synchronously get chapter count for a book from the in-memory cache.
+   * Returns 0 if the book is not found or data not loaded.
+   */
+  getChapterCountSync(book: string): number {
+    const abbrev = this.getBookAbbrev(book);
+    let maxChapter = 0;
+    for (const key of this.parsedChapters.keys()) {
+      const [keyBook, chapterStr] = key.split('.');
+      if (keyBook === abbrev) {
+        const chapter = parseInt(chapterStr);
+        if (chapter > maxChapter) maxChapter = chapter;
+      }
+    }
+    return maxChapter;
   }
 }
 
