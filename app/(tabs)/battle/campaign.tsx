@@ -39,7 +39,12 @@ export default function CampaignScreen() {
         completeNode,
         isDark,
         theme,
-        userStats
+        userStats,
+        scriptures,
+        generateAutoCampaign,
+        generateThematicCampaign,
+        findAvailableThemes,
+        escalateCampaign,
     } = useAppStore()
 
     const router = useRouter()
@@ -136,6 +141,11 @@ export default function CampaignScreen() {
             )
 
             const success = await completeNode(activeCampaign.id, selectedNode.id, accuracy)
+
+            // Update SRS state for spaced repetition scheduling
+            if (targetScripture) {
+                useZustandStore.getState().updateSRSAfterReview(targetScripture.id, accuracy)
+            }
 
             if (success) {
                 Toast.missionSuccess(`Sector Secured! ${accuracy.toFixed(1)}% | ${vpEarned} VP Earned`)
@@ -237,18 +247,78 @@ export default function CampaignScreen() {
                                 </ThemedText>
                             </ThemedCard>
                         )}
+
+                        {/* Auto-generated Campaign Actions */}
+                        <View style={styles.autoCampaignSection}>
+                            <View style={styles.sectionHeader}>
+                                <FontAwesome5 name="robot" size={12} color={theme.warning} style={{ opacity: 0.7 }} />
+                                <ThemedText variant="caption" style={{ letterSpacing: 2, marginLeft: 8, opacity: 0.7 }}>ADAPTIVE OPERATIONS</ThemedText>
+                            </View>
+
+                            <ThemedText variant="caption" style={{ opacity: 0.55, marginBottom: 12, lineHeight: 18 }}>
+                                Procedurally generated campaigns that adapt to your performance. Auto Operations target your weakest verses; Thematic Operations connect verses by biblical theme.
+                            </ThemedText>
+
+                            <TouchableOpacity
+                                style={[styles.autoCampaignButton, { borderColor: theme.accent }]}
+                                onPress={() => {
+                                    const campaign = generateAutoCampaign()
+                                    if (campaign) {
+                                        handleStartCampaign(campaign.id)
+                                    } else {
+                                        Alert.alert('ALL CLEAR', 'No weak areas detected. Keep up the good work, soldier!', [{ text: 'Understood' }])
+                                    }
+                                }}
+                                activeOpacity={0.7}
+                            >
+                                <FontAwesome5 name="crosshairs" size={20} color={theme.accent} />
+                                <View style={styles.autoCampaignText}>
+                                    <ThemedText variant="body" style={{ fontWeight: '700' }}>AUTO OPERATION</ThemedText>
+                                    <ThemedText variant="caption" style={{ opacity: 0.7 }}>Targets your weakest verses</ThemedText>
+                                </View>
+                                <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
+                            </TouchableOpacity>
+
+                            {findAvailableThemes().length > 0 && (
+                                <TouchableOpacity
+                                    style={[styles.autoCampaignButton, { borderColor: theme.warning }]}
+                                    onPress={() => {
+                                        const themes = findAvailableThemes()
+                                        if (themes.length > 0) {
+                                            const campaign = generateThematicCampaign(themes[0])
+                                            if (campaign) {
+                                                handleStartCampaign(campaign.id)
+                                            } else {
+                                                Alert.alert('INSUFFICIENT DATA', 'Practice more verses to unlock thematic operations.', [{ text: 'Understood' }])
+                                            }
+                                        }
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <FontAwesome5 name="link" size={20} color={theme.warning} />
+                                    <View style={styles.autoCampaignText}>
+                                        <ThemedText variant="body" style={{ fontWeight: '700' }}>THEMATIC OPERATION</ThemedText>
+                                        <ThemedText variant="caption" style={{ opacity: 0.7 }}>Connects verses by theme ({findAvailableThemes().slice(0, 3).join(', ')})</ThemedText>
+                                    </View>
+                                    <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
+                                </TouchableOpacity>
+                            )}
+                        </View>
                     </ScrollView>
                 ) : (
                     <View style={styles.activeCampaignContainer}>
                         <TouchableOpacity
                             style={styles.backButton}
-                            onPress={() => router.push('/battle')}
+                            onPress={() => {
+                                useZustandStore.getState().clearActiveCampaign()
+                                router.push('/battle')
+                            }}
                             activeOpacity={0.7}
                         >
                             <View style={styles.backButtonIcon}>
                                 <FontAwesome5 name="arrow-left" size={12} color={theme.text} />
                             </View>
-                            <ThemedText variant="button" style={{ fontSize: 14, letterSpacing: 1 }}>RETURN TO BASE</ThemedText>
+                            <ThemedText variant="button" style={{ fontSize: 14, letterSpacing: 1 }}>ABANDON MISSION</ThemedText>
                         </TouchableOpacity>
 
                         <View style={styles.mapContainer} onLayout={handleMapLayout}>
@@ -290,7 +360,7 @@ export default function CampaignScreen() {
                             onPress={() => setPracticeMode(null)}
                         >
                             <Ionicons name="arrow-back" size={24} color={theme.accent} />
-                            <ThemedText variant="button" style={{ marginLeft: 8, color: theme.accent }}>ABORT MISSION</ThemedText>
+                            <ThemedText variant="button" style={{ marginLeft: 8, color: theme.accent }}>END SESSION</ThemedText>
                         </TouchableOpacity>
                         <View style={styles.requirementBadge}>
                             <ThemedText variant="caption" style={{ color: theme.accent }}>REQ: {selectedNode?.requiredAccuracy}% ACCURACY</ThemedText>
@@ -472,5 +542,20 @@ const styles = StyleSheet.create({
         flex: 1,
         opacity: 0.8,
         letterSpacing: 0.5,
+    },
+    autoCampaignSection: {
+        marginTop: 24,
+        gap: 12,
+    },
+    autoCampaignButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        gap: 12,
+    },
+    autoCampaignText: {
+        flex: 1,
     },
 })

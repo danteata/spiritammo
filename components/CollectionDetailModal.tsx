@@ -471,25 +471,16 @@ const CollectionDetailModal = React.memo(({
   }
 
   const handleChapterSelect = (chapterId: string) => {
-    console.log('🔵 [CollectionDetailModal] Chapter selected:', chapterId)
-    console.log('🔵 [CollectionDetailModal] Collection ID:', collection.id)
     setSelectedChapterId(chapterId)
-    // Set processing state to show loading feedback
     setIsProcessing(true)
-    console.log('🔵 [CollectionDetailModal] Set isProcessing=true, navigating...')
-    
-    // Navigate directly without closing the modal first
-    // The modal will close automatically when navigation happens
+
     if (onChapterNavigate) {
-      console.log('🔵 [CollectionDetailModal] Using onChapterNavigate callback')
       onChapterNavigate(collection.id, chapterId)
     } else {
-      console.log('🔵 [CollectionDetailModal] Using store to navigate with collection:', collection.id, chapterId)
       useZustandStore.getState().startTraining('single', collection.id, chapterId)
       router.push('/(tabs)/train')
     }
     setIsProcessing(false)
-    console.log('🔵 [CollectionDetailModal] Navigation complete, isProcessing=false')
   }
 
   const handleLongPressScripture = (scriptureId: string) => {

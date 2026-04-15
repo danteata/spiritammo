@@ -4,7 +4,6 @@ import {
     StyleSheet,
     Animated,
     Easing,
-    FlatList,
     TouchableOpacity, Image
 } from 'react-native'
 import { useWindowDimensions } from 'react-native'
@@ -248,64 +247,69 @@ export const ArsenalEquipment: React.FC<ArsenalEquipmentProps> = ({
                         <View style={[styles.headerLine, { backgroundColor: theme.border || 'rgba(255,255,255,0.1)' }]} />
                     </View>
 
-                    <FlatList
-                        data={getItemsBySlot(selectedSlot as EquipmentSlot)}
-                        keyExtractor={(item) => item.id}
-                        numColumns={columns}
-                        key={columns}
-                        showsVerticalScrollIndicator={false}
-                        contentContainerStyle={styles.itemsListContent}
-                        columnWrapperStyle={columns > 1 ? { gap: columnGap } : undefined}
-                        renderItem={({ item }) => {
-                            const isOwned = avatarInventory?.ownedItems?.includes(item.id)
-                            const isEquipped = avatarInventory?.equippedItems?.[selectedSlot] === item.id
+                    <View style={styles.itemsListContent}>
+                        {(() => {
+                            const items = getItemsBySlot(selectedSlot as EquipmentSlot)
+                            const rows: Array<typeof items> = []
+                            for (let i = 0; i < items.length; i += columns) {
+                                rows.push(items.slice(i, i + columns))
+                            }
+                            return rows.map((row, rowIdx) => (
+                                <View key={rowIdx} style={columns > 1 ? { flexDirection: 'row', gap: columnGap } : undefined}>
+                                    {row.map((item) => {
+                                        const isOwned = avatarInventory?.ownedItems?.includes(item.id)
+                                        const isEquipped = avatarInventory?.equippedItems?.[selectedSlot] === item.id
 
-                            return (
-                                <ThemedCard
-                                    variant="default"
-                                    style={[
-                                        styles.itemCard,
-                                        isEquipped && styles.equippedItemCard,
-                                        { borderColor: isEquipped ? theme.accent : undefined, width: cardWidth }
-                                    ]}
-                                    onPress={() => onItemPress(item.id)}
-                                >
-                                    <View style={styles.itemIconContainer}>
-                                        <FontAwesome5
-                                            name={(item as any).icon || 'box'}
-                                            size={24}
-                                            color={isEquipped ? theme.accent : theme.text}
-                                        />
-                                    </View>
+                                        return (
+                                            <ThemedCard
+                                                key={item.id}
+                                                variant="default"
+                                                style={[
+                                                    styles.itemCard,
+                                                    isEquipped && styles.equippedItemCard,
+                                                    { borderColor: isEquipped ? theme.accent : undefined, width: cardWidth }
+                                                ]}
+                                                onPress={() => onItemPress(item.id)}
+                                            >
+                                                <View style={styles.itemIconContainer}>
+                                                    <FontAwesome5
+                                                        name={(item as any).icon || 'box'}
+                                                        size={24}
+                                                        color={isEquipped ? theme.accent : theme.text}
+                                                    />
+                                                </View>
 
-                                    <ThemedText
-                                        variant="caption"
-                                        numberOfLines={2}
-                                        style={[styles.itemName, { color: theme.text }]}
-                                    >
-                                        {item.name}
-                                    </ThemedText>
+                                                <ThemedText
+                                                    variant="caption"
+                                                    numberOfLines={2}
+                                                    style={[styles.itemName, { color: theme.text }]}
+                                                >
+                                                    {item.name}
+                                                </ThemedText>
 
-                                    <View style={styles.itemFooter}>
-                                        {isEquipped ? (
-                                            <View style={[styles.badge, { backgroundColor: theme.accent }]}>
-                                                <ThemedText style={[styles.badgeText, { color: theme.surface }]} >EQUIPPED</ThemedText>
-                                            </View>
-                                        ) : isOwned ? (
-                                            <View style={[styles.badge, { backgroundColor: theme.surfaceHighlight || 'rgba(255,255,255,0.1)' }]}>
-                                                <ThemedText style={styles.badgeText}>OWNED</ThemedText>
-                                            </View>
-                                        ) : (
-                                            <View style={styles.costBadge}>
-                                                <FontAwesome5 name="coins" size={10} color="#FFD700" />
-                                                <ThemedText style={styles.costText}>{item.cost}</ThemedText>
-                                            </View>
-                                        )}
-                                    </View>
-                                </ThemedCard>
-                            )
-                        }}
-                    />
+                                                <View style={styles.itemFooter}>
+                                                    {isEquipped ? (
+                                                        <View style={[styles.badge, { backgroundColor: theme.accent }]}>
+                                                            <ThemedText style={[styles.badgeText, { color: theme.surface }]}>EQUIPPED</ThemedText>
+                                                        </View>
+                                                    ) : isOwned ? (
+                                                        <View style={[styles.badge, { backgroundColor: theme.surfaceHighlight || 'rgba(255,255,255,0.1)' }]}>
+                                                            <ThemedText style={styles.badgeText}>OWNED</ThemedText>
+                                                        </View>
+                                                    ) : (
+                                                        <View style={styles.costBadge}>
+                                                            <FontAwesome5 name="coins" size={10} color="#FFD700" />
+                                                            <ThemedText style={styles.costText}>{item.cost}</ThemedText>
+                                                        </View>
+                                                    )}
+                                                </View>
+                                            </ThemedCard>
+                                        )
+                                    })}
+                                </View>
+                            ))
+                        })()}
+                    </View>
                 </Animated.View>
             )}
         </View>
@@ -392,7 +396,6 @@ const styles = StyleSheet.create({
     itemsListContent: {
         paddingHorizontal: 16,
         rowGap: 12,
-        columnGap: 10,
         paddingBottom: 100,
     },
     itemCard: {

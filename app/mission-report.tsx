@@ -8,12 +8,13 @@ import {
   Dimensions,
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
-import { FontAwesome, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { FontAwesome, FontAwesome5, Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import {
   MILITARY_TYPOGRAPHY,
 } from '@/constants/colors'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import { useAppStore } from '@/hooks/useAppStore'
+import useZustandStore from '@/hooks/zustandStore'
 import RankBadge from '@/components/RankBadge'
 import AccuracyMeter from '@/components/AccuracyMeter'
 import { militaryRankingService } from '@/services/militaryRanking'
@@ -27,9 +28,15 @@ const { width } = Dimensions.get('window')
 
 export default function MissionReportScreen() {
   const { isDark, userStats, scriptures, theme } = useAppStore()
+  const afterActionBriefings = useZustandStore((s) => s.afterActionBriefings)
+  const crossReferenceBriefings = useZustandStore((s) => s.crossReferenceBriefings)
+  const srsDailySummary = useZustandStore((s) => s.srsDailySummary)
+  const requestCrossReferenceBriefing = useZustandStore((s) => s.requestCrossReferenceBriefing)
+  const isBriefingLoading = useZustandStore((s) => s.isBriefingLoading)
+  const latestBriefing = afterActionBriefings.length > 0 ? afterActionBriefings[0] : null
   const [militaryProfile, setMilitaryProfile] = useState<any>(null)
   const [selectedTab, setSelectedTab] = useState<
-    'overview' | 'achievements' | 'history'
+    'overview' | 'achievements' | 'history' | 'briefings'
   >('overview')
   const [practiceLogs, setPracticeLogs] = useState<any[]>([])
 
@@ -599,6 +606,118 @@ export default function MissionReportScreen() {
     )
   }
 
+  const renderBriefings = () => (
+    <View style={styles.tabContent}>
+      <View style={[styles.card, { backgroundColor: cardBackground, borderColor, borderWidth: 1 }]}>
+        <View style={styles.cardHeader}>
+          <FontAwesome5 name="satellite-dish" size={18} color={theme.accent} />
+          <Text style={[styles.cardTitle, { color: theme.text }]}>
+            TACTICAL BRIEFINGS
+          </Text>
+        </View>
+
+        {/* Mission Readiness */}
+        <View style={[styles.section, { marginTop: 8 }]}>
+          <ThemedText variant="caption" style={{ letterSpacing: 1.5, opacity: 0.6, marginBottom: 8 }}>
+            MISSION READINESS
+          </ThemedText>
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+            <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', flex: 1 }]}>
+              <ThemedText variant="heading" style={{ color: theme.warning, fontSize: 20 }}>
+                {srsDailySummary.overdueCount}
+              </ThemedText>
+              <ThemedText variant="caption" style={{ opacity: 0.6 }}>OVERDUE</ThemedText>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', flex: 1 }]}>
+              <ThemedText variant="heading" style={{ color: theme.accent, fontSize: 20 }}>
+                {srsDailySummary.dueCount}
+              </ThemedText>
+              <ThemedText variant="caption" style={{ opacity: 0.6 }}>DUE TODAY</ThemedText>
+            </View>
+            <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', flex: 1 }]}>
+              <ThemedText variant="heading" style={{ color: theme.success, fontSize: 20 }}>
+                {srsDailySummary.reviewedTodayCount}
+              </ThemedText>
+              <ThemedText variant="caption" style={{ opacity: 0.6 }}>COMPLETED</ThemedText>
+            </View>
+          </View>
+        </View>
+
+        {/* Latest After-Action Briefing */}
+        {latestBriefing ? (
+          <View style={[styles.section, { marginTop: 8 }]}>
+            <ThemedText variant="caption" style={{ letterSpacing: 1.5, opacity: 0.6, marginBottom: 8 }}>
+              AFTER-ACTION REPORT
+            </ThemedText>
+            <View style={[styles.card, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderColor: theme.accent + '40', borderWidth: 1 }]}>
+              <ThemedText variant="body" style={{ lineHeight: 22, opacity: 0.9 }}>
+                {latestBriefing.diagnosis}
+              </ThemedText>
+              {latestBriefing.recommendation && (
+                <ThemedText variant="caption" style={{ marginTop: 8, opacity: 0.7, color: theme.accent }}>
+                  → {latestBriefing.recommendation}
+                </ThemedText>
+              )}
+            </View>
+          </View>
+        ) : (
+          <View style={[styles.emptyState, { paddingVertical: 16 }]}>
+            <FontAwesome5 name="satellite-dish" size={32} color={isDark ? '#444' : '#ccc'} />
+            <Text style={[styles.comingSoon, { color: isDark ? '#888' : '#666' }]}>
+              Complete a practice session to receive tactical briefings.
+            </Text>
+          </View>
+        )}
+
+        {/* Cross-Reference Briefings */}
+        <View style={[styles.section, { marginTop: 16 }]}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <ThemedText variant="caption" style={{ letterSpacing: 1.5, opacity: 0.6 }}>
+              CROSS-REFERENCE INTEL
+            </ThemedText>
+            <TouchableOpacity
+              style={[styles.generateButton, { backgroundColor: theme.accent, opacity: isBriefingLoading ? 0.5 : 1 }]}
+              onPress={() => requestCrossReferenceBriefing(scriptures)}
+              disabled={isBriefingLoading}
+            >
+              <FontAwesome5 name="satellite-dish" size={10} color={theme.accentContrastText} />
+              <Text style={{ color: theme.accentContrastText, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>
+                {isBriefingLoading ? 'SCANNING...' : 'GENERATE'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          {crossReferenceBriefings.length > 0 ? (
+            crossReferenceBriefings.slice(0, 5).map((briefing, idx) => (
+              <View key={briefing.id || idx} style={[styles.card, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)', borderWidth: 1, marginBottom: 8 }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <FontAwesome5 name="link" size={10} color={theme.accent} />
+                  <ThemedText variant="caption" style={{ fontWeight: '700', color: theme.accent }}>
+                    {briefing.sourceReference} ↔ {briefing.targetReference}
+                  </ThemedText>
+                  <View style={{ backgroundColor: theme.accent + '20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                    <ThemedText variant="caption" style={{ fontSize: 9, color: theme.accent }}>
+                      {briefing.theme}
+                    </ThemedText>
+                  </View>
+                </View>
+                <ThemedText variant="caption" style={{ lineHeight: 18, opacity: 0.8 }}>
+                  {briefing.explanation}
+                </ThemedText>
+              </View>
+            ))
+          ) : (
+            <View style={[styles.emptyState, { paddingVertical: 16 }]}>
+              <FontAwesome5 name="search" size={24} color={isDark ? '#444' : '#ccc'} />
+              <Text style={[styles.comingSoon, { color: isDark ? '#888' : '#666', fontSize: 12 }]}>
+                Generate cross-references to discover thematic connections between verses.
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+    </View>
+  )
+
   return (
     <ThemedContainer style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={{ paddingBottom: 104 }}>
@@ -612,6 +731,7 @@ export default function MissionReportScreen() {
             { key: 'overview', label: 'OVERVIEW' },
             { key: 'achievements', label: 'MEDALS' },
             { key: 'history', label: 'LOGS' },
+            { key: 'briefings', label: 'BRIEFINGS' },
           ] as const).map(({ key, label }) => (
             <TouchableOpacity
               key={key}
@@ -644,6 +764,7 @@ export default function MissionReportScreen() {
         {selectedTab === 'overview' && renderOverview()}
         {selectedTab === 'achievements' && renderAchievements()}
         {selectedTab === 'history' && renderHistory()}
+        {selectedTab === 'briefings' && renderBriefings()}
       </ScrollView>
     </ThemedContainer>
   )
@@ -895,5 +1016,13 @@ const getStyles = (theme: any, isDark: boolean) => StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     fontStyle: 'italic',
+  },
+  generateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
   },
 })
