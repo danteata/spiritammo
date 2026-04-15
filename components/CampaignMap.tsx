@@ -9,7 +9,7 @@ import {
 } from 'react-native'
 import { LinearGradient } from 'expo-linear-gradient'
 import { FontAwesome5 } from '@expo/vector-icons'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 import { ThemedText } from '@/components/Themed'
 import { Campaign, CampaignNode } from '@/types/campaign'
 import Svg, { Line } from 'react-native-svg'
@@ -24,7 +24,7 @@ const MAP_WIDTH = 390
 const SCREEN_HEIGHT = Dimensions.get('window').height
 
 export default function CampaignMap({ campaign, onNodeSelect, containerHeight }: CampaignMapProps) {
-    const { theme, isDark } = useAppStore()
+    const { theme, isDark } = useTheme()
     // Use container height if provided, otherwise calculate from screen
     const mapHeight = containerHeight && containerHeight > 0 ? containerHeight : SCREEN_HEIGHT - 200
     // Reserve bottom padding so nodes aren't hidden behind the info overlay

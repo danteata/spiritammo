@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 
 interface AccuracyTargetProps {
   accuracy: number
@@ -17,7 +17,7 @@ export default function AccuracyTarget({
   showShot = true,
   showDart = true,
 }: AccuracyTargetProps) {
-  const { theme, isDark } = useAppStore()
+  const { theme, isDark } = useTheme()
 
   const shot = useMemo(() => {
     const safeAccuracy = clamp(accuracy, 0, 100)

@@ -1,7 +1,7 @@
 import { useRef, useState, Children, isValidElement } from 'react'
 import { StyleSheet, View, Platform, Text } from 'react-native'
 import { BlurView, BlurTargetView } from 'expo-blur'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 
 interface BlurredTextOverlayProps {
   children: React.ReactNode
@@ -54,7 +54,7 @@ export default function BlurredTextOverlay({
   containerStyle,
   textContainerStyle,
 }: BlurredTextOverlayProps) {
-  const { isDark, theme } = useAppStore()
+  const { isDark, theme } = useTheme()
   const blurTargetRef = useRef(null)
   const [blurKey, setBlurKey] = useState(0)
 

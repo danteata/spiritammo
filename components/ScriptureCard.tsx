@@ -5,11 +5,10 @@ import {
   View,
   TouchableOpacity,
   Platform,
-  Alert,
 } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons';
 import { Scripture } from '@/types/scripture'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 import ScriptureText from './ScriptureText'
 import BlurredTextOverlay from './ui/BlurredTextOverlay'
 
@@ -30,14 +29,22 @@ export default function ScriptureCard({
   isRecording = false,
   embedded = false,
 }: ScriptureCardProps) {
-  const { theme, isDark } = useAppStore()
+  const { theme, isDark } = useTheme()
   const [revealed, setRevealed] = useState(false)
+  const [showPeekBanner, setShowPeekBanner] = useState(false)
 
   useEffect(() => {
     if (isBattleMode && isRecording && revealed) {
       setRevealed(false)
     }
   }, [isRecording, isBattleMode])
+
+  useEffect(() => {
+    if (showPeekBanner) {
+      const timer = setTimeout(() => setShowPeekBanner(false), 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [showPeekBanner])
 
   const handleReveal = () => {
     setRevealed(true)
@@ -46,7 +53,21 @@ export default function ScriptureCard({
 
   const handleNext = () => {
     setRevealed(false)
+    setShowPeekBanner(false)
     if (onNext) onNext()
+  }
+
+  const handleToggleReveal = () => {
+    if (revealed) {
+      setRevealed(false)
+      setShowPeekBanner(false)
+    } else {
+      if (isBattleMode && !showPeekBanner) {
+        setShowPeekBanner(true)
+      } else {
+        handleReveal()
+      }
+    }
   }
 
   const textColor = theme.text
@@ -63,24 +84,7 @@ export default function ScriptureCard({
         <View style={styles.iconContainer}>
           <TouchableOpacity
             style={styles.iconButton}
-            onPress={() => {
-              if (revealed) {
-                setRevealed(false)
-              } else {
-                if (isBattleMode) {
-                  Alert.alert(
-                    'UNAUTHORIZED DISCLOSURE',
-                    'Manual scripture reveal is not encouraged during active combat operations. Do you wish to proceed?',
-                    [
-                      { text: 'ABORT', style: 'cancel' },
-                      { text: 'PROCEED', onPress: handleReveal }
-                    ]
-                  )
-                } else {
-                  handleReveal()
-                }
-              }
-            }}
+            onPress={handleToggleReveal}
             testID="toggle-reveal-button"
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
@@ -92,6 +96,26 @@ export default function ScriptureCard({
           </TouchableOpacity>
         </View>
       </View>
+
+      {showPeekBanner && isBattleMode && !revealed && (
+        <View style={[styles.peekBanner, { backgroundColor: `${theme.warning}15`, borderColor: `${theme.warning}40` }]}>
+          <FontAwesome name="exclamation-triangle" size={12} color={theme.warning} />
+          <Text style={[styles.peekBannerText, { color: theme.warning }]}>
+            Peek penalty: 0 VP for this verse. Tap again to reveal.
+          </Text>
+        </View>
+      )}
+
+      {isBattleMode && revealed && (
+        <TouchableOpacity
+          style={[styles.proceedButton, { borderColor: theme.accent }]}
+          onPress={handleNext}
+        >
+          <Text style={[styles.proceedButtonText, { color: theme.accent }]}>
+            PROCEED
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {revealed ? (
         <ScriptureText
@@ -192,5 +216,31 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  peekBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 12,
+    gap: 8,
+  },
+  peekBannerText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  proceedButton: {
+    alignSelf: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  proceedButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
 })

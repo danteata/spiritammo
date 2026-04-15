@@ -2,7 +2,7 @@ import { StyleSheet, View, Text } from 'react-native'
 import { FontAwesome } from '@expo/vector-icons'
 import { ThemedCard, ThemedText } from '@/components/Themed'
 
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 
 interface ArmoryBookDistributionProps {
     item: { book: string; count: number }
@@ -13,7 +13,7 @@ export default function ArmoryBookDistribution({
     item,
     onPress,
 }: ArmoryBookDistributionProps) {
-    const { theme } = useAppStore() // Use dynamic theme
+    const { theme } = useTheme()
 
     return (
         <ThemedCard

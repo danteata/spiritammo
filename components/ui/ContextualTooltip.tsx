@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Ionicons } from '@expo/vector-icons'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 
 const TOOLTIP_PREFIX = 'tooltip_seen_'
 
@@ -13,7 +13,7 @@ interface ContextualTooltipProps {
 }
 
 export default function ContextualTooltip({ id, title, message }: ContextualTooltipProps) {
-    const { isDark, theme } = useAppStore()
+    const { isDark, theme } = useTheme()
     const [visible, setVisible] = useState(false)
 
     useEffect(() => {

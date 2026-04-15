@@ -1,6 +1,6 @@
 import { StyleSheet, View } from 'react-native'
 import { FontAwesome, Ionicons } from '@expo/vector-icons'
-import { useAppStore } from '@/hooks/useAppStore'
+import { useTheme } from '@/hooks/useTheme'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 
 interface SquadChallengeCardProps {
@@ -12,7 +12,7 @@ export default function SquadChallengeCard({
     challenge,
     onShare
 }: SquadChallengeCardProps) {
-    const { isDark, theme } = useAppStore()
+    const { isDark, theme } = useTheme()
 
     const progressPercent = Math.min((challenge.currentValue / challenge.targetValue) * 100, 100)
 
