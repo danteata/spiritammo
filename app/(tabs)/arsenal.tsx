@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { useState } from 'react'
+import { useState, ReactNode } from 'react'
 import {
     StyleSheet,
     View,
@@ -8,6 +8,7 @@ import {
     Text,
     Alert,
     Dimensions,
+    ActivityIndicator,
 } from 'react-native'
 import { FontAwesome, FontAwesome5, Ionicons } from '@expo/vector-icons'
 import ContextualTooltip from '@/components/ui/ContextualTooltip'
@@ -18,7 +19,6 @@ import { useAppStore } from '@/hooks/useAppStore'
 import { useZustandStore } from '@/hooks/zustandStore'
 import { Collection, Scripture } from '@/types/scripture'
 import ScreenHeader from '@/components/ScreenHeader'
-import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { SkeletonCollectionList } from '@/components/ui/Skeleton'
 import { Toast } from '@/components/ui/Toast'
 import FileUploader from '@/components/FileUploader'
@@ -30,7 +30,17 @@ import { CollectionChapterService } from '@/services/collectionChapters'
 
 const { width } = Dimensions.get('window')
 
-type ArsenalSection = 'collections' | 'voice'
+const renderMarkdownText = (text: string, baseStyle: any, boldStyle: any): ReactNode[] => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/g)
+    return parts.filter(Boolean).map((part, i) => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+            return <Text key={i} style={boldStyle}>{part.slice(2, -2)}</Text>
+        }
+        return <Text key={i} style={baseStyle}>{part}</Text>
+    })
+}
+
+type ArsenalSection = 'collections' | 'voice' | 'mnemonics'
 
 export default function ArsenalScreen() {
     const {
@@ -44,6 +54,10 @@ export default function ArsenalScreen() {
         theme,
         isLoading,
     } = useAppStore()
+    const mnemonics = useZustandStore((s) => s.mnemonics)
+    const getMnemonicsForScripture = useZustandStore((s) => s.getMnemonicsForScripture)
+    const generateMnemonicsForScripture = useZustandStore((s) => s.generateMnemonicsForScripture)
+    const addMnemonic = useZustandStore((s) => s.addMnemonic)
     const router = useRouter()
     const { action } = useLocalSearchParams()
     const { trackEvent } = useAnalytics()
@@ -56,6 +70,8 @@ export default function ArsenalScreen() {
     const [showCollectionDetail, setShowCollectionDetail] = useState(false)
     const [showFileUploader, setShowFileUploader] = useState(false)
     const [showAddVerses, setShowAddVerses] = useState(false)
+    const [expandedMnemonicId, setExpandedMnemonicId] = useState<string | null>(null)
+    const [generatingMnemonicId, setGeneratingMnemonicId] = useState<string | null>(null)
 
     // Handle deep link for import
     React.useEffect(() => {
@@ -98,6 +114,7 @@ export default function ArsenalScreen() {
     const sections: { key: ArsenalSection; label: string; icon: string }[] = [
         { key: 'collections', label: 'Collections', icon: 'folder' },
         { key: 'voice', label: 'Voice', icon: 'mic' },
+        { key: 'mnemonics', label: 'Intel', icon: 'bulb-outline' },
     ]
 
     return (
@@ -271,6 +288,132 @@ export default function ArsenalScreen() {
                         <VoiceLibrary isDark={isDark} theme={theme} />
                     </View>
                 )}
+
+                {/* Mnemonic Arsenal Section */}
+                {activeSection === 'mnemonics' && (
+                    <View style={styles.sectionContent}>
+                        <View style={[styles.sectionHeader, { marginBottom: 16 }]}>
+                            <FontAwesome5 name="lightbulb" size={18} color={theme.accent} />
+                            <ThemedText variant="subheading" style={{ marginLeft: 10, letterSpacing: 1 }}>
+                                MNEMONIC ARSENAL
+                            </ThemedText>
+                        </View>
+
+                        <ThemedText variant="body" style={{ opacity: 0.7, marginBottom: 16, lineHeight: 22 }}>
+                            Memory aids for every verse. AI-generated mnemonics help you encode scriptures faster. Tap a verse to generate mnemonics.
+                        </ThemedText>
+
+                        {scriptures && scriptures.length > 0 ? (
+                            scriptures.filter(s => s.practiceCount && s.practiceCount > 0).slice(0, 15).map(scripture => {
+                                const scriptureMnemonics = getMnemonicsForScripture(scripture.id)
+                                const isExpanded = expandedMnemonicId === scripture.id
+                                const isGenerating = generatingMnemonicId === scripture.id
+                                const MNEMONIC_TYPE_ICONS: Record<string, string> = {
+                                    acrostic: 'font',
+                                    visual: 'eye',
+                                    'story-chain': 'link',
+                                    acronym: 'spell-check',
+                                    keyword: 'key',
+                                }
+                                return (
+                                    <View key={scripture.id}>
+                                        <TouchableOpacity
+                                            style={[styles.mnemonicScriptureCard, { borderColor: isExpanded ? theme.accent + '60' : theme.border, backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)' }]}
+                                            onPress={async () => {
+                                                if (scriptureMnemonics.length === 0 && !isGenerating) {
+                                                    setGeneratingMnemonicId(scripture.id)
+                                                    try {
+                                                        await generateMnemonicsForScripture(scripture.id, scripture.reference, scripture.text)
+                                                    } finally {
+                                                        setGeneratingMnemonicId(null)
+                                                    }
+                                                } else if (scriptureMnemonics.length > 0) {
+                                                    setExpandedMnemonicId(isExpanded ? null : scripture.id)
+                                                }
+                                            }}
+                                            activeOpacity={0.7}
+                                            disabled={isGenerating}
+                                        >
+                                            <View style={styles.mnemonicScriptureHeader}>
+                                                <View style={[styles.mnemonicRefBadge, { backgroundColor: theme.accent + '20' }]}>
+                                                    <ThemedText variant="caption" style={{ color: theme.accent, fontWeight: '800', letterSpacing: 0.5 }}>
+                                                        {scripture.reference}
+                                                    </ThemedText>
+                                                </View>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                                    {isGenerating && <ActivityIndicator size="small" color={theme.accent} />}
+                                                    {scriptureMnemonics.length > 0 && (
+                                                        <View style={[styles.mnemonicCountBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                                                            <FontAwesome5 name="lightbulb" size={10} color={theme.success} />
+                                                            <ThemedText variant="caption" style={{ fontSize: 10, color: theme.success }}>
+                                                                {scriptureMnemonics.length}
+                                                            </ThemedText>
+                                                        </View>
+                                                    )}
+                                                    {!isGenerating && scriptureMnemonics.length > 0 && (
+                                                        <FontAwesome5
+                                                            name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                                                            size={12}
+                                                            color={theme.textSecondary}
+                                                        />
+                                                    )}
+                                                </View>
+                                            </View>
+                                            {isGenerating && (
+                                                <ThemedText variant="caption" style={{ color: theme.accent, marginTop: 6, opacity: 0.8 }}>
+                                                    Generating mnemonics...
+                                                </ThemedText>
+                                            )}
+                                            {scriptureMnemonics.length > 0 && !isExpanded && !isGenerating && (
+                                                <Text style={{ fontSize: 12, opacity: 0.6, marginTop: 6, color: theme.text }} numberOfLines={1}>
+                                                    {renderMarkdownText(scriptureMnemonics[0].content, { fontSize: 12, opacity: 0.6, color: theme.text }, { fontSize: 12, opacity: 0.6, color: theme.text, fontWeight: '700' })}
+                                                </Text>
+                                            )}
+                                            {scriptureMnemonics.length === 0 && !isGenerating && (
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+                                                    <FontAwesome5 name="plus" size={10} color={theme.accent} />
+                                                    <ThemedText variant="caption" style={{ color: theme.accent, opacity: 0.8 }}>
+                                                        Tap to generate mnemonics
+                                                    </ThemedText>
+                                                </View>
+                                            )}
+                                        </TouchableOpacity>
+
+                                        {isExpanded && scriptureMnemonics.length > 0 && (
+                                            <View style={[styles.mnemonicDetailPanel, { backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.015)', borderColor: theme.accent + '30' }]}>
+                                                {scriptureMnemonics.map((mnemonic, idx) => (
+                                                    <View key={mnemonic.id} style={[styles.mnemonicItem, idx < scriptureMnemonics.length - 1 && { borderBottomWidth: 1, borderBottomColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }]}>
+                                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                                            <View style={[styles.mnemonicTypeIcon, { backgroundColor: theme.accent + '15' }]}>
+                                                                <FontAwesome5 name={MNEMONIC_TYPE_ICONS[mnemonic.type] || 'lightbulb'} size={11} color={theme.accent} />
+                                                            </View>
+                                                            <ThemedText variant="caption" style={{ fontWeight: '700', letterSpacing: 1, color: theme.accent, textTransform: 'uppercase' }}>
+                                                                {mnemonic.type}
+                                                            </ThemedText>
+                                                            <ThemedText variant="caption" style={{ opacity: 0.4, marginLeft: 'auto' }}>
+                                                                {mnemonic.source === 'ai' ? 'AI' : mnemonic.source}
+                                                            </ThemedText>
+                                                        </View>
+                                                        <Text style={{ fontSize: 14, opacity: 0.85, lineHeight: 20, paddingLeft: 26, color: theme.text }}>
+                                                            {renderMarkdownText(mnemonic.content, { fontSize: 14, opacity: 0.85, lineHeight: 20, color: theme.text }, { fontSize: 14, opacity: 0.85, lineHeight: 20, color: theme.text, fontWeight: '700' })}
+                                                        </Text>
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        )}
+                                    </View>
+                                )
+                            })
+                        ) : (
+                            <View style={styles.emptyState}>
+                                <FontAwesome5 name="lightbulb" size={48} color={isDark ? '#64748b' : '#94a3b8'} />
+                                <ThemedText variant="body" style={{ marginTop: 16, opacity: 0.6, textAlign: 'center' }}>
+                                    Practice some verses first to unlock the Mnemonic Arsenal.
+                                </ThemedText>
+                            </View>
+                        )}
+                    </View>
+                )}
             </ScrollView>
 
             {/* Modals */}
@@ -279,12 +422,10 @@ export default function ArsenalScreen() {
                     isVisible={showCollectionDetail}
                     collection={selectedCollection}
                     onClose={() => {
-                        console.log('🟡 [Arsenal] onClose called, clearing collection')
                         setShowCollectionDetail(false)
                         setSelectedCollection(null)
                     }}
                     onChapterNavigate={(collectionId, chapterId) => {
-                        console.log('🟡 [Arsenal] onChapterNavigate called:', collectionId, chapterId)
                         setShowCollectionDetail(false)
                         useZustandStore.getState().startTraining('single', collectionId, chapterId)
                         router.push('/(tabs)/train')
@@ -292,28 +433,28 @@ export default function ArsenalScreen() {
                 />
             )}
 
-                <FileUploader
-                    isVisible={showFileUploader}
-                    onClose={() => setShowFileUploader(false)}
-                    onVersesExtracted={async (verses, targetCollectionId) => {
-                        console.log('Extracted verses:', verses.length, 'for collection:', targetCollectionId)
-                        if (verses.length > 0) {
-                            try {
-                                // 1. Add scriptures to global store
-                                const addSuccess = await addScriptures(verses)
-                                if (addSuccess && targetCollectionId) {
-                                    // 2. Link them to the selected collection
-                                    await addScripturesToCollection(targetCollectionId, verses.map(v => v.id))
-                                }
-                                Toast.missionSuccess(`${verses.length} verse${verses.length !== 1 ? 's' : ''} imported to arsenal`)
-                            } catch (error) {
-                                console.error('❌ Failed to persist extracted verses:', error)
-                                Toast.missionFailed('Failed to save extracted verses to your arsenal')
+            <FileUploader
+                isVisible={showFileUploader}
+                onClose={() => setShowFileUploader(false)}
+                onVersesExtracted={async (verses, targetCollectionId) => {
+                    console.log('Extracted verses:', verses.length, 'for collection:', targetCollectionId)
+                    if (verses.length > 0) {
+                        try {
+                            // 1. Add scriptures to global store
+                            const addSuccess = await addScriptures(verses)
+                            if (addSuccess && targetCollectionId) {
+                                // 2. Link them to the selected collection
+                                await addScripturesToCollection(targetCollectionId, verses.map(v => v.id))
                             }
+                            Toast.missionSuccess(`${verses.length} verse${verses.length !== 1 ? 's' : ''} imported to arsenal`)
+                        } catch (error) {
+                            console.error('❌ Failed to persist extracted verses:', error)
+                            Toast.missionFailed('Failed to save extracted verses to your arsenal')
                         }
-                        setShowFileUploader(false)
-                    }}
-                />
+                    }
+                    setShowFileUploader(false)
+                }}
+            />
 
             <AddVersesModal
                 isVisible={showAddVerses}
@@ -326,8 +467,6 @@ export default function ArsenalScreen() {
                     setShowAddVerses(false)
                 }}
             />
-
-            <LoadingOverlay visible={false} message="Loading..." />
         </ThemedContainer>
     )
 }
@@ -594,5 +733,51 @@ const styles = StyleSheet.create({
         textAlign: 'center',
         opacity: 0.6,
         lineHeight: 22,
+    },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    mnemonicScriptureCard: {
+        padding: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        marginBottom: 10,
+    },
+    mnemonicScriptureHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+    },
+    mnemonicRefBadge: {
+        paddingHorizontal: 10,
+        paddingVertical: 4,
+        borderRadius: 6,
+    },
+    mnemonicCountBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 4,
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 4,
+    },
+    mnemonicDetailPanel: {
+        marginTop: -4,
+        marginBottom: 10,
+        borderRadius: 10,
+        borderWidth: 1,
+        overflow: 'hidden',
+    },
+    mnemonicItem: {
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+    },
+    mnemonicTypeIcon: {
+        width: 22,
+        height: 22,
+        borderRadius: 11,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
 })

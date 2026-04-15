@@ -12,25 +12,20 @@ import ContextualTooltip from '@/components/ui/ContextualTooltip'
 import { useRouter, useFocusEffect } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
 import { useZustandStore, TrainingMode } from '@/hooks/zustandStore'
+import { SRSDailySummary } from '@/types/srs'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
-import { LoadingOverlay } from '@/components/LoadingOverlay'
+import { SkeletonHomeScreen } from '@/components/ui/Skeleton'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
-import CollectionSelector from '@/components/CollectionSelector'
-import CollectionChapterSelector from '@/components/CollectionChapterSelector'
-import { Collection } from '@/types/scripture'
 
 const { width } = Dimensions.get('window')
 
 export default function TrainingScreen() {
-    const { isLoading, theme, isDark, userStats, scriptures, collections } = useAppStore()
+    const { isLoading, theme, isDark, userStats, scriptures, collections, startTraining } = useAppStore()
+    const srsDailySummary = useZustandStore((s) => s.srsDailySummary)
     const router = useRouter()
     const { trackEvent } = useAnalytics()
-
-    const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
-    const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
-    const [showChapterSelector, setShowChapterSelector] = useState(false)
 
     useScreenTracking('training')
 
@@ -41,18 +36,12 @@ export default function TrainingScreen() {
     // stack root so NativeTabs can't pop it, and avoids stacking stale screens.
     useFocusEffect(
         useCallback(() => {
-            console.log('[TRAIN-INDEX] useFocusEffect fired')
-            const state = useZustandStore.getState()
-            console.log('[TRAIN-INDEX] pendingTrainingMode =', state.pendingTrainingMode)
-            const intent = state.consumeTrainingIntent()
-            console.log('[TRAIN-INDEX] consumeTrainingIntent returned:', JSON.stringify(intent))
+            const intent = useZustandStore.getState().consumeTrainingIntent()
             if (intent.mode) {
                 const target = intent.mode === 'voice' ? '/train/voice' : '/train/practice'
-                console.log('[TRAIN-INDEX] dismissAll, then replacing with:', target, 'mode:', intent.mode)
-                // Pop any screens above the index first (e.g. a previous
-                // practice screen from a prior cross-tab navigation).
-                router.dismissAll()
-                // Small delay to let the dismiss settle before we replace.
+                try {
+                    router.dismissAll()
+                } catch {}
                 requestAnimationFrame(() => {
                     router.replace({
                         pathname: target,
@@ -63,8 +52,6 @@ export default function TrainingScreen() {
                         },
                     })
                 })
-            } else {
-                console.log('[TRAIN-INDEX] no pending mode — showing mode selector')
             }
         }, [router])
     )
@@ -73,16 +60,10 @@ export default function TrainingScreen() {
         trackEvent(AnalyticsEventType.PRACTICE_START, {
             practice_type: 'training_mode_selected',
             mode_selected: mode,
-            collection_id: selectedCollection?.id,
-            chapter_ids: selectedChapterIds.length > 0 ? selectedChapterIds.join(',') : undefined
         })
         router.push({
             pathname: mode === 'voice' ? '/train/voice' : '/train/practice',
-            params: {
-                mode,
-                collectionId: selectedCollection?.id,
-                chapterIds: selectedChapterIds.length > 0 ? selectedChapterIds.join(',') : undefined
-            }
+            params: { mode },
         })
     }
 
@@ -97,13 +78,23 @@ export default function TrainingScreen() {
     const verseCount = scriptures?.length || 0
     const collectionCount = collections?.length || 0
 
-    const displayVerseCount = selectedCollection
-        ? selectedCollection.scriptures.length
-        : verseCount
-
     const totalSessions = userStats?.totalPracticed || 0
 
-    if (!isLoading && verseCount === 0) {
+    if (isLoading) {
+        return (
+            <ThemedContainer style={styles.container}>
+                <ScreenHeader
+                    title="ENGAGEMENT RANGE"
+                    subtitle="COMBAT READINESS TRAINING"
+                />
+                <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+                    <SkeletonHomeScreen />
+                </ScrollView>
+            </ThemedContainer>
+        )
+    }
+
+    if (verseCount === 0) {
         return (
             <ThemedContainer style={styles.container}>
                 <ScreenHeader
@@ -159,7 +150,7 @@ export default function TrainingScreen() {
                 <View style={styles.statsRow}>
                     <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                         <FontAwesome5 name="book" size={20} color={theme.accent} />
-                        <ThemedText variant="heading" style={styles.statNumber}>{displayVerseCount}</ThemedText>
+                        <ThemedText variant="heading" style={styles.statNumber}>{verseCount}</ThemedText>
                         <ThemedText variant="caption" style={styles.statLabel}>Verses</ThemedText>
                     </View>
                     <View style={[styles.statCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
@@ -174,42 +165,6 @@ export default function TrainingScreen() {
                     </View>
                 </View>
 
-                {/* Load Ammunition */}
-                <View style={styles.collectionSection}>
-                    <ThemedText variant="caption" style={styles.sectionTitle}>
-                        LOAD AMMUNITION (OPTIONAL)
-                    </ThemedText>
-                    <CollectionSelector
-                        selectedCollection={selectedCollection}
-                        onSelectCollection={setSelectedCollection}
-                    />
-                    
-                    {selectedCollection && (
-                        <>
-                            <CollectionChapterSelector
-                                collection={selectedCollection}
-                                isVisible={false}
-                                onClose={() => setShowChapterSelector(true)}
-                                onStartPractice={setSelectedChapterIds}
-                                initialSelectedChapterIds={selectedChapterIds}
-                                variant="dropdown"
-                            />
-                            
-                            <CollectionChapterSelector
-                                collection={selectedCollection}
-                                isVisible={showChapterSelector}
-                                onClose={() => setShowChapterSelector(false)}
-                                onStartPractice={(chapterIds) => {
-                                    setSelectedChapterIds(chapterIds)
-                                    setShowChapterSelector(false)
-                                }}
-                                initialSelectedChapterIds={selectedChapterIds}
-                                variant="modal"
-                            />
-                        </>
-                    )}
-                </View>
-
                 {/* Low verse count banner */}
                 {verseCount > 0 && verseCount < 5 && (
                     <TouchableOpacity
@@ -219,7 +174,7 @@ export default function TrainingScreen() {
                     >
                         <Ionicons name="add-circle" size={18} color={theme.warning} />
                         <ThemedText variant="caption" style={[styles.lowVerseBannerText, { color: theme.warning }]}>
-                            Add more verses to unlock Burst Fire and Live Fire Drill
+                            Add more verses to unlock Live Fire Drill
                         </ThemedText>
                     </TouchableOpacity>
                 )}
@@ -227,7 +182,7 @@ export default function TrainingScreen() {
                 <ContextualTooltip
                     id="train_modes"
                     title="Choose a Drill"
-                    message="Start with Single Focus for deep memorization, or Auto Pilot to listen passively. More modes unlock as you practice."
+                    message="Start with Focused Drill for deep memorization, or Auto Pilot to listen passively. More modes unlock as you practice."
                 />
 
                 {/* Training Mode Selection */}
@@ -236,7 +191,7 @@ export default function TrainingScreen() {
                         CHOOSE DRILL
                     </ThemedText>
 
-                    {/* Single Mode - Always available */}
+                    {/* Focused Drill - Always available */}
                     <TouchableOpacity
                         style={styles.modeCard}
                         onPress={() => handleModeSelect('single')}
@@ -245,13 +200,13 @@ export default function TrainingScreen() {
                         <ThemedCard variant="glass" style={[styles.modeCardInner, styles.primaryMode, !isDark && { borderColor: theme.accent }]}>
                             <View style={styles.modeIconContainer}>
                                 <View style={[styles.modeIcon, { backgroundColor: `${theme.accent}15` }]}>
-                                    <Ionicons name="eye" size={28} color={theme.accent} />
+                                    <Ionicons name="shuffle" size={28} color={theme.accent} />
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.accent }]}>SINGLE FOCUS</ThemedText>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.accent }]}>FOCUSED DRILL</ThemedText>
                                 <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
-                                    Deep memorization drill. Master one verse at a time before advancing.
+                                    Randomize verses and practice at your own pace. Scope to any collection.
                                 </ThemedText>
                                 <View style={[styles.modeTag, { backgroundColor: `${theme.accent}15` }]}>
                                     <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.accent }]}>Best for starting</ThemedText>
@@ -290,48 +245,48 @@ export default function TrainingScreen() {
                         </ThemedCard>
                     </TouchableOpacity>
 
-                    {/* Burst Mode - Unlocked after 1 session */}
-                    {totalSessions >= 1 ? (
+                    {/* Daily Deployment - Intelligent review of due verses */}
+                    {totalSessions >= 2 && srsDailySummary.dueCount > 0 && (
                         <TouchableOpacity
                             style={styles.modeCard}
-                            onPress={() => handleModeSelect('burst')}
+                            onPress={() => {
+                                trackEvent(AnalyticsEventType.PRACTICE_START, {
+                                    practice_type: 'daily_deployment',
+                                    due_count: srsDailySummary.dueCount,
+                                })
+                                startTraining('single')
+                                router.push({
+                                    pathname: '/train/practice',
+                                    params: { mode: 'srs' },
+                                })
+                            }}
                             activeOpacity={0.9}
                         >
-                            <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.success }]}>
+                            <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: srsDailySummary.overdueCount > 0 ? theme.warning : theme.success }]}>
                                 <View style={styles.modeIconContainer}>
-                                    <View style={[styles.modeIcon, { backgroundColor: `${theme.success}15` }]}>
-                                        <Ionicons name="flash" size={28} color={theme.success} />
+                                    <View style={[styles.modeIcon, { backgroundColor: `${srsDailySummary.overdueCount > 0 ? theme.warning : theme.success}15` }]}>
+                                        <FontAwesome5 name="crosshairs" size={28} color={srsDailySummary.overdueCount > 0 ? theme.warning : theme.success} />
                                     </View>
                                 </View>
                                 <View style={styles.modeContent}>
-                                    <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.success }]}>BURST FIRE</ThemedText>
+                                    <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: srsDailySummary.overdueCount > 0 ? theme.warning : theme.success }]}>DAILY DEPLOYMENT</ThemedText>
                                     <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
-                                        Rapid-fire drill for quick recall. Practice multiple verses in succession.
+                                        {srsDailySummary.overdueCount > 0
+                                            ? `${srsDailySummary.overdueCount} verse${srsDailySummary.overdueCount === 1 ? '' : 's'} overdue — deploy now before you lose them.`
+                                            : `${srsDailySummary.dueCount} verse${srsDailySummary.dueCount === 1 ? '' : 's'} due for review today.`
+                                        }
                                     </ThemedText>
-                                    <View style={[styles.modeTag, { backgroundColor: `${theme.success}15` }]}>
-                                        <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.success }]}>Quick Review</ThemedText>
+                                    <View style={[styles.modeTag, { backgroundColor: `${srsDailySummary.overdueCount > 0 ? theme.warning : theme.success}15` }]}>
+                                        <ThemedText variant="caption" style={[styles.modeTagText, { color: srsDailySummary.overdueCount > 0 ? theme.warning : theme.success }]}>
+                                            {srsDailySummary.overdueCount > 0 ? `${srsDailySummary.overdueCount} OVERDUE` : `${srsDailySummary.dueCount} DUE`}
+                                        </ThemedText>
                                     </View>
                                 </View>
                                 <View style={styles.modeArrow}>
-                                    <FontAwesome5 name="chevron-right" size={14} color={isDark ? theme.textSecondary : '#6B7B3A'} />
+                                    <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
                                 </View>
                             </ThemedCard>
                         </TouchableOpacity>
-                    ) : (
-                        <View style={[styles.lockedCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)' }]}>
-                            <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }]}>
-                                    <Ionicons name="flash" size={28} color={isDark ? '#475569' : '#94a3b8'} />
-                                </View>
-                            </View>
-                            <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: isDark ? '#475569' : '#94a3b8' }]}>BURST FIRE</ThemedText>
-                                <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? '#334155' : '#94a3b8' }]}>
-                                    Complete 1 drill to unlock
-                                </ThemedText>
-                            </View>
-                            <FontAwesome5 name="lock" size={16} color={isDark ? '#475569' : '#94a3b8'} />
-                        </View>
                     )}
 
                     {/* Voice Ops - Unlocked after 3 sessions */}
@@ -424,8 +379,6 @@ export default function TrainingScreen() {
                 </View>
 
             </ScrollView>
-
-            <LoadingOverlay visible={isLoading} />
         </ThemedContainer>
     )
 }

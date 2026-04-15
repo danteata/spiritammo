@@ -5,15 +5,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRouter } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import { useAppStore } from '@/hooks/useAppStore'
+import useZustandStore from '@/hooks/zustandStore'
 import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
-import { LoadingOverlay } from '@/components/LoadingOverlay'
 import { SkeletonHomeScreen } from '@/components/ui/Skeleton'
+import { LoadingOverlay } from '@/components/LoadingOverlay'
 import SoldierAvatar from '@/components/SoldierAvatar'
 import WelcomeModal from '@/components/WelcomeModal'
 import { AnalyticsEventType } from '@/services/analytics'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { streakManager, DailyChallenge } from '@/services/streakManager'
+import { SRSDailySummary } from '@/types/srs'
+import { getSRSPriorityDescription } from '@/services/srsScheduler'
 
 const { width } = Dimensions.get('window')
 
@@ -131,6 +134,7 @@ const PulsingGlow: React.FC<PulsingGlowProps> = ({ children, color, style }: Pul
 
 export default function HomeScreen() {
   const { isLoading, theme, isDark, userStats, scriptures, collections, userSettings, startTraining } = useAppStore()
+  const srsDailySummary = useZustandStore((s) => s.srsDailySummary)
   const router = useRouter()
   const [showWelcome, setShowWelcome] = useState(false)
   const [dailyCompleted, setDailyCompleted] = useState(false)
@@ -210,7 +214,6 @@ export default function HomeScreen() {
     if (verseCount === 0) {
       router.push('/(tabs)/arsenal')
     } else {
-      console.log('[HOME] startTraining(single) then router.push(/(tabs)/train)')
       startTraining('single')
       router.push('/(tabs)/train')
     }
@@ -230,6 +233,7 @@ export default function HomeScreen() {
   const verseCount = scriptures?.length || 0
   const streak = userStats?.streak || 0
   const valorPoints = (userStats as any)?.valorPoints || 0
+  const totalSessions = userStats?.totalPracticed || 0
 
   const ctaState = useMemo(() => {
     const isNewUser = verseCount === 0 && streak === 0
@@ -401,6 +405,46 @@ export default function HomeScreen() {
               </PulsingGlow>
             </Animated.View>
 
+            {/* Daily Mission Card */}
+            {verseCount > 0 && srsDailySummary.dueCount > 0 && (
+              <Animated.View style={[styles.briefingDeck, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+                <View style={[
+                  styles.briefingCard,
+                  {
+                    backgroundColor: theme.surface,
+                    borderColor: theme.border,
+                    borderLeftColor: srsDailySummary.overdueCount > 0 ? theme.warning : theme.success,
+                  }
+                ]}>
+                  <View style={styles.transmissionHeader}>
+                    <View style={styles.transmissionIconBox}>
+                      <FontAwesome5 name="crosshairs" size={10} color={srsDailySummary.overdueCount > 0 ? theme.warning : theme.success} />
+                    </View>
+                    <ThemedText variant="caption" style={[styles.transmissionLabel, { color: srsDailySummary.overdueCount > 0 ? theme.warning : theme.success }]}>
+                      {srsDailySummary.overdueCount > 0 ? 'OVERDUE MISSIONS' : 'DAILY MISSIONS'}
+                    </ThemedText>
+                  </View>
+                  <ThemedText variant="body" style={styles.briefingText}>
+                    {getSRSPriorityDescription(srsDailySummary.overdueCount, srsDailySummary.dueCount)}
+                  </ThemedText>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {})
+                      startTraining('single' as any)
+                      router.push('/(tabs)/train')
+                    }}
+                    style={[styles.missionDeployButton, { backgroundColor: `${srsDailySummary.overdueCount > 0 ? theme.warning : theme.success}20`, borderColor: `${srsDailySummary.overdueCount > 0 ? theme.warning : theme.success}40` }]}
+                    activeOpacity={0.8}
+                  >
+                    <FontAwesome5 name="play" size={14} color={srsDailySummary.overdueCount > 0 ? theme.warning : theme.success} />
+                    <ThemedText variant="caption" style={{ color: srsDailySummary.overdueCount > 0 ? theme.warning : theme.success, fontWeight: '800', letterSpacing: 1, marginLeft: 8 }}>
+                      DEPLOY ({srsDailySummary.dueCount} {srsDailySummary.dueCount === 1 ? 'VERSE' : 'VERSES'})
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+              </Animated.View>
+            )}
+
             {/* Quick Start Cards */}
             {verseCount > 0 && (
               <View style={styles.quickStartSection}>
@@ -410,20 +454,18 @@ export default function HomeScreen() {
                     style={[styles.quickCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : theme.surface, borderColor: theme.border }]}
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
-                      console.log('[HOME] startTraining(single) then router.push(/(tabs)/train)')
                       startTraining('single')
                       router.push('/(tabs)/train')
                     }}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="eye" size={20} color={theme.accent} />
-                    <ThemedText variant="caption" style={styles.quickCardLabel}>Single Focus</ThemedText>
+                    <Ionicons name="shuffle" size={20} color={theme.accent} />
+                    <ThemedText variant="caption" style={styles.quickCardLabel}>Drill</ThemedText>
                   </TouchableOpacity>
                   <TouchableOpacity
                     style={[styles.quickCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : theme.surface, borderColor: theme.border }]}
                     onPress={() => {
                       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
-                      console.log('[HOME] startTraining(automatic) then router.push(/(tabs)/train)')
                       startTraining('automatic')
                       router.push('/(tabs)/train')
                     }}
@@ -431,19 +473,6 @@ export default function HomeScreen() {
                   >
                     <Ionicons name="infinite" size={20} color={theme.warning} />
                     <ThemedText variant="caption" style={styles.quickCardLabel}>Auto Pilot</ThemedText>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.quickCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : theme.surface, borderColor: theme.border }]}
-                    onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {})
-                      console.log('[HOME] startTraining(burst) then router.push(/(tabs)/train)')
-                      startTraining('burst')
-                      router.push('/(tabs)/train')
-                    }}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons name="flash" size={20} color={theme.success} />
-                    <ThemedText variant="caption" style={styles.quickCardLabel}>Burst Fire</ThemedText>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -461,7 +490,7 @@ export default function HomeScreen() {
           }, 300)
         }
       }} />
-      <LoadingOverlay visible={isLoading} message="Mobilizing forces..." />
+      <LoadingOverlay visible={isLoading} message="Mobilizing forces..." showTips />
     </ThemedContainer>
   )
 }
@@ -537,4 +566,5 @@ const styles = StyleSheet.create({
   quickStartRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
   quickCard: { flex: 1, alignItems: 'center', paddingVertical: 16, borderRadius: 12, borderWidth: 1, gap: 8 },
   quickCardLabel: { fontWeight: '700', letterSpacing: 0.5 },
+  missionDeployButton: { flexDirection: 'row', alignItems: 'center', paddingVertical: 12, paddingHorizontal: 16, borderRadius: 10, borderWidth: 1.5, marginTop: 16 },
 })

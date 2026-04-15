@@ -8,13 +8,13 @@ import {
     Dimensions,
     Alert,
 } from 'react-native'
-import { FontAwesome5, FontAwesome, Ionicons } from '@expo/vector-icons'
+import { FontAwesome5, Ionicons } from '@expo/vector-icons'
 import ContextualTooltip from '@/components/ui/ContextualTooltip'
 import { useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText, ThemedCard } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
-import { LoadingOverlay } from '@/components/LoadingOverlay'
+import { SkeletonHomeScreen } from '@/components/ui/Skeleton'
 import CampaignCard from '@/components/CampaignCard'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
@@ -30,7 +30,14 @@ export default function BattleScreen() {
         userStats,
         campaigns,
         activeCampaignId,
-        startCampaign
+        startCampaign,
+        scriptures,
+        generateAutoCampaign,
+        generateThematicCampaign,
+        findAvailableThemes,
+        deleteCampaign,
+        resetCampaignProgress,
+        escalateCampaign,
     } = useAppStore()
     const router = useRouter()
     const { trackEvent } = useAnalytics()
@@ -48,25 +55,31 @@ export default function BattleScreen() {
         router.push({ pathname: '/battle/campaign', params: { mode: 'campaign' } })
     }
 
-    const handleQuickBattle = () => {
+    const handleBattle = () => {
         trackEvent(AnalyticsEventType.PRACTICE_START, {
-            practice_type: 'quick_battle',
+            practice_type: 'battle',
             source: 'battle_screen'
         })
-        router.push('/battle/quick')
-    }
-
-    const handleCollectionBattle = () => {
-        trackEvent(AnalyticsEventType.PRACTICE_START, {
-            practice_type: 'collection_battle',
-            source: 'battle_screen'
-        })
-        router.push('/battle/collection')
+        router.push({ pathname: '/battle/collection', params: { mode: 'random' } })
     }
 
     const valorPoints = userStats?.valorPoints || 0
     const rank = userStats?.rank || 'Recruit'
     const streak = userStats?.streak || 0
+
+    if (isLoading) {
+        return (
+            <ThemedContainer style={styles.container}>
+                <ScreenHeader
+                    title="CHALLENGE ARENA"
+                    subtitle="TEST YOUR PROGRESS"
+                />
+                <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+                    <SkeletonHomeScreen />
+                </ScrollView>
+            </ThemedContainer>
+        )
+    }
 
     return (
         <ThemedContainer style={styles.container}>
@@ -122,10 +135,10 @@ export default function BattleScreen() {
                         CHOOSE YOUR BATTLE
                     </ThemedText>
 
-                    {/* Quick Battle - Primary CTA */}
+                    {/* Combat — Single card with random/sequential toggle inside */}
                     <TouchableOpacity
                         style={styles.modeCard}
-                        onPress={handleQuickBattle}
+                        onPress={handleBattle}
                         activeOpacity={0.9}
                     >
                         <ThemedCard variant="glass" style={[styles.modeCardInner, styles.primaryMode, { borderColor: isDark ? `${theme.accent}30` : theme.accent }]}>
@@ -135,13 +148,19 @@ export default function BattleScreen() {
                                 </View>
                             </View>
                             <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.accent }]}>QUICK SKIRMISH</ThemedText>
+                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.accent }]}>ENTER COMBAT</ThemedText>
                                 <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
-                                    Random verse battle. Earn VP based on accuracy. No preparation needed.
+                                    Battle verses for Valor Points. Toggle between random and sequential mode inside.
                                 </ThemedText>
-                                <View style={styles.rewardBadge}>
-                                    <FontAwesome5 name="coins" size={12} color={theme.accent} />
-                                    <ThemedText variant="caption" style={[styles.rewardText, { color: theme.accent }]}>+5-25 VP</ThemedText>
+                                <View style={{ flexDirection: 'row', gap: 6 }}>
+                                    <View style={styles.rewardBadge}>
+                                        <FontAwesome5 name="coins" size={12} color={theme.accent} />
+                                        <ThemedText variant="caption" style={[styles.rewardText, { color: theme.accent }]}>+5-25 VP</ThemedText>
+                                    </View>
+                                    <View style={styles.rewardBadge}>
+                                        <FontAwesome5 name="list" size={12} color={theme.success} />
+                                        <ThemedText variant="caption" style={[styles.rewardText, { color: theme.success }]}>Sequential</ThemedText>
+                                    </View>
                                 </View>
                             </View>
                             <View style={styles.modeArrow}>
@@ -150,33 +169,65 @@ export default function BattleScreen() {
                         </ThemedCard>
                     </TouchableOpacity>
 
-                    {/* Collection Battle */}
-                    <TouchableOpacity
-                        style={styles.modeCard}
-                        onPress={handleCollectionBattle}
-                        activeOpacity={0.9}
-                    >
-                        <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.border }]}>
-                            <View style={styles.modeIconContainer}>
-                                <View style={[styles.modeIcon, { backgroundColor: `${theme.success}15` }]}>
-                                    <FontAwesome name="folder-open" size={24} color={theme.success} />
+                    {/* Adaptive Operations */}
+                    <View style={styles.adaptiveSection}>
+                        <View style={styles.adaptiveHeader}>
+                            <FontAwesome5 name="robot" size={12} color={theme.warning} />
+                            <ThemedText variant="caption" style={{ letterSpacing: 2, marginLeft: 8, opacity: 0.7 }}>ADAPTIVE OPERATIONS</ThemedText>
+                        </View>
+                        <ThemedText variant="caption" style={{ opacity: 0.55, marginBottom: 14, lineHeight: 18 }}>
+                            Procedurally generated campaigns that adapt to your performance.
+                        </ThemedText>
+
+                        <TouchableOpacity
+                            style={[styles.adaptiveButton, { borderColor: theme.accent }]}
+                            onPress={() => {
+                                const campaign = generateAutoCampaign()
+                                if (campaign) {
+                                    handleStartCampaign(campaign.id)
+                                } else {
+                                    Alert.alert('ALL CLEAR', 'No weak areas detected. Keep up the good work, soldier!', [{ text: 'Understood' }])
+                                }
+                            }}
+                            activeOpacity={0.7}
+                        >
+                            <View style={[styles.adaptiveIcon, { backgroundColor: `${theme.accent}15` }]}>
+                                <FontAwesome5 name="crosshairs" size={20} color={theme.accent} />
+                            </View>
+                            <View style={styles.adaptiveText}>
+                                <ThemedText variant="body" style={{ fontWeight: '700' }}>AUTO OPERATION</ThemedText>
+                                <ThemedText variant="caption" style={{ opacity: 0.6 }}>Targets your weakest verses</ThemedText>
+                            </View>
+                            <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
+                        </TouchableOpacity>
+
+                        {findAvailableThemes().length > 0 && (
+                            <TouchableOpacity
+                                style={[styles.adaptiveButton, { borderColor: theme.warning, marginTop: 10 }]}
+                                onPress={() => {
+                                    const themes = findAvailableThemes()
+                                    if (themes.length > 0) {
+                                        const campaign = generateThematicCampaign(themes[0])
+                                        if (campaign) {
+                                            handleStartCampaign(campaign.id)
+                                        } else {
+                                            Alert.alert('INSUFFICIENT DATA', 'Practice more verses to unlock thematic operations.', [{ text: 'Understood' }])
+                                        }
+                                    }
+                                }}
+                                activeOpacity={0.7}
+                            >
+                                <View style={[styles.adaptiveIcon, { backgroundColor: `${theme.warning}15` }]}>
+                                    <FontAwesome5 name="link" size={20} color={theme.warning} />
                                 </View>
-                            </View>
-                            <View style={styles.modeContent}>
-                                <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.success }]}>COLLECTION ASSAULT</ThemedText>
-                                <ThemedText variant="body" style={[styles.modeDescription, { color: isDark ? theme.textSecondary : '#6B7B3A' }]}>
-                                    Battle through your collections. Higher accuracy = more Valor Points.
-                                </ThemedText>
-                                <View style={styles.rewardBadge}>
-                                    <FontAwesome5 name="coins" size={12} color={theme.accent} />
-                                    <ThemedText variant="caption" style={[styles.rewardText, { color: theme.accent }]}>+10-50 VP</ThemedText>
+                                <View style={styles.adaptiveText}>
+                                    <ThemedText variant="body" style={{ fontWeight: '700' }}>THEMATIC OPERATION</ThemedText>
+                                    <ThemedText variant="caption" style={{ opacity: 0.6 }}>Connects verses by theme ({findAvailableThemes().slice(0, 3).join(', ')})</ThemedText>
                                 </View>
-                            </View>
-                            <View style={styles.modeArrow}>
-                                <FontAwesome5 name="chevron-right" size={14} color={isDark ? theme.textSecondary : '#6B7B3A'} />
-                            </View>
-                        </ThemedCard>
-                    </TouchableOpacity>
+                                <FontAwesome5 name="chevron-right" size={14} color={theme.textSecondary} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
 
                     {/* Campaign Section */}
                     <ThemedText variant="caption" style={[styles.sectionTitle, { marginTop: 24 }]}>
@@ -189,6 +240,14 @@ export default function BattleScreen() {
                                 key={campaign.id}
                                 campaign={campaign}
                                 onPress={() => handleStartCampaign(campaign.id)}
+                                onDelete={(id) => deleteCampaign(id)}
+                                onReset={(id) => resetCampaignProgress(id)}
+                                onEscalate={(id) => {
+                                    const escalated = escalateCampaign(id)
+                                    if (escalated) {
+                                        handleStartCampaign(escalated.id)
+                                    }
+                                }}
                             />
                         ))
                     ) : (
@@ -229,7 +288,6 @@ export default function BattleScreen() {
                 )}
             </ScrollView>
 
-            {isLoading && <LoadingOverlay />}
         </ThemedContainer>
     )
 }
@@ -380,5 +438,31 @@ const styles = StyleSheet.create({
     },
     challengeProgress: {
         alignItems: 'flex-end',
+    },
+    adaptiveSection: {
+        marginTop: 24,
+        gap: 12,
+    },
+    adaptiveHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    adaptiveButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        padding: 16,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        gap: 12,
+    },
+    adaptiveIcon: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    adaptiveText: {
+        flex: 1,
     },
 })

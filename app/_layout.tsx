@@ -27,13 +27,12 @@ if (!publishableKey) {
 }
 
 export default function RootLayout() {
-  const isLoading = useZustandStore((s) => s.isLoading)
-
+  // Hide splash screen immediately — screens show skeletons while data streams in
   useEffect(() => {
-    if (!isLoading) {
-      SplashScreen.hideAsync();
-    }
-  }, [isLoading]);
+    SplashScreen.hideAsync().catch(() => {
+      // Splash may already be hidden, ignore errors
+    })
+  }, [])
 
   // Handle Deep Links
   useEffect(() => {
