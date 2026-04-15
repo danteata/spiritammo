@@ -14,17 +14,20 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { useAppStore } from '@/hooks/useAppStore';
 import { useBibleReader } from '@/hooks/useBibleReader';
 import { bibleApiService, BibleVerse, ParsedReference } from '@/services/bibleApi';
 import { BOOKS } from '@/mocks/books';
 import { Scripture } from '@/types/scripture';
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors';
+import VoicePlaybackService from '@/services/voicePlayback';
 
 import VerseRow from './VerseRow';
 import ChapterNavBar from './ChapterNavBar';
 import SmartSearchBar from './SmartSearchBar';
 import SelectionHUD from './SelectionHUD';
+import ReaderSettingsModal from './ReaderSettingsModal';
 import BookSelector from '@/components/BookSelector';
 import { Book, Collection } from '@/types/scripture';
 
@@ -57,7 +60,6 @@ export default function BibleReaderScreen({
     selectedVerses,
     toggleVerseSelection,
     clearSelection,
-    arsenalVerseIds,
     getArsenalData,
     chaptersWithArsenal,
     navigateToVerse,
@@ -71,11 +73,18 @@ export default function BibleReaderScreen({
     recentSearches,
     addRecentSearch,
     loadRecentSearches,
+    highlights,
+    notes,
+    loadChapterInsights,
+    saveHighlight,
+    removeHighlight,
+    saveNote,
   } = useBibleReader(arsenalScriptures);
 
   const [mode, setMode] = useState<ReaderMode>(initialBook ? 'reading' : 'browsing');
   const [chapterVerses, setChapterVerses] = useState<BibleVerse[]>([]);
   const [isLoadingChapter, setIsLoadingChapter] = useState(false);
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const scrollY = useRef(new Animated.Value(0)).current;
   const headerOpacity = scrollY.interpolate({
@@ -102,15 +111,13 @@ export default function BibleReaderScreen({
 
   // Initial load and deep-link handling
   useEffect(() => {
+    loadRecentSearches();
     if (initialBook) {
       navigateToVerse(initialBook, initialChapter || 1, initialVerse);
       setMode('reading');
+    } else {
+      loadChapterInsights(currentBook, currentChapter);
     }
-  }, []);
-
-  // Load recent searches on mount
-  useEffect(() => {
-    loadRecentSearches();
   }, []);
 
   // Reload whenever book/chapter changes
@@ -150,46 +157,123 @@ export default function BibleReaderScreen({
   }, [navigateToVerse]);
 
   const handleVerseLongPress = useCallback((verse: BibleVerse) => {
-    // Long press also toggles selection
     toggleVerseSelection(verse);
   }, [toggleVerseSelection]);
+
+  const handleHighlight = useCallback((color: string | null) => {
+    selectedVerses.forEach(v => {
+      saveHighlight(v.id, color || '#FDE047');
+    });
+  }, [selectedVerses, saveHighlight]);
+
+  const handleAddNote = useCallback(() => {
+    if (selectedVerses.length === 0) return;
+    const verse = selectedVerses[0];
+    const existing = notes.get(verse.id) || '';
+
+    Alert.prompt(
+      'MISSION NOTE',
+      `Add tactical intelligence to ${verse.reference}`,
+      [
+        { text: 'CANCEL', style: 'cancel' },
+        { text: 'DELETE', style: 'destructive', onPress: () => saveNote(verse.id, '') },
+        { text: 'SAVE', onPress: (text?: string) => saveNote(verse.id, text || '') },
+      ],
+      'plain-text',
+      existing
+    );
+  }, [selectedVerses, notes, saveNote]);
+
+  const onGestureEvent = useCallback(({ nativeEvent }: any) => {
+    if (nativeEvent.state === State.END) {
+      const { translationX, velocityX } = nativeEvent;
+      // Detect horizontal swipe with enough velocity/distance
+      if (Math.abs(translationX) > 100 && Math.abs(velocityX) > 500) {
+        if (translationX > 0) {
+          goToPreviousChapter();
+        } else {
+          goToNextChapter(currentChapterCount);
+        }
+      }
+    }
+  }, [goToPreviousChapter, goToNextChapter, currentChapterCount]);
+
+  const handleShare = useCallback(async () => {
+    if (selectedVerses.length === 0) return;
+    const verse = selectedVerses[0];
+    Alert.alert('Share', `Generating beautiful card for ${verse.reference}... (Developer: Implementation in progress)`);
+  }, [selectedVerses]);
+
+  const [activelyReadingVerseId, setActivelyReadingVerseId] = useState<string | null>(null);
+  const isReadingRef = useRef(false);
+
+  // Sequential Playback
+  const handleSequentialListen = useCallback(async (verses: Scripture[]) => {
+    if (isReadingRef.current) {
+      VoicePlaybackService.stopPlayback();
+      isReadingRef.current = false;
+      setActivelyReadingVerseId(null);
+      return;
+    }
+
+    isReadingRef.current = true;
+    for (const v of verses) {
+      if (!isReadingRef.current) break;
+      setActivelyReadingVerseId(v.id);
+      
+      // Auto-scroll to verse if it's not in view
+      const idx = chapterVerses.findIndex(cv => cv.reference === v.reference);
+      if (idx !== -1) {
+        flatListRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.2 });
+      }
+
+      await new Promise<void>((resolve) => {
+        VoicePlaybackService.playTextToSpeech(`${v.reference}. ${v.text}`, {
+          onDone: () => resolve(),
+          onError: () => resolve(),
+          rate: userSettings?.voiceRate || 0.9,
+          pitch: userSettings?.voicePitch || 1.0,
+        });
+      });
+    }
+    setActivelyReadingVerseId(null);
+    isReadingRef.current = false;
+  }, [chapterVerses, userSettings]);
 
   const currentBookData = BOOKS.find(b => b.name.toLowerCase() === currentBook.toLowerCase());
   const testament = currentBookData?.testament === 'new' ? 'NEW TESTAMENT' : 'OLD TESTAMENT';
 
-  // ── Render individual verse ──────────────────────────────────────────────────
   const renderVerse = useCallback(({ item }: { item: BibleVerse }) => {
     const verseId = `${item.book.toLowerCase()}-${item.chapter}-${item.verse}`;
     const isSelected = selectedVerseIds.has(verseId);
     const isHighlighted = item.verse === highlightedVerse;
     const arsenalData = getArsenalData(item);
+    const highlightColor = highlights.get(verseId);
+    const hasNote = notes.has(verseId);
+    const isActivelyReading = verseId === activelyReadingVerseId;
 
     return (
       <VerseRow
         verse={item}
         isSelected={isSelected}
         isHighlighted={isHighlighted}
+        highlightColor={highlightColor}
+        hasNote={hasNote}
+        isActivelyReading={isActivelyReading}
         arsenalData={arsenalData}
         onPress={toggleVerseSelection}
         onLongPress={handleVerseLongPress}
         theme={theme}
         isDark={isDark}
+        userSettings={userSettings}
       />
     );
-  }, [selectedVerseIds, highlightedVerse, getArsenalData, toggleVerseSelection, handleVerseLongPress, theme, isDark]);
+  }, [selectedVerseIds, highlightedVerse, getArsenalData, highlights, notes, activelyReadingVerseId, toggleVerseSelection, handleVerseLongPress, theme, isDark, userSettings]);
 
   const keyExtractor = useCallback((item: BibleVerse) => `${item.chapter}:${item.verse}`, []);
 
-  const getItemLayout = useCallback((_: any, index: number) => ({
-    length: 70,
-    offset: 70 * index,
-    index,
-  }), []);
-
-  // ── Header ───────────────────────────────────────────────────────────────────
   const renderHeader = () => (
     <View>
-      {/* Sticky dynamic title bar (fades in on scroll) */}
       <Animated.View style={[styles.stickyTitle, {
         opacity: headerOpacity,
         backgroundColor: isDark ? theme.background : '#FFFFFF',
@@ -200,91 +284,48 @@ export default function BibleReaderScreen({
         </Text>
       </Animated.View>
 
-      {/* Chapter hero header */}
       <LinearGradient
-        colors={isDark
-          ? [theme.surface, theme.background]
-          : ['#F8FAFC', '#FFFFFF']}
+        colors={isDark ? [theme.surface, theme.background] : ['#F8FAFC', '#FFFFFF']}
         style={styles.chapterHero}
       >
-        <Text style={[styles.testamentLabel, { color: theme.accent }]}>
-          {testament}
-        </Text>
-        <Text style={[styles.chapterTitle, { color: theme.text }]}>
-          {currentBook}
-        </Text>
+        <Text style={[styles.testamentLabel, { color: theme.accent }]}>{testament}</Text>
+        <Text style={[styles.chapterTitle, { color: theme.text }]}>{currentBook}</Text>
         <View style={styles.chapterNumRow}>
-          <TouchableOpacity
-            onPress={goToPreviousChapter}
-            disabled={currentChapter <= 1}
-            style={styles.chapterArrow}
-          >
-            <Ionicons
-              name="chevron-back"
-              size={22}
-              color={currentChapter <= 1 ? theme.border : theme.accent}
-            />
+          <TouchableOpacity onPress={goToPreviousChapter} disabled={currentChapter <= 1} style={styles.chapterArrow}>
+            <Ionicons name="chevron-back" size={22} color={currentChapter <= 1 ? theme.border : theme.accent} />
           </TouchableOpacity>
-
-          <Text style={[styles.chapterNum, { color: theme.text }]}>
-            Chapter {currentChapter}
-          </Text>
-
-          <TouchableOpacity
-            onPress={() => goToNextChapter(currentChapterCount)}
-            disabled={currentChapter >= currentChapterCount}
-            style={styles.chapterArrow}
-          >
-            <Ionicons
-              name="chevron-forward"
-              size={22}
-              color={currentChapter >= currentChapterCount ? theme.border : theme.accent}
-            />
+          <Text style={[styles.chapterNum, { color: theme.text }]}>Chapter {currentChapter}</Text>
+          <TouchableOpacity onPress={() => goToNextChapter(currentChapterCount)} disabled={currentChapter >= currentChapterCount} style={styles.chapterArrow}>
+            <Ionicons name="chevron-forward" size={22} color={currentChapter >= currentChapterCount ? theme.border : theme.accent} />
           </TouchableOpacity>
         </View>
-
-        {/* Arsenal stats for this chapter */}
         {chaptersWithArsenal.has(currentChapter) && (
           <View style={[styles.arsenalBanner, { backgroundColor: `${theme.accent}15`, borderColor: `${theme.accent}30` }]}>
             <Ionicons name="shield-checkmark" size={13} color={theme.accent} />
-            <Text style={[styles.arsenalBannerText, { color: theme.accent }]}>
-              Arsenal verses in this chapter
-            </Text>
+            <Text style={[styles.arsenalBannerText, { color: theme.accent }]}>Arsenal verses in this chapter</Text>
           </View>
         )}
       </LinearGradient>
     </View>
   );
 
-  // ── Footer ───────────────────────────────────────────────────────────────────
   const renderFooter = () => (
     <View style={styles.chapterFooter}>
       <View style={styles.footerNavRow}>
         <TouchableOpacity
-          style={[styles.footerNavBtn, {
-            backgroundColor: isDark ? theme.surface : '#F1F5F9',
-            opacity: currentChapter <= 1 ? 0.4 : 1,
-          }]}
+          style={[styles.footerNavBtn, { backgroundColor: isDark ? theme.surface : '#F1F5F9', opacity: currentChapter <= 1 ? 0.4 : 1 }]}
           onPress={goToPreviousChapter}
           disabled={currentChapter <= 1}
         >
           <Ionicons name="chevron-back" size={16} color={theme.text} />
-          <Text style={[styles.footerNavText, { color: theme.text }]}>
-            Chapter {currentChapter - 1}
-          </Text>
+          <Text style={[styles.footerNavText, { color: theme.text }]}>Chapter {currentChapter - 1}</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
-          style={[styles.footerNavBtn, {
-            backgroundColor: isDark ? theme.surface : '#F1F5F9',
-            opacity: currentChapter >= currentChapterCount ? 0.4 : 1,
-          }]}
+          style={[styles.footerNavBtn, { backgroundColor: isDark ? theme.surface : '#F1F5F9', opacity: currentChapter >= currentChapterCount ? 0.4 : 1 }]}
           onPress={() => goToNextChapter(currentChapterCount)}
           disabled={currentChapter >= currentChapterCount}
         >
-          <Text style={[styles.footerNavText, { color: theme.text }]}>
-            Chapter {currentChapter + 1}
-          </Text>
+          <Text style={[styles.footerNavText, { color: theme.text }]}>Chapter {currentChapter + 1}</Text>
           <Ionicons name="chevron-forward" size={16} color={theme.text} />
         </TouchableOpacity>
       </View>
@@ -292,16 +333,10 @@ export default function BibleReaderScreen({
     </View>
   );
 
-  // ── Main Render ──────────────────────────────────────────────────────────────
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
-      <StatusBar
-        barStyle={isDark ? 'light-content' : 'dark-content'}
-        backgroundColor="transparent"
-        translucent
-      />
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor="transparent" translucent />
 
-      {/* Smart Search Bar — always visible at top */}
       <View style={{ paddingTop: insets.top + (Platform.OS === 'android' ? 8 : 0) }}>
         <SmartSearchBar
           onReferenceSelect={handleReferenceSelect}
@@ -313,41 +348,39 @@ export default function BibleReaderScreen({
         />
       </View>
 
-      {/* Back to browse button */}
       {mode === 'reading' && (
-        <TouchableOpacity
-          style={[styles.backToBrowse, { backgroundColor: isDark ? theme.surface : '#F1F5F9' }]}
-          onPress={() => {
-            clearSelection();
-            setMode('browsing');
-          }}
-        >
-          <Ionicons name="grid" size={14} color={theme.textSecondary} />
-          <Text style={[styles.backToBrowseText, { color: theme.textSecondary }]}>
-            BROWSE BOOKS
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.navTools}>
+          <TouchableOpacity
+            style={[styles.backToBrowse, { backgroundColor: isDark ? theme.surface : '#F1F5F9' }]}
+            onPress={() => { clearSelection(); setMode('browsing'); }}
+          >
+            <Ionicons name="grid" size={14} color={theme.textSecondary} />
+            <Text style={[styles.backToBrowseText, { color: theme.textSecondary }]}>BROWSE BOOKS</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.settingsToggle, { backgroundColor: isDark ? theme.surface : '#F1F5F9' }]}
+            onPress={() => setIsSettingsVisible(true)}
+          >
+            <Ionicons name="options" size={16} color={theme.textSecondary} />
+            <Text style={[styles.backToBrowseText, { color: theme.textSecondary }]}>DISPLAY</Text>
+          </TouchableOpacity>
+        </View>
       )}
 
       {mode === 'browsing' ? (
-        // ── Browsing Mode ──────────────────────────────────────────────────────
         <FlatList
           data={[]}
           renderItem={null}
           ListHeaderComponent={
             <View style={{ paddingTop: 8 }}>
-              <Text style={[styles.browseTitle, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>
-                SELECT BOOK
-              </Text>
+              <Text style={[styles.browseTitle, MILITARY_TYPOGRAPHY.caption, { color: theme.textSecondary }]}>SELECT BOOK</Text>
               <BookSelector onSelectBook={handleBookSelect} />
             </View>
           }
           keyboardShouldPersistTaps="handled"
         />
       ) : (
-        // ── Reading Mode ───────────────────────────────────────────────────────
         <>
-          {/* Chapter navigation bar */}
           <ChapterNavBar
             totalChapters={currentChapterCount}
             currentChapter={currentChapter}
@@ -356,49 +389,47 @@ export default function BibleReaderScreen({
             theme={theme}
             isDark={isDark}
           />
-
-          {/* Chapter verse list */}
           {isLoadingChapter ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={theme.accent} />
-              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>
-                Loading {currentBook} {currentChapter}...
-              </Text>
+              <Text style={[styles.loadingText, { color: theme.textSecondary }]}>Loading {currentBook} {currentChapter}...</Text>
             </View>
           ) : (
-            <Animated.FlatList
-              ref={flatListRef}
-              data={chapterVerses}
-              renderItem={renderVerse}
-              keyExtractor={keyExtractor}
-              ListHeaderComponent={renderHeader}
-              ListFooterComponent={renderFooter}
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                { useNativeDriver: false }
-              )}
-              scrollEventThrottle={16}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.verseListContent}
-              keyboardShouldPersistTaps="handled"
-              onScrollToIndexFailed={({ index }) => {
-                setTimeout(() => {
-                  flatListRef.current?.scrollToIndex({ index, animated: true });
-                }, 500);
-              }}
-            />
+            <PanGestureHandler
+              onHandlerStateChange={onGestureEvent}
+              activeOffsetX={[-20, 20]}
+            >
+              <Animated.FlatList
+                ref={flatListRef}
+                data={chapterVerses}
+                renderItem={renderVerse}
+                keyExtractor={keyExtractor}
+                ListHeaderComponent={renderHeader}
+                ListFooterComponent={renderFooter}
+                onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+                scrollEventThrottle={16}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.verseListContent}
+                keyboardShouldPersistTaps="handled"
+              />
+            </PanGestureHandler>
           )}
 
-          {/* Selection HUD */}
           <SelectionHUD
             selectedVerses={selectedVerses}
             onClear={clearSelection}
             onAddToCollection={onRequestAddToCollection}
             onDrillNow={onRequestDrill}
+            onHighlight={handleHighlight}
+            onAddNote={handleAddNote}
+            onShare={handleShare}
+            onListen={() => handleSequentialListen(selectedVerses)}
             theme={theme}
             isDark={isDark}
             userSettings={userSettings}
           />
+
+          <ReaderSettingsModal isVisible={isSettingsVisible} onClose={() => setIsSettingsVisible(false)} />
         </>
       )}
     </View>
@@ -406,128 +437,27 @@ export default function BibleReaderScreen({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  browseTitle: {
-    paddingHorizontal: 20,
-    paddingBottom: 8,
-    letterSpacing: 1.5,
-  },
-  backToBrowse: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    marginHorizontal: 16,
-    marginBottom: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    gap: 6,
-  },
-  backToBrowseText: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 1.0,
-    fontFamily: 'monospace',
-  },
-  stickyTitle: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  stickyTitleText: {
-    fontSize: 15,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  chapterHero: {
-    paddingTop: 28,
-    paddingBottom: 20,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-  },
-  testamentLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    letterSpacing: 2.0,
-    fontFamily: 'monospace',
-    marginBottom: 6,
-  },
-  chapterTitle: {
-    fontSize: 30,
-    fontWeight: '900',
-    letterSpacing: 0.5,
-    marginBottom: 6,
-  },
-  chapterNumRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  chapterNum: {
-    fontSize: 18,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  chapterArrow: {
-    padding: 4,
-  },
-  arsenalBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
-    borderWidth: 1,
-  },
-  arsenalBannerText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.6,
-    fontFamily: 'monospace',
-  },
-  verseListContent: {
-    paddingBottom: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 14,
-  },
-  loadingText: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  chapterFooter: {
-    paddingTop: 8,
-    paddingHorizontal: 16,
-  },
-  footerNavRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 8,
-  },
-  footerNavBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    borderRadius: 12,
-    gap: 6,
-  },
-  footerNavText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  container: { flex: 1 },
+  browseTitle: { paddingHorizontal: 20, paddingBottom: 8, letterSpacing: 1.5 },
+  backToBrowse: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 },
+  settingsToggle: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 },
+  navTools: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: 16, marginBottom: 4 },
+  backToBrowseText: { fontSize: 10, fontWeight: '700', letterSpacing: 1.0, fontFamily: 'monospace' },
+  stickyTitle: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, paddingVertical: 10, alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth },
+  stickyTitleText: { fontSize: 15, fontWeight: '700', letterSpacing: 0.5 },
+  chapterHero: { paddingTop: 28, paddingBottom: 20, paddingHorizontal: 24, alignItems: 'center' },
+  testamentLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 2.0, fontFamily: 'monospace', marginBottom: 6 },
+  chapterTitle: { fontSize: 30, fontWeight: '900', letterSpacing: 0.5, marginBottom: 6 },
+  chapterNumRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  chapterNum: { fontSize: 18, fontWeight: '600', letterSpacing: 0.3 },
+  chapterArrow: { padding: 4 },
+  arsenalBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
+  arsenalBannerText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, fontFamily: 'monospace' },
+  verseListContent: { paddingBottom: 8 },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 },
+  loadingText: { fontSize: 14, fontWeight: '500' },
+  chapterFooter: { paddingTop: 8, paddingHorizontal: 16 },
+  footerNavRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginBottom: 8 },
+  footerNavBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, gap: 6 },
+  footerNavText: { fontSize: 14, fontWeight: '600' },
 });

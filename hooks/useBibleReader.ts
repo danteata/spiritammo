@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { Scripture } from '@/types/scripture';
 import { bibleApiService, BibleVerse, ParsedReference } from '@/services/bibleApi';
+import { biblePersistence, BibleHighlight, BibleNote } from '@/services/biblePersistence';
 import { BOOKS } from '@/mocks/books';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -22,6 +23,8 @@ export function useBibleReader(scriptures: Scripture[]) {
   const [selectedVerseIds, setSelectedVerseIds] = useState<Set<string>>(new Set());
   const [selectedVerses, setSelectedVerses] = useState<Scripture[]>([]);
   const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [highlights, setHighlights] = useState<Map<string, string>>(new Map());
+  const [notes, setNotes] = useState<Map<string, string>>(new Map());
   const historyStack = useRef<HistoryEntry[]>([]);
 
   // Build a fast lookup Set of verse IDs already in the arsenal
@@ -42,6 +45,72 @@ export function useBibleReader(scriptures: Scripture[]) {
     return arsenalVerseMap.get(id) || null;
   }, [arsenalVerseMap]);
 
+  // Insights (Highlights & Notes)
+  const loadChapterInsights = useCallback(async (book: string, chapter: number) => {
+    try {
+      const hls = await biblePersistence.getHighlightsForChapter(book, chapter);
+      const nts = await biblePersistence.getNotesForChapter(book, chapter);
+      
+      const hlMap = new Map<string, string>();
+      hls.forEach(h => hlMap.set(h.verseId, h.color));
+      setHighlights(hlMap);
+      
+      const ntMap = new Map<string, string>();
+      nts.forEach(n => ntMap.set(n.verseId, n.content));
+      setNotes(ntMap);
+    } catch (e) {
+      console.error('Failed to load chapter insights:', e);
+    }
+  }, []);
+
+  const saveHighlight = useCallback(async (verseId: string, color: string) => {
+    try {
+      await biblePersistence.saveHighlight(verseId, color);
+      setHighlights(prev => {
+        const next = new Map(prev);
+        next.set(verseId, color);
+        return next;
+      });
+    } catch (e) {
+       console.error('Failed to save highlight:', e);
+    }
+  }, []);
+
+  const removeHighlight = useCallback(async (verseId: string) => {
+    try {
+      await biblePersistence.removeHighlight(verseId);
+      setHighlights(prev => {
+        const next = new Map(prev);
+        next.delete(verseId);
+        return next;
+      });
+    } catch (e) {
+      console.error('Failed to remove highlight:', e);
+    }
+  }, []);
+
+  const saveNote = useCallback(async (verseId: string, content: string) => {
+    try {
+      if (!content.trim()) {
+        await biblePersistence.deleteNote(verseId);
+        setNotes(prev => {
+          const next = new Map(prev);
+          next.delete(verseId);
+          return next;
+        });
+      } else {
+        await biblePersistence.saveNote(verseId, content);
+        setNotes(prev => {
+          const next = new Map(prev);
+          next.set(verseId, content);
+          return next;
+        });
+      }
+    } catch (e) {
+      console.error('Failed to save note:', e);
+    }
+  }, []);
+
   // Navigate to a specific book/chapter, with optional verse highlight
   const navigateToVerse = useCallback((book: string, chapter: number, verse?: number) => {
     // Save current position to history
@@ -53,7 +122,8 @@ export function useBibleReader(scriptures: Scripture[]) {
     setHighlightedVerse(verse);
     setSelectedVerseIds(new Set());
     setSelectedVerses([]);
-  }, [currentBook, currentChapter]);
+    loadChapterInsights(book, chapter);
+  }, [currentBook, currentChapter, loadChapterInsights]);
 
   // Navigate using a parsed reference
   const navigateToReference = useCallback((ref: ParsedReference) => {
@@ -69,8 +139,9 @@ export function useBibleReader(scriptures: Scripture[]) {
       setHighlightedVerse(prev.highlightVerse);
       setSelectedVerseIds(new Set());
       setSelectedVerses([]);
+      loadChapterInsights(prev.book, prev.chapter);
     }
-  }, []);
+  }, [loadChapterInsights]);
 
   const canGoBack = historyStack.current.length > 0;
 
@@ -80,7 +151,8 @@ export function useBibleReader(scriptures: Scripture[]) {
     setHighlightedVerse(undefined);
     setSelectedVerseIds(new Set());
     setSelectedVerses([]);
-  }, []);
+    loadChapterInsights(currentBook, chapter);
+  }, [currentBook, loadChapterInsights]);
 
   const goToPreviousChapter = useCallback(() => {
     if (currentChapter > 1) {
@@ -202,6 +274,14 @@ export function useBibleReader(scriptures: Scripture[]) {
     arsenalVerseMap,
     getArsenalData,
     chaptersWithArsenal,
+
+    // Insights
+    highlights,
+    notes,
+    loadChapterInsights,
+    saveHighlight,
+    removeHighlight,
+    saveNote,
 
     // Navigation
     navigateToVerse,

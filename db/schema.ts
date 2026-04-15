@@ -98,3 +98,24 @@ export const srsStates = sqliteTable('srs_states', {
     scriptureIdx: index('idx_srs_scripture').on(table.scriptureId),
     dueDateIdx: index('idx_srs_due_date').on(table.dueDate),
 }));
+
+// Bible Reader Highlights
+export const bibleHighlights = sqliteTable('bible_highlights', {
+    id: text('id').primaryKey(),
+    verseId: text('verse_id').notNull(), // book-ch-v string
+    color: text('color').notNull(),
+    createdAt: text('created_at').notNull(),
+}, (table) => ({
+    verseIdx: index('idx_highlight_verse').on(table.verseId),
+}));
+
+// Bible Reader Notes
+export const bibleNotes = sqliteTable('bible_notes', {
+    id: text('id').primaryKey(),
+    verseId: text('verse_id').notNull(),
+    content: text('content').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+}, (table) => ({
+    verseIdx: index('idx_note_verse').on(table.verseId),
+}));

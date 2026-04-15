@@ -2,12 +2,11 @@ import React, { memo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
-  TouchableOpacity,
   StyleSheet,
   Animated,
   Pressable,
 } from 'react-native';
-import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import ScriptureText from '@/components/ScriptureText';
 import { BibleVerse } from '@/services/bibleApi';
 import { Scripture } from '@/types/scripture';
@@ -16,22 +15,30 @@ interface VerseRowProps {
   verse: BibleVerse;
   isSelected: boolean;
   isHighlighted: boolean; // deep-link highlight
+  highlightColor?: string | null; // personal highlight
+  hasNote?: boolean;
+  isActivelyReading?: boolean;
   arsenalData: Scripture | null; // null = not in arsenal
   onPress: (verse: BibleVerse) => void;
   onLongPress: (verse: BibleVerse) => void;
   theme: any;
   isDark: boolean;
+  userSettings: any;
 }
 
 const VerseRow = memo(({
   verse,
   isSelected,
   isHighlighted,
+  highlightColor,
+  hasNote,
+  isActivelyReading,
   arsenalData,
   onPress,
   onLongPress,
   theme,
   isDark,
+  userSettings,
 }: VerseRowProps) => {
   const highlightAnim = useRef(new Animated.Value(isHighlighted ? 1 : 0)).current;
   const selectAnim = useRef(new Animated.Value(0)).current;
@@ -90,14 +97,30 @@ const VerseRow = memo(({
     outputRange: ['rgba(0,0,0,0)', isDark ? 'rgba(245,158,11,0.18)' : 'rgba(245,158,11,0.15)'],
   });
 
-  const leftBorderColor = isSelected
-    ? theme.accent
-    : hasArsenal
-      ? getAccuracyColor(accuracy)
-      : 'transparent';
+  const finalHighlightBg = isActivelyReading
+    ? (isDark ? `${theme.info}44` : `${theme.info}22`)
+    : highlightColor 
+      ? (isDark ? `${highlightColor}33` : `${highlightColor}44`)
+      : highlightBg;
+
+  const leftBorderColor = isActivelyReading
+    ? theme.info
+    : isSelected
+      ? theme.accent
+      : hasArsenal
+        ? getAccuracyColor(accuracy)
+        : 'transparent';
+
+  const fontSize = userSettings?.bibleFontSize || 17;
+  const lineHeight = fontSize * (userSettings?.bibleLineHeight || 1.6);
+  const fontFamily = userSettings?.bibleFontFamily === 'serif' 
+    ? 'serif' 
+    : userSettings?.bibleFontFamily === 'mono' 
+      ? 'monospace' 
+      : 'System';
 
   return (
-    <Animated.View style={{ backgroundColor: isSelected ? selectedBg : highlightBg }}>
+    <Animated.View style={{ backgroundColor: isSelected ? selectedBg : finalHighlightBg }}>
       <Pressable
         onPress={() => onPress(verse)}
         onLongPress={() => onLongPress(verse)}
@@ -106,28 +129,44 @@ const VerseRow = memo(({
         style={[
           styles.row,
           {
-            borderLeftWidth: hasArsenal || isSelected ? 3 : 0,
+            borderLeftWidth: hasArsenal || isSelected || isActivelyReading ? 3 : 0,
             borderLeftColor: leftBorderColor,
           }
         ]}
       >
         {/* Verse number */}
         <View style={styles.verseNumCol}>
-          <Text style={[
-            styles.verseNumber,
-            { color: isSelected ? theme.accent : theme.textSecondary }
-          ]}>
-            {verse.verse}
-          </Text>
+          {isActivelyReading ? (
+             <Ionicons name="volume-high" size={14} color={theme.info} style={{ marginBottom: 4 }} />
+          ) : (
+            <Text style={[
+              styles.verseNumber,
+              { color: isSelected ? theme.accent : theme.textSecondary }
+            ]}>
+              {verse.verse}
+            </Text>
+          )}
+          {hasNote && (
+            <View style={{ marginTop: 4 }}>
+              <Ionicons name="document-text" size={10} color={theme.accent} />
+            </View>
+          )}
         </View>
 
         {/* Verse text */}
         <View style={styles.textCol}>
+          {highlightColor && !isSelected && !isActivelyReading && (
+            <View style={[styles.highlightDot, { backgroundColor: highlightColor }]} />
+          )}
+
           <ScriptureText
             text={verse.text}
             isJesusWords={verse.isJesusWords}
             style={{
               ...styles.verseText,
+              fontSize,
+              lineHeight,
+              fontFamily,
               color: isSelected ? theme.text : (isDark ? theme.text : '#1A202C'),
             }}
           />
@@ -192,6 +231,12 @@ const styles = StyleSheet.create({
     lineHeight: 27,
     fontWeight: '400',
     letterSpacing: 0.1,
+  },
+  highlightDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginBottom: 4,
   },
   arsenalBadge: {
     flexDirection: 'row',

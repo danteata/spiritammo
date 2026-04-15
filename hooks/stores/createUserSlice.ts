@@ -22,8 +22,11 @@ const DEFAULT_USER_SETTINGS: UserSettings = {
     clonedVoiceId: null,
     ttsCacheEnabled: true,
     isTimedMission: false,
-    stealthInputMode: 'bank',
     showPlainLabels: true,
+    stealthInputMode: 'bank',
+    bibleFontSize: 17,
+    bibleFontFamily: 'sans',
+    bibleLineHeight: 1.6,
 }
 
 const DEFAULT_USER_STATS: UserStats = {

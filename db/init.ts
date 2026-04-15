@@ -105,6 +105,24 @@ export const initializeDatabase = async () => {
             CREATE INDEX IF NOT EXISTS idx_mnemonics_source ON mnemonics(source);
             CREATE INDEX IF NOT EXISTS idx_srs_scripture ON srs_states(scripture_id);
             CREATE INDEX IF NOT EXISTS idx_srs_due_date ON srs_states(due_date);
+
+            CREATE TABLE IF NOT EXISTS bible_highlights (
+                id TEXT PRIMARY KEY NOT NULL,
+                verse_id TEXT NOT NULL,
+                color TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            );
+
+            CREATE TABLE IF NOT EXISTS bible_notes (
+                id TEXT PRIMARY KEY NOT NULL,
+                verse_id TEXT NOT NULL,
+                content TEXT NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_highlight_verse ON bible_highlights(verse_id);
+            CREATE INDEX IF NOT EXISTS idx_note_verse ON bible_notes(verse_id);
         `);
 
         console.log('Database initialized successfully');

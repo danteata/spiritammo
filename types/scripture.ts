@@ -90,6 +90,9 @@ export interface UserSettings {
   isTimedMission?: boolean
   stealthInputMode?: 'bank' | 'tactical'
   showPlainLabels?: boolean
+  bibleFontSize?: number
+  bibleFontFamily?: 'sans' | 'serif' | 'mono'
+  bibleLineHeight?: number
 }
 
 export interface UserStats {
