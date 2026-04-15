@@ -78,6 +78,91 @@ export default function QuizScreen() {
         return `${mins}:${secs.toString().padStart(2, '0')}`
     }, [])
 
+    const currentQuestion = useMemo(() => {
+        if (!questionSet || currentQuestionIndex >= questionSet.questions.length) return null
+        return questionSet.questions[currentQuestionIndex]
+    }, [questionSet, currentQuestionIndex])
+
+    const finishMission = useCallback((timedOutFlag: boolean = false) => {
+        setTimerActive(false)
+        if (timedOutFlag) setTimedOut(true)
+
+        let earnedPoints = 0
+        if (questionSet) {
+            questionSet.questions.forEach(q => {
+                const userAnswer = selectedAnswers[q.id]
+                const correctAnswer = q.correctAnswer
+
+                if (q.type === 'true-false-list') {
+                    const correctMap = correctAnswer as Record<string, 'T' | 'F'>
+                    const userMap = (userAnswer as Record<string, 'T' | 'F' | 'S'>) || {}
+                    let allCorrect = true
+                    q.options.forEach(opt => {
+                        const userChoice = userMap[opt.label] || 'S'
+                        const correctChoice = correctMap[opt.label]
+                        if (userChoice !== 'S' && userChoice === correctChoice) {
+                            earnedPoints += 1
+                        }
+                        if (userChoice !== 'S' && userChoice !== correctChoice) {
+                            allCorrect = false
+                        }
+                        if (userChoice === 'S') {
+                            // skipped — no points, not wrong
+                        }
+                    })
+                } else if (JSON.stringify(userAnswer) === JSON.stringify(correctAnswer)) {
+                    earnedPoints += 5
+                }
+            })
+        }
+
+        setPoints(earnedPoints)
+        setShowResults(true)
+
+        if (recordQuizResults && questionSet) {
+            recordQuizResults(questionSet.questions, selectedAnswers)
+        }
+
+        trackEvent(AnalyticsEventType.QUIZ_COMPLETED, {
+            collection_id: collectionId,
+            score: earnedPoints,
+            total_points: totalPointsPossible,
+            timed_out: timedOutFlag,
+        })
+    }, [questionSet, selectedAnswers, totalPointsPossible, collectionId, recordQuizResults, trackEvent])
+
+    const handleSelectAnswer = useCallback((questionId: string, answer: any) => {
+        setSelectedAnswers(prev => ({ ...prev, [questionId]: answer }))
+    }, [])
+
+    const handleOptionSelect = useCallback((questionId: string, optionLabel: string, value: 'T' | 'F' | 'S') => {
+        setSelectedAnswers(prev => {
+            const current = (prev[questionId] as Record<string, 'T' | 'F' | 'S'>) || {}
+            if (value === 'S') {
+                const { [optionLabel]: _, ...rest } = current
+                return { ...prev, [questionId]: rest }
+            }
+            return { ...prev, [questionId]: { ...current, [optionLabel]: value } }
+        })
+    }, [])
+
+    const handleNextQuestion = useCallback(() => {
+        if (!questionSet) return
+        if (currentQuestionIndex < questionSet.questions.length - 1) {
+            setCurrentQuestionIndex(prev => prev + 1)
+            setShowExplanation(false)
+        } else {
+            finishMission(false)
+        }
+    }, [questionSet, currentQuestionIndex, finishMission])
+
+    const handlePreviousQuestion = useCallback(() => {
+        if (currentQuestionIndex > 0) {
+            setCurrentQuestionIndex(prev => prev - 1)
+            setShowExplanation(false)
+        }
+    }, [currentQuestionIndex])
+
     const generateQuestions = useCallback(async (limit: number = questionLimit) => {
         if (collectionScriptures.length === 0) return
 

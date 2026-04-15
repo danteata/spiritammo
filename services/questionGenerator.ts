@@ -335,7 +335,7 @@ function buildContentOptions(
 }
 
 export function generateReferenceQuestion(scripture: Scripture, scripturesInScope: Scripture[] = []): Question {
-  const isNegative = Math.random() < 0.25;
+  const isNegative = Math.random() < 0.10;
   const correctRef = scripture.reference;
   const distractors = generateDistractorReferences(correctRef);
   
@@ -366,7 +366,7 @@ export function generateContentQuestion(
   scripture: Scripture,
   allScriptures: Scripture[]
 ): Question {
-  const isNegative = Math.random() < 0.25; // 25% chance for "cannot be gleaned"
+  const isNegative = Math.random() < 0.10;
   const options = buildContentOptions(scripture, allScriptures)
 
   const correctMap: Record<string, 'T' | 'F'> = {};
@@ -393,7 +393,7 @@ export function generateContentQuestion(
 }
 
 export function generateInferenceQuestion(scripture: Scripture, scripturesInScope: Scripture[] = []): Question {
-  const isNegative = Math.random() < 0.25;
+  const isNegative = Math.random() < 0.10;
   const correctRef = scripture.reference;
   const distractors = generateDistractorReferences(correctRef);
   
@@ -422,7 +422,7 @@ export function generateInferenceQuestion(scripture: Scripture, scripturesInScop
 
 
 export function generateTrueFalseListQuestion(scripture: Scripture, allScriptures: Scripture[]): Question {
-  const isNegative = Math.random() < 0.25;
+  const isNegative = Math.random() < 0.10;
   const phrases = extractKeyPhrases(scripture.text, 3);
   const otherScriptures = allScriptures.filter(s => s.id !== scripture.id);
   

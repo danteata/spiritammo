@@ -119,6 +119,11 @@ export default function TrainingCampaignScreen() {
     const handleMissionComplete = async (accuracy: number) => {
         if (!selectedNode || !activeCampaign) return
 
+        // Update SRS state for spaced repetition scheduling
+        if (targetScripture) {
+            useZustandStore.getState().updateSRSAfterReview(targetScripture.id, accuracy)
+        }
+
         // In training mode, we don't track scores - just show feedback
         // We no longer close practiceMode here, so user sees results in recorder
         if (accuracy >= 70) {
@@ -209,13 +214,16 @@ export default function TrainingCampaignScreen() {
                     <View style={styles.activeCampaignContainer}>
                         <TouchableOpacity
                             style={styles.backButton}
-                            onPress={() => router.push('/train')}
+                            onPress={() => {
+                                useZustandStore.getState().clearActiveCampaign()
+                                router.push('/train')
+                            }}
                             activeOpacity={0.7}
                         >
                             <View style={styles.backButtonIcon}>
                                 <FontAwesome5 name="arrow-left" size={12} color={theme.text} />
                             </View>
-                            <ThemedText variant="button" style={{ fontSize: 14, letterSpacing: 1 }}>RETURN TO BASE</ThemedText>
+                            <ThemedText variant="button" style={{ fontSize: 14, letterSpacing: 1 }}>ABANDON MISSION</ThemedText>
                         </TouchableOpacity>
 
                         <View style={styles.mapContainer}>
@@ -267,7 +275,7 @@ export default function TrainingCampaignScreen() {
                             onPress={() => setPracticeMode(null)}
                         >
                             <Ionicons name="arrow-back" size={24} color={theme.text} />
-                            <ThemedText variant="button" style={{ marginLeft: 8 }}>ABORT MISSION</ThemedText>
+                            <ThemedText variant="button" style={{ marginLeft: 8 }}>END SESSION</ThemedText>
                         </TouchableOpacity>
                         <View style={styles.requirementBadge}>
                             <ThemedText variant="caption" style={{ color: theme.accent }}>REQ: {selectedNode?.requiredAccuracy || 60}% ACCURACY</ThemedText>

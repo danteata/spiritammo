@@ -13,8 +13,8 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import VoicePlaybackService from '@/services/voicePlayback';
 import { evaluateRecitation } from '@/utils/similarity';
 import { Scripture } from '@/types/scripture';
-import { practiceLogService } from '@/services/practiceLogService';
-import { militaryRankingService } from '@/services/militaryRanking';
+import { useScriptureScope } from '@/hooks/useScriptureScope';
+import { usePracticeCompletion } from '@/hooks/usePracticeCompletion';
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
 
@@ -45,6 +45,16 @@ export default function VoiceOpsScreen() {
     const { scriptures: allScriptures, collections, theme, isDark, userSettings } = useAppStore();
     const params = useLocalSearchParams();
     const router = useRouter();
+
+    const { handleComplete: handlePracticeComplete } = usePracticeCompletion({
+        practiceType: 'voice_ops',
+        isTraining: true,
+        awardVP: false,
+        saveLog: true,
+        updateProfile: true,
+        updateSRS: true,
+        afterActionBriefing: false,
+    })
 
     const [currentScripture, setCurrentScripture] = useState<Scripture | null>(null);
     const [phase, setPhase] = useState<VoicePhase>('idle');
@@ -175,28 +185,11 @@ export default function VoiceOpsScreen() {
         return collections.find((c) => c.id === id) || null;
     }, [params.collectionId, collections]);
 
-    const targetScriptures = useMemo(() => {
-        if (!selectedCollection) return allScriptures;
-        const mapped = selectedCollection.scriptures
-            .map((id) => allScriptures.find((s) => s.id === id))
-            .filter((s): s is Scripture => s !== undefined);
-
-        if (
-            selectedCollection.isChapterBased &&
-            selectedCollection.chapters &&
-            initialChapterIds.length > 0
-        ) {
-            const selectedIds = new Set(
-                selectedCollection.chapters
-                    .filter((ch) => initialChapterIds.includes(ch.id))
-                    .flatMap((ch) => ch.scriptures),
-            );
-            const filtered = mapped.filter((s) => selectedIds.has(s.id));
-            return filtered.length > 0 ? filtered : mapped;
-        }
-
-        return mapped.length > 0 ? mapped : allScriptures;
-    }, [allScriptures, selectedCollection, initialChapterIds]);
+    const targetScriptures = useScriptureScope(
+        allScriptures,
+        selectedCollection,
+        initialChapterIds,
+    );
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -350,17 +343,9 @@ export default function VoiceOpsScreen() {
         setVersesAttempted((p) => p + 1);
         if (score >= 80) setVersesHit((p) => p + 1);
 
-        practiceLogService
-            .saveLog({ scriptureId: currentScripture.id, accuracy: score, transcription: captured })
-            .then(() =>
-                militaryRankingService.updateProfile({
-                    versesMemorized: 0,
-                    averageAccuracy: 0,
-                    consecutiveDays: 0,
-                    lastSessionAccuracy: score,
-                    lastSessionWordCount: currentScripture.text.split(' ').length,
-                }),
-            );
+        if (currentScripture) {
+            handlePracticeComplete(currentScripture, score, captured)
+        }
 
         const msg =
             score >= 80

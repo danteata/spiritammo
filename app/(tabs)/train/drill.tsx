@@ -12,7 +12,6 @@ import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
 import CollectionSelector from '@/components/CollectionSelector'
-import CollectionChapterSelector from '@/components/CollectionChapterSelector'
 import UnifiedScriptureRecorderCard from '@/components/UnifiedScriptureRecorderCard'
 import ScriptureActionRow from '@/components/ScriptureActionRow'
 import StealthDrill from '@/components/StealthDrill'
@@ -53,7 +52,6 @@ export default function CollectionDrillScreen() {
     })
 
     const [showStealthDrill, setShowStealthDrill] = useState(false)
-    const [showChapterSelector, setShowChapterSelector] = useState(false)
     const [isListeningVerse, setIsListeningVerse] = useState(false)
 
     const handleRecordingComplete = async (accuracy: number) => {
@@ -189,21 +187,6 @@ export default function CollectionDrillScreen() {
                             <FontAwesome5 name="chevron-down" size={12} color={theme.textSecondary} />
                         </TouchableOpacity>
 
-                        {selectedCollection.isChapterBased && selectedCollection.chapters && (
-                            <TouchableOpacity
-                                style={styles.chapterFilter}
-                                onPress={() => setShowChapterSelector(true)}
-                            >
-                                <FontAwesome5 name="layer-group" size={14} color={theme.textSecondary} />
-                                <ThemedText variant="caption" style={styles.chapterFilterText}>
-                                    {selectedChapterIds.length === selectedCollection.chapters.length
-                                        ? 'All Chapters'
-                                        : `${selectedChapterIds.length} Chapter${selectedChapterIds.length !== 1 ? 's' : ''} Selected`}
-                                </ThemedText>
-                                <FontAwesome5 name="chevron-right" size={12} color={theme.textSecondary} />
-                            </TouchableOpacity>
-                        )}
-
                         <TouchableOpacity
                             style={[styles.quizButton, { backgroundColor: theme.accent }]}
                             onPress={() => {
@@ -292,28 +275,6 @@ export default function CollectionDrillScreen() {
                 />
             )}
 
-            {selectedCollection?.isChapterBased && selectedCollection.chapters && (
-                <CollectionChapterSelector
-                    isVisible={showChapterSelector}
-                    collection={selectedCollection}
-                    onClose={() => setShowChapterSelector(false)}
-                    initialSelectedChapterIds={selectedChapterIds}
-                    actionLabel="APPLY SELECTION"
-                    onStartPractice={(chapterIds) => {
-                        setSelectedChapterIds(chapterIds)
-                        setShowChapterSelector(false)  // Close modal after selection
-                        chapterIds.forEach((chapterId) => {
-                            const chapter = selectedCollection.chapters?.find((ch) => ch.id === chapterId)
-                            trackEvent(AnalyticsEventType.CHAPTER_SELECTED, {
-                                chapter_id: chapterId,
-                                collection_id: selectedCollection.id,
-                                verse_count: chapter?.scriptures.length,
-                            })
-                        })
-                    }}
-                />
-            )}
-
         </ThemedContainer>
     )
 }
@@ -360,20 +321,6 @@ const styles = StyleSheet.create({
         backgroundColor: 'rgba(255,255,255,0.05)',
         marginBottom: 16,
         gap: 10,
-    },
-    chapterFilter: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        paddingHorizontal: 12,
-        paddingVertical: 10,
-        borderRadius: 10,
-        backgroundColor: 'rgba(255,255,255,0.04)',
-        marginBottom: 12,
-        gap: 8,
-    },
-    chapterFilterText: {
-        flex: 1,
-        opacity: 0.8,
     },
     collectionName: {
         flex: 1,

@@ -104,6 +104,7 @@ export function useCollectionPractice({
         setSelectedChapterIds,
         currentScripture,
         scriptureIndex,
+        setScriptureIndex,
         collectionScriptures,
         loadNextScripture,
         loadPreviousScripture,
