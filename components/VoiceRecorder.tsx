@@ -323,7 +323,7 @@ export default function VoiceRecorder({
           setStatusMessage('Listening to targets...');
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_START, {
             recording_id: 'tts_verse',
-            playback_type: ttsEngine === 'elevenlabs' ? 'elevenlabs_tts' : 'neural_tts',
+            playback_type: ttsEngine === 'elevenlabs' ? 'elevenlabs_tts' : ttsEngine === 'chatterbox' ? 'chatterbox_tts' : 'native_tts',
             text_length: scriptureText.length
           });
         },
@@ -332,7 +332,7 @@ export default function VoiceRecorder({
           setStatusMessage('Ready to record');
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_COMPLETE, {
             recording_id: 'tts_verse',
-            playback_type: ttsEngine === 'elevenlabs' ? 'elevenlabs_tts' : 'neural_tts',
+            playback_type: ttsEngine === 'elevenlabs' ? 'elevenlabs_tts' : ttsEngine === 'chatterbox' ? 'chatterbox_tts' : 'native_tts',
             duration: 0
           });
         },
@@ -346,6 +346,10 @@ export default function VoiceRecorder({
         voiceId,
         apiKey: userSettings.elevenLabsApiKey,
         scriptureId,
+        chatterboxServerUrl: userSettings.chatterboxServerUrl,
+        chatterboxVoiceId: userSettings.chatterboxVoiceId,
+        chatterboxVoiceMode: userSettings.chatterboxVoiceMode,
+        chatterboxReferenceAudio: userSettings.chatterboxReferenceAudio,
       });
     } catch (error: any) {
       console.error('Error in speakVerse:', error);
@@ -388,7 +392,7 @@ export default function VoiceRecorder({
           setStatusMessage('Reading intel...');
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_START, {
             recording_id: 'tts_intel',
-            playback_type: ttsEngine === 'elevenlabs' ? 'elevenlabs_tts' : 'neural_tts',
+            playback_type: ttsEngine === 'elevenlabs' ? 'elevenlabs_tts' : ttsEngine === 'chatterbox' ? 'chatterbox_tts' : 'native_tts',
             text_length: textToSpeak.length
           });
         },
@@ -397,7 +401,7 @@ export default function VoiceRecorder({
           setStatusMessage('Ready to record');
           trackEvent(AnalyticsEventType.VOICE_PLAYBACK_COMPLETE, {
             recording_id: 'tts_intel',
-            playback_type: ttsEngine === 'elevenlabs' ? 'elevenlabs_tts' : 'neural_tts',
+            playback_type: ttsEngine === 'elevenlabs' ? 'elevenlabs_tts' : ttsEngine === 'chatterbox' ? 'chatterbox_tts' : 'native_tts',
             duration: 0
           });
         },
@@ -411,6 +415,10 @@ export default function VoiceRecorder({
         voiceId,
         apiKey: userSettings.elevenLabsApiKey,
         scriptureId: scriptureId ? `intel_${scriptureId}` : undefined,
+        chatterboxServerUrl: userSettings.chatterboxServerUrl,
+        chatterboxVoiceId: userSettings.chatterboxVoiceId,
+        chatterboxVoiceMode: userSettings.chatterboxVoiceMode,
+        chatterboxReferenceAudio: userSettings.chatterboxReferenceAudio,
       });
     } catch (error: any) {
       console.error('Error in speakIntel:', error);

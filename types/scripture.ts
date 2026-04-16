@@ -70,7 +70,7 @@ export interface CollectionChapter {
 export type ThemeMode = 'light' | 'dark' | 'auto'
 export type ThemeColor = 'slate' | 'jungle'
 
-export type TTSEngineType = 'native' | 'elevenlabs'
+export type TTSEngineType = 'native' | 'elevenlabs' | 'chatterbox'
 
 export interface UserSettings {
   themeMode: ThemeMode
@@ -85,6 +85,10 @@ export interface UserSettings {
   elevenLabsApiKey?: string
   useClonedVoice?: boolean
   clonedVoiceId?: string | null
+  chatterboxServerUrl?: string
+  chatterboxVoiceId?: string
+  chatterboxVoiceMode?: 'predefined' | 'clone'
+  chatterboxReferenceAudio?: string
   ttsCacheEnabled?: boolean
   soldierName?: string
   isTimedMission?: boolean

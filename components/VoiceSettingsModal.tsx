@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import {
     View, StyleSheet, ScrollView, TouchableOpacity, Text,
     Modal, ActivityIndicator, Alert, TextInput,
@@ -6,6 +6,8 @@ import {
 import { MaterialCommunityIcons, Feather } from '@expo/vector-icons'
 import { ThemedText, ThemedCard } from './Themed'
 import { useTTSVoices } from '@/hooks/useTTSVoices'
+import { useAudioRecorder, RecordingPresets } from 'expo-audio'
+import * as FileSystem from 'expo-file-system/legacy'
 import elevenLabsTTSService from '@/services/elevenLabsTTS'
 import { TTSEngineType } from '@/types/scripture'
 
@@ -24,6 +26,18 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
     const [apiKeyValue, setApiKeyValue] = useState('')
     const [apiKeyError, setApiKeyError] = useState<string | null>(null)
     const [subscriptionTier, setSubscriptionTier] = useState<string | null>(null)
+    const [chatterboxUrlInput, setChatterboxUrlInput] = useState(tts.chatterboxServerUrl || 'http://192.168.100.193:8004')
+    const [chatterboxConnectionStatus, setChatterboxConnectionStatus] = useState<'idle' | 'checking' | 'connected' | 'error'>('idle')
+    const [isRecording, setIsRecording] = useState(false)
+    const [recordingDuration, setRecordingDuration] = useState(0)
+    const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+    const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY)
+
+    useEffect(() => {
+        if (visible && tts.ttsEngine === 'chatterbox' && tts.chatterboxServerUrl) {
+            tts.checkChatterboxConnection()
+        }
+    }, [visible])
 
     useEffect(() => {
         if (visible && tts.isAvailable) {
@@ -69,6 +83,66 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
             ]
         )
     }
+
+    const startChatterboxRecording = useCallback(async () => {
+        try {
+            const { requestRecordingPermissionsAsync } = await import('expo-audio')
+            const { status } = await requestRecordingPermissionsAsync()
+            if (status !== 'granted') {
+                Alert.alert('Permission Required', 'Microphone access is needed to record your voice.')
+                return
+            }
+
+            await recorder.prepareToRecordAsync()
+            await recorder.record()
+
+            setIsRecording(true)
+            setRecordingDuration(0)
+            recordingTimerRef.current = setInterval(() => {
+                setRecordingDuration((d: number) => d + 1)
+            }, 1000)
+        } catch (error) {
+            console.error('Failed to start recording:', error)
+            Alert.alert('Recording Error', 'Could not start recording. Please check microphone permissions.')
+        }
+    }, [recorder])
+
+    const stopChatterboxRecording = useCallback(async () => {
+        try {
+            if (recordingTimerRef.current) {
+                clearInterval(recordingTimerRef.current)
+                recordingTimerRef.current = null
+            }
+
+            await recorder.stop()
+            setIsRecording(false)
+
+            const uri = recorder.uri
+            if (!uri) {
+                Alert.alert('Recording Failed', 'No audio was recorded. Please try again.')
+                return
+            }
+
+            const filename = `clone_${Date.now()}.m4a`
+
+            try {
+                const uploadedName = await tts.uploadChatterboxReferenceAudio(uri, filename)
+                if (uploadedName) {
+                    await tts.setChatterboxReferenceAudio(uploadedName)
+                    Alert.alert('Voice Uploaded', `Reference audio "${uploadedName}" uploaded. Your voice clone is ready.`)
+                }
+            } catch (uploadError) {
+                console.error('Upload to Chatterbox failed:', uploadError)
+                Alert.alert(
+                    'Upload Failed',
+                    'Could not upload your recording to the Chatterbox server. Make sure the server is running and accessible.',
+                )
+            }
+        } catch (error) {
+            console.error('Failed to stop recording:', error)
+            setIsRecording(false)
+        }
+    }, [recorder, tts])
 
     return (
         <Modal
@@ -134,6 +208,26 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
                             </View>
                             <ThemedText variant="caption" style={styles.optionDescription}>
                                 Neural text-to-speech via ElevenLabs. Humanlike voices with local + community cloud caching.
+                            </ThemedText>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            style={[
+                                styles.optionButton,
+                                tts.ttsEngine === 'chatterbox' && styles.selectedOption,
+                                { borderColor: tts.ttsEngine === 'chatterbox' ? theme.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'), backgroundColor: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.5)' },
+                            ]}
+                            onPress={() => tts.setTTSEngine('chatterbox')}
+                        >
+                            <View style={styles.optionHeader}>
+                                <View style={styles.optionTitleRow}>
+                                    <MaterialCommunityIcons name="access-point" size={18} color={tts.ttsEngine === 'chatterbox' ? theme.accent : (isDark ? '#888' : '#666')} />
+                                    <ThemedText variant="body" style={styles.optionTitle}>Self-Hosted (Chatterbox)</ThemedText>
+                                </View>
+                                {tts.ttsEngine === 'chatterbox' && <View style={[styles.activeDot, { backgroundColor: theme.accent }]} />}
+                            </View>
+                            <ThemedText variant="caption" style={styles.optionDescription}>
+                                Free, self-hosted TTS with voice cloning. Runs locally via Chatterbox server. No API key needed.
                             </ThemedText>
                         </TouchableOpacity>
                     </ThemedCard>
@@ -271,6 +365,211 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
                                             Clone Your Voice
                                         </ThemedText>
                                     </TouchableOpacity>
+                                </>
+                            )}
+                        </ThemedCard>
+                    )}
+
+                    {/* Chatterbox Configuration */}
+                    {tts.ttsEngine === 'chatterbox' && (
+                        <ThemedCard style={styles.card} variant="default">
+                            <View style={styles.cardHeader}>
+                                <MaterialCommunityIcons name="access-point" size={20} color={theme.accent} />
+                                <ThemedText variant="subheading" style={styles.cardTitle}>
+                                    CHATTERBOX SERVER
+                                </ThemedText>
+                                <View style={[styles.statusDot, { backgroundColor: tts.chatterboxConnected ? '#22c55e' : '#ef4444' }]} />
+                            </View>
+
+                            <View style={styles.apiKeySection}>
+                                <ThemedText variant="body" style={styles.sectionText}>
+                                    Enter your Chatterbox TTS server URL. The server must be running locally or on your network.
+                                </ThemedText>
+                                <TextInput
+                                    style={[styles.apiKeyInput, {
+                                        backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
+                                        color: theme.text,
+                                        borderColor: chatterboxConnectionStatus === 'error' ? '#ef4444' : (chatterboxConnectionStatus === 'connected' ? '#22c55e' : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)')),
+                                    }]}
+                                    value={chatterboxUrlInput}
+                                    onChangeText={(text) => { setChatterboxUrlInput(text); setChatterboxConnectionStatus('idle') }}
+                                    placeholder="http://192.168.100.193:8004"
+                                    placeholderTextColor={theme.textSecondary}
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                    keyboardType="url"
+                                />
+                                <TouchableOpacity
+                                    style={[styles.saveButton, { backgroundColor: theme.accent }]}
+                                    onPress={async () => {
+                                        setChatterboxConnectionStatus('checking')
+                                        try {
+                                            await tts.setChatterboxServerUrl(chatterboxUrlInput)
+                                            const connected = await tts.checkChatterboxConnection()
+                                            setChatterboxConnectionStatus(connected ? 'connected' : 'error')
+                                        } catch {
+                                            setChatterboxConnectionStatus('error')
+                                        }
+                                    }}
+                                >
+                                    {chatterboxConnectionStatus === 'checking' ? (
+                                        <ActivityIndicator size="small" color="#fff" />
+                                    ) : (
+                                        <ThemedText variant="body" style={styles.saveButtonText}>CONNECT</ThemedText>
+                                    )}
+                                </TouchableOpacity>
+                                {chatterboxConnectionStatus === 'connected' && (
+                                    <ThemedText variant="caption" style={[styles.statusText, { color: '#22c55e' }]}>
+                                        Connected to Chatterbox server
+                                    </ThemedText>
+                                )}
+                                {chatterboxConnectionStatus === 'error' && (
+                                    <ThemedText variant="caption" style={[styles.statusText, { color: '#ef4444' }]}>
+                                        Cannot connect. Make sure the server is running.
+                                    </ThemedText>
+                                )}
+                            </View>
+
+                            {tts.chatterboxConnected && (
+                                <>
+                                    <View style={styles.sectionSpacer} />
+                                    <View style={styles.cardHeader}>
+                                        <MaterialCommunityIcons name="tune-vertical" size={20} color={theme.accent} />
+                                        <ThemedText variant="subheading" style={styles.cardTitle}>
+                                            VOICE SELECTION
+                                        </ThemedText>
+                                    </View>
+
+                                    {/* Voice Mode Toggle */}
+                                    <View style={styles.voiceModeRow}>
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.voiceModeButton,
+                                                tts.chatterboxVoiceMode === 'predefined' && styles.voiceModeActive,
+                                                { borderColor: tts.chatterboxVoiceMode === 'predefined' ? theme.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }
+                                            ]}
+                                            onPress={() => tts.setChatterboxVoiceMode('predefined')}
+                                        >
+                                            <ThemedText variant="caption" style={{ color: tts.chatterboxVoiceMode === 'predefined' ? theme.accent : theme.textSecondary, fontWeight: '600' }}>
+                                                PREDEFINED
+                                            </ThemedText>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={[
+                                                styles.voiceModeButton,
+                                                tts.chatterboxVoiceMode === 'clone' && styles.voiceModeActive,
+                                                { borderColor: tts.chatterboxVoiceMode === 'clone' ? theme.accent : (isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)') }
+                                            ]}
+                                            onPress={() => tts.setChatterboxVoiceMode('clone')}
+                                        >
+                                            <ThemedText variant="caption" style={{ color: tts.chatterboxVoiceMode === 'clone' ? theme.accent : theme.textSecondary, fontWeight: '600' }}>
+                                                CLONE
+                                            </ThemedText>
+                                        </TouchableOpacity>
+                                    </View>
+
+                                    {tts.chatterboxVoiceMode === 'predefined' ? (
+                                        <View style={styles.voiceList}>
+                                            {tts.chatterboxVoices.map((voice) => (
+                                                <TouchableOpacity
+                                                    key={voice.filename}
+                                                    style={[
+                                                        styles.voiceItem,
+                                                        {
+                                                            backgroundColor: tts.chatterboxVoiceId === voice.filename
+                                                                ? (isDark ? 'rgba(255,165,0,0.1)' : 'rgba(255,165,0,0.05)')
+                                                                : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+                                                            borderColor: tts.chatterboxVoiceId === voice.filename ? theme.accent : 'transparent',
+                                                        },
+                                                    ]}
+                                                    onPress={() => tts.setChatterboxVoiceId(voice.filename)}
+                                                >
+                                                    <View style={styles.voiceInfo}>
+                                                        <ThemedText variant="body" style={styles.voiceName}>{voice.name}</ThemedText>
+                                                        <ThemedText variant="caption" style={styles.voiceCategory}>
+                                                            predefined
+                                                        </ThemedText>
+                                                    </View>
+                                                    <TouchableOpacity
+                                                        style={[styles.previewButton, { borderColor: theme.accent }]}
+                                                        onPress={() => tts.previewChatterboxVoice(voice.filename)}
+                                                    >
+                                                        <MaterialCommunityIcons name="play" size={14} color={theme.accent} />
+                                                    </TouchableOpacity>
+                                                </TouchableOpacity>
+                                            ))}
+                                        </View>
+                                    ) : (
+                                        <>
+                                            <ThemedText variant="caption" style={styles.sectionText}>
+                                                Record a voice sample or use an existing recording as reference audio for voice cloning.
+                                            </ThemedText>
+
+                                            {tts.chatterboxReferenceFiles.length > 0 && (
+                                                <View style={styles.voiceList}>
+                                                    {tts.chatterboxReferenceFiles.map((filename) => (
+                                                        <TouchableOpacity
+                                                            key={filename}
+                                                            style={[
+                                                                styles.voiceItem,
+                                                                {
+                                                                    backgroundColor: tts.chatterboxReferenceAudio === filename
+                                                                        ? (isDark ? 'rgba(255,165,0,0.1)' : 'rgba(255,165,0,0.05)')
+                                                                        : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
+                                                                    borderColor: tts.chatterboxReferenceAudio === filename ? theme.accent : 'transparent',
+                                                                },
+                                                            ]}
+                                                            onPress={() => tts.setChatterboxReferenceAudio(filename)}
+                                                        >
+                                                            <View style={styles.voiceInfo}>
+                                                                <ThemedText variant="body" style={styles.voiceName}>{filename.replace(/\.(wav|mp3)$/i, '')}</ThemedText>
+                                                                <ThemedText variant="caption" style={styles.voiceCategory}>
+                                                                    reference audio
+                                                                </ThemedText>
+                                                            </View>
+                                                            <TouchableOpacity
+                                                                style={[styles.previewButton, { borderColor: theme.accent }]}
+                                                                onPress={() => tts.previewChatterboxVoice(filename)}
+                                                            >
+                                                                <MaterialCommunityIcons name="play" size={14} color={theme.accent} />
+                                                            </TouchableOpacity>
+                                                        </TouchableOpacity>
+                                                    ))}
+                                                </View>
+                                            )}
+
+                                            {/* Record New Voice Sample */}
+                                            {isRecording ? (
+                                                <View style={[styles.recordingContainer, { borderColor: '#ef4444' }]}>
+                                                    <View style={styles.recordingIndicator}>
+                                                        <View style={styles.recordingDot} />
+                                                        <ThemedText variant="body" style={{ color: '#ef4444', fontWeight: '600' }}>
+                                                            Recording... {recordingDuration}s
+                                                        </ThemedText>
+                                                    </View>
+                                                    <TouchableOpacity
+                                                        style={[styles.stopRecordingButton, { backgroundColor: '#ef4444' }]}
+                                                        onPress={stopChatterboxRecording}
+                                                    >
+                                                        <MaterialCommunityIcons name="stop" size={18} color="#fff" />
+                                                        <Text style={styles.stopRecordingText}>STOP</Text>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            ) : (
+                                                <View style={styles.cloneActions}>
+                                                    <TouchableOpacity
+                                                        style={[styles.cloneButton, { borderColor: theme.accent }]}
+                                                        onPress={startChatterboxRecording}
+                                                    >
+                                                        <MaterialCommunityIcons name="microphone" size={18} color={theme.accent} />
+                                                        <ThemedText variant="body" style={{ color: theme.accent }}>
+                                                            Record Voice Sample
+                                                        </ThemedText>
+                                                    </TouchableOpacity>
+                                                </View>
+                                            )}
+                                        </>
+                                    )}
                                 </>
                             )}
                         </ThemedCard>
@@ -416,6 +715,36 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
         letterSpacing: 1,
     },
+    statusDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        marginLeft: 'auto',
+    },
+    statusText: {
+        fontSize: 12,
+        textAlign: 'center',
+        marginTop: 8,
+    },
+    sectionSpacer: {
+        height: 16,
+    },
+    voiceModeRow: {
+        flexDirection: 'row',
+        gap: 8,
+        marginBottom: 12,
+    },
+    voiceModeButton: {
+        flex: 1,
+        paddingVertical: 8,
+        paddingHorizontal: 12,
+        borderRadius: 8,
+        borderWidth: 1.5,
+        alignItems: 'center',
+    },
+    voiceModeActive: {
+        backgroundColor: 'rgba(255,165,0,0.08)',
+    },
     optionButton: {
         borderWidth: 1,
         borderRadius: 8,
@@ -552,6 +881,43 @@ const styles = StyleSheet.create({
         borderWidth: 1.5,
         borderStyle: 'dashed',
         marginTop: 12,
+    },
+    recordingContainer: {
+        borderWidth: 1.5,
+        borderRadius: 8,
+        padding: 16,
+        marginTop: 12,
+        alignItems: 'center',
+        gap: 12,
+    },
+    recordingIndicator: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+    },
+    recordingDot: {
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        backgroundColor: '#ef4444',
+    },
+    stopRecordingButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 6,
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 8,
+    },
+    stopRecordingText: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: '600',
+    },
+    cloneActions: {
+        gap: 8,
+        marginTop: 4,
     },
     loader: {
         marginVertical: 20,

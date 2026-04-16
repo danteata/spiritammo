@@ -5,6 +5,7 @@ import useZustandStore from './zustandStore'
 import VoicePlaybackService from '@/services/voicePlayback'
 import TTSEngine from '@/services/ttsEngine'
 import elevenLabsTTSService from '@/services/elevenLabsTTS'
+import chatterboxTTSService from '@/services/chatterboxTTS'
 
 export const [AppStoreProvider, useAppStore] = createContextHook(() => {
   const { themeMode, themeColor, isDark, theme, gradients, setTheme, setThemeColor, toggleTheme } = useTheme()
@@ -21,6 +22,9 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     if (apiKey) {
       elevenLabsTTSService.setApiKey(apiKey)
     }
+    if (userSettings.chatterboxServerUrl) {
+      chatterboxTTSService.setServerUrl(userSettings.chatterboxServerUrl)
+    }
     VoicePlaybackService.configureTTS({
       engine: userSettings.ttsEngine || 'native',
       voiceId: userSettings.elevenLabsVoiceId,
@@ -28,8 +32,17 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
       voiceRate: userSettings.voiceRate,
       voicePitch: userSettings.voicePitch,
       language: userSettings.language,
+      chatterboxServerUrl: userSettings.chatterboxServerUrl,
+      chatterboxVoiceId: userSettings.chatterboxVoiceId,
+      chatterboxVoiceMode: userSettings.chatterboxVoiceMode,
+      chatterboxReferenceAudio: userSettings.chatterboxReferenceAudio,
     })
-  }, [userSettings.ttsEngine, userSettings.elevenLabsVoiceId, userSettings.elevenLabsApiKey, userSettings.voiceRate, userSettings.voicePitch, userSettings.language])
+  }, [
+    userSettings.ttsEngine, userSettings.elevenLabsVoiceId, userSettings.elevenLabsApiKey,
+    userSettings.voiceRate, userSettings.voicePitch, userSettings.language,
+    userSettings.chatterboxServerUrl, userSettings.chatterboxVoiceId,
+    userSettings.chatterboxVoiceMode, userSettings.chatterboxReferenceAudio,
+  ])
 
   const books = useZustandStore((s) => s.books)
   const scriptures = useZustandStore((s) => s.scriptures)

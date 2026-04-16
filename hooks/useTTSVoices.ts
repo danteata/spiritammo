@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import elevenLabsTTSService, { ElevenLabsVoice } from '@/services/elevenLabsTTS'
+import chatterboxTTSService, { ChatterboxVoice } from '@/services/chatterboxTTS'
 import TTSCache from '@/services/ttsCache'
 import VoicePlaybackService from '@/services/voicePlayback'
 import { useZustandStore } from '@/hooks/zustandStore'
@@ -7,6 +8,8 @@ import { TTSEngineType } from '@/types/scripture'
 
 interface TTSVoicesState {
     voices: ElevenLabsVoice[]
+    chatterboxVoices: ChatterboxVoice[]
+    chatterboxReferenceFiles: string[]
     isLoadingVoices: boolean
     voicesError: string | null
     isCloningVoice: boolean
@@ -14,6 +17,7 @@ interface TTSVoicesState {
     cacheSizeMB: number
     cacheEntryCount: number
     isAvailable: boolean
+    chatterboxConnected: boolean
 }
 
 export function useTTSVoices() {
@@ -22,6 +26,8 @@ export function useTTSVoices() {
 
     const [state, setState] = useState<TTSVoicesState>({
         voices: [],
+        chatterboxVoices: [],
+        chatterboxReferenceFiles: [],
         isLoadingVoices: false,
         voicesError: null,
         isCloningVoice: false,
@@ -29,6 +35,7 @@ export function useTTSVoices() {
         cacheSizeMB: 0,
         cacheEntryCount: 0,
         isAvailable: elevenLabsTTSService.isAvailable(),
+        chatterboxConnected: false,
     })
 
     useEffect(() => {
@@ -40,10 +47,14 @@ export function useTTSVoices() {
                 voiceRate: userSettings.voiceRate,
                 voicePitch: userSettings.voicePitch,
                 language: userSettings.language,
+                chatterboxServerUrl: userSettings.chatterboxServerUrl,
+                chatterboxVoiceId: userSettings.chatterboxVoiceId,
+                chatterboxVoiceMode: userSettings.chatterboxVoiceMode,
+                chatterboxReferenceAudio: userSettings.chatterboxReferenceAudio,
             })
         }
         syncSettings()
-    }, [userSettings.ttsEngine, userSettings.elevenLabsVoiceId, userSettings.elevenLabsApiKey, userSettings.voiceRate, userSettings.voicePitch, userSettings.language])
+    }, [userSettings.ttsEngine, userSettings.elevenLabsVoiceId, userSettings.elevenLabsApiKey, userSettings.voiceRate, userSettings.voicePitch, userSettings.language, userSettings.chatterboxServerUrl, userSettings.chatterboxVoiceId, userSettings.chatterboxVoiceMode, userSettings.chatterboxReferenceAudio])
 
     const loadVoices = useCallback(async () => {
         if (!elevenLabsTTSService.isAvailable()) return
@@ -174,6 +185,99 @@ export function useTTSVoices() {
         }
     }, [])
 
+    const checkChatterboxConnection = useCallback(async () => {
+        const serverUrl = userSettings.chatterboxServerUrl
+        if (serverUrl) {
+            chatterboxTTSService.setServerUrl(serverUrl)
+        }
+        const connected = await chatterboxTTSService.checkConnection()
+        setState((s) => ({
+            ...s,
+            chatterboxConnected: connected,
+            chatterboxVoices: connected ? chatterboxTTSService.getVoices() : [],
+            chatterboxReferenceFiles: connected ? chatterboxTTSService.getReferenceAudioFiles() : [],
+        }))
+        return connected
+    }, [userSettings.chatterboxServerUrl])
+
+    const setChatterboxServerUrl = useCallback(async (url: string) => {
+        const updated = { ...userSettings, chatterboxServerUrl: url }
+        await saveUserSettings(updated)
+        chatterboxTTSService.setServerUrl(url)
+        if (url) {
+            const connected = await chatterboxTTSService.checkConnection()
+            setState((s) => ({
+                ...s,
+                chatterboxConnected: connected,
+                chatterboxVoices: connected ? chatterboxTTSService.getVoices() : [],
+                chatterboxReferenceFiles: connected ? chatterboxTTSService.getReferenceAudioFiles() : [],
+            }))
+        } else {
+            setState((s) => ({ ...s, chatterboxConnected: false, chatterboxVoices: [], chatterboxReferenceFiles: [] }))
+        }
+    }, [userSettings, saveUserSettings])
+
+    const setChatterboxVoiceId = useCallback(async (voiceId: string) => {
+        const updated = { ...userSettings, chatterboxVoiceId: voiceId }
+        await saveUserSettings(updated)
+    }, [userSettings, saveUserSettings])
+
+    const setChatterboxVoiceMode = useCallback(async (mode: 'predefined' | 'clone') => {
+        const updated = { ...userSettings, chatterboxVoiceMode: mode }
+        await saveUserSettings(updated)
+    }, [userSettings, saveUserSettings])
+
+    const setChatterboxReferenceAudio = useCallback(async (filename: string) => {
+        const updated = { ...userSettings, chatterboxReferenceAudio: filename, chatterboxVoiceMode: 'clone' as const }
+        await saveUserSettings(updated)
+    }, [userSettings, saveUserSettings])
+
+    const uploadChatterboxReferenceAudio = useCallback(async (localFileUri: string, filename: string): Promise<string | null> => {
+        try {
+            setState((s) => ({ ...s, isCloningVoice: true, cloneProgress: 'Uploading voice sample to Chatterbox...' }))
+            const uploadedName = await chatterboxTTSService.uploadReferenceAudio(localFileUri, filename)
+            const updated = {
+                ...userSettings,
+                chatterboxReferenceAudio: uploadedName,
+                chatterboxVoiceMode: 'clone' as const,
+            }
+            await saveUserSettings(updated)
+            await chatterboxTTSService.checkConnection()
+            setState((s) => ({
+                ...s,
+                isCloningVoice: false,
+                cloneProgress: '',
+                chatterboxConnected: true,
+                chatterboxVoices: chatterboxTTSService.getVoices(),
+                chatterboxReferenceFiles: chatterboxTTSService.getReferenceAudioFiles(),
+            }))
+            return uploadedName
+        } catch (error) {
+            console.error('Chatterbox reference audio upload failed:', error)
+            setState((s) => ({ ...s, isCloningVoice: false, cloneProgress: '' }))
+            throw error
+        }
+    }, [userSettings, saveUserSettings])
+
+    const previewChatterboxVoice = useCallback(async (voiceId: string) => {
+        try {
+            const audioUri = await chatterboxTTSService.speak(
+                'The Lord is my shepherd, I shall not want.',
+                { voiceId, voiceMode: 'predefined' }
+            )
+            const { createAudioPlayer } = await import('expo-audio')
+            const player = createAudioPlayer({ uri: audioUri })
+            player.play()
+            player.addListener('playbackStatusUpdate', (status) => {
+                if (status.didJustFinish) {
+                    player.release()
+                }
+            })
+        } catch (error) {
+            console.error('Chatterbox voice preview failed:', error)
+        }
+    }, [])
+
     return {
         ...state,
         ttsEngine: userSettings.ttsEngine || 'native',
@@ -183,6 +287,10 @@ export function useTTSVoices() {
         cacheEnabled: userSettings.ttsCacheEnabled ?? true,
         useClonedVoice: userSettings.useClonedVoice ?? false,
         clonedVoiceId: userSettings.clonedVoiceId,
+        chatterboxServerUrl: userSettings.chatterboxServerUrl || '',
+        chatterboxVoiceId: userSettings.chatterboxVoiceId || 'Emily.wav',
+        chatterboxVoiceMode: userSettings.chatterboxVoiceMode || 'predefined',
+        chatterboxReferenceAudio: userSettings.chatterboxReferenceAudio || '',
         loadVoices,
         loadCacheInfo,
         setTTSEngine,
@@ -195,5 +303,12 @@ export function useTTSVoices() {
         deleteClonedVoice,
         clearCache,
         previewVoice,
+        checkChatterboxConnection,
+        setChatterboxServerUrl,
+        setChatterboxVoiceId,
+        setChatterboxVoiceMode,
+        setChatterboxReferenceAudio,
+        uploadChatterboxReferenceAudio,
+        previewChatterboxVoice,
     }
 }

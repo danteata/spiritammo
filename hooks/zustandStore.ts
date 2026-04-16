@@ -203,7 +203,8 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
           if (parsed.elevenLabsVoiceId === '21m00Tcm4TlvDq8ikWAM' || parsed.elevenLabsVoiceId === 'JBFpfCBYomT7L7iX63mr') {
             parsed.elevenLabsVoiceId = 'onwK4e9ZLuTAKqWW03F9'
           }
-          set({ userSettings: parsed })
+          const merged = { ...get().userSettings, ...parsed }
+          set({ userSettings: merged })
         } else {
           await AsyncStorage.setItem('user_settings', JSON.stringify(get().userSettings))
         }

@@ -12,6 +12,10 @@ class VoicePlaybackService {
         voiceRate?: number
         voicePitch?: number
         language?: string
+        chatterboxServerUrl?: string
+        chatterboxVoiceId?: string
+        chatterboxVoiceMode?: 'predefined' | 'clone'
+        chatterboxReferenceAudio?: string
     } = {}
 
     static configureTTS(settings: {
@@ -21,6 +25,10 @@ class VoicePlaybackService {
         voiceRate?: number
         voicePitch?: number
         language?: string
+        chatterboxServerUrl?: string
+        chatterboxVoiceId?: string
+        chatterboxVoiceMode?: 'predefined' | 'clone'
+        chatterboxReferenceAudio?: string
     }): void {
         this.ttsSettings = { ...this.ttsSettings, ...settings }
     }
@@ -132,6 +140,10 @@ class VoicePlaybackService {
                 ttsEngine: this.ttsSettings.engine ?? 'native',
                 voiceId: this.ttsSettings.voiceId,
                 elevenLabsApiKey: this.ttsSettings.apiKey,
+                chatterboxServerUrl: this.ttsSettings.chatterboxServerUrl,
+                chatterboxVoiceId: this.ttsSettings.chatterboxVoiceId,
+                chatterboxVoiceMode: this.ttsSettings.chatterboxVoiceMode,
+                chatterboxReferenceAudio: this.ttsSettings.chatterboxReferenceAudio,
                 onStart: () => {
                     settings?.onStart?.()
                 },

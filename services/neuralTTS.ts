@@ -35,10 +35,14 @@ class NeuralTTSService {
         options?: {
             speed?: number;
             sid?: number;
-            ttsEngine?: 'native' | 'elevenlabs';
+            ttsEngine?: 'native' | 'elevenlabs' | 'chatterbox';
             voiceId?: string;
             apiKey?: string;
             scriptureId?: string;
+            chatterboxServerUrl?: string;
+            chatterboxVoiceId?: string;
+            chatterboxVoiceMode?: 'predefined' | 'clone';
+            chatterboxReferenceAudio?: string;
         }
     ): Promise<void> {
         const rate = options?.speed ?? 0.85;
@@ -54,6 +58,10 @@ class NeuralTTSService {
                 voiceId: options?.voiceId,
                 elevenLabsApiKey: options?.apiKey,
                 scriptureId: options?.scriptureId,
+                chatterboxServerUrl: options?.chatterboxServerUrl,
+                chatterboxVoiceId: options?.chatterboxVoiceId,
+                chatterboxVoiceMode: options?.chatterboxVoiceMode,
+                chatterboxReferenceAudio: options?.chatterboxReferenceAudio,
                 onDone: () => {
                     this.notifyProgress('ready', 100);
                     this.currentCallbacks?.onDone?.();
@@ -109,17 +117,20 @@ class NeuralTTSService {
 }
 
 const neuralTTSService = new NeuralTTSService();
-
 export default neuralTTSService;
 
 export async function speakWithNeuralTTS(
     text: string,
     callbacks?: TTSCallbacks,
     options?: {
-        ttsEngine?: 'native' | 'elevenlabs';
+        ttsEngine?: 'native' | 'elevenlabs' | 'chatterbox';
         voiceId?: string;
         apiKey?: string;
         scriptureId?: string;
+        chatterboxServerUrl?: string;
+        chatterboxVoiceId?: string;
+        chatterboxVoiceMode?: 'predefined' | 'clone';
+        chatterboxReferenceAudio?: string;
     }
 ): Promise<void> {
     await neuralTTSService.speak(text, {

@@ -63,29 +63,19 @@ class ConvexTTSService {
         try {
             const postUrl = await convex.mutation(api.ttsAudio.generateUploadUrl, {})
 
-            const base64 = await FileSystem.readAsStringAsync(localFileUri, {
-                encoding: FileSystem.EncodingType.Base64,
+            const uploadResult = await FileSystem.uploadAsync(postUrl, localFileUri, {
+                fieldName: 'file',
+                httpMethod: 'POST',
+                headers: {
+                    'Content-Type': 'audio/mpeg',
+                },
             })
 
-            const binaryString = atob(base64)
-            const bytes = new Uint8Array(binaryString.length)
-            for (let i = 0; i < binaryString.length; i++) {
-                bytes[i] = binaryString.charCodeAt(i)
+            if (uploadResult.status < 200 || uploadResult.status >= 300) {
+                throw new Error(`Upload failed: ${uploadResult.status}`)
             }
 
-            const blob = new Blob([bytes], { type: 'audio/mpeg' })
-
-            const uploadResponse = await fetch(postUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'audio/mpeg' },
-                body: blob,
-            })
-
-            if (!uploadResponse.ok) {
-                throw new Error(`Upload failed: ${uploadResponse.status}`)
-            }
-
-            const { storageId } = await uploadResponse.json()
+            const { storageId } = JSON.parse(uploadResult.body)
 
             const textHash = await hashText(scriptureId)
 
@@ -110,8 +100,8 @@ class ConvexTTSService {
 async function hashText(text: string): Promise<string> {
     const encoder = new TextEncoder()
     const data = encoder.encode(text)
-            const hashBuffer = await crypto.subtle.digest('SHA-256', data.buffer as ArrayBuffer)
-    const hashArray = Array.from(new Uint8Array(hashBuffer))
+    const hashBuffer = await crypto.subtle.digest({ name: 'SHA-256' }, data as unknown as BufferSource)
+    const hashArray = Array.from(new Uint8Array(hashBuffer as ArrayBuffer))
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 

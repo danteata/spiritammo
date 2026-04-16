@@ -29,6 +29,10 @@ const getTTSSettings = (userSettings: any) => {
         ttsEngine: engine as TTSEngineType | undefined,
         voiceId,
         apiKey: userSettings.elevenLabsApiKey,
+        chatterboxServerUrl: userSettings.chatterboxServerUrl,
+        chatterboxVoiceId: userSettings.chatterboxVoiceId,
+        chatterboxVoiceMode: userSettings.chatterboxVoiceMode,
+        chatterboxReferenceAudio: userSettings.chatterboxReferenceAudio,
     };
 };
 
@@ -42,6 +46,10 @@ const speakAndWait = (
         voiceId?: string;
         apiKey?: string;
         scriptureId?: string;
+        chatterboxServerUrl?: string;
+        chatterboxVoiceId?: string;
+        chatterboxVoiceMode?: 'predefined' | 'clone';
+        chatterboxReferenceAudio?: string;
     },
 ): Promise<void> => {
     const ttsOptions: TTSOptions = {
@@ -53,6 +61,10 @@ const speakAndWait = (
         voiceId: options?.voiceId,
         elevenLabsApiKey: options?.apiKey,
         scriptureId: options?.scriptureId,
+        chatterboxServerUrl: options?.chatterboxServerUrl,
+        chatterboxVoiceId: options?.chatterboxVoiceId,
+        chatterboxVoiceMode: options?.chatterboxVoiceMode,
+        chatterboxReferenceAudio: options?.chatterboxReferenceAudio,
     };
     return TTSEngine.speak(ttsOptions);
 };
