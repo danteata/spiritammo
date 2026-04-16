@@ -221,6 +221,26 @@ class ChatterboxTTSService {
         throw new Error('Upload completed but no filename returned')
     }
 
+    async renameReferenceAudio(filename: string, newName: string): Promise<string | null> {
+        try {
+            const displayName = newName.replace(/\.(wav|mp3)$/i, '')
+            const response = await fetch(
+                `${this.serverUrl}/rename_reference/${encodeURIComponent(filename)}?new_name=${encodeURIComponent(displayName)}`,
+                { method: 'PUT' }
+            )
+            if (response.ok) {
+                const data = await response.json()
+                await this.fetchVoices()
+                return data.new_filename || null
+            }
+            console.warn('[ChatterboxTTS] Rename failed:', response.status)
+            return null
+        } catch (error) {
+            console.error('[ChatterboxTTS] Rename error:', error)
+            return null
+        }
+    }
+
     async deleteReferenceAudio(filename: string): Promise<boolean> {
         try {
             const response = await fetch(`${this.serverUrl}/delete_reference/${encodeURIComponent(filename)}`, {

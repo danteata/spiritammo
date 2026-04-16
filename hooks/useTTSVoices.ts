@@ -277,6 +277,24 @@ export function useTTSVoices() {
         return deleted
     }, [userSettings, saveUserSettings])
 
+    const renameChatterboxReferenceAudio = useCallback(async (filename: string, newName: string) => {
+        const newFilename = await chatterboxTTSService.renameReferenceAudio(filename, newName)
+        if (newFilename) {
+            const updated = { ...userSettings }
+            if (userSettings.chatterboxReferenceAudio === filename) {
+                updated.chatterboxReferenceAudio = newFilename
+                await saveUserSettings(updated)
+            }
+            await chatterboxTTSService.checkConnection()
+            setState((s) => ({
+                ...s,
+                chatterboxVoices: chatterboxTTSService.getVoices(),
+                chatterboxReferenceFiles: chatterboxTTSService.getReferenceAudioFiles(),
+            }))
+        }
+        return newFilename
+    }, [userSettings, saveUserSettings])
+
     const previewChatterboxVoice = useCallback(async (voiceId: string) => {
         try {
             const audioUri = await chatterboxTTSService.speak(
@@ -328,6 +346,7 @@ export function useTTSVoices() {
         setChatterboxReferenceAudio,
         uploadChatterboxReferenceAudio,
         deleteChatterboxReferenceAudio,
+        renameChatterboxReferenceAudio,
         previewChatterboxVoice,
     }
 }

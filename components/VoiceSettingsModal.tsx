@@ -30,6 +30,8 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
     const [chatterboxConnectionStatus, setChatterboxConnectionStatus] = useState<'idle' | 'checking' | 'connected' | 'error'>('idle')
     const [isRecording, setIsRecording] = useState(false)
     const [recordingDuration, setRecordingDuration] = useState(0)
+    const [renamingFile, setRenamingFile] = useState<string | null>(null)
+    const [renameValue, setRenameValue] = useState('')
     const recordingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY)
 
@@ -529,12 +531,36 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
                                                                     onPress={() => tts.setChatterboxReferenceAudio(filename)}
                                                                 >
                                                                     <View style={styles.voiceInfo}>
-                                                                        <ThemedText variant="body" style={styles.voiceName}>{
-                                                                            filename.replace(/\.(wav|mp3|m4a)$/i, '')
-                                                                                .replace(/^recording-[a-f0-9-]+/, 'Previous Recording')
-                                                                                .replace(/^clone_\d+/, 'Voice Clone')
-                                                                                .replace(/^voice_clone_\d+/, 'Voice Clone')
-                                                                        }</ThemedText>
+                                                                        {renamingFile === filename ? (
+                                                                            <TextInput
+                                                                                style={[styles.renameInput, {
+                                                                                    color: theme.text,
+                                                                                    backgroundColor: isDark ? '#1E293B' : '#F1F5F9',
+                                                                                    borderColor: theme.accent,
+                                                                                }]}
+                                                                                value={renameValue}
+                                                                                onChangeText={setRenameValue}
+                                                                                autoFocus
+                                                                                selectTextOnFocus
+                                                                                returnKeyType="done"
+                                                                                onSubmitEditing={async () => {
+                                                                                    const trimmed = renameValue.trim()
+                                                                                    if (trimmed && trimmed !== filename.replace(/\.(wav|mp3)$/i, '')) {
+                                                                                        const result = await tts.renameChatterboxReferenceAudio(filename, trimmed)
+                                                                                        if (result) await tts.setChatterboxReferenceAudio(result)
+                                                                                    }
+                                                                                    setRenamingFile(null)
+                                                                                }}
+                                                                                onBlur={() => setRenamingFile(null)}
+                                                                            />
+                                                                        ) : (
+                                                                            <ThemedText variant="body" style={styles.voiceName}>{
+                                                                                filename.replace(/\.(wav|mp3|m4a)$/i, '')
+                                                                                    .replace(/^recording-[a-f0-9-]+/, 'Previous Recording')
+                                                                                    .replace(/^clone_\d+/, 'Voice Clone')
+                                                                                    .replace(/^voice_clone_\d+/, 'Voice Clone')
+                                                                            }</ThemedText>
+                                                                        )}
                                                                         <ThemedText variant="caption" style={styles.voiceCategory}>
                                                                             your recording
                                                                         </ThemedText>
@@ -548,11 +574,20 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
                                                                         <MaterialCommunityIcons name="play" size={14} color={theme.accent} />
                                                                     </TouchableOpacity>
                                                                     <TouchableOpacity
+                                                                        style={[styles.previewButton, { borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)' }]}
+                                                                        onPress={() => {
+                                                                            setRenameValue(filename.replace(/\.(wav|mp3|m4a)$/i, ''))
+                                                                            setRenamingFile(filename)
+                                                                        }}
+                                                                    >
+                                                                        <MaterialCommunityIcons name="pencil" size={14} color={isDark ? '#aaa' : '#666'} />
+                                                                    </TouchableOpacity>
+                                                                    <TouchableOpacity
                                                                         style={[styles.previewButton, { borderColor: '#ef4444' }]}
                                                                         onPress={() => {
                                                                             Alert.alert(
                                                                                 'Delete Recording',
-                                                                                `Remove "${filename}" from the Chatterbox server?`,
+                                                                                `Remove "${filename.replace(/\.(wav|mp3|m4a)$/i, '')}"?`,
                                                                                 [
                                                                                     { text: 'Cancel', style: 'cancel' },
                                                                                     {
@@ -954,6 +989,14 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 6,
         alignItems: 'center',
+    },
+    renameInput: {
+        fontSize: 14,
+        borderWidth: 1.5,
+        borderRadius: 6,
+        paddingHorizontal: 8,
+        paddingVertical: 4,
+        minWidth: 120,
     },
     cloneActions: {
         gap: 8,
