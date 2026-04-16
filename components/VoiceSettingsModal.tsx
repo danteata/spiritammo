@@ -118,24 +118,28 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
             setIsRecording(false)
 
             const uri = recorder.uri
+            console.log('[ChatterboxClone] Recording stopped, uri:', uri)
             if (!uri) {
                 Alert.alert('Recording Failed', 'No audio was recorded. Please try again.')
                 return
             }
 
-            const filename = `clone_${Date.now()}.m4a`
+            const existingCount = tts.chatterboxReferenceFiles.length
+            const filename = existingCount > 0 ? `My Voice ${existingCount + 1}.m4a` : `My Voice.m4a`
+            console.log('[ChatterboxClone] Uploading file:', uri, 'as:', filename)
 
             try {
                 const uploadedName = await tts.uploadChatterboxReferenceAudio(uri, filename)
                 if (uploadedName) {
                     await tts.setChatterboxReferenceAudio(uploadedName)
-                    Alert.alert('Voice Uploaded', `Reference audio "${uploadedName}" uploaded. Your voice clone is ready.`)
+                    Alert.alert('Voice Uploaded', 'Your voice clone is ready. Switch to it by tapping the name in the list.')
                 }
             } catch (uploadError) {
                 console.error('Upload to Chatterbox failed:', uploadError)
+                const errMsg = uploadError instanceof Error ? uploadError.message : String(uploadError)
                 Alert.alert(
                     'Upload Failed',
-                    'Could not upload your recording to the Chatterbox server. Make sure the server is running and accessible.',
+                    `Could not upload your recording: ${errMsg}`,
                 )
             }
         } catch (error) {
@@ -505,12 +509,13 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
                                                 Record a voice sample or use an existing recording as reference audio for voice cloning.
                                             </ThemedText>
 
-                                            {tts.chatterboxReferenceFiles.length > 0 && (
-                                                <View style={styles.voiceList}>
-                                                    {tts.chatterboxReferenceFiles.map((filename) => (
-                                                        <TouchableOpacity
-                                                            key={filename}
-                                                            style={[
+                                            {(() => {
+                                                const predefinedSet = new Set(tts.chatterboxVoices.map(v => v.filename))
+                                                const cloneFiles = tts.chatterboxReferenceFiles.filter(f => !predefinedSet.has(f))
+                                                return cloneFiles.length > 0 ? (
+                                                    <View style={styles.voiceList}>
+                                                        {cloneFiles.map((filename) => (
+                                                            <View key={filename} style={[
                                                                 styles.voiceItem,
                                                                 {
                                                                     backgroundColor: tts.chatterboxReferenceAudio === filename
@@ -518,25 +523,55 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
                                                                         : (isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.02)'),
                                                                     borderColor: tts.chatterboxReferenceAudio === filename ? theme.accent : 'transparent',
                                                                 },
-                                                            ]}
-                                                            onPress={() => tts.setChatterboxReferenceAudio(filename)}
-                                                        >
-                                                            <View style={styles.voiceInfo}>
-                                                                <ThemedText variant="body" style={styles.voiceName}>{filename.replace(/\.(wav|mp3)$/i, '')}</ThemedText>
-                                                                <ThemedText variant="caption" style={styles.voiceCategory}>
-                                                                    reference audio
-                                                                </ThemedText>
+                                                            ]}>
+                                                                <TouchableOpacity
+                                                                    style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+                                                                    onPress={() => tts.setChatterboxReferenceAudio(filename)}
+                                                                >
+                                                                    <View style={styles.voiceInfo}>
+                                                                        <ThemedText variant="body" style={styles.voiceName}>{
+                                                                            filename.replace(/\.(wav|mp3|m4a)$/i, '')
+                                                                                .replace(/^recording-[a-f0-9-]+/, 'Previous Recording')
+                                                                                .replace(/^clone_\d+/, 'Voice Clone')
+                                                                                .replace(/^voice_clone_\d+/, 'Voice Clone')
+                                                                        }</ThemedText>
+                                                                        <ThemedText variant="caption" style={styles.voiceCategory}>
+                                                                            your recording
+                                                                        </ThemedText>
+                                                                    </View>
+                                                                </TouchableOpacity>
+                                                                <View style={styles.voiceItemActions}>
+                                                                    <TouchableOpacity
+                                                                        style={[styles.previewButton, { borderColor: theme.accent }]}
+                                                                        onPress={() => tts.previewChatterboxVoice(filename)}
+                                                                    >
+                                                                        <MaterialCommunityIcons name="play" size={14} color={theme.accent} />
+                                                                    </TouchableOpacity>
+                                                                    <TouchableOpacity
+                                                                        style={[styles.previewButton, { borderColor: '#ef4444' }]}
+                                                                        onPress={() => {
+                                                                            Alert.alert(
+                                                                                'Delete Recording',
+                                                                                `Remove "${filename}" from the Chatterbox server?`,
+                                                                                [
+                                                                                    { text: 'Cancel', style: 'cancel' },
+                                                                                    {
+                                                                                        text: 'Delete',
+                                                                                        style: 'destructive',
+                                                                                        onPress: () => tts.deleteChatterboxReferenceAudio(filename),
+                                                                                    },
+                                                                                ]
+                                                                            )
+                                                                        }}
+                                                                    >
+                                                                        <MaterialCommunityIcons name="delete-outline" size={14} color="#ef4444" />
+                                                                    </TouchableOpacity>
+                                                                </View>
                                                             </View>
-                                                            <TouchableOpacity
-                                                                style={[styles.previewButton, { borderColor: theme.accent }]}
-                                                                onPress={() => tts.previewChatterboxVoice(filename)}
-                                                            >
-                                                                <MaterialCommunityIcons name="play" size={14} color={theme.accent} />
-                                                            </TouchableOpacity>
-                                                        </TouchableOpacity>
-                                                    ))}
-                                                </View>
-                                            )}
+                                                        ))}
+                                                    </View>
+                                                ) : null
+                                            })()}
 
                                             {/* Record New Voice Sample */}
                                             {isRecording ? (
@@ -914,6 +949,11 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 14,
         fontWeight: '600',
+    },
+    voiceItemActions: {
+        flexDirection: 'row',
+        gap: 6,
+        alignItems: 'center',
     },
     cloneActions: {
         gap: 8,

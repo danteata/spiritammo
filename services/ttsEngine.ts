@@ -4,6 +4,7 @@ import elevenLabsTTSService, { ElevenLabsTTSService } from './elevenLabsTTS'
 import chatterboxTTSService, { ChatterboxTTSService } from './chatterboxTTS'
 import TTSCache from './ttsCache'
 import convexTTSService from './convexTTS'
+import { formatTextForTTS } from '@/utils/ttsTextUtils'
 
 export type TTSEngineType = 'elevenlabs' | 'native' | 'chatterbox'
 
@@ -41,19 +42,22 @@ class TTSEngine {
     static async speak(options: TTSOptions): Promise<void> {
         await this.stop()
 
-        if (options.elevenLabsApiKey) {
-            elevenLabsTTSService.setApiKey(options.elevenLabsApiKey)
+        const ttsText = formatTextForTTS(options.text)
+        const opts = { ...options, text: ttsText }
+
+        if (opts.elevenLabsApiKey) {
+            elevenLabsTTSService.setApiKey(opts.elevenLabsApiKey)
         }
 
-        if (options.chatterboxServerUrl) {
-            chatterboxTTSService.setServerUrl(options.chatterboxServerUrl)
+        if (opts.chatterboxServerUrl) {
+            chatterboxTTSService.setServerUrl(opts.chatterboxServerUrl)
         }
 
-        const engine = options.ttsEngine || 'native'
+        const engine = opts.ttsEngine || 'native'
 
         if (engine === 'chatterbox') {
             try {
-                await this.speakWithChatterbox(options)
+                await this.speakWithChatterbox(opts)
                 return
             } catch (error) {
                 const readableError = ChatterboxTTSService.getHumanReadableError(error)
@@ -62,7 +66,7 @@ class TTSEngine {
                 if (readableError.includes('Cannot connect') || readableError.includes('still loading')) {
                     return
                 }
-                await this.speakWithNative(options)
+                await this.speakWithNative(opts)
             }
         } else if (engine === 'elevenlabs') {
             const useElevenLabs = this.isOnline
@@ -70,7 +74,7 @@ class TTSEngine {
 
             if (useElevenLabs) {
                 try {
-                    await this.speakWithElevenLabs(options)
+                    await this.speakWithElevenLabs(opts)
                     return
                 } catch (error) {
                     const readableError = ElevenLabsTTSService.getHumanReadableError(error)
@@ -79,21 +83,21 @@ class TTSEngine {
                         options.onError?.(new Error(readableError))
                         return
                     }
-                    await this.speakWithNative(options)
+                    await this.speakWithNative(opts)
                 }
             } else {
-                await this.speakWithNative(options)
+                await this.speakWithNative(opts)
             }
         } else if (options.scriptureId && this.isOnline) {
             try {
-                const played = await this.tryCommunityVoice(options)
+                const played = await this.tryCommunityVoice(opts)
                 if (played) return
             } catch (error) {
                 console.warn('[TTSEngine] Community voice fallback failed:', error)
             }
-            await this.speakWithNative(options)
+            await this.speakWithNative(opts)
         } else {
-            await this.speakWithNative(options)
+            await this.speakWithNative(opts)
         }
     }
 

@@ -170,38 +170,72 @@ class ChatterboxTTSService {
     async uploadReferenceAudio(localFileUri: string, filename: string): Promise<string> {
         const uploadUrl = `${this.serverUrl}/upload_reference`
 
-        const uploadResult = await FileSystem.uploadAsync(uploadUrl, localFileUri, {
-            fieldName: 'files',
-            httpMethod: 'POST',
-            headers: {},
-            parameters: {},
-            uploadType: FileSystem.FileSystemUploadType.MULTIPART,
-        })
+        console.log('[ChatterboxTTS] Uploading reference audio from:', localFileUri, 'to:', uploadUrl)
 
-        if (uploadResult.status < 200 || uploadResult.status >= 300) {
-            throw new Error(`Chatterbox upload failed ${uploadResult.status}: ${uploadResult.body}`)
+        const filesBefore = new Set(this.referenceAudioFiles)
+
+        try {
+            const fileInfo = await FileSystem.getInfoAsync(localFileUri)
+            console.log('[ChatterboxTTS] Local file exists:', fileInfo.exists, 'size:', fileInfo.exists ? (fileInfo as any).size : 0)
+        } catch (e) {
+            console.warn('[ChatterboxTTS] Could not check local file:', e)
         }
 
-        const data = JSON.parse(uploadResult.body)
+        let uploadResult
+        try {
+            uploadResult = await FileSystem.uploadAsync(uploadUrl, localFileUri, {
+                fieldName: 'files',
+                httpMethod: 'POST',
+                uploadType: FileSystem.FileSystemUploadType.MULTIPART,
+            })
+        } catch (uploadError) {
+            console.error('[ChatterboxTTS] FileSystem.uploadAsync error:', uploadError)
+            throw new Error(`Upload failed: ${uploadError instanceof Error ? uploadError.message : String(uploadError)}`)
+        }
+
+        console.log('[ChatterboxTTS] Upload response status:', uploadResult.status, 'body:', uploadResult.body?.substring(0, 500))
+
+        const data = JSON.parse(uploadResult.body || '{}')
+
+        await this.fetchVoices()
 
         if (data.uploaded_files && data.uploaded_files.length > 0) {
-            await this.fetchVoices()
             return data.uploaded_files[0]
         }
 
-        if (data.all_reference_files) {
-            const match = data.all_reference_files.find((f: string) => f === filename)
-            if (match) {
-                await this.fetchVoices()
-                return match
-            }
+        const filesAfter = this.referenceAudioFiles
+        const newFiles = filesAfter.filter(f => !filesBefore.has(f))
+        if (newFiles.length > 0) {
+            return newFiles[0]
+        }
+
+        if (uploadResult.status < 200 || uploadResult.status >= 300) {
+            throw new Error(`Chatterbox upload failed ${uploadResult.status}: ${uploadResult.body?.substring(0, 200)}`)
         }
 
         if (data.errors && data.errors.length > 0) {
-            throw new Error(data.errors[0].error || 'Upload failed')
+            const errorMsg = data.errors[0]?.error || 'Unknown upload error'
+            throw new Error(`Server rejected upload: ${errorMsg}`)
         }
 
         throw new Error('Upload completed but no filename returned')
+    }
+
+    async deleteReferenceAudio(filename: string): Promise<boolean> {
+        try {
+            const response = await fetch(`${this.serverUrl}/delete_reference/${encodeURIComponent(filename)}`, {
+                method: 'DELETE',
+            })
+            if (response.ok) {
+                await this.fetchVoices()
+                return true
+            }
+            console.warn('[ChatterboxTTS] Delete failed:', response.status)
+            return false
+        } catch (error) {
+            console.error('[ChatterboxTTS] Delete error:', error)
+            return false
+        }
     }
 
     static getHumanReadableError(error: unknown): string {
