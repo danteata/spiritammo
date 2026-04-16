@@ -101,7 +101,9 @@ const VerseRow = memo(({
     ? (isDark ? `${theme.info}44` : `${theme.info}22`)
     : highlightColor 
       ? (isDark ? `${highlightColor}33` : `${highlightColor}44`)
-      : highlightBg;
+      : hasArsenal
+        ? (isDark ? `${theme.accent}12` : `${theme.accent}08`)
+        : highlightBg;
 
   const leftBorderColor = isActivelyReading
     ? theme.info

@@ -35,7 +35,24 @@ export function useBibleReader(scriptures: Scripture[]) {
   // Build a map from verse ID → scripture (for quick mastery data access)
   const arsenalVerseMap = useMemo(() => {
     const map = new Map<string, Scripture>();
-    scriptures.forEach(s => map.set(s.id, s));
+    scriptures.forEach(s => {
+      // Primary ID lookup
+      map.set(s.id, s);
+      
+      // Component-based lookup (Book-Chapter-Verse)
+      const startId = `${s.book.toLowerCase()}-${s.chapter}-${s.verse}`;
+      map.set(startId, s);
+      
+      // Range-based lookup
+      if (s.endVerse && s.endVerse > s.verse) {
+        for (let v = s.verse + 1; v <= s.endVerse; v++) {
+          const rangeId = `${s.book.toLowerCase()}-${s.chapter}-${v}`;
+          if (!map.has(rangeId)) {
+            map.set(rangeId, s);
+          }
+        }
+      }
+    });
     return map;
   }, [scriptures]);
 

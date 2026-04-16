@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Alert } from 'react-native'
 import { generateBattleIntel } from '@/services/battleIntelligence'
 import { militaryRankingService } from '@/services/militaryRanking'
@@ -21,10 +21,20 @@ export function useBattleIntel(
         battlePlan: string
         tacticalNotes: string
     } | null>(null)
+    const lastScriptureIdRef = useRef<string | null>(null)
 
     const rate = voiceSettings?.rate ?? 0.9
     const pitch = voiceSettings?.pitch ?? 1.0
     const language = voiceSettings?.language ?? 'en-US'
+
+    useEffect(() => {
+        const scripture = getCurrentScripture()
+        const currentId = scripture?.id ?? null
+        if (currentId !== lastScriptureIdRef.current) {
+            lastScriptureIdRef.current = currentId
+            setTacticalIntel(null)
+        }
+    })
 
     const handleShowIntel = useCallback(async () => {
         const scripture = getCurrentScripture()

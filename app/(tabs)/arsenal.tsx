@@ -167,7 +167,7 @@ export default function ArsenalScreen() {
                             style={[
                                 styles.sectionTab,
                                 activeSection === section.key && styles.activeTab,
-                                activeSection === section.key && { backgroundColor: isDark ? theme.accent : '#E2E8F0' }
+                                activeSection === section.key && { backgroundColor: theme.accent }
                             ]}
                             onPress={() => setActiveSection(section.key)}
                             activeOpacity={0.8}
@@ -175,14 +175,14 @@ export default function ArsenalScreen() {
                             <Ionicons
                                 name={section.icon as any}
                                 size={16}
-                                color={activeSection === section.key ? (isDark ? theme.accentContrastText : '#1E293B') : (isDark ? '#94A3B8' : '#475569')}
+                                color={activeSection === section.key ? theme.accentContrastText : (isDark ? '#94A3B8' : '#475569')}
                             />
                             <ThemedText
                                 variant="caption"
                                 style={[
                                     styles.tabText,
                                     activeSection === section.key && styles.activeTabText,
-                                    { color: activeSection === section.key ? (isDark ? theme.accentContrastText : '#1E293B') : (isDark ? '#94A3B8' : '#475569') }
+                                    { color: activeSection === section.key ? theme.accentContrastText : (isDark ? '#94A3B8' : '#475569') }
                                 ]}
                             >
                                 {section.label}

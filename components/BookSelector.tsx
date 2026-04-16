@@ -9,7 +9,14 @@ interface BookSelectorProps {
 }
 
 export default function BookSelector({ onSelectBook }: BookSelectorProps) {
-  const { books, isDark, theme } = useAppStore();
+  const { books, isDark, theme, scriptures } = useAppStore();
+
+  // Create a set of book names that have arsenal verses
+  const booksWithArsenal = React.useMemo(() => {
+    const set = new Set<string>();
+    scriptures.forEach(s => set.add(s.book.toLowerCase()));
+    return set;
+  }, [scriptures]);
 
   // Define book groups with color coding (inspired by your screenshot)
   const bookGroups = [
@@ -172,6 +179,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  arsenalIndicator: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
   },
   bookText: {
     fontSize: 14,

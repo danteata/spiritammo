@@ -14,8 +14,7 @@ export const ArsenalTabSelector: React.FC<ArsenalTabSelectorProps> = ({
     activeTab,
     onTabChange
 }) => {
-    // Use app store for dynamic theming
-    const { isDark } = useTheme()
+    const { isDark, theme } = useTheme()
 
     return (
         <View style={
@@ -30,15 +29,14 @@ export const ArsenalTabSelector: React.FC<ArsenalTabSelectorProps> = ({
             <TouchableOpacity
                 style={[
                     styles.tabButton,
-                    activeTab === 'equipment' && styles.activeMainTab,
-                    activeTab === 'equipment' && { backgroundColor: '#FFD700', borderColor: '#FFD700' },
+                    activeTab === 'equipment' && { backgroundColor: theme.accent, borderColor: theme.accent },
                 ]}
                 onPress={() => onTabChange('equipment')}
             >
-                <FontAwesome5 name="shield-alt" size={20} color={activeTab === 'equipment' ? '#000' : isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'} />
+                <FontAwesome5 name="shield-alt" size={20} color={activeTab === 'equipment' ? theme.accentContrastText : (isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)')} />
                 <Text style={[
                     styles.tabButtonText,
-                    { color: activeTab === 'equipment' ? '#000' : isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }
+                    { color: activeTab === 'equipment' ? theme.accentContrastText : (isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)') }
                 ]}>
                     ARMORY
                 </Text>
@@ -47,15 +45,14 @@ export const ArsenalTabSelector: React.FC<ArsenalTabSelectorProps> = ({
             <TouchableOpacity
                 style={[
                     styles.tabButton,
-                    activeTab === 'ammunition' && styles.activeMainTab,
-                    activeTab === 'ammunition' && { backgroundColor: '#FFD700', borderColor: '#FFD700' },
+                    activeTab === 'ammunition' && { backgroundColor: theme.accent, borderColor: theme.accent },
                 ]}
                 onPress={() => onTabChange('ammunition')}
             >
-                <FontAwesome name="book" size={20} color={activeTab === 'ammunition' ? '#000' : isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'} />
+                <FontAwesome name="book" size={20} color={activeTab === 'ammunition' ? theme.accentContrastText : (isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)')} />
                 <Text style={[
                     styles.tabButtonText,
-                    { color: activeTab === 'ammunition' ? '#000' : isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }
+                    { color: activeTab === 'ammunition' ? theme.accentContrastText : (isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)') }
                 ]}>
                     AMMO BANK
                 </Text>
@@ -64,15 +61,14 @@ export const ArsenalTabSelector: React.FC<ArsenalTabSelectorProps> = ({
             <TouchableOpacity
                 style={[
                     styles.tabButton,
-                    activeTab === 'voice' && styles.activeMainTab,
-                    activeTab === 'voice' && { backgroundColor: '#FFD700', borderColor: '#FFD700' },
+                    activeTab === 'voice' && { backgroundColor: theme.accent, borderColor: theme.accent },
                 ]}
                 onPress={() => onTabChange('voice')}
             >
-                <FontAwesome5 name="microphone-alt" size={20} color={activeTab === 'voice' ? '#000' : isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)'} />
+                <FontAwesome5 name="microphone-alt" size={20} color={activeTab === 'voice' ? theme.accentContrastText : (isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)')} />
                 <Text style={[
                     styles.tabButtonText,
-                    { color: activeTab === 'voice' ? '#000' : isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)' }
+                    { color: activeTab === 'voice' ? theme.accentContrastText : (isDark ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.6)') }
                 ]}>
                     VOICE
                 </Text>
@@ -102,15 +98,6 @@ const styles = StyleSheet.create({
         gap: 8,
         borderWidth: 1,
         borderColor: 'transparent',
-    },
-    activeMainTab: {
-        backgroundColor: '#FFD700',
-        borderColor: '#FFD700',
-        shadowColor: '#FFD700',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.3,
-        shadowRadius: 4,
-        elevation: 4,
     },
     tabButtonText: {
         fontWeight: 'bold',

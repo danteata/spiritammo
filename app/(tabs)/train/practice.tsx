@@ -118,6 +118,11 @@ export default function TrainingPracticeScreen() {
 
     const [showStealthDrill, setShowStealthDrill] = useState(false)
     const [isListeningVerse, setIsListeningVerse] = useState(false)
+    const [isLooping, setIsLooping] = useState(false)
+
+    useEffect(() => {
+        setIsLooping(false)
+    }, [currentScripture?.id])
 
     const {
         isLoadingIntel,
@@ -295,6 +300,10 @@ export default function TrainingPracticeScreen() {
         }
     }
 
+    const handleToggleLoop = useCallback(() => {
+        setIsLooping(prev => !prev)
+    }, [])
+
     // ──────────────────────────────────────
     //  MODE INFO
     // ──────────────────────────────────────
@@ -311,7 +320,7 @@ export default function TrainingPracticeScreen() {
     }
 
     const modeInfo = getModeInfo()
-    const showOrderToggle = trainingMode === 'single'
+    const showOrderToggle = true
 
     // ──────────────────────────────────────
     //  RENDER
@@ -448,7 +457,7 @@ export default function TrainingPracticeScreen() {
 
                 {/* Unified Scripture + Recorder */}
                 {currentScripture && (
-                    <Animated.View style={[styles.scriptureSection, { opacity: fadeAnim }]}>
+                    <View style={styles.scriptureSection}>
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8, paddingHorizontal: 16 }}>
                             <TouchableOpacity
                                 disabled={verseOrder === 'sequential' ? seqIndex <= 0 : true}
@@ -475,6 +484,10 @@ export default function TrainingPracticeScreen() {
                             onIntel={handleShowIntel}
                             onReadIntelAloud={handleListenIntel}
                             isListeningIntel={isListeningIntel}
+                            isLoadingIntel={isLoadingIntel}
+                            fadeAnim={fadeAnim}
+                            isLooping={isLooping}
+                            onToggleLoop={handleToggleLoop}
                         />
                         <ScriptureActionRow
                             onStealth={handleStartStealthPractice}
@@ -483,7 +496,7 @@ export default function TrainingPracticeScreen() {
                             isLoadingIntel={isLoadingIntel}
                             accentColor="#EF4444"
                         />
-                    </Animated.View>
+                    </View>
                 )}
 
                 {currentScripture && (

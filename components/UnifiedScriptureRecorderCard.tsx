@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { StyleSheet, Text, View, TouchableOpacity, Platform, ActivityIndicator, Animated } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
 import { Scripture } from '@/types/scripture'
@@ -18,7 +18,11 @@ interface UnifiedScriptureRecorderCardProps {
   onClose?: () => void
   isListening?: boolean
   isListeningIntel?: boolean
+  isLoadingIntel?: boolean
   showViewInContext?: boolean
+  fadeAnim?: Animated.Value
+  isLooping?: boolean
+  onToggleLoop?: () => void
 }
 
 export default function UnifiedScriptureRecorderCard({
@@ -32,11 +36,27 @@ export default function UnifiedScriptureRecorderCard({
   onClose,
   isListening = false,
   isListeningIntel = false,
+  isLoadingIntel = false,
   showViewInContext = true,
+  fadeAnim,
+  isLooping = false,
+  onToggleLoop,
 }: UnifiedScriptureRecorderCardProps) {
   const { theme, isDark } = useAppStore()
   const [isRecording, setIsRecording] = useState(false)
   const [showIntel, setShowIntel] = useState(false)
+  const wasListeningRef = useRef(false)
+
+  useEffect(() => {
+    if (wasListeningRef.current && !isListening && isLooping && onListen) {
+      onListen()
+    }
+    wasListeningRef.current = isListening
+  }, [isListening])
+
+  useEffect(() => {
+    wasListeningRef.current = false
+  }, [scripture.id])
 
   // Auto-show intel section when intelText becomes available
   // Auto-hide when intelText is cleared (scripture changed)
@@ -61,15 +81,25 @@ export default function UnifiedScriptureRecorderCard({
     }
   }, [scripture])
 
+  const scriptureCard = (
+    <ScriptureCard
+      scripture={scripture}
+      isBattleMode={isBattleMode}
+      isRecording={isRecording}
+      embedded
+      onViewInContext={showViewInContext ? handleViewInContext : undefined}
+    />
+  )
+
   return (
     <View style={[styles.container, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-      <ScriptureCard
-        scripture={scripture}
-        isBattleMode={isBattleMode}
-        isRecording={isRecording}
-        embedded
-        onViewInContext={showViewInContext ? handleViewInContext : undefined}
-      />
+      {fadeAnim ? (
+        <Animated.View style={{ opacity: fadeAnim }}>
+          {scriptureCard}
+        </Animated.View>
+      ) : (
+        scriptureCard
+      )}
 
       {onClose && (
         <TouchableOpacity 
@@ -93,22 +123,47 @@ export default function UnifiedScriptureRecorderCard({
             {onIntel && (
               <TouchableOpacity 
                 style={[styles.listenBtn, { borderColor: theme.border, backgroundColor: showIntel ? `${theme.accent}15` : 'transparent' }]} 
-                onPress={() => setShowIntel(!showIntel)}
+                onPress={() => {
+                  if (!showIntel) {
+                    setShowIntel(true)
+                    if (!intelText) {
+                      onIntel()
+                    }
+                  } else {
+                    setShowIntel(false)
+                  }
+                }}
+                disabled={isLoadingIntel}
               >
-                <Ionicons 
-                  name={showIntel ? "bulb" : "bulb-outline"} 
-                  size={14} 
-                  color={showIntel ? theme.accent : theme.textSecondary} 
-                />
+                {isLoadingIntel && showIntel ? (
+                  <ActivityIndicator size="small" color={theme.accent} />
+                ) : (
+                  <Ionicons 
+                    name={showIntel ? "bulb" : "bulb-outline"} 
+                    size={14} 
+                    color={showIntel ? theme.accent : theme.textSecondary} 
+                  />
+                )}
               </TouchableOpacity>
             )}
             
             <View style={styles.rightActions}>
+              {onToggleLoop && (
+                <TouchableOpacity 
+                  style={[styles.listenBtn, { borderColor: theme.border, backgroundColor: isLooping ? `${theme.accent}15` : 'transparent' }]} 
+                  onPress={onToggleLoop}
+                >
+                  <Ionicons 
+                    name={isLooping ? "repeat" : "repeat-outline"} 
+                    size={14} 
+                    color={isLooping ? theme.accent : theme.textSecondary} 
+                  />
+                </TouchableOpacity>
+              )}
               {onListen && (
                 <TouchableOpacity 
                   style={[styles.listenBtn, { borderColor: theme.border }]} 
                   onPress={onListen}
-                  disabled={isListening}
                 >
                   <Ionicons 
                     name={isListening ? "radio" : "volume-high"} 
@@ -131,7 +186,7 @@ export default function UnifiedScriptureRecorderCard({
                 <Ionicons name="shield-checkmark" size={14} color={theme.accent} />
                 <Text style={[styles.intelTitle, MILITARY_TYPOGRAPHY.caption, { color: theme.accent }]}>TACTICAL INTEL</Text>
               </View>
-              {onReadIntelAloud && (
+              {onReadIntelAloud && intelText && (
                 <TouchableOpacity 
                   onPress={onReadIntelAloud} 
                   disabled={isListeningIntel}
@@ -148,9 +203,18 @@ export default function UnifiedScriptureRecorderCard({
                 </TouchableOpacity>
               )}
             </View>
-            <Text style={[styles.intelText, { color: theme.textSecondary }]}>
-              {intelText || scripture.mnemonic || "No additional intel available."}
-            </Text>
+            {isLoadingIntel && !intelText ? (
+              <View style={styles.intelLoadingContainer}>
+                <ActivityIndicator size="small" color={theme.accent} />
+                <Text style={[styles.intelText, { color: theme.textSecondary, fontStyle: 'normal' }]}>
+                  Retrieving tactical intel...
+                </Text>
+              </View>
+            ) : (
+              <Text style={[styles.intelText, { color: theme.textSecondary }]}>
+                {intelText || scripture.mnemonic || "No additional intel available."}
+              </Text>
+            )}
           </View>
         )}
 
@@ -261,5 +325,10 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
     fontStyle: 'italic',
+  },
+  intelLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
 })

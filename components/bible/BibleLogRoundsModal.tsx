@@ -98,7 +98,7 @@ export default function BibleLogRoundsModal({
 
       onSuccess(targetCollection.id, verses);
       Alert.alert(
-        '🎯 ROUNDS LOGGED',
+        '🎯 ARSENAL UPDATED',
         `${verses.length} verse${verses.length !== 1 ? 's' : ''} added to "${targetCollection.name}"`,
         [{ text: 'DISMISSED', onPress: handleClose }],
       );
@@ -165,7 +165,7 @@ export default function BibleLogRoundsModal({
           <View style={styles.header}>
             <View>
               <Text style={[styles.title, MILITARY_TYPOGRAPHY.heading, { color: theme.text }]}>
-                LOG ROUNDS
+                ADD TO ARSENAL
               </Text>
               <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
                 {verses.length} verse{verses.length !== 1 ? 's' : ''} · {versePreview}

@@ -42,6 +42,7 @@ export default function BattleScreen() {
     const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
     const [showStealthDrill, setShowStealthDrill] = useState(false)
     const [battlesWon, setBattlesWon] = useState(0)
+    const [isLooping, setIsLooping] = useState(false)
 
     const scopedScriptures = useScriptureScope(allScriptures, selectedCollection, selectedChapterIds)
 
@@ -218,6 +219,9 @@ export default function BattleScreen() {
                             onIntel={handleShowIntel}
                             onReadIntelAloud={handleListenIntel}
                             isListeningIntel={isListeningIntel}
+                            isLoadingIntel={isLoadingIntel}
+                            isLooping={isLooping}
+                            onToggleLoop={() => setIsLooping(prev => !prev)}
                         />
                         <ScriptureActionRow
                             onStealth={handleStartStealthBattle}

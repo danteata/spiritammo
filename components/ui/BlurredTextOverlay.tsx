@@ -106,7 +106,6 @@ export default function BlurredTextOverlay({
               },
               textContainerStyle,
             ]}
-            numberOfLines={5}
           >
             {rawText}
           </Text>

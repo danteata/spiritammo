@@ -130,7 +130,7 @@ const SelectionHUD = memo(({
       >
         <Ionicons name="rocket" size={20} color={theme.accentContrastText} />
         <Text style={[styles.primaryActionText, MILITARY_TYPOGRAPHY.button, { color: theme.accentContrastText }]}>
-          LOG ROUNDS TO ARSENAL
+          ADD TO ARSENAL
         </Text>
       </TouchableOpacity>
 

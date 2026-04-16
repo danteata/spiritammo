@@ -69,6 +69,11 @@ export default function CampaignScreen() {
     const [isLoadingIntel, setIsLoadingIntel] = useState(false)
     const [tacticalIntel, setTacticalIntel] = useState<{ battlePlan: string; tacticalNotes: string } | null>(null)
     const [mapContainerHeight, setMapContainerHeight] = useState(0)
+    const [isLooping, setIsLooping] = useState(false)
+
+    useEffect(() => {
+        setTacticalIntel(null)
+    }, [targetScripture?.id])
 
     const handleMapLayout = (e: any) => {
         setMapContainerHeight(e.nativeEvent.layout.height)
@@ -383,6 +388,9 @@ export default function CampaignScreen() {
                         onIntel={handleShowIntel}
                         onReadIntelAloud={handleListenIntel}
                         isListeningIntel={isListeningIntel}
+                        isLoadingIntel={isLoadingIntel}
+                        isLooping={isLooping}
+                        onToggleLoop={() => setIsLooping(prev => !prev)}
                     />
                         <ScriptureActionRow
                             onStealth={() => setPracticeMode('STEALTH')}

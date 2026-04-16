@@ -361,10 +361,24 @@ export default function BibleReaderScreen({
         opacity: headerOpacity,
         backgroundColor: isDark ? theme.background : '#FFFFFF',
         borderBottomColor: theme.border,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        gap: 8,
       }]}>
-        <Text style={[styles.stickyTitleText, { color: theme.text }]}>
-          {currentBook} {currentChapter}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          {chaptersWithArsenal.has(currentChapter) && (
+            <Ionicons name="shield-checkmark" size={14} color={theme.accent} />
+          )}
+          <Text style={[styles.stickyTitleText, { color: theme.text }]}>
+            {currentBook} {currentChapter}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={[styles.miniListenBtn, { backgroundColor: isListeningToChapter ? theme.warning : `${theme.accent}15` }]}
+          onPress={handleListenToChapter}
+        >
+          <Ionicons name={isListeningToChapter ? 'stop-circle' : 'headset'} size={12} color={isListeningToChapter ? '#FFFFFF' : theme.accent} />
+        </TouchableOpacity>
       </Animated.View>
 
       <LinearGradient
@@ -388,16 +402,6 @@ export default function BibleReaderScreen({
             <Text style={[styles.arsenalBannerText, { color: theme.accent }]}>Arsenal verses in this chapter</Text>
           </View>
         )}
-        <TouchableOpacity
-          style={[styles.listenChapterBtn, { backgroundColor: isListeningToChapter ? theme.warning : `${theme.accent}15`, borderColor: isListeningToChapter ? theme.warning : `${theme.accent}30` }]}
-          onPress={handleListenToChapter}
-          activeOpacity={0.8}
-        >
-          <Ionicons name={isListeningToChapter ? 'stop-circle' : 'headset'} size={16} color={isListeningToChapter ? '#FFFFFF' : theme.accent} />
-          <Text style={[styles.listenChapterBtnText, { color: isListeningToChapter ? '#FFFFFF' : theme.accent }]}>
-            {isListeningToChapter ? 'STOP LISTENING' : 'LISTEN TO CHAPTER'}
-          </Text>
-        </TouchableOpacity>
       </LinearGradient>
     </View>
   );
@@ -460,9 +464,36 @@ export default function BibleReaderScreen({
             </TouchableOpacity>
           </View>
           <View style={[styles.bookTitleBar, { backgroundColor: isDark ? theme.background : '#FFFFFF', borderBottomColor: theme.border }]}>
-            <Text style={[styles.bookTitleBarText, { color: theme.text }]} numberOfLines={1}>
-              {currentBook} <Text style={{ color: theme.textSecondary }}>•</Text> Chapter {currentChapter}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                {chaptersWithArsenal.has(currentChapter) && (
+                  <Ionicons name="shield-checkmark" size={16} color={theme.accent} />
+                )}
+                <Text style={[styles.bookTitleBarText, { color: theme.text }]} numberOfLines={1}>
+                  {currentBook} <Text style={{ color: theme.textSecondary }}>•</Text> Chapter {currentChapter}
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[
+                  styles.headerListenBtn,
+                  { 
+                    backgroundColor: isListeningToChapter ? theme.warning : `${theme.accent}15`,
+                    borderColor: isListeningToChapter ? theme.warning : `${theme.accent}30`
+                  }
+                ]}
+                onPress={handleListenToChapter}
+                activeOpacity={0.7}
+              >
+                <Ionicons 
+                  name={isListeningToChapter ? 'stop-circle' : 'headset'} 
+                  size={14} 
+                  color={isListeningToChapter ? '#FFFFFF' : theme.accent} 
+                />
+                <Text style={[styles.headerListenBtnText, { color: isListeningToChapter ? '#FFFFFF' : theme.accent }]}>
+                  {isListeningToChapter ? 'STOP' : 'LISTEN'}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </>
       )}
@@ -581,8 +612,11 @@ const styles = StyleSheet.create({
   bookTitleBar: { paddingHorizontal: 20, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, alignItems: 'center' },
   bookTitleBarText: { fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
   backToBrowseText: { fontSize: 10, fontWeight: '700', letterSpacing: 1.0, fontFamily: 'monospace' },
-  stickyTitle: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, paddingVertical: 10, alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth },
-  stickyTitleText: { fontSize: 15, fontWeight: '700', letterSpacing: 0.5 },
+  stickyTitle: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, paddingVertical: 10, alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, flexDirection: 'row', justifyContent: 'center', gap: 8 },
+  stickyTitleText: { fontSize: 13, fontWeight: '700', letterSpacing: 0.5 },
+  miniListenBtn: { padding: 4, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  headerListenBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1 },
+  headerListenBtnText: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, fontFamily: 'monospace' },
   chapterHero: { paddingTop: 28, paddingBottom: 20, paddingHorizontal: 24, alignItems: 'center' },
   testamentLabel: { fontSize: 10, fontWeight: '700', letterSpacing: 2.0, fontFamily: 'monospace', marginBottom: 6 },
   chapterTitle: { fontSize: 30, fontWeight: '900', letterSpacing: 0.5, marginBottom: 6 },
@@ -591,8 +625,6 @@ const styles = StyleSheet.create({
   chapterArrow: { padding: 4 },
   arsenalBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   arsenalBannerText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, fontFamily: 'monospace' },
-  listenChapterBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 24, borderWidth: 1 },
-  listenChapterBtnText: { fontSize: 11, fontWeight: '700', letterSpacing: 1.0, fontFamily: 'monospace' },
   verseListContent: { paddingBottom: 8 },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 },
   loadingText: { fontSize: 14, fontWeight: '500' },
