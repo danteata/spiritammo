@@ -2,6 +2,7 @@ import * as Speech from 'expo-speech'
 import { AudioPlayer, createAudioPlayer } from 'expo-audio'
 import elevenLabsTTSService, { ElevenLabsTTSService } from './elevenLabsTTS'
 import TTSCache from './ttsCache'
+import convexTTSService from './convexTTS'
 
 export type TTSEngineType = 'elevenlabs' | 'native'
 
@@ -57,6 +58,14 @@ class TTSEngine {
                 }
                 await this.speakWithNative(options)
             }
+        } else if (options.scriptureId && this.isOnline) {
+            try {
+                const played = await this.tryCommunityVoice(options)
+                if (played) return
+            } catch (error) {
+                console.warn('[TTSEngine] Community voice fallback failed:', error)
+            }
+            await this.speakWithNative(options)
         } else {
             await this.speakWithNative(options)
         }
@@ -74,6 +83,75 @@ class TTSEngine {
         } catch (error) {
             console.error('Failed to stop TTS:', error)
         }
+    }
+
+    private static async tryCommunityVoice(options: TTSOptions): Promise<boolean> {
+        const scriptureId = options.scriptureId!
+        const communityVoiceId = convexTTSService.getCommunityVoiceId()
+
+        const cachedUri = await TTSCache.get(scriptureId, communityVoiceId)
+        if (cachedUri) {
+            await this.playAudioFile(cachedUri, options)
+            return true
+        }
+
+        const convexUrl = await convexTTSService.getCommunityAudio(scriptureId, communityVoiceId)
+        if (convexUrl) {
+            await this.playAudioFile(convexUrl, options)
+            this.cacheConvexAudioInBackground(scriptureId, communityVoiceId, convexUrl)
+            return true
+        }
+
+        if (convexTTSService.isAvailable()) {
+            try {
+                const generatedUrl = await convexTTSService.generateAndCache(
+                    scriptureId,
+                    options.text,
+                    communityVoiceId
+                )
+                if (generatedUrl) {
+                    await this.playAudioFile(generatedUrl, options)
+                    this.cacheConvexAudioInBackground(scriptureId, communityVoiceId, generatedUrl)
+                    return true
+                }
+            } catch (error) {
+                console.warn('[TTSEngine] Convex generateAndCache failed:', error)
+            }
+        }
+
+        return false
+    }
+
+    private static cacheConvexAudioInBackground(
+        scriptureId: string,
+        voiceId: string,
+        remoteUrl: string
+    ): void {
+        (async () => {
+            try {
+                const { default: FileSystem } = await import('expo-file-system/legacy')
+                const filename = `tts_${scriptureId}_${voiceId}_convex.mp3`
+                const localUri = `${FileSystem.documentDirectory || ''}tts_cache/${filename}`
+
+                const dirInfo = await FileSystem.getInfoAsync(
+                    `${FileSystem.documentDirectory || ''}tts_cache/`
+                )
+                if (!dirInfo.exists) {
+                    await FileSystem.makeDirectoryAsync(
+                        `${FileSystem.documentDirectory || ''}tts_cache/`,
+                        { intermediates: true }
+                    )
+                }
+
+                const downloadResult = await FileSystem.downloadAsync(remoteUrl, localUri)
+                if (downloadResult.uri) {
+                    await TTSCache.set(scriptureId, voiceId, downloadResult.uri)
+                    console.log('[TTSEngine] Cached community audio locally:', scriptureId)
+                }
+            } catch (error) {
+                console.warn('[TTSEngine] Background cache failed:', error)
+            }
+        })()
     }
 
     private static async speakWithNative(options: TTSOptions): Promise<void> {
@@ -131,6 +209,12 @@ class TTSEngine {
             } catch (cacheError) {
                 console.warn('Failed to cache TTS audio:', cacheError)
             }
+
+            if (convexTTSService.isAvailable()) {
+                convexTTSService.uploadFromLocal(scriptureId, voiceId, audioUri).catch((err) => {
+                    console.warn('[TTSEngine] Convex upload failed:', err)
+                })
+            }
         }
 
         await this.playAudioFile(audioUri, options)
@@ -170,5 +254,7 @@ class TTSEngine {
         })
     }
 }
+
+convexTTSService.initialize()
 
 export default TTSEngine

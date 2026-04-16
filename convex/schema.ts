@@ -190,4 +190,15 @@ export default defineSchema({
         .index("byChallenger", ["challengerSquadId"])
         .index("byDefender", ["defenderSquadId"])
         .index("byStatus", ["status"]),
+
+    // Shared TTS audio cache (community voices for scripture playback)
+    ttsAudio: defineTable({
+        scriptureId: v.string(),
+        voiceId: v.string(),
+        storageId: v.id("_storage"),
+        textHash: v.string(),
+        durationMs: v.optional(v.number()),
+        createdAt: v.number(),
+    })
+        .index("byScriptureAndVoice", ["scriptureId", "voiceId"]),
 });

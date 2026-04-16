@@ -10,7 +10,10 @@
 
 import type * as challenges from "../challenges.js";
 import type * as presence from "../presence.js";
+import type * as squadOperations from "../squadOperations.js";
+import type * as squadWars from "../squadWars.js";
 import type * as squads from "../squads.js";
+import type * as ttsAudio from "../ttsAudio.js";
 import type * as users from "../users.js";
 
 import type {
@@ -22,7 +25,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   challenges: typeof challenges;
   presence: typeof presence;
+  squadOperations: typeof squadOperations;
+  squadWars: typeof squadWars;
   squads: typeof squads;
+  ttsAudio: typeof ttsAudio;
   users: typeof users;
 }>;
 
