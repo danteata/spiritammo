@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors'
@@ -18,6 +18,7 @@ interface UnifiedScriptureRecorderCardProps {
   onClose?: () => void
   isListening?: boolean
   isListeningIntel?: boolean
+  showViewInContext?: boolean
 }
 
 export default function UnifiedScriptureRecorderCard({
@@ -31,6 +32,7 @@ export default function UnifiedScriptureRecorderCard({
   onClose,
   isListening = false,
   isListeningIntel = false,
+  showViewInContext = true,
 }: UnifiedScriptureRecorderCardProps) {
   const { theme, isDark } = useAppStore()
   const [isRecording, setIsRecording] = useState(false)
@@ -46,6 +48,19 @@ export default function UnifiedScriptureRecorderCard({
     }
   }, [intelText])
 
+  const handleViewInContext = useCallback(() => {
+    try {
+      const bibleTab = require('@/app/(tabs)/bible')
+      bibleTab.navigateToBibleVerse?.({
+        book: scripture.book,
+        chapter: scripture.chapter,
+        verse: scripture.verse,
+      })
+    } catch (e) {
+      console.warn('Bible tab not available for deep link:', e)
+    }
+  }, [scripture])
+
   return (
     <View style={[styles.container, { backgroundColor: theme.surface, borderColor: theme.border }]}>
       <ScriptureCard
@@ -53,6 +68,7 @@ export default function UnifiedScriptureRecorderCard({
         isBattleMode={isBattleMode}
         isRecording={isRecording}
         embedded
+        onViewInContext={showViewInContext ? handleViewInContext : undefined}
       />
 
       {onClose && (
@@ -176,6 +192,7 @@ const styles = StyleSheet.create({
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 10,
   },
   recorderTitle: {
     letterSpacing: 1,
@@ -183,9 +200,10 @@ const styles = StyleSheet.create({
   listenBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    height: 28,
     borderRadius: 6,
     borderWidth: 1,
   },
@@ -204,22 +222,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  closeCircleBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  closeBtn: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   intelContainer: {
     marginVertical: 10,

@@ -10,9 +10,13 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
+  TextInput,
+  Modal,
+  KeyboardAvoidingView,
+  Clipboard,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { useAppStore } from '@/hooks/useAppStore';
@@ -37,6 +41,7 @@ interface BibleReaderScreenProps {
   initialBook?: string;
   initialChapter?: number;
   initialVerse?: number;
+  deepLinkKey?: number;
   onRequestAddToCollection: (verses: Scripture[], collection?: Collection) => void;
   onRequestDrill: (verses: Scripture[]) => void;
 }
@@ -45,6 +50,7 @@ export default function BibleReaderScreen({
   initialBook,
   initialChapter,
   initialVerse,
+  deepLinkKey,
   onRequestAddToCollection,
   onRequestDrill,
 }: BibleReaderScreenProps) {
@@ -93,6 +99,14 @@ export default function BibleReaderScreen({
     extrapolate: 'clamp',
   });
 
+  const onScrollToIndexFailed = useCallback((info: { index: number; highestMeasuredFrameIndex: number; averageItemLength: number }) => {
+    const offset = info.averageItemLength * info.index;
+    flatListRef.current?.scrollToOffset({ offset, animated: true });
+    setTimeout(() => {
+      flatListRef.current?.scrollToIndex({ index: info.index, animated: true, viewPosition: 0.3 });
+    }, 500);
+  }, []);
+
   // Load chapter verses
   const loadChapter = useCallback(async (book: string, chapter: number) => {
     setIsLoadingChapter(true);
@@ -120,6 +134,14 @@ export default function BibleReaderScreen({
     }
   }, []);
 
+  // React to deep-link changes after mount (e.g. "View in Context" from another tab)
+  useEffect(() => {
+    if (initialBook && deepLinkKey !== undefined && deepLinkKey > 0) {
+      navigateToVerse(initialBook, initialChapter || 1, initialVerse);
+      setMode('reading');
+    }
+  }, [deepLinkKey]);
+
   // Reload whenever book/chapter changes
   useEffect(() => {
     if (mode === 'reading') {
@@ -129,15 +151,15 @@ export default function BibleReaderScreen({
 
   // Scroll to highlighted verse after load
   useEffect(() => {
-    if (highlightedVerse && chapterVerses.length > 0) {
+    if (!isLoadingChapter && highlightedVerse && chapterVerses.length > 0) {
       const index = chapterVerses.findIndex(v => v.verse === highlightedVerse);
       if (index >= 0) {
         setTimeout(() => {
           flatListRef.current?.scrollToIndex({ index, animated: true, viewPosition: 0.3 });
-        }, 400);
+        }, 800);
       }
     }
-  }, [highlightedVerse, chapterVerses]);
+  }, [highlightedVerse, chapterVerses, isLoadingChapter, deepLinkKey]);
 
   const handleBookSelect = useCallback((book: Book) => {
     setCurrentBook(book.name);
@@ -166,23 +188,36 @@ export default function BibleReaderScreen({
     });
   }, [selectedVerses, saveHighlight]);
 
+  const [noteModalVisible, setNoteModalVisible] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const [noteVerseId, setNoteVerseId] = useState('');
+
   const handleAddNote = useCallback(() => {
     if (selectedVerses.length === 0) return;
     const verse = selectedVerses[0];
     const existing = notes.get(verse.id) || '';
+    setNoteVerseId(verse.id);
+    setNoteText(existing);
+    setNoteModalVisible(true);
+  }, [selectedVerses, notes]);
 
-    Alert.prompt(
-      'MISSION NOTE',
-      `Add tactical intelligence to ${verse.reference}`,
-      [
-        { text: 'CANCEL', style: 'cancel' },
-        { text: 'DELETE', style: 'destructive', onPress: () => saveNote(verse.id, '') },
-        { text: 'SAVE', onPress: (text?: string) => saveNote(verse.id, text || '') },
-      ],
-      'plain-text',
-      existing
-    );
-  }, [selectedVerses, notes, saveNote]);
+  const handleSaveNote = useCallback(() => {
+    if (noteVerseId) {
+      saveNote(noteVerseId, noteText);
+    }
+    setNoteModalVisible(false);
+    setNoteText('');
+    setNoteVerseId('');
+  }, [noteVerseId, noteText, saveNote]);
+
+  const handleDeleteNote = useCallback(() => {
+    if (noteVerseId) {
+      saveNote(noteVerseId, '');
+    }
+    setNoteModalVisible(false);
+    setNoteText('');
+    setNoteVerseId('');
+  }, [noteVerseId, saveNote]);
 
   const onGestureEvent = useCallback(({ nativeEvent }: any) => {
     if (nativeEvent.state === State.END) {
@@ -198,21 +233,74 @@ export default function BibleReaderScreen({
     }
   }, [goToPreviousChapter, goToNextChapter, currentChapterCount]);
 
-  const handleShare = useCallback(async () => {
+  const handleShare = useCallback(() => {
     if (selectedVerses.length === 0) return;
-    const verse = selectedVerses[0];
-    Alert.alert('Share', `Generating beautiful card for ${verse.reference}... (Developer: Implementation in progress)`);
+    const text = selectedVerses.map(v => `"${v.text}" — ${v.reference}`).join('\n\n');
+    Clipboard.setString(text);
+    Alert.alert('Copied to Clipboard', 'Verse text ready to share from clipboard.');
   }, [selectedVerses]);
 
   const [activelyReadingVerseId, setActivelyReadingVerseId] = useState<string | null>(null);
+  const [isListeningToChapter, setIsListeningToChapter] = useState(false);
   const isReadingRef = useRef(false);
 
-  // Sequential Playback
+  const handleListenToChapter = useCallback(async () => {
+    if (isReadingRef.current) {
+      VoicePlaybackService.stopPlayback();
+      isReadingRef.current = false;
+      setActivelyReadingVerseId(null);
+      setIsListeningToChapter(false);
+      return;
+    }
+
+    const scriptures: Scripture[] = chapterVerses.map(v => ({
+      id: `${v.book.toLowerCase()}-${v.chapter}-${v.verse}`,
+      book: v.book,
+      chapter: v.chapter,
+      verse: v.verse,
+      endVerse: v.verse,
+      text: v.text,
+      reference: v.reference,
+      mnemonic: '',
+      isJesusWords: v.isJesusWords,
+    }));
+
+    isReadingRef.current = true;
+    setIsListeningToChapter(true);
+
+    for (const v of scriptures) {
+      if (!isReadingRef.current) break;
+      setActivelyReadingVerseId(v.id);
+
+      const idx = chapterVerses.findIndex(cv => cv.reference === v.reference);
+      if (idx !== -1) {
+        requestAnimationFrame(() => {
+          flatListRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.2 });
+        });
+      }
+
+      await new Promise<void>((resolve) => {
+        VoicePlaybackService.playTextToSpeech(`${v.reference}. ${v.text}`, {
+          scriptureId: v.id,
+          onDone: () => resolve(),
+          onError: () => resolve(),
+          rate: userSettings?.voiceRate || 0.9,
+          pitch: userSettings?.voicePitch || 1.0,
+        });
+      });
+    }
+
+    setActivelyReadingVerseId(null);
+    isReadingRef.current = false;
+    setIsListeningToChapter(false);
+  }, [chapterVerses, userSettings]);
+
   const handleSequentialListen = useCallback(async (verses: Scripture[]) => {
     if (isReadingRef.current) {
       VoicePlaybackService.stopPlayback();
       isReadingRef.current = false;
       setActivelyReadingVerseId(null);
+      setIsListeningToChapter(false);
       return;
     }
 
@@ -221,14 +309,16 @@ export default function BibleReaderScreen({
       if (!isReadingRef.current) break;
       setActivelyReadingVerseId(v.id);
       
-      // Auto-scroll to verse if it's not in view
       const idx = chapterVerses.findIndex(cv => cv.reference === v.reference);
       if (idx !== -1) {
-        flatListRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.2 });
+        requestAnimationFrame(() => {
+          flatListRef.current?.scrollToIndex({ index: idx, animated: true, viewPosition: 0.2 });
+        });
       }
 
       await new Promise<void>((resolve) => {
         VoicePlaybackService.playTextToSpeech(`${v.reference}. ${v.text}`, {
+          scriptureId: v.id,
           onDone: () => resolve(),
           onError: () => resolve(),
           rate: userSettings?.voiceRate || 0.9,
@@ -245,22 +335,15 @@ export default function BibleReaderScreen({
 
   const renderVerse = useCallback(({ item }: { item: BibleVerse }) => {
     const verseId = `${item.book.toLowerCase()}-${item.chapter}-${item.verse}`;
-    const isSelected = selectedVerseIds.has(verseId);
-    const isHighlighted = item.verse === highlightedVerse;
-    const arsenalData = getArsenalData(item);
-    const highlightColor = highlights.get(verseId);
-    const hasNote = notes.has(verseId);
-    const isActivelyReading = verseId === activelyReadingVerseId;
-
     return (
       <VerseRow
         verse={item}
-        isSelected={isSelected}
-        isHighlighted={isHighlighted}
-        highlightColor={highlightColor}
-        hasNote={hasNote}
-        isActivelyReading={isActivelyReading}
-        arsenalData={arsenalData}
+        isSelected={selectedVerseIds.has(verseId)}
+        isHighlighted={item.verse === highlightedVerse}
+        highlightColor={highlights.get(verseId)}
+        hasNote={notes.has(verseId)}
+        isActivelyReading={verseId === activelyReadingVerseId}
+        arsenalData={getArsenalData(item)}
         onPress={toggleVerseSelection}
         onLongPress={handleVerseLongPress}
         theme={theme}
@@ -268,7 +351,7 @@ export default function BibleReaderScreen({
         userSettings={userSettings}
       />
     );
-  }, [selectedVerseIds, highlightedVerse, getArsenalData, highlights, notes, activelyReadingVerseId, toggleVerseSelection, handleVerseLongPress, theme, isDark, userSettings]);
+  }, [selectedVerseIds, highlightedVerse, highlights, notes, activelyReadingVerseId, getArsenalData, toggleVerseSelection, handleVerseLongPress, theme, isDark, userSettings]);
 
   const keyExtractor = useCallback((item: BibleVerse) => `${item.chapter}:${item.verse}`, []);
 
@@ -305,6 +388,16 @@ export default function BibleReaderScreen({
             <Text style={[styles.arsenalBannerText, { color: theme.accent }]}>Arsenal verses in this chapter</Text>
           </View>
         )}
+        <TouchableOpacity
+          style={[styles.listenChapterBtn, { backgroundColor: isListeningToChapter ? theme.warning : `${theme.accent}15`, borderColor: isListeningToChapter ? theme.warning : `${theme.accent}30` }]}
+          onPress={handleListenToChapter}
+          activeOpacity={0.8}
+        >
+          <Ionicons name={isListeningToChapter ? 'stop-circle' : 'headset'} size={16} color={isListeningToChapter ? '#FFFFFF' : theme.accent} />
+          <Text style={[styles.listenChapterBtnText, { color: isListeningToChapter ? '#FFFFFF' : theme.accent }]}>
+            {isListeningToChapter ? 'STOP LISTENING' : 'LISTEN TO CHAPTER'}
+          </Text>
+        </TouchableOpacity>
       </LinearGradient>
     </View>
   );
@@ -349,22 +442,29 @@ export default function BibleReaderScreen({
       </View>
 
       {mode === 'reading' && (
-        <View style={styles.navTools}>
-          <TouchableOpacity
-            style={[styles.backToBrowse, { backgroundColor: isDark ? theme.surface : '#F1F5F9' }]}
-            onPress={() => { clearSelection(); setMode('browsing'); }}
-          >
-            <Ionicons name="grid" size={14} color={theme.textSecondary} />
-            <Text style={[styles.backToBrowseText, { color: theme.textSecondary }]}>BROWSE BOOKS</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.settingsToggle, { backgroundColor: isDark ? theme.surface : '#F1F5F9' }]}
-            onPress={() => setIsSettingsVisible(true)}
-          >
-            <Ionicons name="options" size={16} color={theme.textSecondary} />
-            <Text style={[styles.backToBrowseText, { color: theme.textSecondary }]}>DISPLAY</Text>
-          </TouchableOpacity>
-        </View>
+        <>
+          <View style={styles.navTools}>
+            <TouchableOpacity
+              style={[styles.backToBrowse, { backgroundColor: isDark ? theme.surface : '#F1F5F9' }]}
+              onPress={() => { clearSelection(); setMode('browsing'); }}
+            >
+              <Ionicons name="grid" size={14} color={theme.textSecondary} />
+              <Text style={[styles.backToBrowseText, { color: theme.textSecondary }]}>BROWSE BOOKS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.settingsToggle, { backgroundColor: isDark ? theme.surface : '#F1F5F9' }]}
+              onPress={() => setIsSettingsVisible(true)}
+            >
+              <Ionicons name="options" size={16} color={theme.textSecondary} />
+              <Text style={[styles.backToBrowseText, { color: theme.textSecondary }]}>DISPLAY</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={[styles.bookTitleBar, { backgroundColor: isDark ? theme.background : '#FFFFFF', borderBottomColor: theme.border }]}>
+            <Text style={[styles.bookTitleBarText, { color: theme.text }]} numberOfLines={1}>
+              {currentBook} <Text style={{ color: theme.textSecondary }}>•</Text> Chapter {currentChapter}
+            </Text>
+          </View>
+        </>
       )}
 
       {mode === 'browsing' ? (
@@ -404,6 +504,7 @@ export default function BibleReaderScreen({
                 data={chapterVerses}
                 renderItem={renderVerse}
                 keyExtractor={keyExtractor}
+                onScrollToIndexFailed={onScrollToIndexFailed}
                 ListHeaderComponent={renderHeader}
                 ListFooterComponent={renderFooter}
                 onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
@@ -411,6 +512,10 @@ export default function BibleReaderScreen({
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.verseListContent}
                 keyboardShouldPersistTaps="handled"
+                initialNumToRender={20}
+                maxToRenderPerBatch={15}
+                windowSize={8}
+                removeClippedSubviews={Platform.OS === 'android'}
               />
             </PanGestureHandler>
           )}
@@ -430,6 +535,37 @@ export default function BibleReaderScreen({
           />
 
           <ReaderSettingsModal isVisible={isSettingsVisible} onClose={() => setIsSettingsVisible(false)} />
+
+          <Modal visible={noteModalVisible} transparent animationType="slide" onRequestClose={() => setNoteModalVisible(false)}>
+            <KeyboardAvoidingView style={styles.noteModalOverlay} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+              <TouchableOpacity style={styles.noteModalDismissArea} activeOpacity={1} onPress={() => setNoteModalVisible(false)} />
+              <View style={[styles.noteModalSheet, { backgroundColor: isDark ? '#0F172A' : '#FFFFFF' }]}>
+                <View style={[styles.noteModalHandle, { backgroundColor: theme.border }]} />
+                <Text style={[styles.noteModalTitle, { color: theme.text }]}>MISSION NOTE</Text>
+                <TextInput
+                  style={[styles.noteModalInput, { color: theme.text, borderColor: theme.border, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F8FAFC' }]}
+                  placeholder="Add tactical intelligence..."
+                  placeholderTextColor={theme.textSecondary}
+                  value={noteText}
+                  onChangeText={setNoteText}
+                  autoFocus
+                  multiline
+                  maxLength={500}
+                />
+                <View style={styles.noteModalActions}>
+                  <TouchableOpacity style={[styles.noteModalBtn, { backgroundColor: '#EF444420' }]} onPress={handleDeleteNote}>
+                    <Text style={[styles.noteModalBtnText, { color: '#EF4444' }]}>DELETE</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={{ flex: 1 }} onPress={() => setNoteModalVisible(false)}>
+                    <Text style={[styles.noteModalBtnText, { color: theme.textSecondary, textAlign: 'center' }]}>CANCEL</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.noteModalBtn, { backgroundColor: theme.accent }]} onPress={handleSaveNote}>
+                    <Text style={[styles.noteModalBtnText, { color: theme.accentContrastText }]}>SAVE</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </KeyboardAvoidingView>
+          </Modal>
         </>
       )}
     </View>
@@ -442,6 +578,8 @@ const styles = StyleSheet.create({
   backToBrowse: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 },
   settingsToggle: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, gap: 6 },
   navTools: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginHorizontal: 16, marginBottom: 4 },
+  bookTitleBar: { paddingHorizontal: 20, paddingVertical: 10, borderBottomWidth: StyleSheet.hairlineWidth, alignItems: 'center' },
+  bookTitleBarText: { fontSize: 16, fontWeight: '700', letterSpacing: 0.3 },
   backToBrowseText: { fontSize: 10, fontWeight: '700', letterSpacing: 1.0, fontFamily: 'monospace' },
   stickyTitle: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10, paddingVertical: 10, alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth },
   stickyTitleText: { fontSize: 15, fontWeight: '700', letterSpacing: 0.5 },
@@ -453,6 +591,8 @@ const styles = StyleSheet.create({
   chapterArrow: { padding: 4 },
   arsenalBanner: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1 },
   arsenalBannerText: { fontSize: 11, fontWeight: '700', letterSpacing: 0.6, fontFamily: 'monospace' },
+  listenChapterBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 24, borderWidth: 1 },
+  listenChapterBtnText: { fontSize: 11, fontWeight: '700', letterSpacing: 1.0, fontFamily: 'monospace' },
   verseListContent: { paddingBottom: 8 },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 14 },
   loadingText: { fontSize: 14, fontWeight: '500' },
@@ -460,4 +600,13 @@ const styles = StyleSheet.create({
   footerNavRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginBottom: 8 },
   footerNavBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 14, borderRadius: 12, gap: 6 },
   footerNavText: { fontSize: 14, fontWeight: '600' },
+  noteModalOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' },
+  noteModalDismissArea: { flex: 1 },
+  noteModalSheet: { borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: 20, paddingTop: 12, paddingBottom: 36 },
+  noteModalHandle: { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginBottom: 16 },
+  noteModalTitle: { fontSize: 14, fontWeight: '700', letterSpacing: 1.2, fontFamily: 'monospace', marginBottom: 12 },
+  noteModalInput: { borderWidth: 1.5, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, minHeight: 100, textAlignVertical: 'top', marginBottom: 16 },
+  noteModalActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  noteModalBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center' },
+  noteModalBtnText: { fontSize: 14, fontWeight: '700', letterSpacing: 0.8, fontFamily: 'monospace' },
 });

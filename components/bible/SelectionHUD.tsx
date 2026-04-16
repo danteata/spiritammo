@@ -6,8 +6,8 @@ import {
   StyleSheet,
   Animated,
   Alert,
-  Clipboard,
   ScrollView,
+  Clipboard,
 } from 'react-native';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { Scripture } from '@/types/scripture';

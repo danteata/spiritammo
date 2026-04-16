@@ -6,7 +6,8 @@ import {
   TouchableOpacity,
   Platform,
 } from 'react-native'
-import { FontAwesome } from '@expo/vector-icons';
+import { FontAwesome, FontAwesome5 } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { Scripture } from '@/types/scripture'
 import { useTheme } from '@/hooks/useTheme'
 import ScriptureText from './ScriptureText'
@@ -19,6 +20,7 @@ interface ScriptureCardProps {
   isBattleMode?: boolean
   isRecording?: boolean
   embedded?: boolean
+  onViewInContext?: () => void
 }
 
 export default function ScriptureCard({
@@ -28,6 +30,7 @@ export default function ScriptureCard({
   isBattleMode = false,
   isRecording = false,
   embedded = false,
+  onViewInContext,
 }: ScriptureCardProps) {
   const { theme, isDark } = useTheme()
   const [revealed, setRevealed] = useState(false)
@@ -79,6 +82,16 @@ export default function ScriptureCard({
           <Text style={[styles.reference, { color: textColor }]}>
             {scripture.reference}
           </Text>
+          {onViewInContext && (
+            <TouchableOpacity
+              onPress={onViewInContext}
+              hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+              style={[styles.bibleIconBtn, { borderColor: theme.border }]}
+            >
+              <FontAwesome5 name="bible" size={12} color={theme.textSecondary} />
+              <Ionicons name="chevron-forward" size={10} color={theme.textSecondary} />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.iconContainer}>
@@ -184,6 +197,9 @@ const styles = StyleSheet.create({
   referenceContainer: {
     flex: 1,
     marginRight: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
   iconContainer: {
     alignItems: 'flex-end',
@@ -191,6 +207,16 @@ const styles = StyleSheet.create({
   reference: {
     fontSize: 20,
     fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  bibleIconBtn: {
+    height: 28,
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: 8,
     marginBottom: 12,
   },
   text: {

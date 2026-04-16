@@ -133,7 +133,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
                                 {tts.ttsEngine === 'elevenlabs' && <View style={[styles.activeDot, { backgroundColor: theme.accent }]} />}
                             </View>
                             <ThemedText variant="caption" style={styles.optionDescription}>
-                                Neural text-to-speech via ElevenLabs. Humanlike voices with caching for instant replay.
+                                Neural text-to-speech via ElevenLabs. Humanlike voices with local + community cloud caching.
                             </ThemedText>
                         </TouchableOpacity>
                     </ThemedCard>
@@ -362,7 +362,7 @@ export const VoiceSettingsModal: React.FC<VoiceSettingsModalProps> = ({
                             </View>
 
                             <ThemedText variant="caption" style={styles.cacheHint}>
-                                Cached verses play instantly without using API quota. Cache fills automatically as you practice.
+                                Local cache: verses play instantly without API quota. Cloud cache: shared community audio for all users.
                             </ThemedText>
                         </ThemedCard>
                     )}

@@ -31,7 +31,7 @@ export default function TabsLayout() {
 
       <NativeTabs.Trigger name="arsenal">
         <NativeTabs.Trigger.Label>Arsenal</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="book.fill" md="menu_book" />
+        <NativeTabs.Trigger.Icon sf="shield.fill" md="shield" />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="profile">

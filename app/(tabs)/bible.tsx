@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
+import { router } from 'expo-router';
 import { useAppStore } from '@/hooks/useAppStore';
-import { Scripture } from '@/types/scripture';
+import { Scripture, Collection } from '@/types/scripture';
 import BibleReaderScreen from '@/components/bible/BibleReaderScreen';
 import BibleLogRoundsModal from '@/components/bible/BibleLogRoundsModal';
 
@@ -15,15 +16,18 @@ export interface BibleDeepLinkTarget {
 export let navigateToBibleVerse: ((target: BibleDeepLinkTarget) => void) | null = null;
 
 export default function BibleTab() {
-  const { theme, addScriptures, startTraining } = useAppStore();
+  const { theme, addScriptures, addCollection, addScripturesToCollection, startTraining } = useAppStore();
   const [isLogModalVisible, setIsLogModalVisible] = useState(false);
   const [pendingVerses, setPendingVerses] = useState<Scripture[]>([]);
   const [deepLinkTarget, setDeepLinkTarget] = useState<BibleDeepLinkTarget | undefined>(undefined);
+  const [deepLinkKey, setDeepLinkKey] = useState(0);
 
   // Register the deep-link handler (called by AmmunitionCard "View in Context")
   useEffect(() => {
     navigateToBibleVerse = (target: BibleDeepLinkTarget) => {
       setDeepLinkTarget(target);
+      setDeepLinkKey(k => k + 1);
+      router.push('/(tabs)/bible');
     };
     return () => {
       navigateToBibleVerse = null;
@@ -49,8 +53,20 @@ export default function BibleTab() {
           onPress: async () => {
             try {
               await addScriptures(verses);
-              // Navigate to the Train tab and start a single-verse drill
-              startTraining('single');
+
+              const drillCollectionId = `drill_${Date.now()}`;
+              const drillCollection: Collection = {
+                id: drillCollectionId,
+                name: 'BIBLE DRILL',
+                scriptures: verses.map(v => v.id),
+                createdAt: new Date().toISOString(),
+                tags: ['bible-drill', 'auto'],
+              };
+              await addCollection(drillCollection);
+              await addScripturesToCollection(drillCollectionId, verses.map(v => v.id));
+
+              startTraining('single', drillCollectionId);
+              router.push('/(tabs)/train');
             } catch (e) {
               console.error('Drill Now error:', e);
               Alert.alert('Error', 'Unable to start drill. Please try again.');
@@ -59,7 +75,7 @@ export default function BibleTab() {
         },
       ],
     );
-  }, [addScriptures, startTraining]);
+  }, [addScriptures, addCollection, addScripturesToCollection, startTraining]);
 
   const handleLogSuccess = useCallback((collectionId: string, verses: Scripture[]) => {
     setIsLogModalVisible(false);
@@ -77,6 +93,7 @@ export default function BibleTab() {
         initialBook={deepLinkTarget?.book}
         initialChapter={deepLinkTarget?.chapter}
         initialVerse={deepLinkTarget?.verse}
+        deepLinkKey={deepLinkKey}
         onRequestAddToCollection={handleAddToCollection}
         onRequestDrill={handleDrillNow}
       />
