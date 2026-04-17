@@ -61,11 +61,8 @@ class TTSEngine {
                 return
             } catch (error) {
                 const readableError = ChatterboxTTSService.getHumanReadableError(error)
-                console.warn('[TTSEngine] Chatterbox failed:', readableError)
+                console.warn('[TTSEngine] Chatterbox failed:', readableError, '— falling back to native TTS')
                 options.onError?.(new Error(readableError))
-                if (readableError.includes('Cannot connect') || readableError.includes('still loading')) {
-                    return
-                }
                 await this.speakWithNative(opts)
             }
         } else if (engine === 'elevenlabs') {
@@ -77,13 +74,10 @@ class TTSEngine {
                     await this.speakWithElevenLabs(opts)
                     return
                 } catch (error) {
-                    const readableError = ElevenLabsTTSService.getHumanReadableError(error)
-                    console.warn('[TTSEngine] ElevenLabs failed:', readableError)
-                    if (ElevenLabsTTSService.isPaymentRequiredError(error)) {
-                        options.onError?.(new Error(readableError))
-                        return
-                    }
-                    await this.speakWithNative(opts)
+                const readableError = ElevenLabsTTSService.getHumanReadableError(error)
+                console.warn('[TTSEngine] ElevenLabs failed:', readableError, '— falling back to native TTS')
+                options.onError?.(new Error(readableError))
+                await this.speakWithNative(opts)
                 }
             } else {
                 await this.speakWithNative(opts)

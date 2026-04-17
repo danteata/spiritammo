@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
     StyleSheet, View, TouchableOpacity, Animated,
-    ActivityIndicator, Alert, ScrollView,
+    ActivityIndicator, Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import BlurredTextOverlay from '@/components/ui/BlurredTextOverlay';
@@ -488,76 +488,69 @@ export default function VoiceOpsScreen() {
 
     return (
         <ThemedContainer style={styles.container}>
-            <ScrollView
-                style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-            >
-                {/* Mission Stats — compact */}
-                {isRunning && (
-                    <View style={[styles.statsBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
-                        {[
-                            { label: 'ATTEMPTED', val: versesAttempted, color: accentColor },
-                            { label: 'HITS', val: versesHit, color: theme.success },
-                            { label: 'SKIPPED', val: skippedCount, color: theme.textSecondary },
-                        ].map((s) => (
-                            <View key={s.label} style={styles.statItem}>
-                                <ThemedText variant="caption" style={styles.statLabel}>{s.label}</ThemedText>
-                                <ThemedText variant="heading" style={[styles.statValue, { color: s.color }]}>{s.val}</ThemedText>
-                            </View>
-                        ))}
-                    </View>
-                )}
-
-                {/* Progress bar */}
-                {isRunning && sessionLength > 0 && (
-                    <View style={styles.progressSection}>
-                        <ThemedText variant="caption" style={styles.progressLabel}>
-                            Verse {versesAttempted} of {sessionLength}
-                        </ThemedText>
-                        <View style={[styles.progressBarBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
-                            <View
-                                style={[styles.progressBarFill, {
-                                    width: `${Math.min((versesAttempted / sessionLength) * 100, 100)}%`,
-                                    backgroundColor: accentColor,
-                                }]}
-                            />
+            <ScreenHeader title="VOICE OPS" subtitle="HANDS-FREE DRILL" />
+            <View style={styles.layout}>
+                <View style={styles.topZone}>
+                    {isRunning && (
+                        <View style={[styles.statsBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
+                            {[
+                                { label: 'ATTEMPTED', val: versesAttempted, color: accentColor },
+                                { label: 'HITS', val: versesHit, color: theme.success },
+                                { label: 'SKIPPED', val: skippedCount, color: theme.textSecondary },
+                            ].map((s) => (
+                                <View key={s.label} style={styles.statItem}>
+                                    <ThemedText variant="caption" style={styles.statLabel}>{s.label}</ThemedText>
+                                    <ThemedText variant="heading" style={[styles.statValue, { color: s.color }]}>{s.val}</ThemedText>
+                                </View>
+                            ))}
                         </View>
-                    </View>
-                )}
+                    )}
 
-                {/* Current target — reference + blurred verse text during briefing/listening */}
-                {currentScripture && isRunning && (phase === 'listening' || phase === 'briefing') && !showVerseText && (
-                    <View style={styles.targetCard}>
-                        <ThemedText variant="caption" style={styles.label}>CURRENT TARGET</ThemedText>
-                        <ThemedText variant="heading" style={[styles.reference, { color: accentColor }]}>
-                            {currentScripture.reference}
-                        </ThemedText>
-                        <BlurredTextOverlay containerStyle={styles.hiddenTextWrapper}>
-                            <ThemedText variant="body" style={styles.blurredVerseText}>
+                    {isRunning && sessionLength > 0 && (
+                        <View style={styles.progressSection}>
+                            <ThemedText variant="caption" style={styles.progressLabel}>
+                                Verse {versesAttempted} of {sessionLength}
+                            </ThemedText>
+                            <View style={[styles.progressBarBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+                                <View
+                                    style={[styles.progressBarFill, {
+                                        width: `${Math.min((versesAttempted / sessionLength) * 100, 100)}%`,
+                                        backgroundColor: accentColor,
+                                    }]}
+                                />
+                            </View>
+                        </View>
+                    )}
+
+                    {currentScripture && isRunning && (phase === 'listening' || phase === 'briefing') && !showVerseText && (
+                        <View style={styles.targetCard}>
+                            <ThemedText variant="caption" style={styles.label}>CURRENT TARGET</ThemedText>
+                            <ThemedText variant="heading" style={[styles.reference, { color: accentColor }]}>
+                                {currentScripture.reference}
+                            </ThemedText>
+                            <BlurredTextOverlay containerStyle={styles.hiddenTextWrapper}>
+                                <ThemedText variant="body" style={styles.blurredVerseText}>
+                                    {currentScripture.text}
+                                </ThemedText>
+                            </BlurredTextOverlay>
+                        </View>
+                    )}
+
+                    {currentScripture && isRunning && showVerseText && (
+                        <View style={styles.targetCard}>
+                            <ThemedText variant="caption" style={styles.label}>VERSE</ThemedText>
+                            <ThemedText variant="heading" style={[styles.reference, { color: accentColor }]}>
+                                {currentScripture.reference}
+                            </ThemedText>
+                            <ThemedText variant="body" style={styles.verseText}>
                                 {currentScripture.text}
                             </ThemedText>
-                        </BlurredTextOverlay>
-                    </View>
-                )}
+                        </View>
+                    )}
+                </View>
 
-                {/* Skip — show verse text so user can read along */}
-                {currentScripture && isRunning && showVerseText && (
-                    <View style={styles.targetCard}>
-                        <ThemedText variant="caption" style={styles.label}>VERSE</ThemedText>
-                        <ThemedText variant="heading" style={[styles.reference, { color: accentColor }]}>
-                            {currentScripture.reference}
-                        </ThemedText>
-                        <ThemedText variant="body" style={styles.verseText}>
-                            {currentScripture.text}
-                        </ThemedText>
-                    </View>
-                )}
-
-                {/* Center Stage */}
+                {/* Center zone: main stage content */}
                 <View style={styles.centerStage}>
-
-                    {/* IDLE */}
                     {phase === 'idle' && !isRunning && (
                         <View style={styles.startContainer}>
                             <TouchableOpacity
@@ -634,7 +627,6 @@ export default function VoiceOpsScreen() {
                         </View>
                     )}
 
-                    {/* BRIEFING */}
                     {phase === 'briefing' && (
                         <View style={styles.stageContent}>
                             <Ionicons name="volume-medium" size={48} color={theme.textSecondary} />
@@ -642,7 +634,6 @@ export default function VoiceOpsScreen() {
                         </View>
                     )}
 
-                    {/* LISTENING */}
                     {phase === 'listening' && (
                         <View style={styles.listeningContainer}>
                             <View style={styles.radarCenter}>
@@ -675,7 +666,6 @@ export default function VoiceOpsScreen() {
                         </View>
                     )}
 
-                    {/* SKIPPING */}
                     {phase === 'skipping' && (
                         <View style={styles.stageContent}>
                             <Ionicons name="volume-medium" size={48} color={theme.textSecondary} />
@@ -683,7 +673,6 @@ export default function VoiceOpsScreen() {
                         </View>
                     )}
 
-                    {/* EVALUATING */}
                     {phase === 'evaluating' && (
                         <View style={styles.stageContent}>
                             <ActivityIndicator size="large" color={accentColor} />
@@ -691,7 +680,6 @@ export default function VoiceOpsScreen() {
                         </View>
                     )}
 
-                    {/* DEBRIEF */}
                     {phase === 'debrief' && (
                         <View style={styles.debriefContainer}>
                             <ThemedText variant="heading" style={[styles.accuracyText, { color: accuracy >= 80 ? theme.success : theme.error }]}>
@@ -722,27 +710,30 @@ export default function VoiceOpsScreen() {
                     )}
                 </View>
 
-                {/* Abort — always visible when running */}
-                {isRunning && (
-                    <TouchableOpacity
-                        style={[styles.abortButton, { borderColor: theme.error }]}
-                        onPress={handleAbortMission}
-                    >
-                        <Ionicons name="close-circle" size={18} color={theme.error} />
-                        <ThemedText variant="caption" style={[styles.abortText, { color: theme.error }]}>
-                            END SESSION
-                        </ThemedText>
-                    </TouchableOpacity>
-                )}
-            </ScrollView>
+                {/* Bottom zone: End session */}
+                <View style={styles.bottomZone}>
+                    {isRunning && (
+                        <TouchableOpacity
+                            style={[styles.abortButton, { borderColor: theme.error }]}
+                            onPress={handleAbortMission}
+                        >
+                            <Ionicons name="close-circle" size={18} color={theme.error} />
+                            <ThemedText variant="caption" style={[styles.abortText, { color: theme.error }]}>
+                                END SESSION
+                            </ThemedText>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            </View>
         </ThemedContainer>
     );
 }
 
 const styles = StyleSheet.create({
     container: { flex: 1 },
-    scrollView: { flex: 1 },
-    scrollContent: { flexGrow: 1, padding: 16, paddingBottom: 32 },
+    layout: { flex: 1, paddingHorizontal: 16, paddingBottom: 16 },
+    topZone: {},
+    bottomZone: { paddingBottom: 16 },
     statsBar: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 8, borderRadius: 8, marginBottom: 12 },
     statItem: { alignItems: 'center', gap: 2 },
     statLabel: { letterSpacing: 1.5, opacity: 0.6, fontSize: 9 },
@@ -753,7 +744,7 @@ const styles = StyleSheet.create({
     verseText: { textAlign: 'center', marginTop: 6, opacity: 0.7, fontStyle: 'italic', lineHeight: 20, paddingHorizontal: 8 },
     hiddenTextWrapper: { marginTop: 6, width: '100%' },
     blurredVerseText: { textAlign: 'center', fontStyle: 'italic', lineHeight: 20, paddingHorizontal: 8 },
-    centerStage: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 8 },
+    centerStage: { flex: 1, alignItems: 'center', justifyContent: 'center' },
     stageContent: { alignItems: 'center', gap: 12 },
     instruction: { opacity: 0.7, letterSpacing: 1 },
     startButton: { width: 180, height: 180, borderRadius: 90, alignItems: 'center', justifyContent: 'center', elevation: 12, shadowColor: '#000', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 12 },
@@ -778,7 +769,7 @@ const styles = StyleSheet.create({
     transcriptVal: { fontStyle: 'italic', lineHeight: 20 },
     divider: { height: 1, backgroundColor: 'rgba(150,150,150,0.2)', marginVertical: 10 },
     expectedVal: { lineHeight: 20, opacity: 0.8 },
-    abortButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 8, borderWidth: 1.5, gap: 6, marginTop: 12 },
+    abortButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 8, borderWidth: 1.5, gap: 6 },
     abortText: { fontWeight: '700', letterSpacing: 1.5, fontSize: 12 },
     startContainer: { alignItems: 'center', width: '100%' },
     sessionLengthSection: { marginTop: 24, alignItems: 'center' },
