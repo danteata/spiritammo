@@ -4,149 +4,89 @@ import {
     View,
     ScrollView,
     TouchableOpacity,
-    Alert,
+    TextInput,
 } from 'react-native'
-import { FontAwesome5, Ionicons } from '@expo/vector-icons'
+import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useAppStore } from '@/hooks/useAppStore'
 import { ThemedContainer, ThemedText } from '@/components/Themed'
 import ScreenHeader from '@/components/ScreenHeader'
-import CollectionSelector from '@/components/CollectionSelector'
-import UnifiedScriptureRecorderCard from '@/components/UnifiedScriptureRecorderCard'
-import ScriptureActionRow from '@/components/ScriptureActionRow'
-import StealthDrill from '@/components/StealthDrill'
-import VoicePlaybackService from '@/services/voicePlayback'
+import ScriptureScopeBar from '@/components/ScriptureScopeBar'
 import { useScreenTracking, useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEventType } from '@/services/analytics'
-import { Toast } from '@/components/ui/Toast'
-import { useCollectionPractice } from '@/hooks/useCollectionPractice'
-import { useLocalSearchParams } from 'expo-router'
+import { Collection } from '@/types/scripture'
+import { useScriptureScope } from '@/hooks/useScriptureScope'
 
 export default function CollectionDrillScreen() {
     const {
+        scriptures: allScriptures,
+        collections,
         isDark,
         theme,
-        updateScriptureAccuracy,
-        userSettings,
     } = useAppStore()
 
-    const params = useLocalSearchParams()
     const router = useRouter()
     const { trackEvent } = useAnalytics()
 
     useScreenTracking('collection_drill')
 
-    const {
+    const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
+    const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>([])
+    const [showCustom, setShowCustom] = useState(false)
+    const [questionLimit, setQuestionLimit] = useState(20)
+    const [timeLimit, setTimeLimit] = useState<number | null>(null)
+    const [isCustomTime, setIsCustomTime] = useState(false)
+    const [customMins, setCustomMins] = useState('')
+
+    const filteredScriptures = useScriptureScope(
+        allScriptures,
         selectedCollection,
-        setSelectedCollection,
         selectedChapterIds,
-        setSelectedChapterIds,
-        currentScripture,
-        scriptureIndex,
-        collectionScriptures,
-        loadNextScripture,
-        loadPreviousScripture,
-    } = useCollectionPractice({
-        collectionId: params.collectionId as string | undefined,
-        initialChapterIds: params.chapterIds ? (Array.isArray(params.chapterIds) ? params.chapterIds : [params.chapterIds]) : [],
-    })
+    )
 
-    const [showStealthDrill, setShowStealthDrill] = useState(false)
-    const [isListeningVerse, setIsListeningVerse] = useState(false)
+    const verseCount = filteredScriptures.length
 
-    const handleRecordingComplete = async (accuracy: number) => {
-        if (!currentScripture || !selectedCollection) return
-
-        // Update scripture accuracy (no VP in training mode)
-        await updateScriptureAccuracy(currentScripture.id, accuracy)
-
-        trackEvent(AnalyticsEventType.PRACTICE_COMPLETE, {
-            practice_type: 'collection_drill',
-            collection_id: selectedCollection.id,
-            scripture_id: currentScripture.id,
-            accuracy: accuracy,
-            is_training: true
+    const handleQuickDrill = () => {
+        if (!selectedCollection) return
+        router.push({
+            pathname: '/train/quiz',
+            params: { collectionId: selectedCollection.id, quick: '1' }
         })
+        trackEvent(AnalyticsEventType.QUIZ_STARTED, {
+            collection_id: selectedCollection.id,
+        })
+    }
 
-        const isLastScripture = scriptureIndex >= collectionScriptures.length - 1
-
-        if (accuracy >= 80) {
-            Toast.missionSuccess(`${accuracy}% ACCURACY ON ${currentScripture.reference.toUpperCase()}`)
-            if (isLastScripture) {
-                Alert.alert(
-                    'COLLECTION COMPLETE 🎖️',
-                    'You have engaged all targets in this collection.',
-                    [
-                        { text: 'Restart', onPress: () => {
-                            setSelectedChapterIds([])
-                        }},
-                        { text: 'Finish', onPress: () => router.back() }
-                    ]
-                )
-            } else {
-                // Auto-advance after 2 seconds if high accuracy
-                setTimeout(() => {
-                    loadNextScripture()
-                }, 2000)
+    const handleCustomDrill = () => {
+        if (!selectedCollection) return
+        router.push({
+            pathname: '/train/quiz',
+            params: {
+                collectionId: selectedCollection.id,
+                questionLimit: String(questionLimit),
+                timeLimit: timeLimit !== null ? String(timeLimit) : '',
             }
-        } else {
-            Toast.show({
-                type: 'warning',
-                title: '⚡ LOW PRECISION',
-                message: `${accuracy}% accuracy - check your coordinates and try again.`,
-            })
-        }
-    }
-
-    const handleStartStealthPractice = () => {
-        if (!currentScripture || !selectedCollection) return
-        setShowStealthDrill(true)
-        trackEvent(AnalyticsEventType.PRACTICE_START, {
-            practice_type: 'stealth_collection',
+        })
+        trackEvent(AnalyticsEventType.QUIZ_STARTED, {
             collection_id: selectedCollection.id,
-            scripture_id: currentScripture.id,
-            is_training: true,
+            question_limit: questionLimit,
+            time_limit: timeLimit,
         })
     }
 
-    const handleListenVerse = async () => {
-        if (!currentScripture) return
-        setIsListeningVerse(true)
-        try {
-            await VoicePlaybackService.playScripture(
-                currentScripture.id,
-                `${currentScripture.reference}. ${currentScripture.text}`,
-                {
-                    rate: userSettings.voiceRate || 0.9,
-                    pitch: userSettings.voicePitch || 1.0,
-                    language: userSettings.language || 'en-US',
-                }
-            )
-        } finally {
-            setIsListeningVerse(false)
-        }
-    }
-
-    const handleIntelPress = async () => {
-        if (!currentScripture) return
-        const intelText = currentScripture.mnemonic || `Target reference: ${currentScripture.reference}`
-        setIsListeningVerse(true)
-        try {
-            await VoicePlaybackService.playTextToSpeech(intelText, {
-                rate: userSettings.voiceRate || 0.9,
-                pitch: userSettings.voicePitch || 1.0,
-                language: userSettings.language || 'en-US',
-            })
-        } finally {
-            setIsListeningVerse(false)
-        }
-    }
+    const accentColor = theme.accent
 
     return (
         <ThemedContainer style={styles.container}>
             <ScreenHeader
                 title="LIVE FIRE DRILL"
                 subtitle="TACTICAL PRACTICE"
+                rightAction={
+                    <TouchableOpacity onPress={() => router.replace('/train')} style={styles.modesButton}>
+                        <Ionicons name="grid" size={20} color={theme.textSecondary} />
+                        <ThemedText variant="caption" style={[styles.modesText, { color: theme.textSecondary }]}>Modes</ThemedText>
+                    </TouchableOpacity>
+                }
             />
 
             <ScrollView
@@ -154,252 +94,302 @@ export default function CollectionDrillScreen() {
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
             >
-                {/* Info Banner */}
-                <View style={[styles.infoBanner, { backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)' }]}>
-                    <Ionicons name="information-circle" size={20} color="#3B82F6" />
-                    <ThemedText variant="caption" style={styles.infoText}>
-                        Practice verses from your collections. No pressure, no scores recorded.
+                <View style={[styles.modeIndicator, { backgroundColor: isDark ? `${accentColor}15` : `${accentColor}10` }]}>
+                    <Ionicons name="flash" size={20} color={accentColor} />
+                    <ThemedText variant="caption" style={[styles.modeIndicatorText, { color: accentColor }]}>
+                        Live Fire Drill — True/false questions from your verses
                     </ThemedText>
                 </View>
 
-                {!selectedCollection ? (
-                    <View style={styles.selectorContainer}>
-                        <ThemedText variant="caption" style={styles.sectionTitle}>
-                            SELECT A COLLECTION
-                        </ThemedText>
-                        <CollectionSelector
-                            onSelectCollection={setSelectedCollection}
-                            selectedCollection={selectedCollection}
-                            selectedChapterIds={selectedChapterIds}
-                        />
-                    </View>
-                ) : (
-                    <View style={styles.practiceContainer}>
-                        {/* Collection Info */}
-                        <TouchableOpacity
-                            style={styles.collectionHeader}
-                            onPress={() => setSelectedCollection(null)}
-                        >
-                            <FontAwesome5 name="folder-open" size={16} color={theme.accent} />
-                            <ThemedText variant="body" style={styles.collectionName}>
-                                {selectedCollection.name}
-                            </ThemedText>
-                            <FontAwesome5 name="chevron-down" size={12} color={theme.textSecondary} />
-                        </TouchableOpacity>
+                <ScriptureScopeBar
+                    selectedCollection={selectedCollection}
+                    selectedChapterIds={selectedChapterIds}
+                    onCollectionChange={setSelectedCollection}
+                    onChapterIdsChange={setSelectedChapterIds}
+                    verseOrder="random"
+                    onOrderChange={() => {}}
+                    isDark={isDark}
+                    theme={theme}
+                    showOrderToggle={false}
+                />
 
-                        <TouchableOpacity
-                            style={[styles.quizButton, { backgroundColor: theme.accent }]}
-                            onPress={() => {
-                                router.push({
-                                    pathname: '/train/quiz',
-                                    params: { collectionId: selectedCollection.id }
-                                })
-                                trackEvent(AnalyticsEventType.QUIZ_STARTED, {
-                                    collection_id: selectedCollection.id,
-                                })
-                            }}
-                        >
-                            <Ionicons name="rocket" size={20} color={theme.accentContrastText} />
-                            <ThemedText variant="body" style={[styles.quizButtonText, { color: theme.accentContrastText }]}>
-                                DEPLOY DRILL
+                {selectedCollection && (
+                    <View style={styles.configSection}>
+                        <View style={styles.verseCountRow}>
+                            <Ionicons name="book" size={16} color={accentColor} />
+                            <ThemedText variant="caption" style={{ color: accentColor, fontWeight: '700', letterSpacing: 1 }}>
+                                {verseCount} VERSE{verseCount !== 1 ? 'S' : ''} LOADED
                             </ThemedText>
-                        </TouchableOpacity>
-
-                        {/* Progress */}
-                        <View style={styles.progressContainer}>
-                            <ThemedText variant="caption" style={styles.progressText}>
-                                Verse {scriptureIndex + 1} of {collectionScriptures.length}
-                            </ThemedText>
-                            <View style={styles.progressBar}>
-                                <View
-                                    style={[
-                                        styles.progressFill,
-                                        {
-                                            width: `${collectionScriptures.length > 0
-                                                ? ((scriptureIndex + 1) / collectionScriptures.length) * 100
-                                                : 0}%`,
-                                            backgroundColor: theme.accent
-                                        }
-                                    ]}
-                                />
-                            </View>
                         </View>
 
-                        {/* Unified Verse + Recorder Card */}
-                        {currentScripture && (
-                            <>
-                                <UnifiedScriptureRecorderCard
-                                    scripture={currentScripture}
-                                    onRecordingComplete={handleRecordingComplete}
-                                    onListen={handleListenVerse}
-                                    isListening={isListeningVerse}
-                                />
-                                <ScriptureActionRow
-                                    onStealth={handleStartStealthPractice}
-                                    onIntel={handleIntelPress}
-                                />
+                        <TouchableOpacity
+                            style={[styles.quickButton, { backgroundColor: theme.success }]}
+                            onPress={handleQuickDrill}
+                            activeOpacity={0.85}
+                        >
+                            <Ionicons name="flash" size={24} color="#FFF" />
+                            <ThemedText variant="body" style={styles.quickButtonText}>
+                                QUICK DRILL
+                            </ThemedText>
+                        </TouchableOpacity>
+                        <ThemedText variant="caption" style={styles.quickHint}>
+                            10 questions, no time limit
+                        </ThemedText>
 
-                                {/* Manual Navigation */}
-                                <View style={styles.navRow}>
-                                    <TouchableOpacity 
-                                        style={[styles.navButton, { borderColor: theme.border }]}
-                                        onPress={loadPreviousScripture}
-                                        disabled={scriptureIndex === 0}
-                                    >
-                                        <Ionicons name="chevron-back" size={24} color={scriptureIndex === 0 ? theme.textSecondary : theme.accent} />
-                                        <ThemedText variant="caption" style={{ color: scriptureIndex === 0 ? theme.textSecondary : theme.accent }}>PREV</ThemedText>
-                                    </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.advancedToggle}
+                            onPress={() => setShowCustom(!showCustom)}
+                        >
+                            <Ionicons name={showCustom ? 'chevron-up' : 'chevron-down'} size={16} color={theme.textSecondary} />
+                            <ThemedText variant="caption" style={{ color: theme.textSecondary }}>Custom Drill Options</ThemedText>
+                        </TouchableOpacity>
 
-                                    <TouchableOpacity 
-                                        style={[styles.navButton, { backgroundColor: theme.surfaceHighlight, borderColor: theme.accent }]}
-                                        onPress={loadNextScripture}
-                                        disabled={scriptureIndex >= collectionScriptures.length - 1}
+                        {showCustom && (
+                            <View style={styles.customSection}>
+                                <ThemedText variant="subheading" style={styles.sectionHeading}>
+                                    MISSION LENGTH
+                                </ThemedText>
+                                <View style={styles.optionRow}>
+                                    {[10, 20, 50, 100].map(limit => (
+                                        <TouchableOpacity
+                                            key={limit}
+                                            style={[
+                                                styles.configChip,
+                                                {
+                                                    backgroundColor: questionLimit === limit ? accentColor : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'),
+                                                    borderColor: questionLimit === limit ? accentColor : 'transparent',
+                                                },
+                                            ]}
+                                            onPress={() => setQuestionLimit(limit)}
+                                        >
+                                            <ThemedText
+                                                variant="caption"
+                                                style={{
+                                                    fontWeight: '700',
+                                                    color: questionLimit === limit ? theme.background : theme.text,
+                                                }}
+                                            >
+                                                {limit}
+                                            </ThemedText>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+
+                                <ThemedText variant="subheading" style={styles.sectionHeading}>
+                                    TIME LIMIT
+                                </ThemedText>
+                                <View style={styles.optionRow}>
+                                    {[null, 5, 15, 30].map(mins => (
+                                        <TouchableOpacity
+                                            key={mins === null ? 'none' : mins}
+                                            style={[
+                                                styles.configChip,
+                                                {
+                                                    backgroundColor: (!isCustomTime && (mins === null ? timeLimit === null : timeLimit === mins * 60)) ? accentColor : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'),
+                                                    borderColor: (!isCustomTime && (mins === null ? timeLimit === null : timeLimit === mins * 60)) ? accentColor : 'transparent',
+                                                },
+                                            ]}
+                                            onPress={() => {
+                                                setIsCustomTime(false)
+                                                setTimeLimit(mins === null ? null : mins * 60)
+                                            }}
+                                        >
+                                            <ThemedText
+                                                variant="caption"
+                                                style={{
+                                                    fontWeight: '700',
+                                                    color: (!isCustomTime && (mins === null ? timeLimit === null : timeLimit === mins * 60)) ? theme.background : theme.text,
+                                                }}
+                                            >
+                                                {mins === null ? 'NONE' : `${mins}M`}
+                                            </ThemedText>
+                                        </TouchableOpacity>
+                                    ))}
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.configChip,
+                                            {
+                                                backgroundColor: isCustomTime ? accentColor : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)'),
+                                                borderColor: isCustomTime ? accentColor : 'transparent',
+                                            },
+                                        ]}
+                                        onPress={() => setIsCustomTime(true)}
                                     >
-                                        <ThemedText variant="caption" style={{ color: theme.accent, fontWeight: '700' }}>NEXT TARGET</ThemedText>
-                                        <Ionicons name="chevron-forward" size={24} color={theme.accent} />
+                                        <ThemedText
+                                            variant="caption"
+                                            style={{
+                                                fontWeight: '700',
+                                                color: isCustomTime ? theme.background : theme.text,
+                                            }}
+                                        >
+                                            CUSTOM
+                                        </ThemedText>
                                     </TouchableOpacity>
                                 </View>
-                            </>
+
+                                {isCustomTime && (
+                                    <View style={styles.customTimeRow}>
+                                        <TextInput
+                                            style={[styles.customInput, { color: theme.text, borderColor: accentColor, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}
+                                            placeholder="MINUTES"
+                                            placeholderTextColor={theme.textSecondary}
+                                            keyboardType="numeric"
+                                            value={customMins}
+                                            maxLength={3}
+                                            onChangeText={(val) => {
+                                                const numericVal = val.replace(/[^0-9]/g, '')
+                                                setCustomMins(numericVal)
+                                                const mins = parseInt(numericVal)
+                                                if (!isNaN(mins) && mins > 0) {
+                                                    setTimeLimit(mins * 60)
+                                                } else {
+                                                    setTimeLimit(null)
+                                                }
+                                            }}
+                                            autoFocus
+                                        />
+                                        <ThemedText variant="caption" style={{ opacity: 0.5, marginTop: 4 }}>Duration (1-999 min)</ThemedText>
+                                    </View>
+                                )}
+
+                                <TouchableOpacity
+                                    style={[styles.customButton, { backgroundColor: accentColor }]}
+                                    onPress={handleCustomDrill}
+                                    activeOpacity={0.85}
+                                >
+                                    <Ionicons name="rocket" size={20} color={theme.background} />
+                                    <ThemedText variant="body" style={[styles.customButtonText, { color: theme.background }]}>
+                                        DEPLOY CUSTOM DRILL
+                                    </ThemedText>
+                                </TouchableOpacity>
+                            </View>
                         )}
                     </View>
                 )}
+
+                {!selectedCollection && (
+                    <View style={styles.emptyHint}>
+                        <Ionicons name="arrow-up" size={20} color={theme.textSecondary} />
+                        <ThemedText variant="caption" style={{ color: theme.textSecondary, opacity: 0.7 }}>
+                            Select a collection above to start your drill
+                        </ThemedText>
+                    </View>
+                )}
             </ScrollView>
-
-            {currentScripture && (
-                <StealthDrill
-                    isVisible={showStealthDrill}
-                    onClose={() => setShowStealthDrill(false)}
-                    onComplete={(accuracy: number) => handleRecordingComplete(accuracy)}
-                    targetVerse={currentScripture.text}
-                    reference={currentScripture.reference}
-                />
-            )}
-
         </ThemedContainer>
     )
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    scrollView: {
-        flex: 1,
-    },
-    scrollContent: {
-        padding: 20,
-        paddingBottom: 40,
-    },
-    infoBanner: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 12,
-        borderRadius: 12,
-        marginBottom: 20,
-        gap: 10,
-    },
-    infoText: {
-        flex: 1,
-        opacity: 0.8,
-    },
-    selectorContainer: {
-        marginTop: 10,
-    },
-    sectionTitle: {
-        letterSpacing: 1.5,
-        marginBottom: 16,
-        opacity: 0.7,
-    },
-    practiceContainer: {
-        marginTop: 10,
-    },
-    collectionHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        padding: 12,
-        borderRadius: 12,
-        backgroundColor: 'rgba(255,255,255,0.05)',
-        marginBottom: 16,
-        gap: 10,
-    },
-    collectionName: {
-        flex: 1,
-        fontWeight: '600',
-    },
-    progressContainer: {
-        marginBottom: 20,
-    },
-    progressText: {
-        marginBottom: 8,
-        opacity: 0.7,
-    },
-    progressBar: {
-        height: 4,
-        backgroundColor: 'rgba(255,255,255,0.1)',
-        borderRadius: 2,
-        overflow: 'hidden',
-    },
-    progressFill: {
-        height: '100%',
-        borderRadius: 2,
-    },
-    practiceButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 16,
-        borderRadius: 12,
+    container: { flex: 1 },
+    scrollView: { flex: 1 },
+    scrollContent: { padding: 16, paddingBottom: 40 },
+    modesButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4 },
+    modesText: { letterSpacing: 1, fontSize: 11 },
+    modeIndicator: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 8, marginBottom: 16, gap: 8 },
+    modeIndicatorText: { flex: 1 },
+    configSection: {
         marginTop: 20,
-        gap: 10,
-    },
-    practiceButtonText: {
-        color: '#FFF',
-        fontWeight: '600',
-        fontSize: 16,
-    },
-    loadingContainer: {
-        flex: 1,
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 100,
-        gap: 20,
     },
-    loadingText: {
-        letterSpacing: 2,
-        opacity: 0.6,
+    verseCountRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginBottom: 24,
     },
-    quizButton: {
+    quickButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: 16,
-        borderRadius: 12,
-        marginTop: 12,
+        paddingVertical: 18,
+        paddingHorizontal: 48,
+        borderRadius: 14,
+        gap: 12,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 6,
+    },
+    quickButtonText: {
+        color: '#FFF',
+        fontWeight: '800',
+        fontSize: 18,
+        letterSpacing: 2,
+    },
+    quickHint: {
+        marginTop: 8,
+        opacity: 0.5,
+        letterSpacing: 1,
+    },
+    advancedToggle: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        gap: 8,
+        marginTop: 8,
+    },
+    customSection: {
+        width: '100%',
+        alignItems: 'center',
+        paddingBottom: 8,
+    },
+    sectionHeading: {
+        letterSpacing: 1.5,
+        opacity: 0.7,
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    optionRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+        gap: 10,
+        marginBottom: 20,
+    },
+    configChip: {
+        paddingHorizontal: 20,
+        paddingVertical: 10,
+        borderRadius: 10,
+        borderWidth: 1.5,
+    },
+    customTimeRow: {
+        alignItems: 'center',
+        marginBottom: 20,
+    },
+    customInput: {
+        width: 120,
+        height: 44,
+        borderWidth: 1,
+        borderRadius: 10,
+        paddingHorizontal: 16,
+        fontSize: 16,
+        fontWeight: '600',
+        textAlign: 'center',
+    },
+    customButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 16,
+        paddingHorizontal: 32,
+        borderRadius: 14,
+        marginTop: 8,
         gap: 10,
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.2,
         shadowRadius: 4,
         elevation: 3,
     },
-    quizButtonText: {
+    customButtonText: {
         fontWeight: '700',
-        fontSize: 16,
-        letterSpacing: 1,
+        fontSize: 15,
+        letterSpacing: 1.5,
     },
-    navRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 24,
-        gap: 12,
-    },
-    navButton: {
-        flex: 1,
-        flexDirection: 'row',
+    emptyHint: {
         alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 12,
-        borderRadius: 12,
-        borderWidth: 1,
+        marginTop: 40,
         gap: 8,
     },
 })

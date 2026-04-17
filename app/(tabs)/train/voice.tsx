@@ -488,9 +488,42 @@ export default function VoiceOpsScreen() {
 
     return (
         <ThemedContainer style={styles.container}>
-            <ScreenHeader title="VOICE OPS" subtitle="HANDS-FREE DRILL" />
+            <ScreenHeader title="VOICE OPS" subtitle="HANDS-FREE DRILL" rightAction={
+                <TouchableOpacity onPress={() => router.replace('/train')} style={styles.modesButton}>
+                    <Ionicons name="grid" size={20} color={theme.textSecondary} />
+                    <ThemedText variant="caption" style={[styles.modesText, { color: theme.textSecondary }]}>Modes</ThemedText>
+                </TouchableOpacity>
+            } />
             <View style={styles.layout}>
                 <View style={styles.topZone}>
+                    <View style={[styles.modeIndicator, { backgroundColor: isDark ? `${accentColor}15` : `${accentColor}10` }]}>
+                        <Ionicons name="mic" size={20} color={accentColor} />
+                        <ThemedText variant="caption" style={[styles.modeIndicatorText, { color: accentColor }]}>
+                            Voice Ops — Hands-free, listen and speak
+                        </ThemedText>
+                    </View>
+                    <ScriptureScopeBar
+                        selectedCollection={selectedCollection}
+                        selectedChapterIds={selectedChapterIds}
+                        onCollectionChange={(collection: Collection | null) => {
+                            if (collection) {
+                                router.setParams({ collectionId: collection.id })
+                                if (collection.isChapterBased && collection.chapters) {
+                                    setSelectedChapterIds(collection.chapters.map(ch => ch.id))
+                                } else {
+                                    setSelectedChapterIds([])
+                                }
+                            } else {
+                                router.setParams({ collectionId: undefined, chapterIds: undefined })
+                                setSelectedChapterIds([])
+                            }
+                        }}
+                        onChapterIdsChange={setSelectedChapterIds}
+                        verseOrder={verseOrder}
+                        onOrderChange={setVerseOrder}
+                        isDark={isDark}
+                        theme={theme}
+                    />
                     {isRunning && (
                         <View style={[styles.statsBar, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)' }]}>
                             {[
@@ -553,43 +586,6 @@ export default function VoiceOpsScreen() {
                 <View style={styles.centerStage}>
                     {phase === 'idle' && !isRunning && (
                         <View style={styles.startContainer}>
-                            <TouchableOpacity
-                                style={[styles.startButton, { backgroundColor: accentColor }]}
-                                onPress={handleStartMission}
-                                activeOpacity={0.85}
-                            >
-                                <Ionicons name="mic" size={56} color={theme.background} />
-                                <ThemedText variant="heading" style={[styles.startLabel, { color: theme.background }]}>
-                                    START MISSION
-                                </ThemedText>
-                                <ThemedText variant="caption" style={[styles.startHint, { color: theme.background }]}>
-                                    Fully hands-free. Just listen and speak.
-                                </ThemedText>
-                            </TouchableOpacity>
-
-                            <ScriptureScopeBar
-                                selectedCollection={selectedCollection}
-                                selectedChapterIds={selectedChapterIds}
-                                onCollectionChange={(collection: Collection | null) => {
-                                    if (collection) {
-                                        router.setParams({ collectionId: collection.id })
-                                        if (collection.isChapterBased && collection.chapters) {
-                                            setSelectedChapterIds(collection.chapters.map(ch => ch.id))
-                                        } else {
-                                            setSelectedChapterIds([])
-                                        }
-                                    } else {
-                                        router.setParams({ collectionId: undefined, chapterIds: undefined })
-                                        setSelectedChapterIds([])
-                                    }
-                                }}
-                                onChapterIdsChange={setSelectedChapterIds}
-                                verseOrder={verseOrder}
-                                onOrderChange={setVerseOrder}
-                                isDark={isDark}
-                                theme={theme}
-                            />
-
                             <View style={styles.sessionLengthSection}>
                                 <ThemedText variant="caption" style={styles.sessionLengthLabel}>
                                     VERSES PER SESSION
@@ -624,6 +620,20 @@ export default function VoiceOpsScreen() {
                                     ))}
                                 </View>
                             </View>
+
+                            <TouchableOpacity
+                                style={[styles.startButton, { backgroundColor: accentColor }]}
+                                onPress={handleStartMission}
+                                activeOpacity={0.85}
+                            >
+                                <Ionicons name="mic" size={56} color={theme.background} />
+                                <ThemedText variant="heading" style={[styles.startLabel, { color: theme.background }]}>
+                                    START MISSION
+                                </ThemedText>
+                                <ThemedText variant="caption" style={[styles.startHint, { color: theme.background }]}>
+                                    Fully hands-free. Just listen and speak.
+                                </ThemedText>
+                            </TouchableOpacity>
                         </View>
                     )}
 
@@ -734,6 +744,10 @@ const styles = StyleSheet.create({
     layout: { flex: 1, paddingHorizontal: 16, paddingBottom: 16 },
     topZone: {},
     bottomZone: { paddingBottom: 16 },
+    modesButton: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 4 },
+    modesText: { letterSpacing: 1, fontSize: 11 },
+    modeIndicator: { flexDirection: 'row', alignItems: 'center', padding: 12, borderRadius: 8, marginBottom: 12, gap: 8 },
+    modeIndicatorText: { flex: 1 },
     statsBar: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 8, borderRadius: 8, marginBottom: 12 },
     statItem: { alignItems: 'center', gap: 2 },
     statLabel: { letterSpacing: 1.5, opacity: 0.6, fontSize: 9 },
@@ -772,7 +786,7 @@ const styles = StyleSheet.create({
     abortButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 8, borderWidth: 1.5, gap: 6 },
     abortText: { fontWeight: '700', letterSpacing: 1.5, fontSize: 12 },
     startContainer: { alignItems: 'center', width: '100%' },
-    sessionLengthSection: { marginTop: 24, alignItems: 'center' },
+    sessionLengthSection: { marginBottom: 32, alignItems: 'center' },
     sessionLengthLabel: { letterSpacing: 1.5, opacity: 0.6, marginBottom: 12, fontSize: 10 },
     sessionLengthOptions: { flexDirection: 'row', gap: 10 },
     sessionOption: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 10, borderWidth: 1.5 },

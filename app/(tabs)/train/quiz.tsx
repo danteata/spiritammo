@@ -33,6 +33,9 @@ export default function QuizScreen() {
     const { trackEvent } = useAnalytics()
 
     const collectionId = params.collectionId as string
+    const quickStart = params.quick !== undefined
+    const paramQuestionLimit = params.questionLimit ? parseInt(params.questionLimit as string) : undefined
+    const paramTimeLimit = params.timeLimit ? parseInt(params.timeLimit as string) : undefined
     const collection = useMemo(() => {
         if (!collectionId || !collections) return null
         return collections.find(c => c.id === collectionId)
@@ -53,12 +56,12 @@ export default function QuizScreen() {
     const [totalPointsPossible, setTotalPointsPossible] = useState(0)
     const [isGenerating, setIsGenerating] = useState(false)
     const [showExplanation, setShowExplanation] = useState(false)
-    const [questionLimit, setQuestionLimit] = useState(20)
-    const [showConfig, setShowConfig] = useState(true)
+    const [questionLimit, setQuestionLimit] = useState(paramQuestionLimit || 20)
+    const [showConfig, setShowConfig] = useState(!quickStart && paramQuestionLimit === undefined)
     const [showAdvanced, setShowAdvanced] = useState(false)
     const [elapsedTime, setElapsedTime] = useState(0)
     const [timerActive, setTimerActive] = useState(false)
-    const [timeLimit, setTimeLimit] = useState<number | null>(null) // in seconds
+    const [timeLimit, setTimeLimit] = useState<number | null>(paramTimeLimit ?? null)
     const [timedOut, setTimedOut] = useState(false)
     const [isCustomTime, setIsCustomTime] = useState(false)
     const [customMins, setCustomMins] = useState('')
@@ -138,7 +141,7 @@ export default function QuizScreen() {
     const handleOptionSelect = useCallback((questionId: string, optionLabel: string, value: 'T' | 'F' | 'S') => {
         setSelectedAnswers(prev => {
             const current = (prev[questionId] as Record<string, 'T' | 'F' | 'S'>) || {}
-            if (value === 'S') {
+            if (value === 'S' && current[optionLabel] === 'S') {
                 const { [optionLabel]: _, ...rest } = current
                 return { ...prev, [questionId]: rest }
             }
@@ -207,6 +210,14 @@ export default function QuizScreen() {
             setIsGenerating(false)
         }
     }, [collectionScriptures, collectionId, trackEvent])
+
+    useEffect(() => {
+        if (quickStart && collectionScriptures.length > 0 && !questionSet && !isGenerating) {
+            generateQuestions(10)
+        } else if (paramQuestionLimit && collectionScriptures.length > 0 && !questionSet && !isGenerating) {
+            generateQuestions(paramQuestionLimit)
+        }
+    }, [quickStart, paramQuestionLimit, collectionScriptures.length, questionSet, isGenerating, generateQuestions])
 
     const handleRestartQuiz = useCallback(() => {
         setShowConfig(true)
