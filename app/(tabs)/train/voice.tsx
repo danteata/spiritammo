@@ -276,7 +276,14 @@ export default function VoiceOpsScreen() {
         phaseRef.current = 'skipping';
         setPhase('skipping');
 
-        await speakAndWait(`Skipping. The verse reads: ${scripture.text}`, {
+        await speakAndWait('Skipping. The verse reads:', {
+            rate: userSettings.voiceRate || 0.9,
+            pitch: userSettings.voicePitch || 1.0,
+            language: userSettings.language || 'en-US',
+            ...getTTSSettings(userSettings),
+        });
+
+        await speakAndWait(`${scripture.reference}. ${scripture.text}`, {
             rate: userSettings.voiceRate || 0.9,
             pitch: userSettings.voicePitch || 1.0,
             language: userSettings.language || 'en-US',
