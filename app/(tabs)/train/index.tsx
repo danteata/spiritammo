@@ -296,19 +296,19 @@ export default function TrainingScreen() {
                             onPress={() => handleModeSelect('voice')}
                             activeOpacity={0.9}
                         >
-                            <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.info }]}>
+                            <ThemedCard variant="glass" style={[styles.modeCardInner, !isDark && { borderColor: theme.accent }]}>
                                 <View style={styles.modeIconContainer}>
-                                    <View style={[styles.modeIcon, { backgroundColor: `${theme.info}15` }]}>
-                                        <Ionicons name="mic" size={28} color={theme.info || '#4dabf7'} />
+                                    <View style={[styles.modeIcon, { backgroundColor: `${theme.accent}15` }]}>
+                                        <Ionicons name="mic" size={28} color={theme.accent} />
                                     </View>
                                 </View>
                                 <View style={styles.modeContent}>
-                                    <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.info || '#4dabf7' }]}>VOICE OPS</ThemedText>
+                                    <ThemedText variant="heading" style={[styles.modeTitle, { letterSpacing: 1.5, color: theme.accent }]}>VOICE OPS</ThemedText>
                                     <ThemedText variant="body" style={[styles.modeDescription, { color: theme.textSecondary }]}>
                                         Listen to the verse and recite it aloud from memory.
                                     </ThemedText>
-                                    <View style={[styles.modeTag, { backgroundColor: `${theme.info || '#4dabf7'}15` }]}>
-                                        <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.info || '#4dabf7' }]}>Speech Recognition</ThemedText>
+                                    <View style={[styles.modeTag, { backgroundColor: `${theme.accent}15` }]}>
+                                        <ThemedText variant="caption" style={[styles.modeTagText, { color: theme.accent }]}>Speech Recognition</ThemedText>
                                     </View>
                                 </View>
                                 <View style={styles.modeArrow}>

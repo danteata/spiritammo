@@ -34,7 +34,7 @@ export function usePracticeCompletion(options: CompletionOptions) {
         accuracy: number,
         transcript: string = ''
     ) => {
-        if (options.awardVP && updateScriptureAccuracy) {
+        if (updateScriptureAccuracy) {
             await updateScriptureAccuracy(scripture.id, accuracy)
         }
 

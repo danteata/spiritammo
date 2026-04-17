@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { useTheme } from '@/hooks/useTheme';
+import { useAppStore } from '@/hooks/useAppStore';
 import {
     TACTICAL_THEME,
     GARRISON_THEME,
@@ -62,7 +62,7 @@ function useThemeColor(
     props: { light?: string; dark?: string },
     colorName: keyof typeof TACTICAL_THEME
 ) {
-    const { isDark, theme } = useTheme();
+    const { isDark, theme } = useAppStore();
     const colorFromProps = isDark ? props.dark : props.light;
 
     if (colorFromProps) {
@@ -81,7 +81,7 @@ export function ThemedContainer({
     darkColor,
     useGradient = true,
 }: ThemedContainerProps) {
-    const { isDark, gradients } = useTheme();
+    const { isDark, gradients } = useAppStore();
     const backgroundColor = useThemeColor(
         { light: lightColor, dark: darkColor },
         'background'
@@ -159,7 +159,7 @@ export function ThemedCard({
     accessibilityRole,
     accessibilityLabel,
 }: ThemedCardProps) {
-    const { isDark, theme } = useTheme();
+    const { isDark, theme } = useAppStore();
 
     const backgroundColor = useThemeColor(
         { light: lightColor, dark: darkColor },
@@ -245,7 +245,7 @@ export function ThemedButton({
     disabled,
     ...props
 }: ThemedButtonProps) {
-    const { isDark, theme, gradients } = useTheme();
+    const { isDark, theme, gradients } = useAppStore();
 
     // Default styles
     let backgroundColor = 'transparent';

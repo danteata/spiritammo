@@ -30,15 +30,17 @@ export default function ScriptureScopeBar({
 }: ScriptureScopeBarProps) {
     return (
         <View style={styles.controlRow}>
-            <VerseScopeSelector
-                selectedCollection={selectedCollection}
-                selectedChapterIds={selectedChapterIds}
-                onCollectionChange={onCollectionChange}
-                onChapterIdsChange={onChapterIdsChange}
-                isDark={isDark}
-                theme={theme}
-                compact
-            />
+            <View style={styles.scopeWrapper}>
+                <VerseScopeSelector
+                    selectedCollection={selectedCollection}
+                    selectedChapterIds={selectedChapterIds}
+                    onCollectionChange={onCollectionChange}
+                    onChapterIdsChange={onChapterIdsChange}
+                    isDark={isDark}
+                    theme={theme}
+                    compact
+                />
+            </View>
             {showOrderToggle && (
                 <TouchableOpacity
                     style={[styles.orderToggle, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}
@@ -51,7 +53,7 @@ export default function ScriptureScopeBar({
                         color={theme.accent}
                     />
                     <ThemedText variant="caption" style={{ fontSize: 10, color: theme.accent, fontWeight: '700', letterSpacing: 1 }}>
-                        {verseOrder === 'random' ? 'RANDOM' : 'SEQUENTIAL'}
+                        {verseOrder === 'random' ? 'RANDOM' : 'SEQ'}
                     </ThemedText>
                 </TouchableOpacity>
             )}
@@ -66,6 +68,10 @@ const styles = StyleSheet.create({
         gap: 10,
         marginBottom: 16,
     },
+    scopeWrapper: {
+        flex: 1,
+        flexShrink: 1,
+    },
     orderToggle: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -75,5 +81,6 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(128,128,128,0.08)',
         gap: 6,
+        flexShrink: 0,
     },
 })

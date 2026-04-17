@@ -256,6 +256,8 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         gap: 8,
         alignItems: 'center',
+        flexShrink: 1,
+        overflow: 'hidden',
     },
     chip: {
         flexDirection: 'row',
@@ -265,6 +267,8 @@ const styles = StyleSheet.create({
         borderRadius: 16,
         borderWidth: 1,
         gap: 6,
+        flexShrink: 1,
+        overflow: 'hidden',
     },
     modalOverlay: {
         flex: 1,

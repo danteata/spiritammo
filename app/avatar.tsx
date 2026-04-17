@@ -13,6 +13,7 @@ import ScreenHeader from '@/components/ScreenHeader'
 import { useScreenTracking } from '@/hooks/useAnalytics'
 import { ArsenalEquipment } from '@/components/arsenal/ArsenalEquipment'
 import { EquipmentSlot } from '@/types/avatar'
+import { getItemById } from '@/constants/avatarItems'
 
 export default function AvatarScreen() {
     const {
@@ -21,6 +22,7 @@ export default function AvatarScreen() {
         avatarInventory,
         userSettings,
         equipItem,
+        purchaseItem,
     } = useAppStore()
 
     // Track screen view
@@ -30,20 +32,52 @@ export default function AvatarScreen() {
     const [selectedSlot, setSelectedSlot] = useState<EquipmentSlot>('primary')
 
     const handleSlotPress = (slot: EquipmentSlot) => {
-        setSelectedSlot(prev => (prev === slot ? null : slot))
+        setSelectedSlot(slot)
     }
 
     const handleItemPress = async (itemId: string) => {
         if (!selectedSlot) return
 
-        const success = await equipItem(selectedSlot, itemId)
-        if (!success) {
+        const isOwned = avatarInventory?.ownedItems?.includes(itemId)
+
+        if (isOwned) {
+            const success = await equipItem(selectedSlot, itemId)
+            if (!success) {
+                Alert.alert('Equip Failed', 'Could not equip this item. Please try again.', [{ text: 'OK' }])
+            }
+            return
+        }
+
+        const item = getItemById(itemId)
+        if (!item) return
+
+        if (valorPoints < item.cost) {
             Alert.alert(
-                'Locked Equipment',
-                'This item is not unlocked yet. Earn more Valor Points to access it.',
+                'Insufficient Valor Points',
+                `This item costs ${item.cost} VP. You need ${item.cost - valorPoints} more Valor Points to purchase it.`,
                 [{ text: 'OK' }]
             )
+            return
         }
+
+        Alert.alert(
+            'Purchase & Equip',
+            `Purchase "${item.name}" for ${item.cost} VP?`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Purchase',
+                    onPress: async () => {
+                        const purchased = await purchaseItem(itemId)
+                        if (purchased) {
+                            await equipItem(selectedSlot, itemId)
+                        } else {
+                            Alert.alert('Purchase Failed', 'Could not purchase this item. Please try again.', [{ text: 'OK' }])
+                        }
+                    },
+                },
+            ]
+        )
     }
 
     return (

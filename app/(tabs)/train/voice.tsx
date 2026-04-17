@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import BlurredTextOverlay from '@/components/ui/BlurredTextOverlay';
+import ScriptureScopeBar from '@/components/ScriptureScopeBar';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useAppStore } from '@/hooks/useAppStore';
 import { ThemedContainer, ThemedText } from '@/components/Themed';
@@ -13,7 +14,7 @@ import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import VoicePlaybackService from '@/services/voicePlayback';
 import TTSEngine, { TTSOptions } from '@/services/ttsEngine';
 import { evaluateRecitation } from '@/utils/similarity';
-import { Scripture, TTSEngineType } from '@/types/scripture';
+import { Scripture, TTSEngineType, Collection } from '@/types/scripture';
 import { useScriptureScope } from '@/hooks/useScriptureScope';
 import { usePracticeCompletion } from '@/hooks/usePracticeCompletion';
 import * as Haptics from 'expo-haptics';
@@ -221,11 +222,25 @@ export default function VoiceOpsScreen() {
         return collections.find((c) => c.id === id) || null;
     }, [params.collectionId, collections]);
 
+    const [selectedChapterIds, setSelectedChapterIds] = useState<string[]>(() => {
+        if (initialChapterIds.length > 0) return initialChapterIds;
+        const collectionId = params.collectionId as string;
+        if (collectionId && collections) {
+            const collection = collections.find(c => c.id === collectionId);
+            if (collection?.isChapterBased && collection.chapters) {
+                return collection.chapters.map((ch) => ch.id);
+            }
+        }
+        return [];
+    });
+
     const targetScriptures = useScriptureScope(
         allScriptures,
         selectedCollection,
-        initialChapterIds,
+        selectedChapterIds,
     );
+
+    const [verseOrder, setVerseOrder] = useState<'random' | 'sequential'>('random');
 
     useEffect(() => {
         isMountedRef.current = true;
@@ -469,7 +484,7 @@ export default function VoiceOpsScreen() {
         setPhase('idle');
     };
 
-    const accentColor = theme.info || '#4dabf7';
+    const accentColor = theme.accent;
 
     return (
         <ThemedContainer style={styles.container}>
@@ -558,6 +573,29 @@ export default function VoiceOpsScreen() {
                                     Fully hands-free. Just listen and speak.
                                 </ThemedText>
                             </TouchableOpacity>
+
+                            <ScriptureScopeBar
+                                selectedCollection={selectedCollection}
+                                selectedChapterIds={selectedChapterIds}
+                                onCollectionChange={(collection: Collection | null) => {
+                                    if (collection) {
+                                        router.setParams({ collectionId: collection.id })
+                                        if (collection.isChapterBased && collection.chapters) {
+                                            setSelectedChapterIds(collection.chapters.map(ch => ch.id))
+                                        } else {
+                                            setSelectedChapterIds([])
+                                        }
+                                    } else {
+                                        router.setParams({ collectionId: undefined, chapterIds: undefined })
+                                        setSelectedChapterIds([])
+                                    }
+                                }}
+                                onChapterIdsChange={setSelectedChapterIds}
+                                verseOrder={verseOrder}
+                                onOrderChange={setVerseOrder}
+                                isDark={isDark}
+                                theme={theme}
+                            />
 
                             <View style={styles.sessionLengthSection}>
                                 <ThemedText variant="caption" style={styles.sessionLengthLabel}>
@@ -742,7 +780,7 @@ const styles = StyleSheet.create({
     expectedVal: { lineHeight: 20, opacity: 0.8 },
     abortButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 8, borderWidth: 1.5, gap: 6, marginTop: 12 },
     abortText: { fontWeight: '700', letterSpacing: 1.5, fontSize: 12 },
-    startContainer: { alignItems: 'center' },
+    startContainer: { alignItems: 'center', width: '100%' },
     sessionLengthSection: { marginTop: 24, alignItems: 'center' },
     sessionLengthLabel: { letterSpacing: 1.5, opacity: 0.6, marginBottom: 12, fontSize: 10 },
     sessionLengthOptions: { flexDirection: 'row', gap: 10 },
