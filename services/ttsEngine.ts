@@ -82,6 +82,8 @@ class TTSEngine {
             } else {
                 await this.speakWithNative(opts)
             }
+        } else if (engine === 'native') {
+            await this.speakWithNative(opts)
         } else if (options.scriptureId && this.isOnline) {
             try {
                 const played = await this.tryCommunityVoice(opts)

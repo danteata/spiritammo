@@ -101,16 +101,16 @@ export default function QuizScreen() {
                     const userMap = (userAnswer as Record<string, 'T' | 'F' | 'S'>) || {}
                     let allCorrect = true
                     q.options.forEach(opt => {
-                        const userChoice = userMap[opt.label] || 'S'
+                        const userChoice = userMap[opt.label]
                         const correctChoice = correctMap[opt.label]
-                        if (userChoice !== 'S' && userChoice === correctChoice) {
+                        if (userChoice === undefined) {
+                            // unattempted — not scored
+                        } else if (userChoice === 'S') {
+                            // explicitly skipped — no points, not wrong
+                        } else if (userChoice === correctChoice) {
                             earnedPoints += 1
-                        }
-                        if (userChoice !== 'S' && userChoice !== correctChoice) {
+                        } else {
                             allCorrect = false
-                        }
-                        if (userChoice === 'S') {
-                            // skipped — no points, not wrong
                         }
                     })
                 } else if (JSON.stringify(userAnswer) === JSON.stringify(correctAnswer)) {
@@ -751,9 +751,11 @@ useEffect(() => {
                                     {q.type === 'true-false-list' ? (
                                         <View style={{ gap: 4 }}>
                                             {q.options.map(opt => {
-                                                const userChoice = (userAnswer as Record<string, string>)?.[opt.label] || 'S'
+                                                const userChoice = (userAnswer as Record<string, string>)?.[opt.label]
                                                 const correctChoice = (correctAnswer as Record<string, string>)[opt.label]
-                                                const isCorrect = userChoice === correctChoice
+                                                const isCorrect = userChoice !== undefined && userChoice !== 'S' && userChoice === correctChoice
+                                                const isSkipped = userChoice === 'S'
+                                                const isUnattempted = userChoice === undefined
 
                                                 return (
                                                     <View key={opt.label} style={styles.reviewOptionRow}>
@@ -770,7 +772,9 @@ useEffect(() => {
                                                             </TouchableOpacity>
                                                         )}
                                                         <View style={{ flexDirection: 'row', gap: 8 }}>
-                                                            <ThemedText variant="caption" style={{ color: theme.textSecondary }}>YOU: {userChoice}</ThemedText>
+                                                            <ThemedText variant="caption" style={{ color: isUnattempted ? theme.textSecondary : isSkipped ? theme.warning : theme.text }}>
+                                                                YOU: {isUnattempted ? '—' : userChoice}
+                                                            </ThemedText>
                                                             <ThemedText variant="caption" style={{ color: isCorrect ? theme.success : theme.error }}>
                                                                 ACTUAL: {correctChoice}
                                                             </ThemedText>

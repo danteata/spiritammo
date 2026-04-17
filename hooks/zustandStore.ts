@@ -131,9 +131,14 @@ export const useZustandStore = create<AppState>((set, get, store) => ({
         const correctMap = correctAnswer as Record<string, 'T' | 'F'>
         const userMap = (userAnswer as Record<string, 'T' | 'F' | 'S'>) || {}
         q.options.forEach((opt) => {
-          const userChoice = userMap[opt.label] || 'S'
+          const userChoice = userMap[opt.label]
           const correctChoice = correctMap[opt.label]
-          if (userChoice !== 'S' && userChoice !== correctChoice) {
+          if (userChoice === undefined) {
+            // unattempted — not tracked
+          } else if (userChoice === 'S') {
+            // explicitly skipped — counts as seen but not wrong
+            gotWrong = false
+          } else if (userChoice !== correctChoice) {
             gotWrong = true
 
             if (userChoice === 'T' && correctChoice === 'F' && opt.scriptureId) {
