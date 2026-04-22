@@ -1,6 +1,6 @@
 import { AudioPlayer, createAudioPlayer } from 'expo-audio'
 import VoiceRecordingService from './voiceRecording'
-import TTSEngine, { TTSOptions, TTSEngineType } from './ttsEngine'
+import TTSEngine, { TTSOptions, TTSEngineType, TTSSegment } from './ttsEngine'
 
 class VoicePlaybackService {
     private static currentPlayer: AudioPlayer | null = null
@@ -160,6 +160,59 @@ class VoicePlaybackService {
             await TTSEngine.speak(ttsOptions)
         } catch (error) {
             console.error('Failed to play text-to-speech:', error)
+            this.isPlaying = false
+            if (settings?.onError) {
+                settings.onError(error)
+            }
+            throw error
+        }
+    }
+
+    static async playSegments(
+        segments: TTSSegment[],
+        settings?: {
+            rate?: number
+            pitch?: number
+            language?: string
+            onStart?: () => void
+            onDone?: () => void
+            onError?: (error: any) => void
+        }
+    ): Promise<void> {
+        try {
+            if (this.isPlaying) {
+                await this.stopPlayback()
+            }
+
+            this.isPlaying = true
+
+            const baseOptions: Omit<TTSOptions, 'text'> = {
+                rate: settings?.rate ?? this.ttsSettings.voiceRate ?? 0.9,
+                pitch: settings?.pitch ?? this.ttsSettings.voicePitch ?? 1.0,
+                language: settings?.language ?? this.ttsSettings.language ?? 'en-US',
+                ttsEngine: this.ttsSettings.engine ?? 'native',
+                voiceId: this.ttsSettings.voiceId,
+                elevenLabsApiKey: this.ttsSettings.apiKey,
+                chatterboxServerUrl: this.ttsSettings.chatterboxServerUrl,
+                chatterboxVoiceId: this.ttsSettings.chatterboxVoiceId,
+                chatterboxVoiceMode: this.ttsSettings.chatterboxVoiceMode,
+                chatterboxReferenceAudio: this.ttsSettings.chatterboxReferenceAudio,
+                onStart: () => {
+                    settings?.onStart?.()
+                },
+                onDone: () => {
+                    this.isPlaying = false
+                    settings?.onDone?.()
+                },
+                onError: (error: Error) => {
+                    this.isPlaying = false
+                    settings?.onError?.(error)
+                },
+            }
+
+            await TTSEngine.speakSegments(segments, baseOptions)
+        } catch (error) {
+            console.error('Failed to play segments:', error)
             this.isPlaying = false
             if (settings?.onError) {
                 settings.onError(error)

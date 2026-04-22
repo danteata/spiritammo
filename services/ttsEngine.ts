@@ -8,6 +8,13 @@ import { formatTextForTTS } from '@/utils/ttsTextUtils'
 
 export type TTSEngineType = 'elevenlabs' | 'native' | 'chatterbox'
 
+export interface TTSSegment {
+    text: string
+    cacheKey?: string
+    rate?: number
+    pitch?: number
+}
+
 export interface TTSOptions {
     text: string
     scriptureId?: string
@@ -94,6 +101,21 @@ class TTSEngine {
             await this.speakWithNative(opts)
         } else {
             await this.speakWithNative(opts)
+        }
+    }
+
+    static async speakSegments(
+        segments: TTSSegment[],
+        baseOptions: Omit<TTSOptions, 'text'>
+    ): Promise<void> {
+        for (const segment of segments) {
+            await this.speak({
+                ...baseOptions,
+                text: segment.text,
+                scriptureId: segment.cacheKey,
+                rate: segment.rate ?? baseOptions.rate,
+                pitch: segment.pitch ?? baseOptions.pitch,
+            })
         }
     }
 

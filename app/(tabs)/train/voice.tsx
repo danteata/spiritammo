@@ -12,7 +12,7 @@ import { ThemedContainer, ThemedText } from '@/components/Themed';
 import ScreenHeader from '@/components/ScreenHeader';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import VoicePlaybackService from '@/services/voicePlayback';
-import TTSEngine, { TTSOptions } from '@/services/ttsEngine';
+import TTSEngine, { TTSOptions, TTSSegment } from '@/services/ttsEngine';
 import { evaluateRecitation } from '@/utils/similarity';
 import { Scripture, TTSEngineType, Collection } from '@/types/scripture';
 import { useScriptureScope } from '@/hooks/useScriptureScope';
@@ -271,25 +271,23 @@ export default function VoiceOpsScreen() {
     const handleSkipWithReadback = useCallback(async (scripture: Scripture) => {
         if (!isMountedRef.current) return;
 
-        // Show the verse text so user can read along
         setShowVerseText(true);
         phaseRef.current = 'skipping';
         setPhase('skipping');
 
-        await speakAndWait('Skipping. The verse reads:', {
-            rate: userSettings.voiceRate || 0.9,
-            pitch: userSettings.voicePitch || 1.0,
-            language: userSettings.language || 'en-US',
-            ...getTTSSettings(userSettings),
-        });
-
-        await speakAndWait(`${scripture.reference}. ${scripture.text}`, {
-            rate: userSettings.voiceRate || 0.9,
-            pitch: userSettings.voicePitch || 1.0,
-            language: userSettings.language || 'en-US',
-            scriptureId: scripture.id,
-            ...getTTSSettings(userSettings),
-        });
+        await TTSEngine.speakSegments(
+            [
+                { text: 'Skipping. The verse reads:', cacheKey: 'instruction:skipping' },
+                { text: scripture.reference, cacheKey: `${scripture.id}:ref` },
+                { text: scripture.text, cacheKey: `${scripture.id}:text` },
+            ],
+            {
+                rate: userSettings.voiceRate || 0.9,
+                pitch: userSettings.voicePitch || 1.0,
+                language: userSettings.language || 'en-US',
+                ...getTTSSettings(userSettings),
+            }
+        );
 
         await new Promise((r) => setTimeout(r, POST_RESULT_DELAY_MS));
         if (!isMountedRef.current || !isRunningRef.current) return;
@@ -324,16 +322,33 @@ export default function VoiceOpsScreen() {
             phaseRef.current = 'briefing';
             setPhase('briefing');
 
-            await speakAndWait(`Deploy: ${scripture.reference}`, {
-                rate: userSettings.voiceRate || 0.9,
-                pitch: userSettings.voicePitch || 1.0,
-                language: userSettings.language || 'en-US',
-                ...getTTSSettings(userSettings),
-            });
+            await TTSEngine.speakSegments(
+                [
+                    { text: 'Deploy:', cacheKey: 'instruction:deploy' },
+                    { text: scripture.reference, cacheKey: `${scripture.id}:ref` },
+                ],
+                {
+                    rate: userSettings.voiceRate || 0.9,
+                    pitch: userSettings.voicePitch || 1.0,
+                    language: userSettings.language || 'en-US',
+                    ...getTTSSettings(userSettings),
+                }
+            );
             if (!isMountedRef.current) return;
 
             await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => { });
-            await speakAndWait('Go', { rate: 1.2, pitch: 1.3, language: userSettings.language || 'en-US', ...getTTSSettings(userSettings) });
+
+            await TTSEngine.speakSegments(
+                [
+                    { text: 'Go', cacheKey: 'instruction:go', rate: 1.2, pitch: 1.3 },
+                ],
+                {
+                    rate: userSettings.voiceRate || 0.9,
+                    pitch: userSettings.voicePitch || 1.0,
+                    language: userSettings.language || 'en-US',
+                    ...getTTSSettings(userSettings),
+                }
+            );
 
             // ── Stop TTS and drain ──────────────────────────────
             await TTSEngine.stop();

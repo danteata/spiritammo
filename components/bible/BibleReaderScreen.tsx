@@ -26,6 +26,7 @@ import { BOOKS } from '@/mocks/books';
 import { Scripture } from '@/types/scripture';
 import { MILITARY_TYPOGRAPHY } from '@/constants/colors';
 import VoicePlaybackService from '@/services/voicePlayback';
+import { TTSSegment } from '@/services/ttsEngine';
 
 import VerseRow from './VerseRow';
 import ChapterNavBar from './ChapterNavBar';
@@ -280,13 +281,17 @@ export default function BibleReaderScreen({
       }
 
       await new Promise<void>((resolve) => {
-        VoicePlaybackService.playTextToSpeech(`${v.reference}. ${v.text}`, {
-          scriptureId: v.id,
-          onDone: () => resolve(),
-          onError: () => resolve(),
-          rate: userSettings?.voiceRate || 0.9,
-          pitch: userSettings?.voicePitch || 1.0,
-        });
+        VoicePlaybackService.playSegments(
+          [
+            { text: v.text, cacheKey: `${v.id}:text` },
+          ],
+          {
+            rate: userSettings?.voiceRate || 0.9,
+            pitch: userSettings?.voicePitch || 1.0,
+            onDone: () => resolve(),
+            onError: () => resolve(),
+          }
+        );
       });
     }
 
@@ -317,13 +322,17 @@ export default function BibleReaderScreen({
       }
 
       await new Promise<void>((resolve) => {
-        VoicePlaybackService.playTextToSpeech(`${v.reference}. ${v.text}`, {
-          scriptureId: v.id,
-          onDone: () => resolve(),
-          onError: () => resolve(),
-          rate: userSettings?.voiceRate || 0.9,
-          pitch: userSettings?.voicePitch || 1.0,
-        });
+        VoicePlaybackService.playSegments(
+          [
+            { text: v.text, cacheKey: `${v.id}:text` },
+          ],
+          {
+            rate: userSettings?.voiceRate || 0.9,
+            pitch: userSettings?.voicePitch || 1.0,
+            onDone: () => resolve(),
+            onError: () => resolve(),
+          }
+        );
       });
     }
     setActivelyReadingVerseId(null);
