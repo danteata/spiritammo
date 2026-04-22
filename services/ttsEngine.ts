@@ -28,6 +28,7 @@ export interface TTSOptions {
     chatterboxVoiceId?: string
     chatterboxVoiceMode?: 'predefined' | 'clone'
     chatterboxReferenceAudio?: string
+    isClonedVoice?: boolean
     onStart?: () => void
     onDone?: () => void
     onError?: (error: Error) => void
@@ -258,7 +259,7 @@ class TTSEngine {
                 console.warn('Failed to cache TTS audio:', cacheError)
             }
 
-            if (convexTTSService.isAvailable()) {
+            if (convexTTSService.isAvailable() && !options.isClonedVoice) {
                 convexTTSService.uploadFromLocal(scriptureId, voiceId, audioUri).catch((err) => {
                     console.warn('[TTSEngine] Convex upload failed:', err)
                 })
@@ -293,6 +294,12 @@ class TTSEngine {
                 await TTSCache.set(scriptureId, cacheKey, audioUri)
             } catch (cacheError) {
                 console.warn('Failed to cache Chatterbox audio:', cacheError)
+            }
+
+            if (convexTTSService.isAvailable() && options.chatterboxVoiceMode !== 'clone') {
+                convexTTSService.uploadFromLocal(scriptureId, cacheKey, audioUri).catch((err) => {
+                    console.warn('[TTSEngine] Chatterbox Convex upload failed:', err)
+                })
             }
         }
 

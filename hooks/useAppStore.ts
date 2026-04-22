@@ -25,9 +25,11 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     if (userSettings.chatterboxServerUrl) {
       chatterboxTTSService.setServerUrl(userSettings.chatterboxServerUrl)
     }
+    const isClonedVoice = userSettings.ttsEngine === 'elevenlabs' && userSettings.useClonedVoice && userSettings.clonedVoiceId
     VoicePlaybackService.configureTTS({
       engine: userSettings.ttsEngine || 'native',
-      voiceId: userSettings.elevenLabsVoiceId,
+      voiceId: isClonedVoice ? userSettings.clonedVoiceId || undefined : userSettings.elevenLabsVoiceId || undefined,
+      isClonedVoice: !!isClonedVoice,
       apiKey,
       voiceRate: userSettings.voiceRate,
       voicePitch: userSettings.voicePitch,
@@ -39,6 +41,7 @@ export const [AppStoreProvider, useAppStore] = createContextHook(() => {
     })
   }, [
     userSettings.ttsEngine, userSettings.elevenLabsVoiceId, userSettings.elevenLabsApiKey,
+    userSettings.useClonedVoice, userSettings.clonedVoiceId,
     userSettings.voiceRate, userSettings.voicePitch, userSettings.language,
     userSettings.chatterboxServerUrl, userSettings.chatterboxVoiceId,
     userSettings.chatterboxVoiceMode, userSettings.chatterboxReferenceAudio,

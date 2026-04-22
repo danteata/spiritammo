@@ -16,6 +16,7 @@ class VoicePlaybackService {
         chatterboxVoiceId?: string
         chatterboxVoiceMode?: 'predefined' | 'clone'
         chatterboxReferenceAudio?: string
+        isClonedVoice?: boolean
     } = {}
 
     static configureTTS(settings: {
@@ -29,6 +30,7 @@ class VoicePlaybackService {
         chatterboxVoiceId?: string
         chatterboxVoiceMode?: 'predefined' | 'clone'
         chatterboxReferenceAudio?: string
+        isClonedVoice?: boolean
     }): void {
         this.ttsSettings = { ...this.ttsSettings, ...settings }
     }
@@ -144,6 +146,7 @@ class VoicePlaybackService {
                 chatterboxVoiceId: this.ttsSettings.chatterboxVoiceId,
                 chatterboxVoiceMode: this.ttsSettings.chatterboxVoiceMode,
                 chatterboxReferenceAudio: this.ttsSettings.chatterboxReferenceAudio,
+                isClonedVoice: this.ttsSettings.isClonedVoice,
                 onStart: () => {
                     settings?.onStart?.()
                 },

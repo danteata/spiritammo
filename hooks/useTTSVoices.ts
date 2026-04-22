@@ -40,9 +40,11 @@ export function useTTSVoices() {
 
     useEffect(() => {
         const syncSettings = () => {
+            const isClonedVoice = userSettings.ttsEngine === 'elevenlabs' && userSettings.useClonedVoice && userSettings.clonedVoiceId
             VoicePlaybackService.configureTTS({
                 engine: userSettings.ttsEngine || 'native',
-                voiceId: userSettings.elevenLabsVoiceId,
+                voiceId: isClonedVoice ? userSettings.clonedVoiceId || undefined : userSettings.elevenLabsVoiceId || undefined,
+                isClonedVoice: !!isClonedVoice,
                 apiKey: userSettings.elevenLabsApiKey,
                 voiceRate: userSettings.voiceRate,
                 voicePitch: userSettings.voicePitch,
@@ -54,7 +56,7 @@ export function useTTSVoices() {
             })
         }
         syncSettings()
-    }, [userSettings.ttsEngine, userSettings.elevenLabsVoiceId, userSettings.elevenLabsApiKey, userSettings.voiceRate, userSettings.voicePitch, userSettings.language, userSettings.chatterboxServerUrl, userSettings.chatterboxVoiceId, userSettings.chatterboxVoiceMode, userSettings.chatterboxReferenceAudio])
+    }, [userSettings.ttsEngine, userSettings.elevenLabsVoiceId, userSettings.elevenLabsApiKey, userSettings.useClonedVoice, userSettings.clonedVoiceId, userSettings.voiceRate, userSettings.voicePitch, userSettings.language, userSettings.chatterboxServerUrl, userSettings.chatterboxVoiceId, userSettings.chatterboxVoiceMode, userSettings.chatterboxReferenceAudio])
 
     const loadVoices = useCallback(async () => {
         if (!elevenLabsTTSService.isAvailable()) return

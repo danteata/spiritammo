@@ -21,14 +21,14 @@ import * as Haptics from 'expo-haptics';
 
 const getTTSSettings = (userSettings: any) => {
     const engine = userSettings.ttsEngine || 'native';
+    const isClonedVoice = engine === 'elevenlabs' && userSettings.useClonedVoice && userSettings.clonedVoiceId;
     const voiceId = engine === 'elevenlabs'
-        ? (userSettings.useClonedVoice && userSettings.clonedVoiceId
-            ? userSettings.clonedVoiceId
-            : userSettings.elevenLabsVoiceId)
+        ? (isClonedVoice ? userSettings.clonedVoiceId : userSettings.elevenLabsVoiceId)
         : undefined;
     return {
         ttsEngine: engine as TTSEngineType | undefined,
         voiceId,
+        isClonedVoice,
         apiKey: userSettings.elevenLabsApiKey,
         chatterboxServerUrl: userSettings.chatterboxServerUrl,
         chatterboxVoiceId: userSettings.chatterboxVoiceId,
@@ -51,6 +51,7 @@ const speakAndWait = (
         chatterboxVoiceId?: string;
         chatterboxVoiceMode?: 'predefined' | 'clone';
         chatterboxReferenceAudio?: string;
+        isClonedVoice?: boolean;
     },
 ): Promise<void> => {
     const ttsOptions: TTSOptions = {
@@ -66,6 +67,7 @@ const speakAndWait = (
         chatterboxVoiceId: options?.chatterboxVoiceId,
         chatterboxVoiceMode: options?.chatterboxVoiceMode,
         chatterboxReferenceAudio: options?.chatterboxReferenceAudio,
+        isClonedVoice: options?.isClonedVoice,
     };
     return TTSEngine.speak(ttsOptions);
 };
